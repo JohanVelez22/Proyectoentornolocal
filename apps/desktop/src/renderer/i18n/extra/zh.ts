@@ -441,6 +441,10 @@ export const zhExtra: TextosParciales = {
       cancelado: '分析已取消。',
       abrirDisco: '在“磁盘使用情况”中打开',
       incompleto: '部分项目未计入：链接、被拒绝访问的项目或过大的文件夹。',
+      raizUnidadTitulo: '要分析整个驱动器吗？',
+      raizUnidadTexto:
+        '您将分析 {ruta}，即整个驱动器。这可能需要很长时间，并会遍历其全部内容。是否继续？',
+      raizUnidadAnalizar: '分析',
     },
     chmod: {
       permisos: '权限',

@@ -498,6 +498,10 @@ export const idExtra: TextosParciales = {
       abrirDisco: 'Buka di Penggunaan disk',
       incompleto:
         'Beberapa item tidak dihitung: tautan, akses ditolak, atau folder yang terlalu besar.',
+      raizUnidadTitulo: 'Analisis seluruh drive?',
+      raizUnidadTexto:
+        'Anda akan menganalisis {ruta}, yaitu satu drive penuh. Prosesnya bisa memakan waktu lama karena membaca seluruh isinya. Lanjutkan?',
+      raizUnidadAnalizar: 'Analisis',
     },
     chmod: {
       permisos: 'Izin',

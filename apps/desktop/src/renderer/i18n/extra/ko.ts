@@ -490,6 +490,10 @@ export const koExtra: TextosParciales = {
       cancelado: '분석이 취소되었습니다.',
       abrirDisco: '디스크 사용량에서 열기',
       incompleto: '일부 항목은 집계되지 않았습니다(링크, 접근 거부, 너무 큰 폴더).',
+      raizUnidadTitulo: '드라이브 전체를 분석하시겠습니까?',
+      raizUnidadTexto:
+        '{ruta} 드라이브 전체를 분석하려고 합니다. 모든 내용을 살펴보므로 시간이 오래 걸릴 수 있습니다. 계속하시겠습니까?',
+      raizUnidadAnalizar: '분석',
     },
     chmod: {
       permisos: '권한',

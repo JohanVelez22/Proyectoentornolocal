@@ -552,6 +552,10 @@ export const nlExtra: TextosParciales = {
       abrirDisco: 'Openen in Schijfgebruik',
       incompleto:
         'Sommige items zijn niet meegeteld: koppelingen, geweigerde toegang of te grote mappen.',
+      raizUnidadTitulo: 'De hele schijf analyseren?',
+      raizUnidadTexto:
+        'U staat op het punt {ruta}, een hele schijf, te analyseren. Dit kan lang duren omdat alle inhoud wordt doorlopen. Doorgaan?',
+      raizUnidadAnalizar: 'Analyseren',
     },
     chmod: {
       permisos: 'Machtigingen',

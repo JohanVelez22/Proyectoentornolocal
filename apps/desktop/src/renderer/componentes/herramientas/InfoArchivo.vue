@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NButton, NSpin } from 'naive-ui';
+import { NButton, NSpin, useDialog } from 'naive-ui';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { AnalisisDisco, HashesArchivo, InfoRuta, ProgresoUsoDisco } from '../../../shared/api';
 import { api } from '../../api';
@@ -7,7 +7,9 @@ import { mensajeDeError } from '../../composables/useAccion';
 import { solicitudes } from '../../composables/solicitudes';
 import { useCopiar } from '../../composables/useHerramienta';
 import { formatearFecha, formatearNumero, textos } from '../../i18n';
+import { rellenar } from '../../utilidades/equipo';
 import { tamanoLegible } from '../../utilidades/herramientas';
+import { esRaizDeUnidad } from '../../utilidades/infoArchivo';
 
 /**
  * Info de archivo (D55): datos de un archivo o de una carpeta que se elige con el selector o se
@@ -20,6 +22,7 @@ import { tamanoLegible } from '../../utilidades/herramientas';
  */
 const t = textos.herramientas.infoArchivo;
 const copiar = useCopiar();
+const dialog = useDialog();
 
 const info = ref<InfoRuta | null>(null);
 const hashes = ref<[string, string][]>([]);
@@ -49,6 +52,32 @@ const incompleto = computed(() => {
   const o = c.omitidos;
   return c.truncado || o.enlaces + o.denegados + o.especiales + o.enlacesDuros > 0;
 });
+
+/** Analizar la raíz de una unidad recorre el disco entero: se pide confirmación antes. */
+function confirmarUnidad(ruta: string): Promise<boolean> {
+  return new Promise((resolver) => {
+    dialog.warning({
+      title: t.raizUnidadTitulo,
+      content: rellenar(t.raizUnidadTexto, { ruta }),
+      positiveText: t.raizUnidadAnalizar,
+      negativeText: textos.acciones.cancelar,
+      autoFocus: false,
+      closable: false,
+      closeOnEsc: true,
+      onPositiveClick: () => resolver(true),
+      onNegativeClick: () => resolver(false),
+      onClose: () => resolver(false),
+      onEsc: () => resolver(false),
+      onMaskClick: () => resolver(false),
+    });
+  });
+}
+
+/** Enter o Espacio sobre un dato copiable equivalen al clic (teclado). */
+function copiarConTeclado(e: KeyboardEvent, texto: string): void {
+  e.preventDefault();
+  copiar(texto);
+}
 
 async function cancelarEscaneo(): Promise<void> {
   if (!analizando.value) return;
@@ -92,6 +121,9 @@ async function cargar(nueva: InfoRuta): Promise<void> {
     return;
   }
 
+  // Sin confirmar, se muestran los datos de la unidad pero no se recorre.
+  if (esRaizDeUnidad(nueva.ruta) && !(await confirmarUnidad(nueva.ruta))) return;
+  if (mio !== turno) return;
   analizando.value = true;
   const trabajo = api().infoArchivo.carpeta(nueva.ruta);
   escaneo = trabajo;
@@ -175,7 +207,17 @@ onBeforeUnmount(() => {
       <dt>{{ t.nombre }}</dt>
       <dd>{{ info.nombre }}</dd>
       <dt>{{ t.ruta }}</dt>
-      <dd class="copiable" @click="copiar(info.ruta)">{{ info.ruta }}</dd>
+      <dd
+        class="copiable"
+        role="button"
+        tabindex="0"
+        :title="textos.acciones.copiar"
+        @click="copiar(info.ruta)"
+        @keydown.enter="copiarConTeclado($event, info.ruta)"
+        @keydown.space="copiarConTeclado($event, info.ruta)"
+      >
+        {{ info.ruta }}
+      </dd>
       <dt>{{ t.tipo }}</dt>
       <dd>{{ info.tipo === 'carpeta' ? t.esCarpeta : t.esArchivo }}</dd>
       <template v-if="info.tipo === 'archivo'">
@@ -206,7 +248,17 @@ onBeforeUnmount(() => {
       </template>
       <template v-for="[a, h] in hashes" :key="a">
         <dt>{{ a }}</dt>
-        <dd class="copiable" @click="copiar(h)">{{ h }}</dd>
+        <dd
+          class="copiable"
+          role="button"
+          tabindex="0"
+          :title="textos.acciones.copiar"
+          @click="copiar(h)"
+          @keydown.enter="copiarConTeclado($event, h)"
+          @keydown.space="copiarConTeclado($event, h)"
+        >
+          {{ h }}
+        </dd>
       </template>
     </dl>
 
@@ -273,6 +325,12 @@ onBeforeUnmount(() => {
 }
 .copiable {
   cursor: copy;
+  /* Un hash o una ruta larga no tienen espacios: se parten donde haga falta para no desbordar. */
   word-break: break-all;
+}
+.copiable:focus-visible {
+  outline: 2px solid rgba(var(--acento-rgb), 0.6);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 </style>

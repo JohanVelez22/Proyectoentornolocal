@@ -547,6 +547,10 @@ export const itExtra: TextosParciales = {
       abrirDisco: 'Apri in Utilizzo del disco',
       incompleto:
         'Alcuni elementi non sono stati conteggiati: collegamenti, accessi negati o cartelle troppo grandi.',
+      raizUnidadTitulo: 'Analizzare l’intera unità?',
+      raizUnidadTexto:
+        'Sta per analizzare {ruta}, un’unità intera. Può richiedere molto tempo e scorre tutto il contenuto. Continuare?',
+      raizUnidadAnalizar: 'Analizza',
     },
     chmod: {
       permisos: 'Permessi',

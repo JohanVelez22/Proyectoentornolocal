@@ -506,6 +506,10 @@ export const trExtra: TextosParciales = {
       abrirDisco: 'Disk kullanımında aç',
       incompleto:
         'Bazı öğeler sayılmadı: bağlantılar, erişimi reddedilenler veya çok büyük klasörler.',
+      raizUnidadTitulo: 'Sürücünün tamamı analiz edilsin mi?',
+      raizUnidadTexto:
+        '{ruta} sürücüsünün tamamını analiz etmek üzeresiniz. Tüm içeriği taradığı için uzun sürebilir. Devam edilsin mi?',
+      raizUnidadAnalizar: 'Analiz et',
     },
     chmod: {
       permisos: 'İzinler',

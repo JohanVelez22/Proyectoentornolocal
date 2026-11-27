@@ -4463,6 +4463,9 @@ export const fr: Textos = {
       abrirDisco: 'Ouvrir dans Utilisation du disque',
       incompleto:
         'Certains éléments n’ont pas été comptés : liens, accès refusés ou dossiers trop volumineux.',
+      raizUnidadTitulo: 'Analyser tout le lecteur ?',
+      raizUnidadTexto: 'Vous allez analyser {ruta}, un lecteur entier. Cela peut être très long et parcourt tout son contenu. Continuer ?',
+      raizUnidadAnalizar: 'Analyser',
     },
     clienteHttp: {
       pestanas: {

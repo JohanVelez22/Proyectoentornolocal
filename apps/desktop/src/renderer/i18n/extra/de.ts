@@ -559,6 +559,10 @@ export const deExtra: TextosParciales = {
       abrirDisco: 'In der Speicherbelegung öffnen',
       incompleto:
         'Einige Elemente wurden nicht gezählt: Verknüpfungen, verweigerte Zugriffe oder zu große Ordner.',
+      raizUnidadTitulo: 'Gesamtes Laufwerk analysieren?',
+      raizUnidadTexto:
+        'Sie sind dabei, {ruta}, ein ganzes Laufwerk, zu analysieren. Das kann lange dauern und liest den gesamten Inhalt. Fortfahren?',
+      raizUnidadAnalizar: 'Analysieren',
     },
     chmod: {
       permisos: 'Berechtigungen',

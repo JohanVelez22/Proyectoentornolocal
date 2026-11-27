@@ -512,6 +512,10 @@ export const jaExtra: TextosParciales = {
       cancelado: '分析をキャンセルしました。',
       abrirDisco: 'ディスク使用量で開く',
       incompleto: '一部の項目は集計されていません（リンク、アクセス拒否、大きすぎるフォルダ）。',
+      raizUnidadTitulo: 'ドライブ全体を分析しますか？',
+      raizUnidadTexto:
+        '{ruta} というドライブ全体を分析します。すべての内容を調べるため、時間がかかることがあります。続行しますか？',
+      raizUnidadAnalizar: '分析する',
     },
     chmod: {
       permisos: 'パーミッション',

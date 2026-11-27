@@ -4337,6 +4337,9 @@ export const es = {
       abrirDisco: 'Abrir en Uso del disco',
       incompleto:
         'Algunos elementos no se contaron: enlaces, accesos denegados o carpetas demasiado grandes.',
+      raizUnidadTitulo: '¿Analizar la unidad completa?',
+      raizUnidadTexto: 'Va a analizar {ruta}, una unidad entera. Puede tardar mucho y recorre todo su contenido. ¿Continuar?',
+      raizUnidadAnalizar: 'Analizar',
     },
     clienteHttp: {
       pestanas: {

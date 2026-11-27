@@ -542,6 +542,10 @@ export const plExtra: TextosParciales = {
       abrirDisco: 'Otwórz w narzędziu „Użycie dysku”',
       incompleto:
         'Niektóre elementy nie zostały policzone: łącza, odmowa dostępu lub zbyt duże foldery.',
+      raizUnidadTitulo: 'Przeanalizować cały dysk?',
+      raizUnidadTexto:
+        'Za chwilę zostanie przeanalizowany {ruta} — cały dysk. Może to trwać bardzo długo, ponieważ przeglądana jest cała zawartość. Kontynuować?',
+      raizUnidadAnalizar: 'Analizuj',
     },
     chmod: {
       permisos: 'Uprawnienia',
