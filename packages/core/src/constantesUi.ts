@@ -5,7 +5,7 @@
  */
 
 /** Idiomas de la interfaz. */
-export const IDIOMAS_UI = ['es', 'en', 'pt', 'fr'] as const;
+export const IDIOMAS_UI = ['es', 'en', 'pt', 'fr', 'de'] as const;
 export type IdiomaUi = (typeof IDIOMAS_UI)[number];
 
 /**

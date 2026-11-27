@@ -1,4 +1,4 @@
-import type { IdiomaUi } from '@pel/core';
+import { IDIOMAS_UI, type IdiomaUi } from '@pel/core';
 
 /** Textos del proceso principal (bandeja y diálogos nativos) en los idiomas de la interfaz. */
 const TEXTOS = {
@@ -159,6 +159,34 @@ const TEXTOS = {
     capturaAbrirPreferencias: 'Ouvrir les réglages',
     capturaNoDisponible: 'La capture d’écran n’est pas disponible sur cet ordinateur.',
   },
+  de: {
+    abrir: 'Öffnen',
+    iniciarTodo: 'Alle starten',
+    detenerTodo: 'Alle stoppen',
+    salir: 'Beenden',
+    workspaces: 'Workspaces',
+    workspaceParcial: 'teilweise',
+    preguntaApagar: 'Dienste stoppen?',
+    siApagar: 'Ja, stoppen',
+    noApagar: 'Nein, weiterlaufen lassen',
+    cancelar: 'Abbrechen',
+    cliTitulo: 'Terminalbefehl (wolf)',
+    cliTunelInternet:
+      'Ein Terminalbefehl möchte {dominio} über {proveedor} im Internet veröffentlichen. Jeder mit dem Link kann die Website aufrufen.',
+    cliTunelTailnet:
+      'Ein Terminalbefehl möchte {dominio} mit den Geräten Ihres Tailnets ({proveedor}) teilen.',
+    cliPublicoEn: 'Öffentliche Adresse: https://{publico}',
+    cliDatosReales:
+      'ACHTUNG: {dominio} enthält ECHTE DATEN. Wählen Sie zum Fortfahren unten die exakte Domain aus. Wenn Sie dies nicht angefordert haben, brechen Sie ab.',
+    cliPublicar: 'Veröffentlichen',
+    cliPhpGlobal:
+      'Ein Terminalbefehl möchte die PHP-Version für alle Terminals auf {version} umstellen.',
+    cliCambiar: 'Ändern',
+    carpetaDatosAislada:
+      'Testdatenordner, ohne hosts, PATH oder Systemzertifikate zu verändern',
+    carpetaDatosInvalida:
+      'WOLFCORE_DATOS ist kein gültiger Datenordner: Er muss absolut sein, kein Systemordner und verschieden vom echten (und vorherigen) Ordner. Die App wird ohne Änderungen geschlossen.',
+  },
 } satisfies Record<IdiomaUi, Record<string, string>>;
 
 export type TextosMain = (typeof TEXTOS)['es'];
@@ -170,5 +198,5 @@ export function textosMain(idioma: IdiomaUi | null): TextosMain {
 /** Idioma de la interfaz para un locale del sistema (`es-CO` → `es`); inglés si no es de los cuatro. */
 export function idiomaDeLocale(locale: string): IdiomaUi {
   const l = (locale || '').slice(0, 2).toLowerCase();
-  return l === 'es' || l === 'pt' || l === 'fr' ? l : 'en';
+  return (IDIOMAS_UI as readonly string[]).includes(l) ? (l as IdiomaUi) : 'en';
 }

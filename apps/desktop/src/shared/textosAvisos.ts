@@ -779,7 +779,186 @@ const FR: Diccionario = {
   },
 };
 
-const DICCIONARIOS = { es: ES, en: EN, pt: PT, fr: FR } satisfies Record<IdiomaUi, Diccionario>;
+const DE: Diccionario = {
+  porCodigo: {
+    'avisos.servicio_caido': (d) => ({
+      titulo: 'Ein Dienst wurde mit einem Fehler beendet',
+      cuerpo: `${limpio(d['nombre'], 'Ein Dienst')} funktioniert nicht mehr. Öffnen Sie WolfCore Dev für Details.`,
+    }),
+    'avisos.iniciar_todo_fallos': (d) => ({
+      titulo: 'Alle starten konnte nicht alles starten',
+      cuerpo: `Nicht gestartet: ${limpio(d['nombres'], 'ein Dienst')}. Öffnen Sie Dienste für Details.`,
+    }),
+    'avisos.workspace_fallos': (d) => ({
+      titulo: 'Ein Workspace konnte nicht alles starten',
+      cuerpo: `${limpio(d['nombre'], 'Der Workspace')}: ${limpio(d['nombres'], 'ein Element')} startete nicht. Öffnen Sie Start, um den Status zu prüfen.`,
+    }),
+    'avisos.workspace_fallos_detener': (d) => ({
+      titulo: 'Ein Workspace konnte nicht alles stoppen',
+      cuerpo: `${limpio(d['nombre'], 'Der Workspace')}: ${limpio(d['nombres'], 'ein Element')} wurde nicht gestoppt. Öffnen Sie Start, um aktive Elemente zu prüfen.`,
+    }),
+    'avisos.tarea_fallo': (d) => ({
+      titulo:
+        d['motivo'] === 'tiempo'
+          ? 'Eine geplante Aufgabe dauerte zu lange'
+          : 'Eine geplante Aufgabe ist fehlgeschlagen',
+      cuerpo: `${limpio(d['nombre'], 'Eine Aufgabe')} (${limpio(d['sitio'], 'ein Projekt')}) ${d['motivo'] === 'tiempo' ? 'überschritt das Zeitlimit und wurde gestoppt' : 'endete mit einem Fehler'}. Öffnen Sie das Projekt für das Protokoll.`,
+    }),
+    'avisos.tarea_bloqueada': (d) => ({
+      titulo: 'Eine geplante Aufgabe wurde nicht ausgeführt',
+      cuerpo: `${limpio(d['nombre'], 'Eine Aufgabe')} (${limpio(d['sitio'], 'ein Projekt')}): ${
+        {
+          aislado: 'der Datenordner ist ein Testordner und Aufgaben wurden nicht erlaubt',
+          no_confiado: 'das Projekt ist nicht als vertrauenswürdig markiert',
+          receta_cambio: 'das Projektrezept hat sich seit Ihrem Vertrauen geändert',
+          sin_confirmar: 'der Befehl muss noch bestätigt werden',
+          comando_invalido: 'der Befehl ist nicht zulässig',
+          cron_invalida: 'der Zeitplan ist ungültig',
+          carpeta: 'der Projektordner existiert nicht',
+        }[String(d['motivo'])] ?? 'die Bedingungen sind nicht erfüllt'
+      }.`,
+    }),
+    'avisos.puerto_ocupado': (d) => ({
+      titulo: 'Port belegt',
+      cuerpo: `Port ${limpio(d['puerto'], '?')} wird von ${limpio(d['nombre'], 'einem anderen Programm')} verwendet: Der Dienst konnte nicht starten.`,
+    }),
+    'avisos.proceso_error': (d) => ({
+      titulo: 'Ein Projektprozess endete mit einem Fehler',
+      cuerpo: `${limpio(d['nombre'], 'Ein Prozess')} wurde beendet. Prüfen Sie seine Protokolle.`,
+    }),
+    'avisos.proceso_terminado': (d) => ({
+      titulo: 'Ein Prozess wurde beendet',
+      cuerpo: `${limpio(d['nombre'], 'Ein Prozess')} endete ohne Fehler.`,
+    }),
+    'avisos.proceso_fallo': (d) => ({
+      titulo: 'Ein Prozess ist fehlgeschlagen',
+      cuerpo: `${limpio(d['nombre'], 'Ein Prozess')} endete mit einem Fehler${d['codigoSalida'] !== undefined ? ` (Code ${limpio(d['codigoSalida'], '?')})` : ''}. Prüfen Sie seine Protokolle.`,
+    }),
+    'avisos.receta_terminada': (d) => ({
+      titulo: 'Ein Rezept wurde abgeschlossen',
+      cuerpo: `Das Rezept für ${limpio(d['sitio'], 'ein Projekt')} endete ohne Fehler.`,
+    }),
+    'avisos.receta_fallo': (d) => ({
+      titulo: 'Ein Rezept ist fehlgeschlagen',
+      cuerpo: `Das Rezept für ${limpio(d['sitio'], 'ein Projekt')} stoppte mit einem Fehler. Öffnen Sie das Projekt, um den Schritt zu sehen.`,
+    }),
+    'avisos.tunel_caido': (d) => ({
+      titulo: 'Ein Tunnel wurde unterbrochen',
+      cuerpo: `Der Tunnel für ${limpio(d['fuente'], 'ein Projekt')} funktioniert nicht mehr.`,
+    }),
+    'avisos.contenedor_detenido': (d) => ({
+      titulo: 'Ein Container wurde gestoppt',
+      cuerpo: `${limpio(d['nombre'], 'Ein Container')} (${limpio(d['motor'], 'Docker')}) wurde unerwartet gestoppt${d['codigoSalida'] !== undefined ? ` (Code ${limpio(d['codigoSalida'], '?')})` : ''}.`,
+    }),
+    'avisos.ca_por_vencer': (d) => ({
+      titulo: 'Die Zertifizierungsstelle läuft bald ab',
+      cuerpo: `Sie läuft in ${limpio(d['dias'], '?')} Tagen ab. Erzeugen Sie sie neu und vertrauen Sie ihr erneut.`,
+    }),
+    'avisos.certificado_por_vencer': (d) => ({
+      titulo: 'Ein Zertifikat läuft bald ab',
+      cuerpo: `Das Zertifikat für ${limpio(d['fuente'], 'eine Website')} läuft in ${limpio(d['dias'], '?')} Tagen ab.`,
+    }),
+    'avisos.certificado_vencido': (d) => ({
+      titulo: 'Ein Zertifikat ist abgelaufen',
+      cuerpo: `Das Zertifikat für ${limpio(d['fuente'], 'eine Website')} ist nicht mehr gültig. Erzeugen Sie es neu.`,
+    }),
+    'avisos.php_sitio_fallo': (d) => ({
+      titulo: 'Eigenes PHP einer Website startete nicht',
+      cuerpo: `Das PHP von ${limpio(d['fuente'], 'einer Website')} startete nicht (möglicherweise ist der Port belegt). Prüfen Sie den PHP-Bereich der Karte.`,
+    }),
+    'avisos.php_sitio_sin_puertos': (d) => ({
+      titulo: 'Keine Ports für eigenes Website-PHP',
+      cuerpo: `${limpio(d['fuente'], 'Eine Website')} nutzt das gemeinsame PHP ihrer Version ohne eigene Einstellungen: Keine freien Ports für eigenes PHP.`,
+    }),
+    'avisos.php_sitio_descartados': (d) => ({
+      titulo: 'PHP-Einstellungen verworfen',
+      cuerpo: `Einige PHP-Einstellungen von ${limpio(d['fuente'], 'einer Website')} sind ungültig und wurden nicht angewendet: ${limpio(d['claves'], 'prüfen Sie den PHP-Bereich')}.`,
+    }),
+    'avisos.lan_red_cambio': (d) => ({
+      titulo: 'Freigabe im lokalen Netzwerk beendet',
+      cuerpo: `Das Netzwerk hat sich geändert: Die Freigabe von ${limpio(d['fuente'], 'einer Website')} wurde beendet.`,
+    }),
+    'avisos.vhost_reglas_descartadas': (d) => ({
+      titulo: 'Nginx-Regeln verworfen',
+      cuerpo: `Die eigenen Regeln von ${limpio(d['fuente'], 'einer Website')} bestehen die Prüfung nicht mehr (Ordner, Domains oder Ports geändert) und wurden aus dem vhost ausgeschlossen. Prüfen Sie sie im Nginx-Bereich.`,
+    }),
+    'avisos.vhost_manual_descartado': (d) => ({
+      titulo: 'Manueller vhost nicht verwendet',
+      cuerpo: `Der manuelle vhost von ${limpio(d['fuente'], 'einer Website')} besteht die Prüfung nicht mehr (Ordner, Domains oder Ports geändert): Der generierte vhost wird verwendet. Prüfen Sie ihn im Nginx-Bereich.`,
+    }),
+    'avisos.rustup_entrada_ajena': () => ({
+      titulo: 'Rustup war bereits anderswo installiert',
+      cuerpo:
+        'Das Rust von WolfCore Dev wurde im eigenen Ordner installiert. Windows hatte bereits einen rustup-Deinstallationseintrag für eine andere Installation: Er blieb unverändert.',
+    }),
+    'avisos.version_nueva': (d) => ({
+      titulo: `Neue Version von ${limpio(d['servicio'], 'einem Dienst')} verfügbar`,
+      cuerpo: `${limpio(d['nueva'], 'Eine neue Version')} wurde veröffentlicht (installiert: ${limpio(d['actual'], 'andere')}). Öffnen Sie Dienste → Versionen zum Aktualisieren; nichts wird automatisch installiert.`,
+      accion: 'Aktualisieren',
+    }),
+    'avisos.version_nueva_sin_huella': (d) => ({
+      titulo: `Neue Version von ${limpio(d['servicio'], 'einem Dienst')} verfügbar`,
+      cuerpo: `${limpio(d['nueva'], 'Eine neue Version')} wurde veröffentlicht (installiert: ${limpio(d['actual'], 'andere')}), ohne veröffentlichte Prüfsumme: Der Download kann nicht geprüft werden. Prüfen Sie sie unter Dienste → Versionen; die Installation verlangt Ihre Bestätigung.`,
+    }),
+    'avisos.rama_nueva_sin_huella': (d) => ({
+      titulo: `Neue Hauptversion von ${limpio(d['servicio'], 'einem Dienst')}`,
+      cuerpo: `${limpio(d['nueva'], 'Eine neue Hauptversion')} ist neuer als Ihre aktuelle (${limpio(d['actual'], '?')}), ohne veröffentlichte Prüfsumme: Der Download kann nicht geprüft werden. Prüfen Sie sie unter Dienste → Versionen; die Installation verlangt Ihre Bestätigung.`,
+    }),
+    'avisos.rama_nueva': (d) => ({
+      titulo: `Neue Hauptversion von ${limpio(d['servicio'], 'einem Dienst')}`,
+      cuerpo: `${limpio(d['nueva'], 'Eine neue Hauptversion')} ist neuer als Ihre aktuelle (${limpio(d['actual'], '?')}). Sie wird parallel installiert, ohne Ihre Daten zu berühren.`,
+      accion: 'Aktualisieren',
+    }),
+    'doctor.hallazgos': (d) => ({
+      titulo: 'Doctor hat Fehler in der Umgebung gefunden',
+      cuerpo: `${limpio(d['errores'], 'Mehrere')} Probleme können die Umgebung beeinträchtigen. Öffnen Sie Doctor, um sie zu beheben.`,
+    }),
+  },
+  porTipo: {
+    'servicio-caido': {
+      titulo: 'Ein Dienst wurde gestoppt',
+      cuerpo: 'Öffnen Sie WolfCore Dev für Details.',
+    },
+    'puerto-ocupado': {
+      titulo: 'Port belegt',
+      cuerpo: 'Öffnen Sie WolfCore Dev für Details.',
+    },
+    'certificado-por-vencer': {
+      titulo: 'Ein Zertifikat läuft bald ab',
+      cuerpo: 'Öffnen Sie WolfCore Dev für Details.',
+    },
+    'tunel-caido': {
+      titulo: 'Ein Tunnel wurde unterbrochen',
+      cuerpo: 'Öffnen Sie WolfCore Dev für Details.',
+    },
+    'proceso-error': {
+      titulo: 'Ein Prozess endete mit einem Fehler',
+      cuerpo: 'Öffnen Sie WolfCore Dev für Details.',
+    },
+    'proceso-terminado': {
+      titulo: 'Ein Prozess wurde beendet',
+      cuerpo: 'Öffnen Sie WolfCore Dev für Details.',
+    },
+    'receta-terminada': {
+      titulo: 'Ein Rezept wurde abgeschlossen',
+      cuerpo: 'Öffnen Sie WolfCore Dev für Details.',
+    },
+    doctor: {
+      titulo: 'Doctor hat Probleme gefunden',
+      cuerpo: 'Öffnen Sie WolfCore Dev zur Prüfung.',
+    },
+    'contenedor-detenido': {
+      titulo: 'Ein Container wurde gestoppt',
+      cuerpo: 'Öffnen Sie WolfCore Dev für Details.',
+    },
+    'version-nueva': {
+      titulo: 'Eine neue Version ist verfügbar',
+      cuerpo: 'Öffnen Sie WolfCore Dev zum Aktualisieren.',
+    },
+  },
+};
+
+const DICCIONARIOS = { es: ES, en: EN, pt: PT, fr: FR, de: DE } satisfies Record<IdiomaUi, Diccionario>;
 
 export const CODIGOS_AVISO = Object.keys(ES.porCodigo);
 
@@ -789,6 +968,7 @@ export const CODIGOS_AVISO_POR_IDIOMA: Record<IdiomaUi, string[]> = {
   en: Object.keys(EN.porCodigo),
   pt: Object.keys(PT.porCodigo),
   fr: Object.keys(FR.porCodigo),
+  de: Object.keys(DE.porCodigo),
 };
 
 export function textoAviso(
