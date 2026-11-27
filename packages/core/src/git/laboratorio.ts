@@ -481,7 +481,8 @@ export class LaboratorioGit {
     const ruta = path.join(this.trabajo, id);
     const info = await lstat(ruta).catch(() => null);
     if (info === null) return '';
-    if (!info.isFile() || info.isSymbolicLink()) throw this.insegura();
+    // Un enlace duro (nlink>1) apuntaría a un archivo de fuera: ni se lee ni se sobrescribe.
+    if (!info.isFile() || info.isSymbolicLink() || info.nlink > 1) throw this.insegura();
     return readFile(ruta, 'utf8');
   }
 
@@ -544,7 +545,9 @@ export class LaboratorioGit {
       case 'revert':
         return ['revert', '--no-edit', 'HEAD'];
       case 'remote':
-        return o.accion === 'add' ? ['remote', 'add', 'origin', this.remoto] : ['remote', '-v'];
+        // URL relativa al cwd (trabajo/): la ruta absoluta del laboratorio (con el usuario de Windows)
+        // no aparece en la orden ni en la salida.
+        return o.accion === 'add' ? ['remote', 'add', 'origin', '../remoto.git'] : ['remote', '-v'];
       case 'fetch':
         return ['fetch', 'origin'];
       case 'pull':
@@ -566,14 +569,15 @@ export class LaboratorioGit {
       const cwd = await realpath(this.trabajo);
       const args = this.argsDe(o);
       const r = await this.correr(args, cwd);
-      const { texto, truncada } = limpiar([r.stdout, r.stderr].filter(Boolean).join('\n'));
+      const ocultar = await this.ocultadorRaiz();
+      const { texto, truncada } = limpiar(ocultar([r.stdout, r.stderr].filter(Boolean).join('\n')));
       let grafo = '';
       if (existsSync(path.join(this.trabajo, '.git'))) {
         const g = await this.correr(
           ['log', '--oneline', '--graph', '--all', '--decorate', `--max-count=${MAX_LINEAS_GRAFO}`],
           cwd,
         ).catch(() => null);
-        if (g && g.codigo === 0) grafo = limpiar(g.stdout).texto;
+        if (g && g.codigo === 0) grafo = limpiar(ocultar(g.stdout)).texto;
       }
       return {
         orden: `git ${args.map(entre).join(' ')}`,
@@ -583,6 +587,30 @@ export class LaboratorioGit {
         grafo,
       };
     });
+  }
+
+  /**
+   * Sustituye la ruta del laboratorio (lleva el usuario de Windows) por `<laboratorio>` en la salida
+   * de git, con \ o con / y sin distinguir mayúsculas.
+   */
+  private async ocultadorRaiz(): Promise<(texto: string) => string> {
+    const raices = new Set<string>([this.raiz]);
+    const real = await realpath(this.raiz).catch(() => null);
+    if (real) raices.add(real);
+    const formas = new Set<string>();
+    for (const r of raices) {
+      formas.add(r);
+      formas.add(r.replace(/\\/g, '/'));
+    }
+    const escapar = (t: string): string => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const patron = new RegExp(
+      [...formas]
+        .sort((x, y) => y.length - x.length)
+        .map(escapar)
+        .join('|'),
+      'gi',
+    );
+    return (texto) => texto.replace(patron, '<laboratorio>');
   }
 
   /** Borra SOLO la carpeta del laboratorio (tras comprobarla) y la prepara de nuevo. */

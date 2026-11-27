@@ -6,6 +6,7 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  linkSync,
   symlinkSync,
   writeFileSync,
 } from 'node:fs';
@@ -285,6 +286,22 @@ describe('reiniciar borra solo el laboratorio', () => {
   });
 });
 
+describe('archivos de práctica con enlace duro (D50, revisión M2)', () => {
+  it('un archivo de práctica con nlink>1 no se lee ni se sobrescribe', async () => {
+    const lab = crear(falso());
+    await lab.estado();
+    const victima = path.join(base, 'victima.txt');
+    writeFileSync(victima, 'NO TOCAR');
+    const practica = path.join(raiz, 'trabajo', ARCHIVOS_LABORATORIO[0]);
+    rmSync(practica, { force: true });
+    linkSync(victima, practica);
+    await expect(lab.escribirArchivo(ARCHIVOS_LABORATORIO[0], 'pisado')).rejects.toMatchObject({
+      codigo: 'laboratoriogit.ruta_insegura',
+    });
+    expect(readFileSync(victima, 'utf8')).toBe('NO TOCAR');
+  });
+});
+
 describe.skipIf(!hayGit)('con git real', () => {
   const lab = (extra: Partial<OpcionesLaboratorio> = {}): LaboratorioGit =>
     new LaboratorioGit({ raiz, buscarGit: () => rutaGit, ...extra });
@@ -431,6 +448,30 @@ describe.skipIf(!hayGit)('con git real', () => {
     await ok({ cmd: 'push', etiquetas: true });
     await ok({ cmd: 'fetch' });
     await ok({ cmd: 'pull' });
+  });
+
+  it('ni la orden ni la salida muestran la ruta absoluta del laboratorio (revisión I1)', async () => {
+    const l = lab();
+    await l.estado();
+    const salidas: string[] = [];
+    for (const o of [
+      { cmd: 'init' },
+      { cmd: 'add', archivo: 'todo' },
+      { cmd: 'commit', mensaje: 'Uno' },
+      { cmd: 'remote', accion: 'add' },
+      { cmd: 'remote', accion: 'ver' },
+      { cmd: 'push' },
+      { cmd: 'fetch' },
+      { cmd: 'pull' },
+    ] as Orden[]) {
+      const r = await l.ejecutar(o);
+      salidas.push(r.orden, r.salida, r.grafo);
+    }
+    const todo = salidas.join('\n');
+    expect(todo).toContain('../remoto.git');
+    for (const r of [raiz, realpathSync(raiz), raiz.replace(/\\/g, '/')]) {
+      expect(todo.toLowerCase()).not.toContain(r.toLowerCase());
+    }
   });
 
   it('push sin remoto configurado falla con un mensaje, sin red ni preguntas', async () => {
