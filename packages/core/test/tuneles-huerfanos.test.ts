@@ -167,10 +167,12 @@ describe('Tuneles.restaurar: cloudflared huérfanos', () => {
     const t = crear();
     await t.restaurar();
     let resuelto = false;
-    const p = t.abrirPuerto(8080, 'ngrok', () => undefined).catch((e: unknown) => {
-      resuelto = true;
-      return e;
-    });
+    const p = t
+      .abrirPuerto(8080, 'ngrok', () => undefined)
+      .catch((e: unknown) => {
+        resuelto = true;
+        return e;
+      });
     await new Promise((r) => setTimeout(r, 20));
     expect(resuelto).toBe(false);
     soltar();

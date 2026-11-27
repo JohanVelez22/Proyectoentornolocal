@@ -25,6 +25,11 @@ export type ResultadoAplicar = {
   httpsPendiente: string[];
 };
 
+/** Lo que dejó `alinearVhosts`: `deshacer` restaura los archivos que cambió (true si restauró alguno). */
+export interface AlineadoVhosts {
+  deshacer(): Promise<boolean>;
+}
+
 export interface DepsSitios {
   almacen: Pick<Almacen, 'leer' | 'guardar'>;
   rutas: Rutas;
@@ -334,17 +339,27 @@ export class GestorSitios {
    * las reglas propias y el vhost manual válidos; un manual que ya no pasa la revisión (p. ej. un
    * `listen` sin dirección) se descarta con aviso, como al aplicar.
    */
-  alinearVhosts(): Promise<void> {
+  alinearVhosts(): Promise<AlineadoVhosts> {
     return this.serializar(() => this.alinearVhostsSinCola());
   }
 
-  private async alinearVhostsSinCola(): Promise<void> {
+  private async alinearVhostsSinCola(): Promise<AlineadoVhosts> {
+    const cambiados = new Map<string, string>();
+    const alineado: AlineadoVhosts = {
+      deshacer: () =>
+        this.serializar(async () => {
+          for (const [ruta, antes] of cambiados) await writeFile(ruta, antes, 'utf8');
+          const hubo = cambiados.size > 0;
+          cambiados.clear();
+          return hubo;
+        }),
+    };
     const cfg = await this.d.almacen.leer();
-    if (cfg.sitios.length === 0) return;
+    if (cfg.sitios.length === 0) return alineado;
     const dir = path.dirname(this.d.rutas.vhost('x'));
     const existentes = await readdir(dir).catch(() => [] as string[]);
     // Sin carpeta de vhosts no hay nada antiguo que poner al día: lo crea el primer aplicar.
-    if (existentes.length === 0) return;
+    if (existentes.length === 0) return alineado;
     const httpsUsable = await this.httpsUsable(cfg);
     const pierdeHttps: string[] = [];
     for (const s of cfg.sitios) {
@@ -354,9 +369,13 @@ export class GestorSitios {
       if (actual === null) continue;
       const v = await this.vhostCon(s, cfg, httpsUsable);
       if (this.pierdeHttps(actual, v)) pierdeHttps.push(s.id);
-      if (v.contenido !== actual) await writeFile(ruta, v.contenido, 'utf8');
+      if (v.contenido !== actual) {
+        cambiados.set(ruta, actual);
+        await writeFile(ruta, v.contenido, 'utf8');
+      }
     }
     await this.avisarPerdidaHttps(cfg, pierdeHttps);
+    return alineado;
   }
 
   /**

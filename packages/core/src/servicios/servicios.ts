@@ -72,7 +72,7 @@ export interface DepsServicios {
    */
   podarRed?: () => Promise<boolean>;
   /** Pone al día los vhosts de los sitios con la plantilla actual al encender Nginx (D40). */
-  alinearVhosts?: () => Promise<void>;
+  alinearVhosts?: () => Promise<{ deshacer(): Promise<boolean> } | void>;
   /** Servidor FTP del proceso: aparece como servicio "ftp" (herramienta). */
   ftp?: Pick<ServidorFtp, 'estado' | 'iniciar' | 'detener'>;
   /** Procesos de los proyectos: aparecen en los estados y se detienen primero en detenerTodo. */

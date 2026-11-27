@@ -88,8 +88,14 @@ export class ServicioNginx {
     } | null> = async () => null,
     /** Poda lo compartido en la red local cuya IP ya no existe (un `listen` que no abriría). */
     private readonly podarRed: () => Promise<boolean> = async () => false,
-    /** Deja los vhosts de los sitios con la plantilla actual (D40); sin él no se toca ninguno. */
-    private readonly alinearVhosts: () => Promise<void> = async () => undefined,
+    /**
+     * Deja los vhosts de los sitios con la plantilla actual (D40); sin él no se toca ninguno.
+     * Devuelve, si cambió algo, cómo volver a los archivos anteriores (`deshacer` da true si
+     * restauró alguno).
+     */
+    private readonly alinearVhosts: () => Promise<{
+      deshacer(): Promise<boolean>;
+    } | void> = async () => undefined,
   ) {}
 
   /** Versión configurada si está instalada; si no, la más reciente instalada. */
@@ -247,15 +253,29 @@ export class ServicioNginx {
     await verificarPuerto(this.plataforma, this.supervisor, 'nginx', puerto);
     // Un nginx.conf nuevo con vhosts de una versión anterior (sin dirección en el `listen`) deja
     // los sitios tapados por el servidor por defecto: los vhosts se alinean antes de probar.
+    let alineado: { deshacer(): Promise<boolean> } | void = undefined;
     try {
-      await this.alinearVhosts();
+      alineado = await this.alinearVhosts();
     } catch (e) {
       console.error(
         'No se pudieron poner al día los vhosts de los sitios:',
         e instanceof Error ? e.message : e,
       );
     }
-    const { bin, args } = await this.prepararYProbar();
+    let preparado: { bin: string; args: string[] };
+    try {
+      preparado = await this.prepararYProbar();
+    } catch (e) {
+      // Unas reglas propias pueden pasar la revisión y no `nginx -t` con la plantilla nueva: se
+      // vuelve a los vhosts anteriores y se reintenta una sola vez.
+      if (!alineado || !(await alineado.deshacer().catch(() => false))) throw e;
+      console.error(
+        'Nginx no aceptó los vhosts puestos al día; se restauraron los anteriores y se reintenta:',
+        e instanceof Error ? e.message : e,
+      );
+      preparado = await this.prepararYProbar();
+    }
+    const { bin, args } = preparado;
     await this.supervisor.iniciar({
       id: 'nginx',
       nombre: 'nginx',

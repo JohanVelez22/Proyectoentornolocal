@@ -294,6 +294,77 @@ describe('ServicioNginx', () => {
     expect(orden).toEqual(['alinear', 'probar']);
   });
 
+  it('si nginx -t falla tras alinear, deshace los vhosts, reintenta una vez y arranca (D40)', async () => {
+    sembrarNginx('1.28.0');
+    const vhost = path.join(path.dirname(rutas.vhost('x')), 'a.conf');
+    mkdirSync(path.dirname(vhost), { recursive: true });
+    writeFileSync(vhost, '# anterior');
+    // Reglas propias que pasan la revisión pero no `nginx -t` con la plantilla nueva.
+    const execVhost: Ejecutor = async (cmd, args) => {
+      llamadas.push({ cmd, args });
+      const roto = readFileSync(vhost, 'utf8') === '# nuevo';
+      return { codigo: roto ? 1 : 0, stdout: '', stderr: roto ? 'nginx: [emerg] fallo' : 'ok' };
+    };
+    let deshechos = 0;
+    const n = new ServicioNginx(
+      rutas,
+      plataforma(),
+      supervisor(),
+      instalador(['1.28.0'], []),
+      async () => cfg,
+      async () => [],
+      execVhost,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      async () => {
+        writeFileSync(vhost, '# nuevo');
+        return {
+          deshacer: async () => {
+            deshechos++;
+            writeFileSync(vhost, '# anterior');
+            return true;
+          },
+        };
+      },
+    );
+    await n.iniciar();
+    expect(deshechos).toBe(1);
+    expect(readFileSync(vhost, 'utf8')).toBe('# anterior');
+    expect(llamadas).toHaveLength(2);
+    expect(iniciados).toHaveLength(1);
+  });
+
+  it('si nginx -t sigue fallando tras deshacer, falla una sola vez más (D40)', async () => {
+    sembrarNginx('1.28.0');
+    codigoExec = 1;
+    let deshechos = 0;
+    const n = new ServicioNginx(
+      rutas,
+      plataforma(),
+      supervisor(),
+      instalador(['1.28.0'], []),
+      async () => cfg,
+      async () => [],
+      exec,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      async () => ({
+        deshacer: async () => {
+          deshechos++;
+          return true;
+        },
+      }),
+    );
+    await expect(n.iniciar()).rejects.toThrow(/fallo/);
+    expect(deshechos).toBe(1);
+    expect(llamadas).toHaveLength(2);
+    expect(iniciados).toHaveLength(0);
+  });
+
   it('si poner al día los vhosts falla, nginx inicia igual', async () => {
     sembrarNginx('1.28.0');
     const n = new ServicioNginx(

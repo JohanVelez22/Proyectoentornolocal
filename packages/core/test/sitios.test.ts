@@ -594,6 +594,24 @@ describe('GestorSitios.alinearVhosts (D40)', () => {
     expect(dominiosHosts).toEqual([]);
   });
 
+  it('devuelve cómo deshacer: restaura solo los archivos que cambió', async () => {
+    const g = gestor();
+    const s = await g.crear(datos('deshacer.test'));
+    await g.aplicar();
+    const actual = readFileSync(rutas.vhost(s.id), 'utf8');
+    const viejo = antiguo(actual);
+    writeFileSync(rutas.vhost(s.id), viejo);
+
+    const alineado = await g.alinearVhosts();
+    expect(readFileSync(rutas.vhost(s.id), 'utf8')).toBe(actual);
+    expect(await alineado.deshacer()).toBe(true);
+    expect(readFileSync(rutas.vhost(s.id), 'utf8')).toBe(viejo);
+
+    // Con todo al día no hay nada que deshacer.
+    await g.alinearVhosts();
+    expect(await (await g.alinearVhosts()).deshacer()).toBe(false);
+  });
+
   it('no toca un vhost manual válido', async () => {
     const g = gestor();
     const s = await g.crear(datos('manual.test'));
