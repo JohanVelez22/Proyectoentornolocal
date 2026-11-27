@@ -101,6 +101,8 @@ export const idExtra: TextosParciales = {
       'disco.cancelado': 'Analisis dibatalkan.',
       'info.ruta_invalida': 'Jalur tidak valid: harus absolut dan lokal.',
       'info.no_existe': 'File atau folder tidak ada.',
+      'info.sin_ruta':
+        'Item ini bukan file di disk (misalnya lampiran atau sesuatu di dalam zip): simpan dahulu ke sebuah folder.',
       'info.enlace': 'Ini adalah tautan: silakan pilih file atau folder tujuannya.',
       'info.hash_grande': 'Ukuran file melebihi {maximo} MB: hash tidak dihitung.',
       'disco.plazo': 'Analisis memakan waktu lebih dari {minutos} menit dan dibatalkan.',
@@ -507,7 +509,8 @@ export const idExtra: TextosParciales = {
       ejecutar: 'Eksekusi (x)',
       especiales: 'Bit khusus',
       setuid: 'setuid: berjalan dengan izin pemilik',
-      setgid: 'setgid: berjalan dengan izin grup; pada folder, apa pun yang baru dibuat di dalamnya mewarisi grup',
+      setgid:
+        'setgid: berjalan dengan izin grup; pada folder, apa pun yang baru dibuat di dalamnya mewarisi grup',
       sticky: 'sticky: hanya pemilik yang dapat menghapus di dalam folder',
       habituales: 'Nilai umum',
       octal: 'Oktal',

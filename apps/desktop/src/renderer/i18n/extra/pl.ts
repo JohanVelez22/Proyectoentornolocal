@@ -112,6 +112,8 @@ export const plExtra: TextosParciales = {
       'disco.cancelado': 'Analiza anulowana.',
       'info.ruta_invalida': 'Ścieżka jest nieprawidłowa: musi być bezwzględna i lokalna.',
       'info.no_existe': 'Plik lub folder nie istnieje.',
+      'info.sin_ruta':
+        'Ten element nie jest plikiem na dysku (na przykład załącznikiem lub czymś wewnątrz archiwum zip): proszę najpierw zapisać go w folderze.',
       'info.enlace': 'To jest łącze: proszę wybrać plik lub folder docelowy.',
       'info.hash_grande': 'Plik przekracza {maximo} MB: skróty nie są obliczane.',
       'disco.plazo': 'Analiza trwała dłużej niż {minutos} min i została anulowana.',
@@ -551,7 +553,8 @@ export const plExtra: TextosParciales = {
       ejecutar: 'Wykonanie (x)',
       especiales: 'Bity specjalne',
       setuid: 'setuid: uruchamia się z uprawnieniami właściciela',
-      setgid: 'setgid: uruchamia się z uprawnieniami grupy; w folderze wszystko, co zostanie w nim utworzone, dziedziczy grupę',
+      setgid:
+        'setgid: uruchamia się z uprawnieniami grupy; w folderze wszystko, co zostanie w nim utworzone, dziedziczy grupę',
       sticky: 'sticky: w katalogu usuwać może tylko właściciel',
       habituales: 'Typowe wartości',
       octal: 'Ósemkowo',

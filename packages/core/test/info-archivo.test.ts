@@ -27,6 +27,10 @@ const codigoDe = async (f: () => unknown): Promise<string | null> => {
 };
 
 describe('validarRutaInfo', () => {
+  it('una ruta vacía (elemento virtual soltado) tiene su propio código', async () => {
+    expect(await codigoDe(() => validarRutaInfo(''))).toBe('info.sin_ruta');
+  });
+
   it('acepta rutas absolutas locales de Windows (con \\ o /) y de POSIX', () => {
     expect(validarRutaInfo('C:\\Proyectos\\app\\a.txt')).toMatch(/a\.txt$/);
     expect(validarRutaInfo('c:/Proyectos/app')).toMatch(/app$/);
@@ -35,7 +39,6 @@ describe('validarRutaInfo', () => {
 
   it.each([
     ['no es texto', 42],
-    ['vacía', ''],
     ['relativa', 'carpeta\\a.txt'],
     ['relativa con unidad', 'C:a.txt'],
     ['UNC', '\\\\servidor\\recurso\\a.txt'],

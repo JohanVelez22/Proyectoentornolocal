@@ -360,6 +360,8 @@ export const pt: Textos = {
       'disco.cancelado': 'Análise cancelada.',
       'info.ruta_invalida': 'O caminho não é válido: deve ser absoluto e local.',
       'info.no_existe': 'O arquivo ou a pasta não existe.',
+      'info.sin_ruta':
+        'Este item não é um arquivo do disco (por exemplo, um anexo ou algo dentro de um zip): salve-o primeiro numa pasta.',
       'info.enlace': 'É um link: escolha o arquivo ou a pasta de destino.',
       'info.hash_grande': 'O arquivo tem mais de {maximo} MB: os hashes não são calculados.',
       'disco.plazo': 'A análise demorou mais de {minutos} min e foi cancelada.',
@@ -3653,7 +3655,8 @@ export const pt: Textos = {
       ejecutar: 'Executar (x)',
       especiales: 'Bits especiais',
       setuid: 'setuid: executa com as permissões do proprietário',
-      setgid: 'setgid: executa com as permissões do grupo; numa pasta, o que for criado dentro herda o grupo',
+      setgid:
+        'setgid: executa com as permissões do grupo; numa pasta, o que for criado dentro herda o grupo',
       sticky: 'sticky: só o dono pode apagar dentro da pasta',
       habituales: 'Valores comuns',
       octal: 'Octal',

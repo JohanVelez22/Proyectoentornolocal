@@ -109,6 +109,8 @@ export const itExtra: TextosParciales = {
       'disco.cancelado': 'Analisi annullata.',
       'info.ruta_invalida': 'Il percorso non è valido: deve essere assoluto e locale.',
       'info.no_existe': 'Il file o la cartella non esiste.',
+      'info.sin_ruta':
+        'Questo elemento non è un file del disco (ad esempio un allegato o qualcosa dentro uno zip): lo salvi prima in una cartella.',
       'info.enlace': 'È un collegamento: scelga il file o la cartella di destinazione.',
       'info.hash_grande': 'Il file supera {maximo} MB: gli hash non vengono calcolati.',
       'disco.plazo': "L'analisi ha richiesto più di {minutos} min ed è stata annullata.",
@@ -556,7 +558,8 @@ export const itExtra: TextosParciales = {
       ejecutar: 'Esecuzione (x)',
       especiales: 'Bit speciali',
       setuid: 'setuid: viene eseguito con i permessi del proprietario',
-      setgid: 'setgid: viene eseguito con i permessi del gruppo; su una cartella, ciò che vi si crea eredita il gruppo',
+      setgid:
+        'setgid: viene eseguito con i permessi del gruppo; su una cartella, ciò che vi si crea eredita il gruppo',
       sticky: 'sticky: solo il proprietario può eliminare nella cartella',
       habituales: 'Valori comuni',
       octal: 'Ottale',

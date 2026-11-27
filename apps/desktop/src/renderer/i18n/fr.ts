@@ -370,6 +370,8 @@ export const fr: Textos = {
       'disco.cancelado': 'Analyse annulée.',
       'info.ruta_invalida': 'Le chemin n’est pas valide : il doit être absolu et local.',
       'info.no_existe': 'Le fichier ou le dossier n’existe pas.',
+      'info.sin_ruta':
+        'Cet élément n’est pas un fichier du disque (par exemple, une pièce jointe ou un élément dans un zip) : enregistrez-le d’abord dans un dossier.',
       'info.enlace': 'C’est un lien : choisissez le fichier ou le dossier cible.',
       'info.hash_grande': 'Le fichier dépasse {maximo} Mo : les empreintes ne sont pas calculées.',
       'disco.plazo': 'L’analyse a duré plus de {minutos} min et a été annulée.',
@@ -3744,7 +3746,8 @@ export const fr: Textos = {
       ejecutar: 'Exécuter (x)',
       especiales: 'Bits spéciaux',
       setuid: 'setuid : s’exécute avec les droits du propriétaire',
-      setgid: 'setgid : s’exécute avec les droits du groupe ; sur un dossier, ce qui y est créé hérite du groupe',
+      setgid:
+        'setgid : s’exécute avec les droits du groupe ; sur un dossier, ce qui y est créé hérite du groupe',
       sticky: 'sticky : seul le propriétaire peut supprimer dans le dossier',
       habituales: 'Valeurs courantes',
       octal: 'Octal',

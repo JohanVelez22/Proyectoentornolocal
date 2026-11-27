@@ -351,6 +351,8 @@ export const en: Textos = {
       'disco.cancelado': 'Analysis cancelled.',
       'info.ruta_invalida': 'The path is not valid: it must be absolute and local.',
       'info.no_existe': 'The file or folder does not exist.',
+      'info.sin_ruta':
+        'This item is not a file on disk (for example, an attachment or something inside a zip): save it to a folder first.',
       'info.enlace': 'It is a link: choose the target file or folder instead.',
       'info.hash_grande': 'The file is over {maximo} MB: hashes are not calculated.',
       'disco.plazo': 'The analysis took more than {minutos} min and was cancelled.',
@@ -3616,7 +3618,8 @@ export const en: Textos = {
       ejecutar: 'Execute (x)',
       especiales: 'Special bits',
       setuid: "setuid: runs with the owner's permissions",
-      setgid: "setgid: runs with the group's permissions; on a folder, anything newly created inside inherits the group",
+      setgid:
+        "setgid: runs with the group's permissions; on a folder, anything newly created inside inherits the group",
       sticky: 'sticky: only the owner can delete inside the folder',
       habituales: 'Common values',
       octal: 'Octal',

@@ -100,6 +100,8 @@ export const jaExtra: TextosParciales = {
       'disco.cancelado': '分析をキャンセルしました。',
       'info.ruta_invalida': 'パスが無効です。絶対パスで、かつローカルのパスを指定してください。',
       'info.no_existe': 'ファイルまたはフォルダが存在しません。',
+      'info.sin_ruta':
+        'この項目はディスク上のファイルではありません（たとえば、添付ファイルや zip の中身）。先にフォルダーに保存してください。',
       'info.enlace': 'リンクです。代わりにリンク先のファイルまたはフォルダを選択してください。',
       'info.hash_grande': 'ファイルが {maximo} MB を超えているため、ハッシュは計算しません。',
       'disco.plazo': '分析に {minutos} 分を超える時間がかかったため、キャンセルしました。',
@@ -521,7 +523,8 @@ export const jaExtra: TextosParciales = {
       ejecutar: '実行 (x)',
       especiales: '特殊ビット',
       setuid: 'setuid: 所有者の権限で実行されます',
-      setgid: 'setgid: グループの権限で実行されます。フォルダーでは、その中に新しく作られるものがグループを引き継ぎます',
+      setgid:
+        'setgid: グループの権限で実行されます。フォルダーでは、その中に新しく作られるものがグループを引き継ぎます',
       sticky: 'sticky: フォルダー内で削除できるのは所有者のみです',
       habituales: 'よく使う値',
       octal: '8進数',

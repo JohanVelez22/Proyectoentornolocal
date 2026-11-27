@@ -29,6 +29,12 @@ const MAX_RUTA = 1024;
 const invalida = (): ErrorWolf =>
   new ErrorWolf('info.ruta_invalida', 'La ruta no es válida: debe ser absoluta y local.');
 
+const sinRuta = (): ErrorWolf =>
+  new ErrorWolf(
+    'info.sin_ruta',
+    'Este elemento no es un archivo del disco: guárdelo primero en una carpeta.',
+  );
+
 /**
  * Comprueba la forma de la ruta y la devuelve normalizada. Acepta `C:\carpeta\archivo` (con `\` o
  * `/`) y rutas absolutas de POSIX; rechaza lo demás: relativas, UNC y de dispositivo (`\\?\`,
@@ -36,6 +42,8 @@ const invalida = (): ErrorWolf =>
  * unidad (flujos alternativos de NTFS).
  */
 export function validarRutaInfo(ruta: unknown): string {
+  // Un elemento virtual (adjunto, algo dentro de un zip) no tiene ruta en el disco.
+  if (ruta === '') throw sinRuta();
   if (typeof ruta !== 'string' || ruta.length < 2 || ruta.length > MAX_RUTA) throw invalida();
   if ([...ruta].some((c) => c.charCodeAt(0) < 0x20)) throw invalida();
   const unidad = /^[A-Za-z]:[\\/]/.test(ruta);

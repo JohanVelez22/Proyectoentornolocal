@@ -101,6 +101,8 @@ export const trExtra: TextosParciales = {
       'disco.cancelado': 'Çözümleme iptal edildi.',
       'info.ruta_invalida': 'Yol geçerli değil: mutlak ve yerel olmalıdır.',
       'info.no_existe': 'Dosya veya klasör yok.',
+      'info.sin_ruta':
+        'Bu öğe diskteki bir dosya değil (örneğin bir ek ya da zip içindeki bir şey): lütfen önce bir klasöre kaydedin.',
       'info.enlace': 'Bu bir bağlantıdır: lütfen bunun yerine hedef dosyayı veya klasörü seçin.',
       'info.hash_grande': 'Dosya {maximo} MB’ı aşıyor: karmalar hesaplanmaz.',
       'disco.plazo': "Çözümleme {minutos} dk'dan uzun sürdü ve iptal edildi.",
@@ -515,7 +517,8 @@ export const trExtra: TextosParciales = {
       ejecutar: 'Çalıştırma (x)',
       especiales: 'Özel bitler',
       setuid: 'setuid: sahibin izinleriyle çalışır',
-      setgid: 'setgid: grubun izinleriyle çalışır; bir klasörde, içinde yeni oluşturulanlar grubu devralır',
+      setgid:
+        'setgid: grubun izinleriyle çalışır; bir klasörde, içinde yeni oluşturulanlar grubu devralır',
       sticky: 'sticky: klasörde yalnızca sahibi silebilir',
       habituales: 'Sık kullanılan değerler',
       octal: 'Sekizlik (octal)',

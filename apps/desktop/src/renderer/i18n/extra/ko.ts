@@ -98,6 +98,8 @@ export const koExtra: TextosParciales = {
       'disco.cancelado': '분석이 취소되었습니다.',
       'info.ruta_invalida': '경로가 올바르지 않습니다. 절대 경로이면서 로컬 경로여야 합니다.',
       'info.no_existe': '파일 또는 폴더가 없습니다.',
+      'info.sin_ruta':
+        '이 항목은 디스크에 있는 파일이 아닙니다(예: 첨부 파일이나 zip 안의 항목). 먼저 폴더에 저장해 주십시오.',
       'info.enlace': '링크입니다. 대신 대상 파일이나 폴더를 선택해 주세요.',
       'info.hash_grande': '파일이 {maximo}MB를 넘어 해시를 계산하지 않습니다.',
       'disco.plazo': '분석에 {minutos}분보다 오래 걸려 취소되었습니다.',
@@ -499,7 +501,8 @@ export const koExtra: TextosParciales = {
       ejecutar: '실행 (x)',
       especiales: '특수 비트',
       setuid: 'setuid: 소유자의 권한으로 실행됩니다',
-      setgid: 'setgid: 그룹의 권한으로 실행됩니다. 폴더에서는 그 안에 새로 만드는 항목이 그룹을 물려받습니다',
+      setgid:
+        'setgid: 그룹의 권한으로 실행됩니다. 폴더에서는 그 안에 새로 만드는 항목이 그룹을 물려받습니다',
       sticky: 'sticky: 폴더 안에서는 소유자만 삭제할 수 있습니다',
       habituales: '자주 쓰는 값',
       octal: '8진수',

@@ -110,6 +110,8 @@ export const nlExtra: TextosParciales = {
       'disco.cancelado': 'Analyse geannuleerd.',
       'info.ruta_invalida': 'Het pad is ongeldig: het moet absoluut en lokaal zijn.',
       'info.no_existe': 'Het bestand of de map bestaat niet.',
+      'info.sin_ruta':
+        'Dit item is geen bestand op de schijf (bijvoorbeeld een bijlage of iets in een zip): sla het eerst op in een map.',
       'info.enlace': 'Dit is een koppeling: kies in plaats daarvan het doelbestand of de doelmap.',
       'info.hash_grande': 'Het bestand is groter dan {maximo} MB: de hashes worden niet berekend.',
       'disco.plazo': 'De analyse duurde langer dan {minutos} min en is geannuleerd.',
@@ -561,7 +563,8 @@ export const nlExtra: TextosParciales = {
       ejecutar: 'Uitvoeren (x)',
       especiales: 'Speciale bits',
       setuid: 'setuid: draait met de rechten van de eigenaar',
-      setgid: 'setgid: draait met de rechten van de groep; bij een map erft alles wat erin wordt aangemaakt de groep',
+      setgid:
+        'setgid: draait met de rechten van de groep; bij een map erft alles wat erin wordt aangemaakt de groep',
       sticky: 'sticky: alleen de eigenaar mag in de map verwijderen',
       habituales: 'Veelgebruikte waarden',
       octal: 'Octaal',

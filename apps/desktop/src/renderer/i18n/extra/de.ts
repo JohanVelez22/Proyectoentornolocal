@@ -111,6 +111,8 @@ export const deExtra: TextosParciales = {
       'disco.cancelado': 'Analyse abgebrochen.',
       'info.ruta_invalida': 'Der Pfad ist ungültig: Er muss absolut und lokal sein.',
       'info.no_existe': 'Die Datei oder der Ordner existiert nicht.',
+      'info.sin_ruta':
+        'Dieses Element ist keine Datei auf der Festplatte (z. B. ein Anhang oder etwas in einer ZIP-Datei): Speichern Sie es zuerst in einem Ordner.',
       'info.enlace':
         'Das ist eine Verknüpfung: Wählen Sie stattdessen die Zieldatei oder den Zielordner.',
       'info.hash_grande':
@@ -568,7 +570,8 @@ export const deExtra: TextosParciales = {
       ejecutar: 'Ausführen (x)',
       especiales: 'Spezialbits',
       setuid: 'setuid: läuft mit den Rechten des Besitzers',
-      setgid: 'setgid: läuft mit den Rechten der Gruppe; bei einem Ordner erben neu darin angelegte Elemente die Gruppe',
+      setgid:
+        'setgid: läuft mit den Rechten der Gruppe; bei einem Ordner erben neu darin angelegte Elemente die Gruppe',
       sticky: 'sticky: nur der Besitzer darf im Ordner löschen',
       habituales: 'Gängige Werte',
       octal: 'Oktal',

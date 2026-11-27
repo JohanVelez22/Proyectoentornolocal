@@ -356,6 +356,8 @@ export const es = {
       'disco.cancelado': 'Análisis cancelado.',
       'info.ruta_invalida': 'La ruta no es válida: debe ser absoluta y local.',
       'info.no_existe': 'El archivo o la carpeta no existe.',
+      'info.sin_ruta':
+        'Este elemento no es un archivo del disco (por ejemplo, un adjunto o algo dentro de un zip): guárdelo primero en una carpeta.',
       'info.enlace': 'Es un enlace: elija el archivo o la carpeta de destino.',
       'info.hash_grande': 'El archivo supera {maximo} MB: no se calculan los hashes.',
       'disco.plazo': 'El análisis tardó más de {minutos} min y se canceló.',
@@ -3644,7 +3646,8 @@ export const es = {
       ejecutar: 'Ejecutar (x)',
       especiales: 'Bits especiales',
       setuid: 'setuid: se ejecuta con los permisos del propietario',
-      setgid: 'setgid: se ejecuta con los permisos del grupo; en una carpeta, lo que se cree dentro hereda el grupo',
+      setgid:
+        'setgid: se ejecuta con los permisos del grupo; en una carpeta, lo que se cree dentro hereda el grupo',
       sticky: 'sticky: solo el dueño puede borrar dentro de la carpeta',
       habituales: 'Valores habituales',
       octal: 'Octal',

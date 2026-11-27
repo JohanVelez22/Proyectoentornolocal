@@ -83,6 +83,8 @@ export const zhExtra: TextosParciales = {
       'disco.cancelado': '分析已取消。',
       'info.ruta_invalida': '路径无效：必须是本地的绝对路径。',
       'info.no_existe': '文件或文件夹不存在。',
+      'info.sin_ruta':
+        '该项目不是磁盘上的文件（例如附件或 zip 压缩包中的内容）：请先将其保存到文件夹中。',
       'info.enlace': '这是一个链接：请改为选择它指向的文件或文件夹。',
       'info.hash_grande': '文件超过 {maximo} MB，不计算哈希值。',
       'disco.plazo': '分析耗时超过 {minutos} 分钟，已被取消。',

@@ -83,6 +83,13 @@ describe('IPC de Info de archivo', () => {
     expect(elegidas.tiene('C:\\a.txt', 'info')).toBe(false);
   });
 
+  it('registrar: un elemento virtual soltado (sin ruta) tiene su propio mensaje', async () => {
+    const { llamar } = montar();
+    const r = await llamar('infoArchivo.registrar', '');
+    expect(r.ok).toBe(false);
+    expect(r.error?.codigo).toBe('info.sin_ruta');
+  });
+
   it('registrar: lo que no existe se rechaza y no se registra', async () => {
     const { llamar, elegidas } = montar();
     const falta = path.join(dir, 'no-existe.txt');
