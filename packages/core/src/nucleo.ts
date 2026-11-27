@@ -1369,7 +1369,7 @@ export class Nucleo {
     });
     procesos = new ProcesosProyecto({
       escuchaLocal: () => asegurarEscuchaLocal(rutas),
-      escuchas: (pid) => puertosHerramienta.escuchasTcpDelArbol(pid),
+      escuchas: (pids) => puertosHerramienta.escuchasTcpDeArboles(pids),
       confianza,
       depuracion: {
         carpetaPython: async () => (await asegurarArchivosDepuracion(rutas)).carpetaPython,

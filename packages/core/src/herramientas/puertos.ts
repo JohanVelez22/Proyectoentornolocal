@@ -132,13 +132,30 @@ export class HerramientasPuertos {
   }
 
   /**
-   * Escuchas TCP del proceso `pid` y de todo su árbol (los hijos que lanzó: `npm` → `node`,
-   * `mvn` → `java`). Sin la tabla de procesos no se pueden saber los hijos y solo cuenta `pid`.
+   * Escuchas TCP de cada proceso `pids` y de todo su árbol (los hijos que lanzó: `npm` → `node`,
+   * `mvn` → `java`), con **una sola** lectura de netstat y de la tabla de procesos para todos.
+   * Sin la tabla no se pueden saber los hijos y solo cuenta cada PID.
    */
+  async escuchasTcpDeArboles(pids: number[]): Promise<Map<number, FilaNetstat[]>> {
+    const res = new Map<number, FilaNetstat[]>(pids.map((p) => [p, []]));
+    if (pids.length === 0) return res;
+    const filas = interpretarNetstatTodos(await this.sistema.netstat()).filter(
+      (f) => f.protocolo === 'TCP',
+    );
+    const tabla = await this.tablaProcesos();
+    for (const pid of pids) {
+      const arbol = this.conDescendientes([pid], tabla);
+      res.set(
+        pid,
+        filas.filter((f) => arbol.has(f.pid)),
+      );
+    }
+    return res;
+  }
+
+  /** Escuchas TCP del proceso `pid` y de su árbol. */
   async escuchasTcpDelArbol(pid: number): Promise<FilaNetstat[]> {
-    const filas = interpretarNetstatTodos(await this.sistema.netstat());
-    const arbol = this.conDescendientes([pid], await this.tablaProcesos());
-    return filas.filter((f) => f.protocolo === 'TCP' && arbol.has(f.pid));
+    return (await this.escuchasTcpDeArboles([pid])).get(pid) ?? [];
   }
 
   async puertosEnUso(): Promise<PuertoEnUso[]> {

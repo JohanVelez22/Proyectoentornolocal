@@ -95,13 +95,25 @@ export interface DepsProcesosProyecto extends DepsEntorno {
    */
   escuchaLocal?: () => Promise<string>;
   /**
-   * Escuchas TCP del proceso `pid` y de su árbol (`HerramientasPuertos.escuchasTcpDelArbol`).
-   * Con ella, los procesos de Rails, Spring Boot, ASP.NET Core y Node que son destino del proxy
-   * se vigilan: si escuchan fuera de 127.0.0.1 y ::1 se detienen.
+   * Escuchas TCP de cada proceso de `pids` y de su árbol, en una sola toma de netstat y de la
+   * tabla de procesos (`HerramientasPuertos.escuchasTcpDeArboles`). Con ella, los procesos de
+   * Rails, Spring Boot, ASP.NET Core y Node que son destino del proxy se vigilan mientras estén
+   * encendidos: cualquier escucha fuera de 127.0.0.1 y ::1 detiene el proceso.
    */
-  escuchas?: (pid: number) => Promise<FilaNetstat[]>;
-  /** Cada cuánto y cuántas veces se mira (por omisión cada 1 s, 120 veces; pruebas). */
-  vigilancia?: { intervaloMs?: number; intentos?: number };
+  escuchas?: (pids: number[]) => Promise<Map<number, FilaNetstat[]>>;
+  /**
+   * Cada cuánto se mira: `intervaloMs` (por omisión 1 s) mientras algún proceso lleve menos de
+   * `rapidoMs` (60 s) encendido y `intervaloLentoMs` (12 s) después. Pruebas.
+   */
+  vigilancia?: { intervaloMs?: number; intervaloLentoMs?: number; rapidoMs?: number };
+}
+
+/** Un proceso en vigilancia: su generación de arranque y desde cuándo se vigila. */
+interface Vigilado {
+  sitio: Sitio;
+  proceso: ProcesoProyecto;
+  gen: number;
+  desde: number;
 }
 
 /** Tipos de sitio cuyo proceso destino del proxy debe escuchar solo en local. */
@@ -151,6 +163,9 @@ export class ProcesosProyecto {
   private readonly generacion = new Map<string, number>();
   /** Ids con un `iniciar` en preparación (aún no llegaron al supervisor). */
   private readonly preparando = new Set<string>();
+  /** Procesos cuya escucha se vigila (ver `vigilar`) y el temporizador único de la vigilancia. */
+  private readonly vigilados = new Map<string, Vigilado>();
+  private temporizadorVigilancia: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly d: DepsProcesosProyecto) {
     // Salida definitiva (sin reinicio pendiente): el aviso sale con el código, sea 0 o no.
@@ -220,45 +235,79 @@ export class ProcesosProyecto {
       proceso.proxy &&
       proceso.puerto !== null
     ) {
-      void this.vigilarEscucha(id, gen, sitio, proceso, proceso.puerto);
+      this.vigilar(id, gen, sitio, proceso);
     }
   }
 
   /**
-   * Cuando el puerto del proceso ya escucha, revisa todas las escuchas TCP de su árbol. Una que no
-   * sea 127.0.0.1 ni ::1 (el framework ignoró `--urls`, `HOST` o la precarga) detiene el proceso,
-   * por su PID y su árbol, y deja el aviso `procesos.escucha_publica`. Nunca lanza.
+   * Vigila el proceso mientras siga encendido (también tras reinicios automáticos del
+   * supervisor: se mira el PID de cada momento). Un solo temporizador y una sola toma de netstat
+   * y de la tabla de procesos por pasada, sea cual sea el número de procesos vigilados.
    */
-  private async vigilarEscucha(
-    id: string,
-    gen: number,
-    sitio: Sitio,
-    proceso: ProcesoProyecto,
-    puerto: number,
-  ): Promise<void> {
-    const { intervaloMs = 1000, intentos = 120 } = this.d.vigilancia ?? {};
-    const sup = this.d.supervisor;
+  private vigilar(id: string, gen: number, sitio: Sitio, proceso: ProcesoProyecto): void {
+    this.vigilados.set(id, { sitio, proceso, gen, desde: Date.now() });
+    this.programarVigilancia();
+  }
+
+  private programarVigilancia(): void {
+    if (this.temporizadorVigilancia !== null || this.vigilados.size === 0) return;
+    const {
+      intervaloMs = 1000,
+      intervaloLentoMs = 12_000,
+      rapidoMs = 60_000,
+    } = this.d.vigilancia ?? {};
+    const ahora = Date.now();
+    const joven = [...this.vigilados.values()].some((v) => ahora - v.desde < rapidoMs);
+    const t = setTimeout(
+      () => {
+        this.temporizadorVigilancia = null;
+        void this.pasadaVigilancia().finally(() => this.programarVigilancia());
+      },
+      joven ? intervaloMs : intervaloLentoMs,
+    );
+    t.unref?.();
+    this.temporizadorVigilancia = t;
+  }
+
+  /**
+   * Una pasada: olvida los procesos detenidos o terminados, toma las escuchas TCP de los que
+   * siguen con PID y detiene los que tengan alguna que no sea 127.0.0.1 ni ::1 (no solo la del
+   * puerto asignado: Kestrel con `Kestrel:Endpoints` o Spring sin `--server.port` escuchan en otro).
+   * Nunca lanza.
+   */
+  private async pasadaVigilancia(): Promise<void> {
     try {
-      for (let i = 0; i < intentos; i++) {
-        await new Promise((r) => setTimeout(r, intervaloMs));
-        if ((this.generacion.get(id) ?? 0) !== gen) return;
+      const sup = this.d.supervisor;
+      const activos: { id: string; v: Vigilado; pid: number }[] = [];
+      for (const [id, v] of this.vigilados) {
         const estado = sup.estado(id);
-        if (estado === 'apagado' || estado === 'error') return;
-        const pid = sup.pid(id);
-        if (pid === null) continue;
-        let filas: FilaNetstat[];
-        try {
-          filas = await this.d.escuchas!(pid);
-        } catch {
+        if (
+          (this.generacion.get(id) ?? 0) !== v.gen ||
+          estado === 'apagado' ||
+          estado === 'error'
+        ) {
+          this.vigilados.delete(id);
           continue;
         }
-        if (!filas.some((f) => f.puerto === puerto)) continue;
-        const publica = filas.find((f) => !DIRECCIONES_LOCALES.has(f.direccion));
-        if (publica) await this.cortarPorEscucha(id, sitio, proceso, publica);
+        const pid = sup.pid(id);
+        if (pid !== null) activos.push({ id, v, pid });
+      }
+      if (activos.length === 0 || !this.d.escuchas) return;
+      let mapa: Map<number, FilaNetstat[]>;
+      try {
+        mapa = await this.d.escuchas([...new Set(activos.map((a) => a.pid))]);
+      } catch {
         return;
       }
+      for (const { id, v, pid } of activos) {
+        if ((this.generacion.get(id) ?? 0) !== v.gen) continue;
+        const publica = (mapa.get(pid) ?? []).find((f) => !DIRECCIONES_LOCALES.has(f.direccion));
+        if (!publica) continue;
+        this.vigilados.delete(id);
+        await this.cortarPorEscucha(id, v.sitio, v.proceso, publica);
+      }
     } catch (e) {
-      console.error('No se pudo vigilar la escucha del proceso:', mensajeDe(e));
+      console.error('No se pudo vigilar la escucha de los procesos:', mensajeDe(e));
     }
   }
 

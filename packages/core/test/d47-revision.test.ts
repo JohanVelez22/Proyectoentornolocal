@@ -192,6 +192,42 @@ describe('D47 revisión I1(b): escuchasTcpDelArbol', () => {
   });
 });
 
+describe('D47 revisión I2: una sola toma para varios procesos', () => {
+  it('escuchasTcpDeArboles lee netstat y la tabla una vez y reparte por árbol', async () => {
+    const llamadas: string[] = [];
+    const ejecutar: Ejecutor = async (cmd) => {
+      const exe = path.win32.basename(cmd).toLowerCase();
+      llamadas.push(exe);
+      if (exe.startsWith('netstat')) {
+        return {
+          codigo: 0,
+          stdout: [
+            '  TCP    0.0.0.0:5000           0.0.0.0:0              LISTENING       3100',
+            '  TCP    127.0.0.1:8080         0.0.0.0:0              LISTENING       3300',
+          ].join('\r\n'),
+          stderr: '',
+        };
+      }
+      return {
+        codigo: 0,
+        stdout: [
+          '3000|50|1|cmd.exe',
+          '3100|3000|2|dotnet.exe',
+          '3200|50|3|cmd.exe',
+          '3300|3200|4|java.exe',
+        ].join('\r\n'),
+        stderr: '',
+      };
+    };
+    const h = new HerramientasPuertos({ ejecutar, pidApp: 50, pidPadre: 10 });
+    const m = await h.escuchasTcpDeArboles([3000, 3200]);
+    expect(m.get(3000)!.map((f) => `${f.direccion}:${f.puerto}`)).toEqual(['0.0.0.0:5000']);
+    expect(m.get(3200)!.map((f) => `${f.direccion}:${f.puerto}`)).toEqual(['127.0.0.1:8080']);
+    expect(llamadas.filter((c) => c.startsWith('netstat'))).toHaveLength(1);
+    expect(llamadas.filter((c) => c.startsWith('powershell'))).toHaveLength(1);
+  });
+});
+
 /* ───────────── I1(c) ───────────── */
 
 describe('D47 revisión I1(c): programas vigilados del cortafuegos', () => {

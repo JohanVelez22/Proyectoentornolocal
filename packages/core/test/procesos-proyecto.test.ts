@@ -822,15 +822,28 @@ describe('D11: proceso de un proyecto Deno con su runtime', () => {
 /* ───────────── D47: escucha solo en local ───────────── */
 
 describe('D47: precarga de Node y vigilancia de las escuchas', () => {
-  const fila = (direccion: string, puerto: number, pid = 4242) => ({
-    protocolo: 'TCP' as const,
+  type Fila = { protocolo: 'TCP'; direccion: string; puerto: number; pid: number };
+  const fila = (direccion: string, puerto: number, pid = 4242): Fila => ({
+    protocolo: 'TCP',
     direccion,
     puerto,
     pid,
   });
   const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
-  const vigilado = (puerto = 8123) =>
-    proceso({ id: 'servidor', puerto, proxy: true, comando: ['npm', 'run', 'start'] });
+  const vigilado = (id = 'servidor', puerto = 8123) =>
+    proceso({ id, puerto, proxy: true, comando: ['npm', 'run', 'start'] });
+  const RAPIDO = { intervaloMs: 1, intervaloLentoMs: 1, rapidoMs: 5 };
+  /** `escuchas` falso: lo que devuelve `filas(pid)` por cada PID pedido; cuenta las tomas. */
+  const falsas = (filas: (pid: number, toma: number) => Fila[]) => {
+    const tomas: number[][] = [];
+    return {
+      tomas,
+      escuchas: async (pids: number[]) => {
+        tomas.push(pids);
+        return new Map(pids.map((p) => [p, filas(p, tomas.length)]));
+      },
+    };
+  };
 
   it('npm con puerto recibe NODE_OPTIONS con la precarga, sumada a la del usuario', async () => {
     const a = await armar({
@@ -861,14 +874,12 @@ describe('D47: precarga de Node y vigilancia de las escuchas', () => {
     const eventos = new Eventos<EventosNucleo>();
     const terminados: string[] = [];
     eventos.on('proceso:terminado', (e) => terminados.push(e.id));
+    const f = falsas(() => [fila('127.0.0.1', 9229), fila('0.0.0.0', 8123)]);
     const a = await armar({
       sitio: { tipo: 'rails' },
       procesos: [vigilado()],
       eventos,
-      extra: {
-        escuchas: async () => [fila('127.0.0.1', 9229), fila('0.0.0.0', 8123)],
-        vigilancia: { intervaloMs: 1, intentos: 50 },
-      },
+      extra: { escuchas: f.escuchas, vigilancia: RAPIDO },
     });
     await a.procesos.iniciar('demo', 'servidor');
     await esperar(60);
@@ -879,19 +890,17 @@ describe('D47: precarga de Node y vigilancia de las escuchas', () => {
     expect(terminados).toEqual(['proy-demo-servidor']);
   });
 
-  it('también corta una escucha en :: ; una en 127.0.0.1 o ::1 sigue', async () => {
+  it('también corta una escucha en ::; una en 127.0.0.1 o ::1 sigue', async () => {
     for (const [dir, corta] of [
       ['::', true],
       ['127.0.0.1', false],
       ['::1', false],
     ] as const) {
+      const f = falsas(() => [fila(dir, 8123)]);
       const a = await armar({
         sitio: { tipo: 'springboot' },
         procesos: [vigilado()],
-        extra: {
-          escuchas: async () => [fila(dir, 8123)],
-          vigilancia: { intervaloMs: 1, intentos: 50 },
-        },
+        extra: { escuchas: f.escuchas, vigilancia: RAPIDO },
       });
       await a.procesos.iniciar('demo', 'servidor');
       await esperar(40);
@@ -899,44 +908,102 @@ describe('D47: precarga de Node y vigilancia de las escuchas', () => {
     }
   });
 
-  it('sin el puerto escuchando todavía no decide; no vigila procesos que no son destino del proxy', async () => {
-    let llamadas = 0;
+  it('I2: una escucha pública en OTRO puerto (Kestrel, Spring sin args) corta sin esperar al asignado', async () => {
+    const f = falsas(() => [fila('0.0.0.0', 5000)]);
     const a = await armar({
       sitio: { tipo: 'aspnet' },
-      procesos: [vigilado(), proceso({ id: 'otro', puerto: 8200, proxy: false })],
-      extra: {
-        escuchas: async () => {
-          llamadas++;
-          return [fila('0.0.0.0', 9999)];
-        },
-        vigilancia: { intervaloMs: 1, intentos: 20 },
-      },
+      procesos: [vigilado('servidor', 8123)],
+      extra: { escuchas: f.escuchas, vigilancia: RAPIDO },
     });
     await a.procesos.iniciar('demo', 'servidor');
     await esperar(40);
-    expect(a.sup.detenidos).toEqual([]);
-    expect(llamadas).toBeGreaterThan(0);
-    const antes = llamadas;
-    await a.procesos.iniciar('demo', 'otro');
-    await esperar(20);
-    expect(llamadas - antes).toBeLessThan(25); // solo el primero sigue mirando
+    expect(a.sup.detenidos).toEqual(['proy-demo-servidor']);
+    expect((await a.procesos.estados('demo'))[0]!.mensaje).toMatch(/0\.0\.0\.0:5000/);
   });
 
-  it('un sitio de otro tipo (Laravel, estático…) no se vigila', async () => {
-    let llamadas = 0;
+  it('I2: un arranque tardío (más de 120 pasadas) sigue vigilado y se corta al abrir', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    const f = falsas((_pid, toma) => (toma > 125 ? [fila('0.0.0.0', 8080)] : []));
     const a = await armar({
-      sitio: { tipo: 'laravel', php: '8.4' },
+      sitio: { tipo: 'springboot' },
       procesos: [vigilado()],
       extra: {
-        escuchas: async () => {
-          llamadas++;
-          return [fila('0.0.0.0', 8123)];
-        },
-        vigilancia: { intervaloMs: 1, intentos: 20 },
+        escuchas: f.escuchas,
+        vigilancia: { intervaloMs: 1000, intervaloLentoMs: 1000, rapidoMs: 1e9 },
       },
     });
     await a.procesos.iniciar('demo', 'servidor');
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(f.tomas.length).toBeGreaterThanOrEqual(119);
+    expect(a.sup.detenidos).toEqual([]);
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(f.tomas.length).toBeGreaterThan(125);
+    expect(a.sup.detenidos).toEqual(['proy-demo-servidor']);
+  });
+
+  it('I2: tras un reinicio automático (otro PID) se sigue vigilando y se corta', async () => {
+    const f = falsas((pid) => (pid === 5555 ? [fila('0.0.0.0', 8123, pid)] : []));
+    const a = await armar({
+      sitio: { tipo: 'node' },
+      procesos: [vigilado()],
+      extra: { escuchas: f.escuchas, vigilancia: RAPIDO },
+    });
+    await a.procesos.iniciar('demo', 'servidor');
+    await esperar(20);
+    expect(a.sup.detenidos).toEqual([]);
+    // El supervisor reinicia el proceso por su cuenta: mismo id, PID nuevo.
+    a.sup.pid = () => 5555;
+    await esperar(40);
+    expect(a.sup.detenidos).toEqual(['proy-demo-servidor']);
+  });
+
+  it('I2: varios procesos comparten una sola toma por pasada, con todos sus PID', async () => {
+    const f = falsas(() => []);
+    const a = await armar({
+      sitio: { tipo: 'rails' },
+      procesos: [vigilado('uno', 8123), vigilado('dos', 8124)],
+      extra: { escuchas: f.escuchas, vigilancia: RAPIDO },
+    });
+    a.sup.pid = (id) => (id.endsWith('uno') ? 1001 : 1002);
+    await a.procesos.iniciar('demo', 'uno');
+    await a.procesos.iniciar('demo', 'dos');
+    await esperar(40);
+    expect(f.tomas.length).toBeGreaterThan(3);
+    // Cada toma trae los dos PID a la vez (nunca una por proceso).
+    expect(f.tomas.at(-1)!.sort()).toEqual([1001, 1002]);
+  });
+
+  it('I2: al apagarse o detenerse el proceso, la vigilancia para', async () => {
+    const f = falsas(() => []);
+    const a = await armar({
+      sitio: { tipo: 'rails' },
+      procesos: [vigilado()],
+      extra: { escuchas: f.escuchas, vigilancia: RAPIDO },
+    });
+    await a.procesos.iniciar('demo', 'servidor');
+    await esperar(20);
+    await a.procesos.detener('demo', 'servidor');
+    await esperar(10);
+    const tomas = f.tomas.length;
     await esperar(30);
-    expect(llamadas).toBe(0);
+    expect(f.tomas.length).toBe(tomas);
+  });
+
+  it('un proceso que no es destino del proxy, o de otro tipo de sitio, no se vigila', async () => {
+    const f = falsas(() => [fila('0.0.0.0', 8200)]);
+    const a = await armar({
+      sitio: { tipo: 'aspnet' },
+      procesos: [proceso({ id: 'otro', puerto: 8200, proxy: false })],
+      extra: { escuchas: f.escuchas, vigilancia: RAPIDO },
+    });
+    await a.procesos.iniciar('demo', 'otro');
+    const b = await armar({
+      sitio: { tipo: 'laravel', php: '8.4' },
+      procesos: [vigilado()],
+      extra: { escuchas: f.escuchas, vigilancia: RAPIDO },
+    });
+    await b.procesos.iniciar('demo', 'servidor');
+    await esperar(30);
+    expect(f.tomas.length).toBe(0);
   });
 });
