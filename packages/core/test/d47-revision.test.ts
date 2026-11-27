@@ -48,6 +48,11 @@ const casos = {
   host_abierto: (s, cb) => s.listen(0, '0.0.0.0', cb),
   host_v6: (s, cb) => s.listen(0, '::', cb),
   host_vacio: (s, cb) => s.listen(0, '', cb),
+  host_corchetes: (s, cb) => s.listen(0, '[::]', cb),
+  host_v6_largo: (s, cb) => s.listen(0, '0:0::0', cb),
+  host_v6_ceros: (s, cb) => s.listen(0, '0000:0000::', cb),
+  host_v4_mapeado: (s, cb) => s.listen(0, '::ffff:0.0.0.0', cb),
+  host_v6_sin_cortar: (s, cb) => s.listen({ port: 0, host: '[::]' }, cb),
   host_y_backlog: (s, cb) => s.listen(0, '0.0.0.0', 5, cb),
   puerto_backlog: (s, cb) => s.listen(0, 5, cb),
   opciones: (s, cb) => s.listen({ port: 0 }, cb),
@@ -94,6 +99,11 @@ const salida = {};
       'host_abierto',
       'host_v6',
       'host_vacio',
+      'host_corchetes',
+      'host_v6_largo',
+      'host_v6_ceros',
+      'host_v4_mapeado',
+      'host_v6_sin_cortar',
       'host_y_backlog',
       'puerto_backlog',
       'opciones',
@@ -117,14 +127,38 @@ const salida = {};
     expect(['::', '0.0.0.0']).toContain(r.puerto);
   });
 
-  it('NODE_OPTIONS: se concatena a lo que había y la ruta va entre comillas', () => {
+  it('NODE_OPTIONS: se concatena a lo que había; la ruta va entre comillas, con / y sin escapes', () => {
     expect(nodeOptionsConEscuchaLocal(undefined, 'C:\\a b\\x.cjs')).toBe(
-      '--require "C:\\a b\\x.cjs"',
+      '--require "C:/a b/x.cjs"',
     );
-    expect(nodeOptionsConEscuchaLocal('  ', 'C:\\x.cjs')).toBe('--require "C:\\x.cjs"');
+    expect(nodeOptionsConEscuchaLocal('  ', 'C:/x.cjs')).toBe('--require "C:/x.cjs"');
     expect(nodeOptionsConEscuchaLocal('--no-warnings', 'C:\\x.cjs')).toBe(
-      '--no-warnings --require "C:\\x.cjs"',
+      '--no-warnings --require "C:/x.cjs"',
     );
+    // Una comilla suelta no rompe las comillas de la opción.
+    expect(nodeOptionsConEscuchaLocal(undefined, 'C:/a"b.cjs')).toBe('--require "C:/a\\"b.cjs"');
+  });
+
+  it('C1: un Node real arranca con NODE_OPTIONS hecho desde una ruta con barras invertidas y espacio', async () => {
+    const base = await temp();
+    const carpeta = path.join(base, 'datos con espacio');
+    await mkdir(carpeta, { recursive: true });
+    const precarga = path.join(carpeta, 'escucha-local.cjs');
+    await writeFile(precarga, ESCUCHA_LOCAL_CJS);
+    // En Windows la ruta real trae `\`; en otros sistemas se usa la ruta tal cual.
+    const ruta = process.platform === 'win32' ? path.win32.normalize(precarga) : precarga;
+    const opciones = nodeOptionsConEscuchaLocal(undefined, ruta);
+    expect(opciones).not.toMatch(/[\\]/);
+    const sonda = path.join(base, 'servidor.cjs');
+    await writeFile(
+      sonda,
+      "const s = require('node:http').createServer(); s.listen(0, () => { process.stdout.write(s.address().address); s.close(); });",
+    );
+    const { stdout } = await ejecutarArchivo(process.execPath, [sonda], {
+      env: { ...process.env, NODE_OPTIONS: opciones },
+      timeout: 30_000,
+    });
+    expect(stdout).toBe('127.0.0.1');
   });
 });
 

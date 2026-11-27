@@ -18,8 +18,23 @@ export const ESCUCHA_LOCAL_CJS = `'use strict';
 // WolfCore Dev: los servidores de Node de un proyecto escuchan solo en 127.0.0.1.
 const net = require('node:net');
 const LOCAL = '127.0.0.1';
-const ABIERTOS = new Set(['', '0.0.0.0', '::', '::0', '0:0:0:0:0:0:0:0']);
-const sinHost = (h) => h === undefined || h === null || ABIERTOS.has(String(h).trim());
+const ABIERTOS = new net.BlockList();
+ABIERTOS.addAddress('0.0.0.0');
+ABIERTOS.addAddress('::', 'ipv6');
+ABIERTOS.addAddress('::ffff:0.0.0.0', 'ipv6');
+// Sin host o con un host "abierto" en cualquiera de sus formas ("[::]", "0:0::0", "::ffff:0.0.0.0").
+// Una dirección que no se entiende se deja tal cual: la vigilancia de WolfCore Dev hace de respaldo.
+function sinHost(h) {
+  if (h === undefined || h === null) return true;
+  let t = String(h).trim();
+  if (t === '') return true;
+  t = t.replace(/^\\[(.*)\\]$/, '$1');
+  try {
+    return ABIERTOS.check(t, net.isIPv6(t) ? 'ipv6' : 'ipv4');
+  } catch {
+    return false;
+  }
+}
 const esPuerto = (p) => typeof p === 'number' || (typeof p === 'string' && /^\\d+$/.test(p.trim()));
 const original = net.Server.prototype.listen;
 
@@ -72,10 +87,12 @@ export async function asegurarEscuchaLocal(rutas: Rutas): Promise<string> {
 
 /**
  * `NODE_OPTIONS` con la precarga añadida a lo que ya hubiera (las opciones del usuario se
- * conservan). La ruta va entre comillas dobles: NODE_OPTIONS las admite y la carpeta de datos
- * puede tener espacios.
+ * conservan). La ruta va entre comillas dobles (la carpeta de datos puede tener espacios) y con
+ * `/`: dentro de comillas, NODE_OPTIONS trata `\` como escape (`C:\Users` llegaba como
+ * `C:Users` y Node no arrancaba). Windows entiende `/`; lo que aún pudiera estorbar se escapa.
  */
 export function nodeOptionsConEscuchaLocal(previo: string | undefined, ruta: string): string {
-  const propia = `--require "${ruta}"`;
+  const segura = ruta.replace(/\\/g, '/').replace(/"/g, '\\"');
+  const propia = `--require "${segura}"`;
   return previo && previo.trim() !== '' ? `${previo.trim()} ${propia}` : propia;
 }
