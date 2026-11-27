@@ -323,6 +323,12 @@ export interface CapacidadesPlataforma {
    */
   inicioDeProceso(pid: number): Promise<string | null>;
   /**
+   * ¿La hora de inicio `inicio` (la forma de `ProcesoUsuario.inicio`) es anterior al instante
+   * `instanteMs` (milisegundos desde 1970)? La forma de `inicio` es de cada plataforma, por eso la
+   * comparación la resuelve ella. Si no se sabe interpretar, false: quien llama no afirma nada.
+   */
+  inicioAnteriorA(inicio: string, instanteMs: number): boolean;
+  /**
    * Conexiones TCP establecidas ahora mismo (para no detener un servicio que alguien está usando).
    * Falla si no se pueden leer: quien llama debe tratar eso como "no se sabe" y no actuar.
    */

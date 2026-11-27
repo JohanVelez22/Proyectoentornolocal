@@ -25,7 +25,7 @@ const proceso = (pid: number, ruta: string, inicio = `t${pid}`) => ({
   usuario: 'u',
 });
 
-const crear = (): Tuneles =>
+const crear = (extra: Record<string, unknown> = {}): Tuneles =>
   new Tuneles({
     supervisor: {
       ids: () => Object.keys(propios),
@@ -40,6 +40,7 @@ const crear = (): Tuneles =>
     urlBase: { restaurarPorId: async () => undefined } as never,
     eventos: new Eventos<EventosNucleo>(),
     plataforma: plat as never,
+    ...extra,
   });
 
 beforeEach(() => {
@@ -116,5 +117,65 @@ describe('Tuneles.restaurar: cloudflared huérfanos', () => {
     await t.restaurar();
     await t.esperarBarrido();
     expect(plat.listados).toBe(0);
+  });
+
+  it('no cierra un proceso que aparece en el listado mientras el supervisor lo arranca', async () => {
+    const mio = path.join(rutas.bin('cloudflared', '2026.3.0'), exe);
+    plat.procesosUsuario = [proceso(10, mio), proceso(11, mio)];
+    // El supervisor adopta el PID 11 justo después de listar (antes de que le toque el turno).
+    const original = plat.inicioDeProceso.bind(plat);
+    plat.inicioDeProceso = async (pid) => {
+      if (pid === 11) propios['tunel-nuevo'] = 11;
+      return original(pid);
+    };
+    const t = crear();
+    await t.restaurar();
+    await t.esperarBarrido();
+    expect(plat.matados).toEqual([10]);
+  });
+
+  it('no cierra un proceso creado después del arranque de este núcleo', async () => {
+    const mio = path.join(rutas.bin('cloudflared', '2026.3.0'), exe);
+    plat.procesosUsuario = [proceso(10, mio, '500'), proceso(11, mio, '5000')];
+    const t = crear({ ahora: () => 1000 });
+    await t.restaurar();
+    await t.esperarBarrido();
+    expect(plat.matados).toEqual([10]);
+  });
+
+  it('sin poder comprobar la hora de inicio no cierra nada', async () => {
+    const mio = path.join(rutas.bin('cloudflared', '2026.3.0'), exe);
+    plat.procesosUsuario = [proceso(10, mio)];
+    const sinInicio = {
+      procesosDelUsuario: plat.procesosDelUsuario.bind(plat),
+      matarArbol: plat.matarArbol.bind(plat),
+      inicioAnteriorA: plat.inicioAnteriorA.bind(plat),
+      restringirAlUsuario: plat.restringirAlUsuario.bind(plat),
+    };
+    const t = crear({ plataforma: sinInicio });
+    await t.restaurar();
+    await t.esperarBarrido();
+    expect(plat.matados).toEqual([]);
+  });
+
+  it('abrir un túnel espera a que termine el barrido en curso', async () => {
+    let soltar: () => void = () => undefined;
+    plat.procesosDelUsuario = () =>
+      new Promise((r) => {
+        soltar = () => r([]);
+      });
+    const t = crear();
+    await t.restaurar();
+    let resuelto = false;
+    const p = t.abrirPuerto(8080, 'ngrok', () => undefined).catch((e: unknown) => {
+      resuelto = true;
+      return e;
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(resuelto).toBe(false);
+    soltar();
+    const e = (await p) as { codigo?: string; code?: string };
+    expect(resuelto).toBe(true);
+    expect(JSON.stringify(e)).toContain('ngrok_no_instalado');
   });
 });

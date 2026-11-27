@@ -476,6 +476,11 @@ export class PlataformaFalsa implements PlataformaCompleta {
     return this.procesosUsuario.find((x) => x.pid === pid)?.inicio ?? null;
   }
 
+  /** En la falsa, un `inicio` numérico son milisegundos desde 1970; otro texto es «muy antiguo». */
+  inicioAnteriorA(inicio: string, instanteMs: number): boolean {
+    return /^\d+$/.test(inicio) ? Number(inicio) < instanteMs : true;
+  }
+
   async conexionesActivas(): Promise<ConexionActiva[]> {
     if (this.fallaConexiones) throw new ErrorWolf('memoria.no_disponible', 'sin conexiones');
     return this.conexiones.map((c) => ({ ...c }));

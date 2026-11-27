@@ -979,6 +979,13 @@ export class PlataformaWindows implements PlataformaCompleta {
     return this.procesosUsuario().inicioDe(pid);
   }
 
+  /** `inicio` es `ToFileTimeUtc` (intervalos de 100 ns desde 1601): se pasa a milisegundos de 1970. */
+  inicioAnteriorA(inicio: string, instanteMs: number): boolean {
+    if (!/^\d{1,19}$/.test(inicio)) return false;
+    const ms = Number(BigInt(inicio) / 10_000n) - 11_644_473_600_000;
+    return Number.isFinite(ms) && ms < instanteMs;
+  }
+
   /** Conexiones TCP en curso (para no detener un servicio que se está usando). */
   conexionesActivas(): Promise<ConexionActiva[]> {
     return this.procesosUsuario().conexiones();

@@ -27,6 +27,8 @@ export interface DepsCloudflareNombre {
   /** Ruta del cloudflared instalado (lanza `tuneles.cloudflared_no_instalado` si no hay). */
   ejecutable: () => Promise<string>;
   secretos: () => SecretosTunel | null;
+  /** Se espera antes de lanzar el `login` (el barrido de cloudflared huérfanos en curso). */
+  antesDeLanzar?: () => Promise<void>;
 }
 
 /** Lo que cloudflared guarda al crear un túnel (su `<UUID>.json`). */
@@ -192,6 +194,7 @@ ${r.stderr}`;
     const lineas: string[] = [];
     let urlVista = false;
     try {
+      await this.d.antesDeLanzar?.().catch(() => undefined);
       await rm(inicio, { recursive: true, force: true });
       await mkdir(inicio, { recursive: true });
       await this.d.plataforma.restringirAlUsuario(inicio).catch(() => false);

@@ -43,7 +43,12 @@ export interface DepsTuneles {
     Partial<
       Pick<
         PlataformaCompleta,
-        'buscarEjecutable' | 'tailscale' | 'procesosDelUsuario' | 'inicioDeProceso' | 'matarArbol'
+        | 'buscarEjecutable'
+        | 'tailscale'
+        | 'procesosDelUsuario'
+        | 'inicioDeProceso'
+        | 'inicioAnteriorA'
+        | 'matarArbol'
       >
     >;
   ejecutor?: Ejecutor;
@@ -62,6 +67,8 @@ export interface DepsTuneles {
    * `true` (la app); las pruebas lo apagan para no consultar los procesos reales del equipo.
    */
   barrerHuerfanos?: boolean;
+  /** Reloj en milisegundos (para las pruebas); la hora de arranque de este núcleo sale de aquí. */
+  ahora?: () => number;
   /** Guarda el proveedor elegido de un sitio (sin tocar nada más del sitio). */
   guardarTunel?: (sitioId: string, tunel: TunelSitio | null) => Promise<void>;
 }
@@ -130,7 +137,11 @@ export class Tuneles {
   private readonly expose: Expose | null = null;
   private readonly tailscale: Tailscale | null = null;
 
+  /** Instante en que arrancó este núcleo: lo que ya corría antes es de otra sesión. */
+  private readonly arranque: number;
+
   constructor(private readonly d: DepsTuneles) {
+    this.arranque = (d.ahora ?? Date.now)();
     this.secretos = d.secretos;
     this.phpCli = d.phpCli;
     this.esperaMs = d.opts?.esperaMs ?? 30_000;
@@ -145,6 +156,7 @@ export class Tuneles {
             ...(d.lanzar ? { lanzar: d.lanzar } : {}),
             alAutorizacion: (url) => d.eventos.emit('tunel:autorizacion', { url }),
             ejecutable: () => this.rutaCloudflared(),
+            antesDeLanzar: () => this.trasBarrido(),
             secretos: () => this.secretos?.() ?? null,
           })
         : null;
@@ -234,6 +246,9 @@ export class Tuneles {
     if (!Number.isInteger(puerto) || puerto < 1 || puerto > 65535) {
       throw new ErrorWolf('compartir.fallo', 'Puerto no válido.');
     }
+    if (this.efimero) throw new ErrorWolf('compartir.ocupado', 'Ya hay algo compartido.');
+    await this.trasBarrido();
+    if (senal?.aborted) throw new ErrorWolf('compartir.tunel_cerrado', 'El túnel se cerró.');
     if (this.efimero) throw new ErrorWolf('compartir.ocupado', 'Ya hay algo compartido.');
     const proveedor = this.proveedores.get(idProveedor);
     if (!proveedor) {
@@ -446,31 +461,60 @@ export class Tuneles {
   }
 
   /**
+   * Antes de abrir un túnel (o el `login`) se deja terminar el barrido en curso, con un límite por
+   * si el listado de procesos no responde; un fallo del barrido no impide abrir.
+   */
+  private async trasBarrido(): Promise<void> {
+    const b = this.barrido;
+    if (!b) return;
+    let temporizador: NodeJS.Timeout | undefined;
+    try {
+      await Promise.race([
+        b.catch(() => undefined),
+        new Promise<void>((r) => {
+          temporizador = setTimeout(r, 15_000);
+          temporizador.unref?.();
+        }),
+      ]);
+    } finally {
+      if (temporizador) clearTimeout(temporizador);
+    }
+  }
+
+  /**
    * Si la app murió de golpe, sus `cloudflared` (Compartir y túneles de sitio) siguen vivos con el
    * túnel público abierto. Al arrancar se cierran, por PID, los que ya no controla el supervisor.
-   * Solo si la ruta completa del ejecutable es `bin/cloudflared/**` de ESTA carpeta de datos y la
-   * hora de creación sigue siendo la que se listó justo antes de cerrar (un PID reutilizado no
-   * coincide). Nunca por nombre de imagen ni fuera de la carpeta de datos.
+   * Solo si la ruta completa del ejecutable es `bin/cloudflared/**` de ESTA carpeta de datos, el
+   * proceso empezó ANTES de arrancar este núcleo (uno posterior es de esta sesión, p. ej. un túnel
+   * o un `login` recién lanzado) y la hora de creación sigue siendo la que se listó (un PID
+   * reutilizado no coincide). Los PIDs del supervisor se vuelven a leer justo antes de cerrar. Sin
+   * poder comprobar la hora de inicio no se cierra nada. Nunca por nombre de imagen ni fuera de la
+   * carpeta de datos.
    */
   private async cerrarCloudflaredHuerfanos(): Promise<void> {
     const p = this.d.plataforma;
-    if (!p?.procesosDelUsuario || !p.matarArbol) return;
-    try {
-      const propios = new Set<number>();
+    if (!p?.procesosDelUsuario || !p.matarArbol || !p.inicioDeProceso || !p.inicioAnteriorA) return;
+    const propios = (): Set<number> => {
+      const s = new Set<number>();
       for (const id of this.d.supervisor.ids()) {
         const pid = this.d.supervisor.pid(id);
-        if (pid !== null) propios.add(pid);
+        if (pid !== null) s.add(pid);
       }
+      return s;
+    };
+    try {
       const raiz = path.join(this.d.rutas.base, 'bin', 'cloudflared');
       const nombre = nombreEjecutable('cloudflared').toLowerCase();
       for (const proc of await p.procesosDelUsuario()) {
-        if (propios.has(proc.pid) || proc.ruta === null || proc.inicio === null) continue;
+        if (proc.ruta === null || proc.inicio === null) continue;
         if (proc.servicio === true || proc.elevado === true) continue;
         if (path.basename(proc.ruta).toLowerCase() !== nombre) continue;
         if (!rutaDentroDe(raiz, proc.ruta)) continue;
+        if (!p.inicioAnteriorA(proc.inicio, this.arranque)) continue;
         try {
-          // Se vuelve a mirar la hora de creación justo antes de cerrar.
-          if (p.inicioDeProceso && (await p.inicioDeProceso(proc.pid)) !== proc.inicio) continue;
+          // Se vuelve a mirar la hora de creación y el supervisor justo antes de cerrar.
+          if ((await p.inicioDeProceso(proc.pid)) !== proc.inicio) continue;
+          if (propios().has(proc.pid)) continue;
           await p.matarArbol(proc.pid);
           console.warn(
             `Se cerró un cloudflared huérfano (PID ${proc.pid}, ${proc.ruta}): lo dejó una sesión que terminó sin cierre ordenado.`,
@@ -574,6 +618,7 @@ export class Tuneles {
   }
 
   private async abrirInterno(sitioId: string, o: OpcionesAbrirTunel): Promise<EstadoTunel> {
+    await this.trasBarrido();
     const gen = this.generacion.get(sitioId) ?? 0;
     const sitio = await this.buscar(sitioId);
     if (!sitio) throw new ErrorWolf('tuneles.sitio_no_encontrado', 'Sitio no encontrado');
