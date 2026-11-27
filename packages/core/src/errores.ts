@@ -297,6 +297,15 @@ export const PARAMETROS_ERROR = {
   'diff.caducado': [],
   'diff.archivo_invalido': [],
   'diff.fallo': [],
+  // uso del disco
+  'disco.raiz_invalida': [],
+  'disco.cancelado': [],
+  'disco.plazo': ['minutos'],
+  'disco.memoria': ['maximo'],
+  'disco.ocupado': [],
+  'disco.caducado': [],
+  'disco.entrada_invalida': [],
+  'disco.fallo': [],
   // terminal
   'terminal.no_abrio': [],
   'terminal.no_instalada': ['nombre'],
