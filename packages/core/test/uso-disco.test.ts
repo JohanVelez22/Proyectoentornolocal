@@ -1,5 +1,6 @@
 import { linkSync, mkdirSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
-import { opendir } from 'node:fs/promises';
+import type { Dirent } from 'node:fs';
+import { lstat, opendir } from 'node:fs/promises';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ErrorWolf } from '../src/errores';
@@ -291,3 +292,66 @@ async function escenarioConUno(rel: string, bytes: number) {
   e.poner(rel, bytes);
   return e;
 }
+
+describe('carpetas sin permiso y árbol acotado (M2 de D51)', () => {
+  it('conserva solo unos 200 nodos denegados y el árbol podado nunca se acerca a 30 000 nodos', async () => {
+    const ent = (name: string, dir: boolean) =>
+      ({
+        name,
+        isDirectory: () => dir,
+        isSymbolicLink: () => false,
+        isFile: () => !dir,
+        isFIFO: () => false,
+        isSocket: () => false,
+        isCharacterDevice: () => false,
+        isBlockDevice: () => false,
+      }) as unknown as Dirent;
+    const dedos = (n: string, c: number, dir = true) =>
+      Array.from({ length: c }, (_, i) => ent(`${n}${i}`, dir));
+    // R -> 100 A; A -> 2 B + 100 D sin permiso; B -> f.bin + 100 D sin permiso.
+    const hijos = (p: string): Dirent[] | null => {
+      const n = path.basename(p);
+      if (n === 'R') return dedos('A', 100);
+      if (/^A\d+$/.test(n)) return [ent('B0', true), ent('B1', true), ...dedos('D', 100)];
+      if (/^B\d$/.test(n)) return [ent('f.bin', false), ...dedos('D', 100)];
+      return null;
+    };
+    const falsoOpendir = (async (p: string) => {
+      const h = hijos(p);
+      if (h === null) throw Object.assign(new Error('EPERM'), { code: 'EPERM' });
+      return {
+        close: async () => undefined,
+        async *[Symbol.asyncIterator]() {
+          yield* h;
+        },
+      };
+    }) as unknown as typeof opendir;
+    const falsoLstat = (async () => ({
+      isSymbolicLink: () => false,
+      isDirectory: () => false,
+      isFile: () => true,
+      size: 1000n,
+      nlink: 1n,
+      dev: 1n,
+      ino: 1n,
+    })) as unknown as typeof lstat;
+    const r = await escanearUsoDisco(
+      { op: 'escanear', raiz: 'R', lim: lim() },
+      { deps: { opendir: falsoOpendir, lstat: falsoLstat } },
+    );
+    let nodos = 0;
+    let denegados = 0;
+    let enOtros = 0;
+    const contar = (x: NodoUso): void => {
+      nodos++;
+      if (x.denegado) denegados++;
+      enOtros += x.denegados ?? 0;
+      x.hijos?.forEach(contar);
+    };
+    contar(r.arbol);
+    expect(r.omitidos.denegados).toBe(100 * 100 + 200 * 100);
+    expect(denegados).toBeLessThanOrEqual(LIMITES_USO_DISCO.denegadosMax);
+    expect(denegados + enOtros).toBeGreaterThan(denegados);
+    expect(nodos).toBeLessThan(5_000);
+  });
+});

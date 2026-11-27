@@ -31,6 +31,8 @@ export interface LimitesUsoDisco {
   extensionesTop: number;
   /** Extensiones distintas que se cuentan por separado; las demás van a «otros». */
   extensionesMax: number;
+  /** Carpetas sin permiso que se conservan en el árbol (el resto se resume en «otros»). */
+  denegadosMax: number;
   /** Hijos que se guardan por carpeta en el árbol. */
   hijosPorNivel: number;
   /** Fracción del total bajo la cual un nodo se resume en «otros» (0,005 = 0,5 %). */
@@ -53,6 +55,7 @@ export const LIMITES_USO_DISCO: Readonly<LimitesUsoDisco> = {
   carpetasTop: 50,
   extensionesTop: 20,
   extensionesMax: 5_000,
+  denegadosMax: 200,
   hijosPorNivel: 100,
   umbralNodo: 0.005,
   enlacesDurosMax: 1_000_000,
@@ -71,6 +74,8 @@ export interface NodoUso {
   tamano: number;
   /** En carpetas y «otros»: archivos que contienen (en todos los niveles). */
   archivos?: number;
+  /** En «otros»: carpetas sin permiso que se resumieron ahí. */
+  denegados?: number;
   /** Ordenados por tamaño; «otros» va al final. */
   hijos?: NodoUso[];
   /** La carpeta no se pudo leer. */
@@ -202,9 +207,10 @@ function podar(n: NodoUso, umbral: number, cap: number): NodoUso | null {
       otros ??= { nombre: '', tipo: 'otros', tamano: 0, archivos: 0 };
       otros.tamano += h.tamano;
       otros.archivos = (otros.archivos ?? 0) + archivosDe(h);
+      if (h.denegado) otros.denegados = (otros.denegados ?? 0) + 1;
     }
   }
-  if (otros && otros.tamano === 0 && (otros.archivos ?? 0) === 0) otros = null;
+  if (otros && otros.tamano === 0 && (otros.archivos ?? 0) === 0 && !otros.denegados) otros = null;
   if (otros) quedan.push(otros);
   if (quedan.length > 0) n.hijos = quedan;
   else delete n.hijos;
@@ -238,6 +244,7 @@ export async function escanearUsoDisco(
     actual: m.raiz,
     truncado: false,
     enlacesDurosIncompleto: false,
+    denegadosGuardados: 0,
   };
   const omitidos: OmitidosUso = { enlaces: 0, denegados: 0, especiales: 0, enlacesDuros: 0 };
   const enlaces: string[] = [];
@@ -272,8 +279,11 @@ export async function escanearUsoDisco(
   };
 
   const umbralActual = (): number => lim.umbralNodo * est.bytes;
-  const cumple = (h: NodoUso): boolean =>
-    h.denegado === true || (h.tamano > 0 && h.tamano >= umbralActual());
+  /** Los nodos sin permiso se conservan hasta `denegadosMax` en total; el resto va a «otros». */
+  const cumple = (h: NodoUso): boolean => {
+    if (h.denegado === true) return est.denegadosGuardados++ < lim.denegadosMax;
+    return h.tamano > 0 && h.tamano >= umbralActual();
+  };
 
   /** Suma un hijo terminado a su carpeta, o lo resume en «otros» si no llega al umbral. */
   const agregar = (marco: Marco, h: NodoUso): void => {
@@ -290,6 +300,7 @@ export async function escanearUsoDisco(
       }
       marco.otros.tamano += h.tamano;
       marco.otros.archivos = (marco.otros.archivos ?? 0) + archivosDe(h);
+      if (h.denegado) marco.otros.denegados = (marco.otros.denegados ?? 0) + 1;
     }
   };
 
