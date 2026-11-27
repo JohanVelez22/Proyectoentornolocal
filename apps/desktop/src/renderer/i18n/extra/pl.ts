@@ -551,7 +551,7 @@ export const plExtra: TextosParciales = {
       ejecutar: 'Wykonanie (x)',
       especiales: 'Bity specjalne',
       setuid: 'setuid: uruchamia się z uprawnieniami właściciela',
-      setgid: 'setgid: uruchamia się z uprawnieniami grupy',
+      setgid: 'setgid: uruchamia się z uprawnieniami grupy; w folderze wszystko, co zostanie w nim utworzone, dziedziczy grupę',
       sticky: 'sticky: w katalogu usuwać może tylko właściciel',
       habituales: 'Typowe wartości',
       octal: 'Ósemkowo',
@@ -560,6 +560,7 @@ export const plExtra: TextosParciales = {
       simbolicoInvalido: 'Należy wpisać 9 znaków, na przykład rwxr-xr-x.',
       ejemplo: 'Przykład',
       archivo: 'Nazwa pliku',
+      archivoPorDefecto: 'plik',
       nota: 'W systemie Windows nie ma zastosowania; służy do serwerów Linux i macOS.',
       avisoOtros:
         'Dowolny użytkownik serwera mógłby go zmienić: lepiej nie nadawać zapisu grupie „inni”.',

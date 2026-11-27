@@ -544,7 +544,7 @@ export const ruExtra: TextosParciales = {
       ejecutar: 'Выполнение (x)',
       especiales: 'Специальные биты',
       setuid: 'setuid: запускается с правами владельца',
-      setgid: 'setgid: запускается с правами группы',
+      setgid: 'setgid: запускается с правами группы; для папки всё, что создаётся внутри, наследует группу',
       sticky: 'sticky: в папке удалять может только владелец',
       habituales: 'Частые значения',
       octal: 'Восьмеричный',
@@ -553,6 +553,7 @@ export const ruExtra: TextosParciales = {
       simbolicoInvalido: 'Введите 9 символов, например rwxr-xr-x.',
       ejemplo: 'Пример',
       archivo: 'Имя файла',
+      archivoPorDefecto: 'файл',
       nota: 'В Windows не применяется; нужно для серверов Linux и macOS.',
       avisoOtros:
         'Любой пользователь сервера сможет его изменить: не давайте право записи группе «остальные».',

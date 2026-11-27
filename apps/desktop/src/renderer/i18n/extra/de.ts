@@ -568,7 +568,7 @@ export const deExtra: TextosParciales = {
       ejecutar: 'Ausführen (x)',
       especiales: 'Spezialbits',
       setuid: 'setuid: läuft mit den Rechten des Besitzers',
-      setgid: 'setgid: läuft mit den Rechten der Gruppe',
+      setgid: 'setgid: läuft mit den Rechten der Gruppe; bei einem Ordner erben neu darin angelegte Elemente die Gruppe',
       sticky: 'sticky: nur der Besitzer darf im Ordner löschen',
       habituales: 'Gängige Werte',
       octal: 'Oktal',
@@ -577,6 +577,7 @@ export const deExtra: TextosParciales = {
       simbolicoInvalido: 'Geben Sie 9 Zeichen wie rwxr-xr-x ein.',
       ejemplo: 'Beispiel',
       archivo: 'Dateiname',
+      archivoPorDefecto: 'datei',
       nota: 'Unter Windows ohne Bedeutung; gedacht für Linux- und macOS-Server.',
       avisoOtros:
         'Jeder Benutzer des Servers könnte die Datei ändern: Vermeiden Sie Schreibrechte für „Andere“.',

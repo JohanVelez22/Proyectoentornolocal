@@ -3744,7 +3744,7 @@ export const fr: Textos = {
       ejecutar: 'Exécuter (x)',
       especiales: 'Bits spéciaux',
       setuid: 'setuid : s’exécute avec les droits du propriétaire',
-      setgid: 'setgid : s’exécute avec les droits du groupe',
+      setgid: 'setgid : s’exécute avec les droits du groupe ; sur un dossier, ce qui y est créé hérite du groupe',
       sticky: 'sticky : seul le propriétaire peut supprimer dans le dossier',
       habituales: 'Valeurs courantes',
       octal: 'Octal',
@@ -3753,6 +3753,7 @@ export const fr: Textos = {
       simbolicoInvalido: 'Saisissez 9 caractères comme rwxr-xr-x.',
       ejemplo: 'Exemple',
       archivo: 'Nom du fichier',
+      archivoPorDefecto: 'fichier',
       nota: 'Sous Windows, cela ne s’applique pas ; c’est utile pour les serveurs Linux et macOS.',
       avisoOtros:
         'Tout utilisateur du serveur pourrait le modifier : évitez de donner l’écriture à « autres ».',

@@ -507,7 +507,7 @@ export const idExtra: TextosParciales = {
       ejecutar: 'Eksekusi (x)',
       especiales: 'Bit khusus',
       setuid: 'setuid: berjalan dengan izin pemilik',
-      setgid: 'setgid: berjalan dengan izin grup',
+      setgid: 'setgid: berjalan dengan izin grup; pada folder, apa pun yang baru dibuat di dalamnya mewarisi grup',
       sticky: 'sticky: hanya pemilik yang dapat menghapus di dalam folder',
       habituales: 'Nilai umum',
       octal: 'Oktal',
@@ -516,6 +516,7 @@ export const idExtra: TextosParciales = {
       simbolicoInvalido: 'Masukkan 9 karakter seperti rwxr-xr-x.',
       ejemplo: 'Contoh',
       archivo: 'Nama berkas',
+      archivoPorDefecto: 'file',
       nota: 'Tidak berlaku di Windows; berguna untuk server Linux dan macOS.',
       avisoOtros:
         'Pengguna mana pun di server dapat mengubahnya: hindari memberi izin tulis kepada «lainnya».',

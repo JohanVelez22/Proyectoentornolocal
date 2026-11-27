@@ -131,7 +131,7 @@ export function alternarPermiso(
 /** Ejemplo para copiar: `chmod 755 archivo`. El nombre se cita si lleva algo que el intérprete lea. */
 export function comandoChmod(p: PermisosChmod, archivo = 'archivo'): string {
   const nombre = archivo.trim() || 'archivo';
-  const seguro = /^[A-Za-z0-9._/@%+=:,-]+$/.test(nombre)
+  const seguro = /^[\p{L}\p{N}._/@%+=:,-]+$/u.test(nombre)
     ? nombre
     : `'${nombre.replace(/'/g, `'\\''`)}'`;
   return `chmod ${aOctal(p)} ${seguro}`;

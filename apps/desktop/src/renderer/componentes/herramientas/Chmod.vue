@@ -32,7 +32,7 @@ const etiquetaBit: Record<Bit, string> = {
 };
 
 const permisos = ref<PermisosChmod>(desdeOctal('755')!);
-const archivo = ref('archivo');
+const archivo = ref(t.archivoPorDefecto);
 
 /** Lo que el usuario está escribiendo en cada campo; null = se muestra el valor calculado. */
 const escritoOctal = ref<string | null>(null);
@@ -46,7 +46,9 @@ const octalInvalido = computed(
 const simbolicoInvalido = computed(
   () => escritoSimbolico.value !== null && desdeSimbolico(escritoSimbolico.value) === null,
 );
-const comando = computed(() => comandoChmod(permisos.value, archivo.value));
+const comando = computed(() =>
+  comandoChmod(permisos.value, archivo.value.trim() || t.archivoPorDefecto),
+);
 const escribeOtros = computed(() => permisos.value.otros.w);
 
 function poner(p: PermisosChmod): void {

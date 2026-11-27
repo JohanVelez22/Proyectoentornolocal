@@ -515,7 +515,7 @@ export const trExtra: TextosParciales = {
       ejecutar: 'Çalıştırma (x)',
       especiales: 'Özel bitler',
       setuid: 'setuid: sahibin izinleriyle çalışır',
-      setgid: 'setgid: grubun izinleriyle çalışır',
+      setgid: 'setgid: grubun izinleriyle çalışır; bir klasörde, içinde yeni oluşturulanlar grubu devralır',
       sticky: 'sticky: klasörde yalnızca sahibi silebilir',
       habituales: 'Sık kullanılan değerler',
       octal: 'Sekizlik (octal)',
@@ -524,6 +524,7 @@ export const trExtra: TextosParciales = {
       simbolicoInvalido: 'rwxr-xr-x gibi 9 karakter girin.',
       ejemplo: 'Örnek',
       archivo: 'Dosya adı',
+      archivoPorDefecto: 'dosya',
       nota: 'Windows’ta geçerli değildir; Linux ve macOS sunucuları içindir.',
       avisoOtros:
         'Sunucudaki herhangi bir kullanıcı bunu değiştirebilir: «diğerleri» için yazma izni vermekten kaçının.',

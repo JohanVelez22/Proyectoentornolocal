@@ -556,7 +556,7 @@ export const itExtra: TextosParciales = {
       ejecutar: 'Esecuzione (x)',
       especiales: 'Bit speciali',
       setuid: 'setuid: viene eseguito con i permessi del proprietario',
-      setgid: 'setgid: viene eseguito con i permessi del gruppo',
+      setgid: 'setgid: viene eseguito con i permessi del gruppo; su una cartella, ciò che vi si crea eredita il gruppo',
       sticky: 'sticky: solo il proprietario può eliminare nella cartella',
       habituales: 'Valori comuni',
       octal: 'Ottale',
@@ -565,6 +565,7 @@ export const itExtra: TextosParciales = {
       simbolicoInvalido: 'Inserisca 9 caratteri come rwxr-xr-x.',
       ejemplo: 'Esempio',
       archivo: 'Nome del file',
+      archivoPorDefecto: 'file',
       nota: 'Su Windows non si applica; serve per i server Linux e macOS.',
       avisoOtros:
         'Qualsiasi utente del server potrebbe modificarlo: eviti di dare scrittura a «altri».',

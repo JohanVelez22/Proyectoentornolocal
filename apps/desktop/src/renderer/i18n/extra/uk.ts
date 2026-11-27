@@ -546,7 +546,7 @@ export const ukExtra: TextosParciales = {
       ejecutar: 'Виконання (x)',
       especiales: 'Спеціальні біти',
       setuid: 'setuid: запускається з правами власника',
-      setgid: 'setgid: запускається з правами групи',
+      setgid: 'setgid: запускається з правами групи; для теки все, що створюється всередині, успадковує групу',
       sticky: 'sticky: у теці видаляти може лише власник',
       habituales: 'Поширені значення',
       octal: 'Вісімковий',
@@ -555,6 +555,7 @@ export const ukExtra: TextosParciales = {
       simbolicoInvalido: 'Введіть 9 символів, наприклад rwxr-xr-x.',
       ejemplo: 'Приклад',
       archivo: 'Назва файлу',
+      archivoPorDefecto: 'файл',
       nota: 'У Windows не застосовується; потрібне для серверів Linux і macOS.',
       avisoOtros:
         'Будь-який користувач сервера зможе його змінити: не надавайте право запису групі «інші».',

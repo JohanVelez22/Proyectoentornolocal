@@ -561,7 +561,7 @@ export const nlExtra: TextosParciales = {
       ejecutar: 'Uitvoeren (x)',
       especiales: 'Speciale bits',
       setuid: 'setuid: draait met de rechten van de eigenaar',
-      setgid: 'setgid: draait met de rechten van de groep',
+      setgid: 'setgid: draait met de rechten van de groep; bij een map erft alles wat erin wordt aangemaakt de groep',
       sticky: 'sticky: alleen de eigenaar mag in de map verwijderen',
       habituales: 'Veelgebruikte waarden',
       octal: 'Octaal',
@@ -570,6 +570,7 @@ export const nlExtra: TextosParciales = {
       simbolicoInvalido: 'Voer 9 tekens in, zoals rwxr-xr-x.',
       ejemplo: 'Voorbeeld',
       archivo: 'Bestandsnaam',
+      archivoPorDefecto: 'bestand',
       nota: 'Op Windows niet van toepassing; bedoeld voor Linux- en macOS-servers.',
       avisoOtros:
         'Elke gebruiker op de server kan het wijzigen: geef «anderen» liever geen schrijfrechten.',

@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { IDIOMAS_UI } from '@pel/core';
+import { fuentes } from '../src/renderer/i18n';
 import {
   alternarPermiso,
   aOctal,
@@ -134,4 +136,22 @@ describe('chmod: comando de ejemplo', () => {
     expect(comandoChmod(p('644'), "a'b; rm -rf /")).toBe("chmod 644 'a'\\''b; rm -rf /'");
     expect(comandoChmod(p('644'), '')).toBe('chmod 644 archivo');
   });
+});
+
+describe('chmod: nombre por defecto y texto de setgid en los 16 idiomas', () => {
+  it('un nombre con letras de cualquier alfabeto no se cita', () => {
+    expect(comandoChmod(p('755'), 'файл')).toBe('chmod 755 файл');
+    expect(comandoChmod(p('755'), 'ファイル')).toBe('chmod 755 ファイル');
+  });
+  it.each([...IDIOMAS_UI])(
+    '%s: tiene el nombre por defecto y setgid explica el caso de las carpetas',
+    (id) => {
+      const c = (fuentes[id] as { herramientas?: { chmod?: Record<string, unknown> } }).herramientas
+        ?.chmod;
+      expect(typeof c?.['archivoPorDefecto']).toBe('string');
+      expect((c!['archivoPorDefecto'] as string).trim().length).toBeGreaterThan(0);
+      // El texto nuevo no se queda en una frase mínima.
+      expect((c!['setgid'] as string).length).toBeGreaterThan(25);
+    },
+  );
 });

@@ -3644,7 +3644,7 @@ export const es = {
       ejecutar: 'Ejecutar (x)',
       especiales: 'Bits especiales',
       setuid: 'setuid: se ejecuta con los permisos del propietario',
-      setgid: 'setgid: se ejecuta con los permisos del grupo',
+      setgid: 'setgid: se ejecuta con los permisos del grupo; en una carpeta, lo que se cree dentro hereda el grupo',
       sticky: 'sticky: solo el dueño puede borrar dentro de la carpeta',
       habituales: 'Valores habituales',
       octal: 'Octal',
@@ -3653,6 +3653,7 @@ export const es = {
       simbolicoInvalido: 'Escriba 9 caracteres como rwxr-xr-x.',
       ejemplo: 'Ejemplo',
       archivo: 'Nombre del archivo',
+      archivoPorDefecto: 'archivo',
       nota: 'En Windows no aplica; sirve para servidores Linux y macOS.',
       avisoOtros:
         'Cualquier usuario del servidor podría modificarlo: evite dar escritura a «otros».',

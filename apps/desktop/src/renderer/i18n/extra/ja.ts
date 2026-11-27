@@ -521,7 +521,7 @@ export const jaExtra: TextosParciales = {
       ejecutar: '実行 (x)',
       especiales: '特殊ビット',
       setuid: 'setuid: 所有者の権限で実行されます',
-      setgid: 'setgid: グループの権限で実行されます',
+      setgid: 'setgid: グループの権限で実行されます。フォルダーでは、その中に新しく作られるものがグループを引き継ぎます',
       sticky: 'sticky: フォルダー内で削除できるのは所有者のみです',
       habituales: 'よく使う値',
       octal: '8進数',
@@ -530,6 +530,7 @@ export const jaExtra: TextosParciales = {
       simbolicoInvalido: 'rwxr-xr-x のような9文字を入力してください。',
       ejemplo: '例',
       archivo: 'ファイル名',
+      archivoPorDefecto: 'ファイル',
       nota: 'Windows では適用されません。Linux および macOS のサーバー向けです。',
       avisoOtros:
         'サーバーのどのユーザーでも変更できてしまいます。「その他」に書き込み権限を与えないでください。',

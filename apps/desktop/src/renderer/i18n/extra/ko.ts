@@ -499,7 +499,7 @@ export const koExtra: TextosParciales = {
       ejecutar: '실행 (x)',
       especiales: '특수 비트',
       setuid: 'setuid: 소유자의 권한으로 실행됩니다',
-      setgid: 'setgid: 그룹의 권한으로 실행됩니다',
+      setgid: 'setgid: 그룹의 권한으로 실행됩니다. 폴더에서는 그 안에 새로 만드는 항목이 그룹을 물려받습니다',
       sticky: 'sticky: 폴더 안에서는 소유자만 삭제할 수 있습니다',
       habituales: '자주 쓰는 값',
       octal: '8진수',
@@ -508,6 +508,7 @@ export const koExtra: TextosParciales = {
       simbolicoInvalido: 'rwxr-xr-x와 같은 9자를 입력하십시오.',
       ejemplo: '예시',
       archivo: '파일 이름',
+      archivoPorDefecto: '파일',
       nota: 'Windows에서는 적용되지 않으며, Linux 및 macOS 서버용입니다.',
       avisoOtros:
         '서버의 모든 사용자가 수정할 수 있습니다. 「기타 사용자」에게 쓰기 권한을 주지 마십시오.',
