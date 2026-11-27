@@ -132,6 +132,13 @@ class Cola {
         const st = await fh.stat({ bigint: true });
         this.identidad = identidadDe(st);
         this.offset = Number(st.size);
+        // Si el archivo no acaba en salto de línea, se está escribiendo un mensaje: lo que llegue
+        // hasta el siguiente salto es su continuación (y el filtro, en duda, lo oculta).
+        if (this.offset > 0) {
+          const ultimo = Buffer.alloc(1);
+          await fh.read(ultimo, 0, 1, this.offset - 1);
+          if (ultimo[0] !== 0x0a) this.partida = true;
+        }
       } finally {
         await fh.close();
       }
@@ -204,7 +211,10 @@ class Cola {
     this.offset = 0;
     this.resto = Buffer.alloc(0);
     this.descartarPrimera = false;
-    this.partida = false;
+    // Archivo truncado o rotado: no se sabe dónde empieza el contenido nuevo (puede ser la cola de
+    // un mensaje). La primera línea cuenta como continuación y el filtro vuelve a la duda.
+    this.partida = true;
+    this.filtro?.reiniciarDuda();
   }
 
   /** Añade una línea (o un trozo de una larga) a `lineas`, pasándola por el filtro si lo hay. */

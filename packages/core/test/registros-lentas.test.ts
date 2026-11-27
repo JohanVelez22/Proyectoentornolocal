@@ -1,5 +1,5 @@
 import { appendFileSync } from 'node:fs';
-import { appendFile, mkdir, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, rename, writeFile } from 'node:fs/promises';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
@@ -224,5 +224,55 @@ describe('MCP leer_registro', () => {
     });
     expect(m.isError).toBe(true);
     expect(JSON.stringify(m)).not.toContain('X_REAL');
+  });
+});
+
+describe('PostgreSQL: seguir al arrancar a mitad de línea o tras truncado/rotación', () => {
+  const H = '2026-11-26 10:00:01.000 CET [2] db=a LOG:  duration: 2000.1 ms  statement: ';
+  const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const todo = (): string => recibidas.flatMap((r) => r.lineas).join('\n');
+
+  async function hastaFin(ruta: string): Promise<string> {
+    await appendFile(ruta, '2026 [1] LOG:  fin-de-prueba\n');
+    await vi.waitFor(() => expect(todo()).toContain('fin-de-prueba'), { timeout: 5000 });
+    return todo();
+  }
+
+  it('H: el visor se abre mientras PostgreSQL escribe una sentencia: el resto no se ve', async () => {
+    const ruta = rutas.logs('postgresql.log');
+    await writeFile(ruta, '2026 [1] LOG:  ready\n' + H + "SELECT * FROM c WHERE dni = 'X");
+    const dejar = await registros.seguir('servicio:postgresql');
+    await espera(100);
+    await appendFile(ruta, "SECRETO_ARRANQUE de Ana'\n");
+    const t = await hastaFin(ruta);
+    dejar();
+    expect(t).not.toContain('SECRETO_ARRANQUE');
+  });
+
+  it('K: un truncado durante seguir no hereda el estado: una continuación inicial se oculta', async () => {
+    const ruta = rutas.logs('postgresql.log');
+    await writeFile(ruta, '2026 [1] LOG:  ready\n');
+    const dejar = await registros.seguir('servicio:postgresql');
+    await appendFile(ruta, '2026 [1] LOG:  checkpoint\n');
+    await vi.waitFor(() => expect(todo()).toContain('checkpoint'), { timeout: 5000 });
+    await writeFile(ruta, "\tAND x='SECRETO_TRUNC'\n");
+    await espera(150);
+    const t = await hastaFin(ruta);
+    dejar();
+    expect(t).not.toContain('SECRETO_TRUNC');
+  });
+
+  it('L: una rotación cuyo archivo nuevo empieza a medias no enseña ese resto', async () => {
+    const ruta = rutas.logs('postgresql.log');
+    await writeFile(ruta, '2026 [1] LOG:  ready\n');
+    const dejar = await registros.seguir('servicio:postgresql');
+    await appendFile(ruta, '2026 [1] LOG:  checkpoint\n');
+    await vi.waitFor(() => expect(todo()).toContain('checkpoint'), { timeout: 5000 });
+    await rename(ruta, ruta + '.1');
+    await writeFile(ruta, "SECRETO_ROT') -- resto\n\tAND y='SECRETO_ROT2'\n");
+    await espera(150);
+    const t = await hastaFin(ruta);
+    dejar();
+    expect(t).not.toContain('SECRETO_ROT');
   });
 });
