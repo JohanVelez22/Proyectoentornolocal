@@ -1,4 +1,4 @@
-import { mkdir, stat } from 'node:fs/promises';
+import { lstat, mkdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { motorDe } from '../../bd/basesDeDatos';
 import { ErrorWolf } from '../../errores';
@@ -44,14 +44,49 @@ const CARPETAS_DE_EJECUCION: readonly { marca: string; carpetas: readonly string
   },
 ];
 
-async function crearCarpetasDeEjecucion(carpeta: string): Promise<void> {
+/**
+ * Crea `relativa` bajo `carpeta` tramo a tramo. Cada tramo que ya existe se mira con `lstat`: si no
+ * es una carpeta real (un archivo, un enlace o una unión que saldría de la carpeta del proyecto) no
+ * se entra ni se crea nada debajo. Devuelve el tramo problemático, o null si quedó creada.
+ */
+async function crearTramos(carpeta: string, relativa: string): Promise<string | null> {
+  let actual = carpeta;
+  let recorrido = '';
+  for (const tramo of relativa.split('/')) {
+    actual = path.join(actual, tramo);
+    recorrido = recorrido ? `${recorrido}/${tramo}` : tramo;
+    const info = await lstat(actual).catch(() => null);
+    if (info) {
+      if (!info.isDirectory()) return recorrido;
+      continue;
+    }
+    try {
+      await mkdir(actual);
+    } catch {
+      return recorrido;
+    }
+  }
+  return null;
+}
+
+async function crearCarpetasDeEjecucion(
+  carpeta: string,
+  avisar: (texto: string) => void,
+): Promise<void> {
   for (const { marca, carpetas } of CARPETAS_DE_EJECUCION) {
     const hay = await stat(path.join(carpeta, marca)).then(
       (s) => s.isFile(),
       () => false,
     );
     if (!hay) continue;
-    for (const c of carpetas) await mkdir(path.join(carpeta, ...c.split('/')), { recursive: true });
+    for (const c of carpetas) {
+      const problema = await crearTramos(carpeta, c);
+      if (problema !== null) {
+        avisar(
+          `No se creó la carpeta ${c}: ${problema} no es una carpeta normal o no se pudo crear.`,
+        );
+      }
+    }
   }
 }
 
@@ -71,7 +106,7 @@ export function pasoRestaurarPlantillaArchivos(d: DepsPasos): ImplementacionPaso
     }
     const r = await plantillasDe(d).restaurarArchivos(id, ctx.carpeta, usoDe(ctx));
     comprobarSenal(ctx);
-    await crearCarpetasDeEjecucion(ctx.carpeta);
+    await crearCarpetasDeEjecucion(ctx.carpeta, (t) => ctx.linea(sanear(t)));
     ctx.linea(`Se copiaron ${r.archivos} archivos de la plantilla.`);
   };
 }

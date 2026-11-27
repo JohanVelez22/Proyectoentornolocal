@@ -2150,6 +2150,26 @@ describe('pasos de plantilla de proyecto (D14)', () => {
     await expect(stat(join(otro.a.carpeta, 'writable'))).rejects.toThrow();
   });
 
+  it('un tramo de las carpetas de ejecución que es un archivo o un enlace se omite con un aviso, sin escapar un error de Node (D39, M6)', async () => {
+    const { a } = await conPlantillas();
+    const fuera = join(a.base, 'fuera-del-proyecto');
+    await mkdir(fuera, { recursive: true });
+    a.deps.plantillas!.restaurarArchivos = async (_id, destino) => {
+      await escribir(destino, 'artisan', '#!/usr/bin/env php');
+      // `storage` es un archivo (mkdir daría ENOTDIR) y `bootstrap` un enlace a otra carpeta.
+      await escribir(destino, 'storage', 'no soy una carpeta');
+      await symlink(fuera, join(destino, 'bootstrap'), 'junction');
+      return { archivos: 3 };
+    };
+    const lineas = await correr(a, 'restaurar-plantilla-archivos', { plantilla: 'mi-base-a1b2c3' });
+    expect(lineas.join('\n')).toMatch(/3 archivos/);
+    expect(lineas.join('\n')).toMatch(/storage/);
+    expect(lineas.join('\n')).toMatch(/bootstrap/);
+    // Nada se creó a través del enlace ni sobre el archivo.
+    expect(await readdir(fuera)).toEqual([]);
+    expect((await stat(join(a.carpeta, 'storage'))).isFile()).toBe(true);
+  });
+
   it('no copia sobre una carpeta con archivos y rechaza un id con ..', async () => {
     const { a, copias } = await conPlantillas();
     await escribir(a.carpeta, 'mio.txt', 'MIO');
