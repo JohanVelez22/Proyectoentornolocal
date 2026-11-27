@@ -8,22 +8,23 @@ Este manual explica cómo instalar, configurar y usar **WolfCore Dev**, el entor
 
 | Capítulo | Contenido principal |
 | --- | --- |
-| [01 · Primeros pasos](01-primeros-pasos.md) | Requisitos, instalación, carpeta de datos, recorrido de bienvenida, barra lateral y paleta `Ctrl+K`. |
-| [02 · Panel e Inicio y Servicios](02-panel-y-servicios.md) | Mosaicos de Inicio, rendimiento en vivo, workspaces de arranque, encender/apagar servicios y ajustes de PHP (`php.ini` y extensiones). |
+| [01 · Primeros pasos](01-primeros-pasos.md) | Requisitos, instalación, carpeta de datos, recorrido de bienvenida, barra lateral, barra superior (con la pastilla de estado) y paleta `Ctrl+K`. |
+| [02 · Panel e Inicio y Servicios](02-panel-y-servicios.md) | Mosaicos de Inicio, avisos agrupados, rendimiento en vivo (con espacio en disco y la tarjeta Servicios y procesos), workspaces de arranque, encender/apagar servicios, motores externos y ajustes de PHP (`php.ini` y extensiones). |
 | [03 · Versiones e instancias](03-versiones.md) | Catálogo en vivo, huellas y firmas PGP, instancias paralelas, actualizar con respaldo, limpieza de versiones sin uso y respaldos de actualización. |
-| [04 · Proyectos y sitios](04-proyectos-y-sitios.md) | Nuevo proyecto, agregar carpeta o clonar desde GitHub, recetas y `wolfcore.yml`, importar desde Laragon/XAMPP/Herd, plantillas, HTTPS, Xdebug, vhost de Nginx y FTP. |
+| [04 · Proyectos y sitios](04-proyectos-y-sitios.md) | Nuevo proyecto, agregar carpeta o clonar desde GitHub, recetas por tipo (Laravel, FastAPI, Node, Rails, Spring Boot, ASP.NET Core…) y `wolfcore.yml`, importar desde Laragon/XAMPP/Herd, plantillas, HTTPS, Xdebug, vhost de Nginx y FTP. |
 | [05 · Bases de datos](05-bases-de-datos.md) | MySQL, MariaDB, PostgreSQL (con pgvector), Redis y MongoDB; crear, respaldar, restaurar, importar, instantáneas, ver esquema, consultas lentas y Adminer/phpMyAdmin. |
 | [06 · Entorno y archivos `.env`](06-entorno-env.md) | Gestor visual de `.env`, secretos enmascarados, comparar con `.env.example`, bloques rápidos, usuario propio de base de datos y copias anteriores. |
-| [07 · Túneles y compartir](07-tuneles-y-compartir.md) | Cloudflare rápido y con nombre, ngrok, Expose, Tailscale (Serve y Funnel), acceso en red local con QR e instalación de la CA en el móvil. |
+| [07 · Túneles y compartir](07-tuneles-y-compartir.md) | Cloudflare rápido y con nombre, ngrok, Expose, Tailscale (Serve y Funnel), acceso en red local con QR, instalación de la CA en el móvil y compartir una carpeta o un archivo suelto. |
 | [08 · Correo de prueba](08-correo-de-prueba.md) | Captadores locales (Mailpit, smtp4dev, Inbucket, Papercut SMTP) y proveedores SMTP remotos con prueba de envío. |
 | [09 · Procesos y tareas programadas](09-procesos-y-tareas.md) | Procesos supervisados por proyecto (`npm run dev`, `queue:work`, `uvicorn`, Reverb) y tareas cron programadas con historial. |
-| [10 · Herramientas](10-herramientas.md) | Editor de código, buscador, comparador, Cliente HTTP, WebSocket, contraseñas, cripto, imágenes, ZIP/PDF, conversor de documentos, uso del disco, compartir carpeta o archivo, captura y grabación de pantalla, limpieza de disco y guías. |
+| [10 · Herramientas](10-herramientas.md) | Las 26 tarjetas de las 5 secciones (Código, Red, Seguridad, Archivos y medios y Sistema): Editor de código, buscador, comparador, Cliente HTTP, WebSocket, compartir carpeta o archivo, guías de HTTP, túneles y Git (con laboratorio), contraseñas, cripto, imágenes, ZIP/PDF, conversor de documentos, uso del disco, captura y grabación de pantalla y limpieza de disco. |
 | [11 · Agentes e IA](11-agentes-ia.md) | IA local con Ollama, proveedores en la nube, registro de agentes de IA con el servidor MCP y sugerencias de commit. |
 | [12 · CLI `wolf`](12-cli-wolf.md) | Activar el comando `wolf` en el PATH, órdenes disponibles (`status`, `link`, `park`, `use`, `secure`, `share`, `open`, `logs`, `doctor`, `start`, `stop`), `--json` y confirmaciones. |
-| [13 · Perfiles y ajustes](13-perfiles-y-ajustes.md) | Apariencia e idioma, avisos, puertos web, HTTPS, editor y terminal predeterminados, optimizador de memoria, respaldos y perfiles `.wolfperfil`. |
+| [13 · Perfiles y ajustes](13-perfiles-y-ajustes.md) | Apariencia e idioma (16 idiomas), avisos, puertos web, HTTPS, editor y terminal predeterminados, optimizador de memoria, respaldos y perfiles `.wolfperfil`. |
 | [14 · Doctor, Depuración y problemas](14-doctor-y-problemas.md) | Diagnóstico automático con Doctor, reparaciones guiadas, revisión del cortafuegos y eliminación de reglas peligrosas, confianza de la CA en Node/Python/Firefox, Depuración (`dump()`/`dd()`/errores) y Registros en vivo. |
 | [15 · Seguridad](15-seguridad.md) | Modelo de seguridad local, almacenamiento cifrado de secretos, confianza en repositorios, sitios con datos reales, verificación de descargas y reglas de red. |
 | [16 · Glosario](16-glosario.md) | Definiciones breves y claras de los términos que aparecen en WolfCore Dev. |
+| [Notas de la versión de la Etapa D](notas-version-etapa-d.md) | Qué hay de nuevo, mejoras de seguridad y correcciones, escrito para usuarios. |
 
 ## Paso a paso para empezar hoy
 
