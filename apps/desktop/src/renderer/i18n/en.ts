@@ -3958,7 +3958,7 @@ export const en: Textos = {
         pregunta: 'Publish this on the internet?',
         ruta: 'Exact path',
         aviso: (hasta: string) =>
-          `It will be public on the internet until ${hasta}. Anyone with the link will be able to view and download what is shared.`,
+          `It will be public on the internet until ${hasta}: anyone with the link will be able to view and download what is shared.`,
         boton: 'Share on the internet',
       },
       abriendo: 'Opening the tunnel…',

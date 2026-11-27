@@ -4102,7 +4102,7 @@ export const fr: Textos = {
         pregunta: 'Publier ceci sur internet ?',
         ruta: 'Chemin exact',
         aviso: (hasta: string) =>
-          `Ce sera public sur internet jusqu’à ${hasta}. Toute personne ayant le lien pourra consulter et télécharger ce qui est partagé.`,
+          `Ce sera public sur internet jusqu’à ${hasta} : toute personne ayant le lien pourra consulter et télécharger ce qui est partagé.`,
         boton: 'Partager sur internet',
       },
       abriendo: 'Ouverture du tunnel…',

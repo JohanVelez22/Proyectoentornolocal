@@ -3989,7 +3989,7 @@ export const es = {
         pregunta: '¿Publicar esto en internet?',
         ruta: 'Ruta exacta',
         aviso: (hasta: string) =>
-          `Quedará público en internet hasta las ${hasta}. Cualquiera que tenga el enlace podrá ver y descargar lo compartido.`,
+          `Quedará público en internet hasta las ${hasta}: cualquiera que tenga el enlace podrá ver y descargar lo compartido.`,
         boton: 'Compartir en internet',
       },
       abriendo: 'Abriendo el túnel…',

@@ -398,9 +398,15 @@ function cambiarRedLocal(valor: boolean): void {
       </label>
       <small class="ayuda">{{ t.ftp.redLocalAyuda }}</small>
       <small class="ayuda">{{ t.ftp.compartir.ayuda }}</small>
-      <NButton text type="primary" size="small" data-testid="ftp-compartir" @click="irACompartir">{{
-        t.ftp.compartir.enlace
-      }}</NButton>
+      <NButton
+        text
+        type="primary"
+        size="small"
+        class="ftp-compartir"
+        data-testid="ftp-compartir"
+        @click="irACompartir"
+        >{{ t.ftp.compartir.enlace }}</NButton
+      >
     </div>
 
     <footer class="pie">
@@ -661,6 +667,9 @@ function cambiarRedLocal(valor: boolean): void {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+.ftp-compartir {
+  align-self: flex-start;
 }
 .ayuda {
   margin: 0;

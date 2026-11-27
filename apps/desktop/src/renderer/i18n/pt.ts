@@ -3998,7 +3998,7 @@ export const pt: Textos = {
         pregunta: 'Publicar isto na internet?',
         ruta: 'Caminho exato',
         aviso: (hasta: string) =>
-          `Ficará público na internet até as ${hasta}. Qualquer pessoa com o link poderá ver e baixar o que for compartilhado.`,
+          `Ficará público na internet até as ${hasta}: qualquer pessoa com o link poderá ver e baixar o que for compartilhado.`,
         boton: 'Compartilhar na internet',
       },
       abriendo: 'Abrindo o túnel…',
