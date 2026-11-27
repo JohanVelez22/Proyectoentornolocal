@@ -30,6 +30,7 @@ export const IDIOMAS: readonly InfoIdioma[] = [
   { id: 'id', nombreNativo: 'Bahasa Indonesia', localeIntl: 'id-ID' },
   { id: 'pl', nombreNativo: 'Polski', localeIntl: 'pl-PL' },
   { id: 'nl', nombreNativo: 'Nederlands', localeIntl: 'nl-NL' },
+  { id: 'uk', nombreNativo: 'Українська', localeIntl: 'uk-UA' },
 ] satisfies readonly InfoIdioma[];
 
 /** Idioma de la interfaz para el locale del sistema (`pt-PT` → pt, `fr-CA` → fr…); si no, español. */

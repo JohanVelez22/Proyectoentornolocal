@@ -467,6 +467,34 @@ const TEXTOS = {
     carpetaDatosInvalida:
       'WOLFCORE_DATOS is geen geldige gegevensmap: deze moet absoluut zijn, geen systeemmap zijn en verschillen van de echte map (en de vorige). De app sluit af zonder iets te wijzigen.',
   },
+  uk: {
+    abrir: 'Відкрити',
+    iniciarTodo: 'Запустити все',
+    detenerTodo: 'Зупинити все',
+    salir: 'Вийти',
+    workspaces: 'Робочі простори',
+    workspaceParcial: 'частково',
+    preguntaApagar: 'Зупинити служби?',
+    siApagar: 'Так, зупинити',
+    noApagar: 'Ні, залишити запущеними',
+    cancelar: 'Скасувати',
+    cliTitulo: 'Команда з термінала (wolf)',
+    cliTunelInternet:
+      'Команда з термінала хоче опублікувати {dominio} в інтернеті за допомогою {proveedor}. Будь-хто з посиланням зможе переглянути його.',
+    cliTunelTailnet:
+      'Команда з термінала хоче надати доступ до {dominio} для пристроїв вашої мережі tailnet ({proveedor}).',
+    cliPublicoEn: 'Публічна адреса: https://{publico}',
+    cliDatosReales:
+      'УВАГА: {dominio} містить РЕАЛЬНІ ДАНІ. Щоб продовжити, оберіть нижче його точний домен. Якщо ви цього не запитували, скасуйте.',
+    cliPublicar: 'Опублікувати',
+    cliPhpGlobal:
+      'Команда з термінала хоче змінити PHP для всіх терміналів на версію {version}.',
+    cliCambiar: 'Змінити',
+    carpetaDatosAislada:
+      'тестова папка даних, без змін у hosts, PATH чи системних сертифікатах',
+    carpetaDatosInvalida:
+      'WOLFCORE_DATOS не є дійсною папкою даних: шлях має бути абсолютним, не системним і відрізнятися від основної папки (та від попередньої). Програма закриється, нічого не змінюючи.',
+  },
 } satisfies Record<IdiomaUi, Record<string, string>>;
 
 export type TextosMain = (typeof TEXTOS)['es'];

@@ -2742,7 +2742,186 @@ const NL: Diccionario = {
   },
 };
 
-const DICCIONARIOS = { es: ES, en: EN, pt: PT, fr: FR, de: DE, it: IT, ru: RU, zh: ZH, ja: JA, ko: KO, hi: HI, tr: TR, id: ID, pl: PL, nl: NL } satisfies Record<IdiomaUi, Diccionario>;
+const UK: Diccionario = {
+  porCodigo: {
+    'avisos.servicio_caido': (d) => ({
+      titulo: 'Служба зупинилася з помилкою',
+      cuerpo: `${limpio(d['nombre'], 'Служба')}: роботу припинено. Відкрийте WolfCore Dev, щоб переглянути подробиці.`,
+    }),
+    'avisos.iniciar_todo_fallos': (d) => ({
+      titulo: 'Не вдалося запустити всі служби',
+      cuerpo: `Не вдалося запустити: ${limpio(d['nombres'], 'деяку службу')}. Відкрийте «Служби», щоб переглянути подробиці.`,
+    }),
+    'avisos.workspace_fallos': (d) => ({
+      titulo: 'Робочий простір не зміг запустити все',
+      cuerpo: `${limpio(d['nombre'], 'Робочий простір')}: не вдалося запустити ${limpio(d['nombres'], 'деякий елемент')}. Відкрийте «Головна», щоб побачити, що запущено.`,
+    }),
+    'avisos.workspace_fallos_detener': (d) => ({
+      titulo: 'Робочий простір не зміг зупинити все',
+      cuerpo: `${limpio(d['nombre'], 'Робочий простір')}: не вдалося зупинити ${limpio(d['nombres'], 'деякий елемент')}. Відкрийте «Головна», щоб побачити, що досі запущено.`,
+    }),
+    'avisos.tarea_fallo': (d) => ({
+      titulo:
+        d['motivo'] === 'tiempo'
+          ? 'Заплановане завдання виконувалося занадто довго'
+          : 'Заплановане завдання завершилося з помилкою',
+      cuerpo: `${limpio(d['nombre'], 'Завдання')} (${limpio(d['sitio'], 'проєкт')}): ${d['motivo'] === 'tiempo' ? 'перевищено максимальний час виконання, завдання зупинено' : 'завершено з помилкою'}. Відкрийте проєкт, щоб переглянути журнал.`,
+    }),
+    'avisos.tarea_bloqueada': (d) => ({
+      titulo: 'Заплановане завдання не виконалося',
+      cuerpo: `${limpio(d['nombre'], 'Завдання')} (${limpio(d['sitio'], 'проєкт')}): ${
+        {
+          aislado: 'папка даних є тестовою, тому виконання завдань заборонено',
+          no_confiado: 'проєкт не позначено як довірений',
+          receta_cambio: 'рецепт проєкту змінився відтоді, як ви йому довірили',
+          sin_confirmar: 'команду ще не підтверджено',
+          comando_invalido: 'команду заборонено',
+          cron_invalida: 'розклад недійсний',
+          carpeta: 'папка проєкту не існує',
+        }[String(d['motivo'])] ?? 'умови не виконано'
+      }.`,
+    }),
+    'avisos.puerto_ocupado': (d) => ({
+      titulo: 'Порт зайнято',
+      cuerpo: `Порт ${limpio(d['puerto'], '?')} використовує ${limpio(d['nombre'], 'інша програма')}: не вдалося запустити службу.`,
+    }),
+    'avisos.proceso_error': (d) => ({
+      titulo: 'Процес проєкту завершився з помилкою',
+      cuerpo: `${limpio(d['nombre'], 'Процес')}: роботу припинено. Перевірте його журнали.`,
+    }),
+    'avisos.proceso_terminado': (d) => ({
+      titulo: 'Процес завершився',
+      cuerpo: `${limpio(d['nombre'], 'Процес')}: завершено без помилок.`,
+    }),
+    'avisos.proceso_fallo': (d) => ({
+      titulo: 'Процес завершився з помилкою',
+      cuerpo: `${limpio(d['nombre'], 'Процес')}: завершено з помилкою${d['codigoSalida'] !== undefined ? ` (код ${limpio(d['codigoSalida'], '?')})` : ''}. Перевірте його журнали.`,
+    }),
+    'avisos.receta_terminada': (d) => ({
+      titulo: 'Рецепт виконано',
+      cuerpo: `Рецепт для ${limpio(d['sitio'], 'проєкту')} завершився без помилок.`,
+    }),
+    'avisos.receta_fallo': (d) => ({
+      titulo: 'Помилка виконання рецепта',
+      cuerpo: `Рецепт для ${limpio(d['sitio'], 'проєкту')} зупинився з помилкою. Відкрийте проєкт, щоб переглянути крок.`,
+    }),
+    'avisos.tunel_caido': (d) => ({
+      titulo: 'Тунель перестав працювати',
+      cuerpo: `Тунель для ${limpio(d['fuente'], 'проєкту')} припинив роботу.`,
+    }),
+    'avisos.contenedor_detenido': (d) => ({
+      titulo: 'Контейнер зупинився',
+      cuerpo: `${limpio(d['nombre'], 'Контейнер')} (${limpio(d['motor'], 'Docker')}) зупинився без вашого запиту${d['codigoSalida'] !== undefined ? ` (код ${limpio(d['codigoSalida'], '?')})` : ''}.`,
+    }),
+    'avisos.ca_por_vencer': (d) => ({
+      titulo: 'Термін дії центру сертифікації скоро спливає',
+      cuerpo: `Термін дії спливає через ${limpio(d['dias'], '?')} дн. Перегенеруйте його та додайте до довірених знову.`,
+    }),
+    'avisos.certificado_por_vencer': (d) => ({
+      titulo: 'Термін дії сертифіката скоро спливає',
+      cuerpo: `Термін дії сертифіката для ${limpio(d['fuente'], 'сайту')} спливає через ${limpio(d['dias'], '?')} дн.`,
+    }),
+    'avisos.certificado_vencido': (d) => ({
+      titulo: 'Термін дії сертифіката сплив',
+      cuerpo: `Сертифікат для ${limpio(d['fuente'], 'сайту')} більше не дійсний. Перегенеруйте його.`,
+    }),
+    'avisos.php_sitio_fallo': (d) => ({
+      titulo: 'Власний PHP сайту не запустився',
+      cuerpo: `PHP для ${limpio(d['fuente'], 'сайту')} не запустився (можливо, його порт зайнятий іншою програмою). Перевірте розділ PHP у його картці.`,
+    }),
+    'avisos.php_sitio_sin_puertos': (d) => ({
+      titulo: 'Немає вільних портів для PHP сайту',
+      cuerpo: `${limpio(d['fuente'], 'Сайт')} використовує спільний PHP своєї версії без власних налаштувань: не залишилося вільних портів для окремого PHP.`,
+    }),
+    'avisos.php_sitio_descartados': (d) => ({
+      titulo: 'Налаштування PHP відхилено',
+      cuerpo: `Деякі налаштування PHP для ${limpio(d['fuente'], 'сайту')} недійсні та не були застосовані: ${limpio(d['claves'], 'перевірте розділ PHP')}.`,
+    }),
+    'avisos.lan_red_cambio': (d) => ({
+      titulo: 'Спільний доступ у локальній мережі припинено',
+      cuerpo: `Мережа змінилася: спільний доступ до ${limpio(d['fuente'], 'сайту')} припинено.`,
+    }),
+    'avisos.vhost_reglas_descartadas': (d) => ({
+      titulo: 'Правила Nginx відхилено',
+      cuerpo: `Власні правила для ${limpio(d['fuente'], 'сайту')} більше не проходять перевірку (змінилися папка, домени або порти) і були виключені з його vhost. Перевірте їх у розділі Nginx.`,
+    }),
+    'avisos.vhost_manual_descartado': (d) => ({
+      titulo: 'Вручну написаний vhost не використовується',
+      cuerpo: `Вручну написаний vhost для ${limpio(d['fuente'], 'сайту')} більше не проходить перевірку (змінилися папка, домени або порти): використовується згенерований. Перевірте його у розділі Nginx.`,
+    }),
+    'avisos.rustup_entrada_ajena': () => ({
+      titulo: 'Rustup уже було встановлено в іншому місці',
+      cuerpo:
+        'Rust від WolfCore Dev встановлено у власну папку. У Windows уже був запис видалення для rustup, який вказує на іншу інсталяцію: його не змінювали.',
+    }),
+    'avisos.version_nueva': (d) => ({
+      titulo: `Доступна нова версія ${limpio(d['servicio'], 'служби')}`,
+      cuerpo: `${limpio(d['nueva'], 'Нова версія')} уже опублікована (у вас ${limpio(d['actual'], 'інша')}). Відкрийте «Служби → Версії», щоб оновити; нічого не встановлюється автоматично.`,
+      accion: 'Оновити',
+    }),
+    'avisos.version_nueva_sin_huella': (d) => ({
+      titulo: `Доступна нова версія ${limpio(d['servicio'], 'служби')}`,
+      cuerpo: `${limpio(d['nueva'], 'Нова версія')} уже опублікована (у вас ${limpio(d['actual'], 'інша')}), але без опублікованого відбитка: завантаження неможливо перевірити. Перегляньте її в «Служби → Версії»; встановлення потребуватиме вашого підтвердження.`,
+    }),
+    'avisos.rama_nueva_sin_huella': (d) => ({
+      titulo: `Нова основна версія ${limpio(d['servicio'], 'служби')}`,
+      cuerpo: `${limpio(d['nueva'], 'Нова основна версія')} новіша за ту, яку ви використовуєте (${limpio(d['actual'], '?')}), але без опублікованого відбитка: завантаження неможливо перевірити. Перегляньте її в «Служби → Версії»; встановлення потребуватиме вашого підтвердження.`,
+    }),
+    'avisos.rama_nueva': (d) => ({
+      titulo: `Нова основна версія ${limpio(d['servicio'], 'служби')}`,
+      cuerpo: `${limpio(d['nueva'], 'Нова основна версія')} новіша за ту, яку ви використовуєте (${limpio(d['actual'], '?')}). Встановлюється окремо, не зачіпаючи ваші дані.`,
+      accion: 'Оновити',
+    }),
+    'doctor.hallazgos': (d) => ({
+      titulo: 'Doctor виявив помилки в середовищі',
+      cuerpo: `Виявлено проблем: ${limpio(d['errores'], 'кілька')}, які можуть завадити роботі середовища. Відкрийте Doctor, щоб дізнатися, як їх виправити.`,
+    }),
+  },
+  porTipo: {
+    'servicio-caido': {
+      titulo: 'Служба зупинилася',
+      cuerpo: 'Відкрийте WolfCore Dev, щоб переглянути подробиці.',
+    },
+    'puerto-ocupado': {
+      titulo: 'Порт зайнято',
+      cuerpo: 'Відкрийте WolfCore Dev, щоб переглянути подробиці.',
+    },
+    'certificado-por-vencer': {
+      titulo: 'Термін дії сертифіката скоро спливає',
+      cuerpo: 'Відкрийте WolfCore Dev, щоб переглянути подробиці.',
+    },
+    'tunel-caido': {
+      titulo: 'Тунель перестав працювати',
+      cuerpo: 'Відкрийте WolfCore Dev, щоб переглянути подробиці.',
+    },
+    'proceso-error': {
+      titulo: 'Процес завершився з помилкою',
+      cuerpo: 'Відкрийте WolfCore Dev, щоб переглянути подробиці.',
+    },
+    'proceso-terminado': {
+      titulo: 'Процес завершився',
+      cuerpo: 'Відкрийте WolfCore Dev, щоб переглянути подробиці.',
+    },
+    'receta-terminada': {
+      titulo: 'Рецепт виконано',
+      cuerpo: 'Відкрийте WolfCore Dev, щоб переглянути подробиці.',
+    },
+    doctor: {
+      titulo: 'Doctor виявив проблеми',
+      cuerpo: 'Відкрийте WolfCore Dev, щоб перевірити їх.',
+    },
+    'contenedor-detenido': {
+      titulo: 'Контейнер зупинився',
+      cuerpo: 'Відкрийте WolfCore Dev, щоб переглянути подробиці.',
+    },
+    'version-nueva': {
+      titulo: 'Доступна нова версія',
+      cuerpo: 'Відкрийте WolfCore Dev, щоб оновити.',
+    },
+  },
+};
+
+const DICCIONARIOS = { es: ES, en: EN, pt: PT, fr: FR, de: DE, it: IT, ru: RU, zh: ZH, ja: JA, ko: KO, hi: HI, tr: TR, id: ID, pl: PL, nl: NL, uk: UK } satisfies Record<IdiomaUi, Diccionario>;
 
 export const CODIGOS_AVISO = Object.keys(ES.porCodigo);
 
@@ -2763,6 +2942,7 @@ export const CODIGOS_AVISO_POR_IDIOMA: Record<IdiomaUi, string[]> = {
   id: Object.keys(ID.porCodigo),
   pl: Object.keys(PL.porCodigo),
   nl: Object.keys(NL.porCodigo),
+  uk: Object.keys(UK.porCodigo),
 };
 
 export function textoAviso(
