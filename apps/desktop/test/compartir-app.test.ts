@@ -173,6 +173,8 @@ describe('textos de D52 en los cuatro idiomas', () => {
       expect(d.herramientas.lista.compartir.nombre, id).not.toBe('');
       expect(t.confirmar.aviso('1 h'), id).toContain('1 h');
       expect(t.grandes, id).toMatch(/8 ?(MB|Mo)/);
+      expect(t.comprimidos, id).toMatch(/\.zip/);
+      expect(t.comprimidos, id).toMatch(/\.env/);
       expect(t.confirmar.rutaReal, id).not.toBe('');
       expect(d.errores.codigos['compartir.carpeta_perfil'], id).not.toBe('');
       expect(d.errores.codigos['compartir.archivo_grande'], id).not.toBe('');

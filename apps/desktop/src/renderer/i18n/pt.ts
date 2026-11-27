@@ -3998,7 +3998,9 @@ export const pt: Textos = {
           'Escolha uma pasta ou um arquivo para obter um link público temporário. Nada é publicado até que você confirme.',
       },
       grandes:
-        'Arquivos de texto ou de tipo desconhecido com mais de 8 MB não são compartilhados, porque não podem ser revisados por completo; imagens, áudio, vídeo e pacotes (zip, 7z, iso, pdf) são. Na listagem aparecem marcados.',
+        'Arquivos de texto ou de tipo desconhecido com mais de 8 MB não são compartilhados, porque não podem ser revisados por completo; imagens, áudio, vídeo e pacotes (zip, 7z, gz, pdf) são. Na listagem aparecem marcados.',
+      comprimidos:
+        'Um arquivo compactado (.zip, .7z, .gz) é compartilhado como está, sem olhar o que há dentro: se contiver um .env ou chaves, eles serão publicados.',
       confirmar: {
         titulo: 'Compartilhar na internet',
         pregunta: 'Publicar isto na internet?',

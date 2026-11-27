@@ -3958,7 +3958,9 @@ export const en: Textos = {
           'Choose a folder or a file to get a temporary public link. Nothing is published until you confirm it.',
       },
       grandes:
-        'Text files or files of an unknown type larger than 8 MB are not shared, because they cannot be fully checked; images, audio, video and packages (zip, 7z, iso, pdf) are. They show as marked in the listing.',
+        'Text files or files of an unknown type larger than 8 MB are not shared, because they cannot be fully checked; images, audio, video and packages (zip, 7z, gz, pdf) are. They show as marked in the listing.',
+      comprimidos:
+        'A compressed file (.zip, .7z, .gz) is shared as it is, without looking inside: if it holds a .env file or keys, they are published.',
       confirmar: {
         titulo: 'Share on the internet',
         pregunta: 'Publish this on the internet?',

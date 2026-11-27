@@ -153,6 +153,9 @@ const recientes = computed(() => [...accesos.value].reverse());
   <div class="herr compartir">
     <NAlert type="info" :show-icon="false">{{ t.explicacion }}</NAlert>
     <p class="herr-tenue">{{ t.grandes }}</p>
+    <NAlert type="warning" :show-icon="false" data-testid="compartir-comprimidos">{{
+      t.comprimidos
+    }}</NAlert>
 
     <template v-if="!activa && !iniciando">
       <NAlert v-if="estado?.fin === 'vencio'" type="warning" :show-icon="false">{{

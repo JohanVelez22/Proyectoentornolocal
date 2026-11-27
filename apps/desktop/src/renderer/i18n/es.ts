@@ -3989,7 +3989,9 @@ export const es = {
           'Elija una carpeta o un archivo para obtener un enlace público temporal. Nada se publica hasta que lo confirme.',
       },
       grandes:
-        'Los archivos de texto o de tipo desconocido de más de 8 MB no se comparten, porque no se pueden revisar por completo; las imágenes, el audio, el vídeo y los paquetes (zip, 7z, iso, pdf) sí. En el listado aparecen marcados.',
+        'Los archivos de texto o de tipo desconocido de más de 8 MB no se comparten, porque no se pueden revisar por completo; las imágenes, el audio, el vídeo y los paquetes (zip, 7z, gz, pdf) sí. En el listado aparecen marcados.',
+      comprimidos:
+        'Un archivo comprimido (.zip, .7z, .gz) se comparte tal cual, sin mirar lo que lleva dentro: si dentro hay un .env o claves, se publican.',
       confirmar: {
         titulo: 'Compartir en internet',
         pregunta: '¿Publicar esto en internet?',

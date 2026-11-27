@@ -4102,7 +4102,9 @@ export const fr: Textos = {
           'Choisissez un dossier ou un fichier pour obtenir un lien public temporaire. Rien n’est publié tant que vous ne l’avez pas confirmé.',
       },
       grandes:
-        'Les fichiers texte ou de type inconnu de plus de 8 Mo ne sont pas partagés, car ils ne peuvent pas être vérifiés en entier ; les images, l’audio, la vidéo et les paquets (zip, 7z, iso, pdf) le sont. Ils apparaissent marqués dans la liste.',
+        'Les fichiers texte ou de type inconnu de plus de 8 Mo ne sont pas partagés, car ils ne peuvent pas être vérifiés en entier ; les images, l’audio, la vidéo et les paquets (zip, 7z, gz, pdf) le sont. Ils apparaissent marqués dans la liste.',
+      comprimidos:
+        'Une archive compressée (.zip, .7z, .gz) est partagée telle quelle, sans regarder son contenu : si elle contient un fichier .env ou des clés, ils sont publiés.',
       confirmar: {
         titulo: 'Partager sur internet',
         pregunta: 'Publier ceci sur internet ?',
