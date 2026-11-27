@@ -251,7 +251,7 @@ export const es = {
         'No existe la autoridad de certificados de WolfCore Dev. Instale la CA desde la sección HTTPS antes de emitir certificados.',
       'clientehttp.peticion_invalida': 'Dato no válido en la petición: {campo}.',
       'clientehttp.variable_sin_definir':
-        'La variable {{{nombre}}} no está definida en el entorno activo.',
+        'La variable «{nombre}» no está definida en el entorno activo.',
       'clientehttp.secreto_faltante':
         'Falta un valor secreto guardado: vuelva a escribirlo y guarde la petición o el entorno.',
       'clientehttp.secreto_no_guardado':

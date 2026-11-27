@@ -255,7 +255,7 @@ export const pt: Textos = {
         'A autoridade certificadora do WolfCore Dev não existe. Instale a CA na seção HTTPS antes de emitir certificados.',
       'clientehttp.peticion_invalida': 'Dado inválido na requisição: {campo}.',
       'clientehttp.variable_sin_definir':
-        'A variável {{{nombre}}} não está definida no ambiente ativo.',
+        'A variável «{nombre}» não está definida no ambiente ativo.',
       'clientehttp.secreto_faltante':
         'Falta um valor secreto guardado: digite-o de novo e salve a requisição ou o ambiente.',
       'clientehttp.secreto_no_guardado':

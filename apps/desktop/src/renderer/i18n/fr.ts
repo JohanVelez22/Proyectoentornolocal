@@ -262,7 +262,7 @@ export const fr: Textos = {
         'L’autorité de certification de WolfCore Dev n’existe pas. Installez la CA depuis la section HTTPS avant d’émettre des certificats.',
       'clientehttp.peticion_invalida': 'Donnée non valide dans la requête : {campo}.',
       'clientehttp.variable_sin_definir':
-        'La variable {{{nombre}}} n’est pas définie dans l’environnement actif.',
+        'La variable «{nombre}» n’est pas définie dans l’environnement actif.',
       'clientehttp.secreto_faltante':
         'Une valeur secrète enregistrée est manquante : saisissez-la de nouveau et enregistrez la requête ou l’environnement.',
       'clientehttp.secreto_no_guardado':

@@ -16,7 +16,6 @@ import {
   NInput,
   NInputNumber,
   NModal,
-  NSelect,
   NTab,
   NTabPane,
   NTabs,
@@ -28,6 +27,7 @@ import { api, plano } from '../../api';
 import { solicitudes } from '../../composables/solicitudes';
 import { formatearFecha, textos } from '../../i18n';
 import { mensajeDeError } from '../../utilidades/errores';
+import Desplegable from '../Desplegable.vue';
 import EstadoVacio from '../EstadoVacio.vue';
 import TextoLargo from '../TextoLargo.vue';
 import CampoSecreto from './clientehttp/CampoSecreto.vue';
@@ -354,7 +354,7 @@ function etiquetaHistorial(e: EstadoClienteHttp['historial'][number]): string {
         <NTab name="historial">{{ t.pestanas.historial }} ({{ estado.historial.length }})</NTab>
         <NTab name="entornos">{{ t.pestanas.entornos }} ({{ estado.entornos.length }})</NTab>
       </NTabs>
-      <NSelect
+      <Desplegable
         v-model:value="entornoActivo"
         :options="opcionesEntorno"
         size="small"
@@ -370,7 +370,7 @@ function etiquetaHistorial(e: EstadoClienteHttp['historial'][number]): string {
         </ul>
       </NAlert>
       <div class="herr-fila linea-url">
-        <NSelect
+        <Desplegable
           v-model:value="borrador.metodo"
           :options="opcionesMetodo"
           class="metodo"
@@ -416,7 +416,7 @@ function etiquetaHistorial(e: EstadoClienteHttp['historial'][number]): string {
         </NTabPane>
         <NTabPane name="cuerpo" :tab="t.secciones.cuerpo">
           <div class="bloque">
-            <NSelect
+            <Desplegable
               v-model:value="cuerpoTipo"
               :options="opcionesCuerpo"
               size="small"
@@ -450,7 +450,7 @@ function etiquetaHistorial(e: EstadoClienteHttp['historial'][number]): string {
         </NTabPane>
         <NTabPane name="auth" :tab="t.secciones.auth">
           <div class="bloque">
-            <NSelect
+            <Desplegable
               v-model:value="authTipo"
               :options="opcionesAuth"
               size="small"
@@ -474,7 +474,7 @@ function etiquetaHistorial(e: EstadoClienteHttp['historial'][number]): string {
                   :placeholder="t.auth.nombre"
                   :aria-label="t.auth.nombre"
                 />
-                <NSelect
+                <Desplegable
                   v-model:value="authEn"
                   :options="opcionesEn"
                   size="small"

@@ -250,7 +250,7 @@ export const en: Textos = {
         'The WolfCore Dev certificate authority does not exist. Install the CA from the HTTPS section before issuing certificates.',
       'clientehttp.peticion_invalida': 'Invalid data in the request: {campo}.',
       'clientehttp.variable_sin_definir':
-        'The variable {{{nombre}}} is not defined in the active environment.',
+        'The variable “{nombre}” is not defined in the active environment.',
       'clientehttp.secreto_faltante':
         'A stored secret value is missing: type it again and save the request or the environment.',
       'clientehttp.secreto_no_guardado':
