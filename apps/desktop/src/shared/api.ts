@@ -219,6 +219,12 @@ import type {
   ResumenCarpetas,
   FilaDiffTexto,
   GrupoDiff,
+  AnalisisDisco,
+  NodoUsoUi,
+  ArchivoTopUi,
+  CarpetaTopUi,
+  ProgresoUsoDisco,
+  UnidadDisco,
   ArchivoEditor,
   RiesgoEditor,
   HuellaArchivo,
@@ -437,6 +443,12 @@ export type {
   ResumenCarpetas,
   FilaDiffTexto,
   GrupoDiff,
+  AnalisisDisco,
+  NodoUsoUi,
+  ArchivoTopUi,
+  CarpetaTopUi,
+  ProgresoUsoDisco,
+  UnidadDisco,
   EstadoInstancia,
   IdInstancia,
   PlanActualizar,
@@ -1612,6 +1624,25 @@ export interface ApiEntorno {
      */
     prepararEditor(idComparacion: string, idEntrada: number, lado: 'a' | 'b'): Promise<string>;
   };
+  discoUso: {
+    /** Unidades locales que se pueden analizar (discos fijos y extraíbles). */
+    unidades(): Promise<UnidadDisco[]>;
+    /**
+     * Analiza una carpeta elegida con el diálogo nativo (`sistema.elegirCarpeta`). Corre en un
+     * proceso aparte, en solo lectura; no sigue enlaces. Uno a la vez; el avance llega por
+     * `disco:progreso`.
+     */
+    analizar(carpeta: string): Promise<AnalisisDisco>;
+    /** Analiza una unidad de la lista de `unidades` (nunca una ruta libre). */
+    analizarUnidad(ruta: string): Promise<AnalisisDisco>;
+    /** Cancela el análisis en curso (termina el proceso de trabajo); false si no había. */
+    cancelar(): Promise<boolean>;
+    /**
+     * Abre en el Explorador la carpeta de una fila del análisis (la carpeta misma, o la que
+     * contiene al archivo). La ruta sale del análisis guardado, no de la ventana.
+     */
+    abrirCarpeta(idAnalisis: string, idFila: number): Promise<void>;
+  };
   captura: {
     /** Configuración, estado del sistema y del atajo global (D35). */
     leer(): Promise<EstadoCapturaUi>;
@@ -2102,6 +2133,11 @@ export const RUTAS_IPC = [
   'diffCarpetas.cancelar',
   'diffCarpetas.archivo',
   'diffCarpetas.prepararEditor',
+  'discoUso.unidades',
+  'discoUso.analizar',
+  'discoUso.analizarUnidad',
+  'discoUso.cancelar',
+  'discoUso.abrirCarpeta',
   'captura.leer',
   'captura.guardarConfig',
   'captura.iniciar',
@@ -2206,5 +2242,6 @@ export const EVENTOS_IPC = [
   'contenedor:lineas',
   'busqueda:resultado',
   'busqueda:fin',
+  'disco:progreso',
   'captura:imagen',
 ] as const satisfies readonly (keyof EventosNucleo)[];

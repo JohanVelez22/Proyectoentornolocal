@@ -18,6 +18,8 @@ export default defineConfig({
           conversorTrabajo: resolve(__dirname, 'src/main/conversorTrabajo.ts'),
           // Y el del diff de carpetas (D44).
           diffTrabajo: resolve(__dirname, 'src/main/diffTrabajo.ts'),
+          // Y el de «Uso del disco» (D51).
+          discoTrabajo: resolve(__dirname, 'src/main/discoTrabajo.ts'),
         },
       },
     },

@@ -2069,6 +2069,17 @@ const TABLA: Record<RutaIpc, Manejador> = {
       'editor',
     ) as string;
   },
+  // ---- Uso del disco (D51): solo lectura; carpeta de un diálogo o unidad de la lista ----
+  'discoUso.unidades': (n) => n.usoDisco.unidades(),
+  'discoUso.analizar': (n, s, carpeta) => n.usoDisco.analizar(s.elegidas.exigir(carpeta, 'carpeta')),
+  'discoUso.analizarUnidad': (n, _s, ruta) =>
+    n.usoDisco.analizarUnidad(textoAcotado(ruta, 3, 260, 'unidad')),
+  'discoUso.cancelar': (n) => n.usoDisco.cancelar(),
+  // La carpeta la pone el núcleo a partir del análisis guardado; este proceso solo la abre.
+  'discoUso.abrirCarpeta': async (n, s, id, fila) =>
+    s.abrirCarpeta(
+      await n.usoDisco.carpetaDe(idCorto(id, 'análisis', 64), enteroPositivo(fila, 'fila')),
+    ),
   'herramientas.optimizarPdf': (n, s, origen, destino) =>
     n.optimizarPdf(
       s.elegidas.exigir(origen, 'archivo'),

@@ -49,6 +49,7 @@ import { abrirGrabadora } from './grabadora';
 import { imprimirHtmlAPdf } from './conversorPdf';
 import { crearEjecutorUtilityProcess } from './conversorProceso';
 import { crearEjecutorDiffUtilityProcess } from './diffProceso';
+import { crearEjecutorDiscoUtilityProcess } from './discoProceso';
 import { registrarIpcCaptura, ServicioCaptura } from './captura';
 import { crearDepsElectron } from './capturaElectron';
 
@@ -421,6 +422,8 @@ if (errorCarpetaDatos !== null) {
         ejecutorConversor: crearEjecutorUtilityProcess(join(__dirname, 'conversorTrabajo.js')),
         // El diff de carpetas (D44) recorre las carpetas en un utilityProcess, nunca aquí.
         ejecutorDiff: crearEjecutorDiffUtilityProcess(join(__dirname, 'diffTrabajo.js')),
+        // Y «Uso del disco» (D51): recorre el disco en otro utilityProcess, con progreso y cancelar.
+        ejecutorUsoDisco: crearEjecutorDiscoUtilityProcess(join(__dirname, 'discoTrabajo.js')),
         servidorCli: {
           version: app.getVersion(),
           // El cliente `wolf` compilado (out/cli/wolf.cjs, dentro del paquete) y el ejecutable que lo

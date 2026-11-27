@@ -556,6 +556,13 @@ const api: ApiEntorno = {
     prepararEditor: (idComparacion, idEntrada, lado) =>
       invocar('diffCarpetas.prepararEditor', idComparacion, idEntrada, lado),
   },
+  discoUso: {
+    unidades: () => invocar('discoUso.unidades'),
+    analizar: (carpeta) => invocar('discoUso.analizar', carpeta),
+    analizarUnidad: (ruta) => invocar('discoUso.analizarUnidad', ruta),
+    cancelar: () => invocar('discoUso.cancelar'),
+    abrirCarpeta: (idAnalisis, idFila) => invocar('discoUso.abrirCarpeta', idAnalisis, idFila),
+  },
   captura: {
     leer: () => invocar('captura.leer'),
     guardarConfig: (cambios) => invocar('captura.guardarConfig', cambios),
