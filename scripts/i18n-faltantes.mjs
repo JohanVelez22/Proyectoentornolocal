@@ -6,7 +6,7 @@
  *   - placeholders `{x}` de un texto que no coinciden con los del inglés;
  *   - funciones cuyos parámetros no coinciden (nombres o cantidad) y arreglos de otro largo;
  *   - traducciones desactualizadas: claves que el idioma tiene pero cuyo texto en español (`es`)
- *     cambió desde el commit de partida de los idiomas (`--desde`, por omisión 0adc3b1, cuando se completaron y revisaron los 12 idiomas sobre el es actual);
+ *     cambió desde el commit de partida de los idiomas (`--desde`, por omisión e35a708, cuando se completaron y revisaron los 12 idiomas sobre el es actual);
  *   - lo mismo para los textos del proceso principal (`main/textos.ts`) y los avisos
  *     (`shared/textosAvisos.ts`): códigos que faltan.
  *
@@ -46,7 +46,7 @@ const valor = (n) => {
 };
 const salida = valor('--salida');
 const soloJson = args.includes('--json');
-const desde = valor('--desde') ?? '0adc3b1';
+const desde = valor('--desde') ?? 'e35a708';
 const filtro = valor('--idioma')
   ?.split(',')
   .map((x) => x.trim());
