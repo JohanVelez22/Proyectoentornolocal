@@ -519,7 +519,10 @@ try {
       // En los runners de GitHub el dueño de las carpetas nuevas es el grupo Administradores, no el
       // usuario: el servidor de órdenes se niega a escribir su token ahí (es lo que debe hacer).
       // Esa comprobación de dueño se prueba con dobles; en un equipo real este paso sí es obligatorio.
-      if (process.env.CI) throw new CliOmitida();
+      // Solo se omite en el CI de Windows: en macOS y Linux el dueño sí es el usuario y un fallo
+      // aquí es real. (No se comprueba el dueño de la carpeta directamente: en Windows exigiría
+      // consultar la ACL y el servidor ya aplica esa misma regla.)
+      if (process.env.CI && process.platform === 'win32') throw new CliOmitida();
       throw new Error('el servidor de órdenes no escribió run/cli.json');
     }
     const script = usarOut
@@ -555,7 +558,11 @@ try {
     falla(`La captura no respondió: ${e}`);
   }
   // Sin consolas: ningún proceso de la app (ni sus hijos) tiene una ventana visible que no sea la
-  // principal (una consola de cmd, PowerShell o Node parpadearía al usuario).
+  // principal (una consola de cmd, PowerShell o Node parpadearía al usuario). Además se buscan
+  // ventanas nuevas de Windows Terminal y de conhost iniciadas después que la app. La comprobación
+  // es PARCIAL: mira ventanas principales de procesos (MainWindowHandle), no recorre todas las
+  // ventanas del escritorio, y una terminal que el propio usuario abra durante la prueba la
+  // dispararía (falso positivo). Nunca abre ninguna ventana.
   if (process.platform === 'win32' && proc?.pid) {
     try {
       const salida = execFileSync(
@@ -564,9 +571,14 @@ try {
           '-NoProfile',
           '-NonInteractive',
           '-Command',
-          `$todos = Get-CimInstance Win32_Process; $ids = @(${proc.pid}); do { $n = @($todos | Where-Object { $ids -contains $_.ParentProcessId -and $ids -notcontains $_.ProcessId } | ForEach-Object { $_.ProcessId }); $ids += $n } while ($n.Count -gt 0); Get-Process -Id $ids -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 -and $_.Id -ne ${proc.pid} } | ForEach-Object { $_.ProcessName + '|' + $_.MainWindowTitle }`,
+          `$todos = Get-CimInstance Win32_Process; $ids = @(${proc.pid}); do { $n = @($todos | Where-Object { $ids -contains $_.ParentProcessId -and $ids -notcontains $_.ProcessId } | ForEach-Object { $_.ProcessId }); $ids += $n } while ($n.Count -gt 0); Get-Process -Id $ids -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 -and $_.Id -ne ${proc.pid} } | ForEach-Object { $_.ProcessName + '|' + $_.MainWindowTitle }; $ini = (Get-Process -Id ${proc.pid} -ErrorAction SilentlyContinue).StartTime; if ($ini) { Get-Process -Name WindowsTerminal,conhost -ErrorAction SilentlyContinue | Where-Object { $_.StartTime -ge $ini -and $_.MainWindowHandle -ne 0 } | ForEach-Object { $_.ProcessName + '|' + $_.MainWindowTitle } }`,
         ],
-        { encoding: 'utf8', windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'] },
+        {
+          encoding: 'utf8',
+          windowsHide: true,
+          timeout: 60_000,
+          stdio: ['ignore', 'pipe', 'ignore'],
+        },
       )
         .split(String.fromCharCode(10))
         .map((l) => l.trim())
