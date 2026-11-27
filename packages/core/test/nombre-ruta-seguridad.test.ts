@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { detectorCompartir } from '../src/compartir/contenido';
+import {
+  detectorCompartir,
+  esAppData,
+  esCarpetaDeClaves,
+  esCarpetaProhibida,
+  tramosDePerfilNavegador,
+} from '../src/compartir/contenido';
+import { segmentosDeRuta } from '../src/rutas/nombreDeRuta';
 import { archivoSensible } from '../src/git/git';
 import { crearDetectorSensible } from '../src/herramientas/archivoSensible';
 import { motivoProtegido } from '../src/sistema/memoria';
@@ -74,4 +81,19 @@ describe('motivoProtegido: el nombre sale de la ruta sea cual sea el separador',
     '%s se protege',
     (ruta) => expect(motivoProtegido({ ...base, ruta }, ctx)).toBe('sistema'),
   );
+});
+
+describe('reglas de Compartir por tramos con rutas de Windows (en cualquier sistema)', () => {
+  it('AppData en cualquier tramo, también con barras mixtas', () => {
+    for (const r of ['D:\\Windows.old\\Users\\u\\AppData\\Local\\x', 'D:/copia\\AppData.bak/x']) {
+      expect(segmentosDeRuta(r).some(esAppData), r).toBe(true);
+    }
+    expect(segmentosDeRuta('D:\\proyectos\\app\\src').some(esAppData)).toBe(false);
+  });
+  it('perfil de Firefox por su sitio y carpetas de claves o prohibidas por tramo', () => {
+    const r = 'C:\\Users\\u\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\abc.default';
+    expect(tramosDePerfilNavegador(segmentosDeRuta(r))).toBe(true);
+    expect(segmentosDeRuta('C:\\Users\\u\\.ssh\\x').some(esCarpetaDeClaves)).toBe(true);
+    expect(segmentosDeRuta('C:\\Users\\u\\.claude\\x').some(esCarpetaProhibida)).toBe(true);
+  });
 });

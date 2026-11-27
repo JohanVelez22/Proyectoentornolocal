@@ -3,6 +3,7 @@ import { access, open, readdir, realpath, lstat, stat, type FileHandle } from 'n
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import path from 'node:path';
+import { segmentosDeRuta } from '../rutas/nombreDeRuta';
 import { pipeline } from 'node:stream';
 import type { DetectorSensible } from '../herramientas/archivoSensible';
 import { rutaDentroDe } from '../plataforma/sistema';
@@ -303,7 +304,7 @@ export class ServidorCompartir {
         return null;
       }
       if (!rutaDentroDe(raiz, real)) return null;
-      const rel = path.relative(raiz, real).split(path.sep).filter(Boolean);
+      const rel = segmentosDeRuta(path.relative(raiz, real));
       if (rel.some(esCarpetaProhibida) || tramosDePerfilNavegador(rel)) return null;
       let info;
       try {
@@ -352,7 +353,7 @@ export class ServidorCompartir {
           continue;
         }
         if (!rutaDentroDe(raiz, real)) continue;
-        const relReal = path.relative(raiz, real).split(path.sep);
+        const relReal = segmentosDeRuta(path.relative(raiz, real));
         if (relReal.some(esCarpetaProhibida) || tramosDePerfilNavegador(relReal)) continue;
         const info = await lstat(real).catch(() => null);
         if (!info) continue;

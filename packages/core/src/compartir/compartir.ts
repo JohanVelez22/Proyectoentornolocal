@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { open, readdir, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { segmentosDeRuta } from '../rutas/nombreDeRuta';
 import { ErrorWolf } from '../errores';
 import {
   crearDetectorSensible,
@@ -444,9 +445,7 @@ export class Compartir {
       const tramos = r.split(/[\\/]/);
       if (tramos.some((t) => esCarpetaDeClaves(t))) throw secretos();
       const base = inicios.find((i) => rutaDentroDe(i, r));
-      const propios = base
-        ? path.relative(base, r).split(path.sep).filter(Boolean)
-        : tramos.slice(-1);
+      const propios = base ? segmentosDeRuta(path.relative(base, r)) : tramos.slice(-1);
       if (propios.some((t) => esCarpetaProhibida(t))) throw perfil();
       // Una copia de AppData fuera de la carpeta del usuario (un respaldo, Windows.old, otra
       // unidad) también: `AppData` en CUALQUIER tramo, y los perfiles de Firefox por su sitio.
