@@ -69,6 +69,7 @@ import {
   rutaSistema32,
 } from './procesosWin';
 import { ProcesosUsuarioWindows } from './procesosUsuarioWin';
+import { interpretarAtributos } from './atributosWin';
 import { interpretarUnidades, SCRIPT_UNIDADES } from './unidadesWin';
 import {
   interpretarEquipo,
@@ -128,6 +129,7 @@ import type {
   RangoPuertos,
   ResultadoEscritura,
   ServicioSistema,
+  AtributosArchivo,
   UnidadDisco,
   UsoProceso,
 } from './tipos';
@@ -1083,6 +1085,18 @@ export class PlataformaWindows implements PlataformaCompleta {
       return r.codigo === 0 ? interpretarUnidades(r.stdout) : [];
     } catch {
       return [];
+    }
+  }
+
+  async atributosArchivo(ruta: string): Promise<AtributosArchivo | null> {
+    try {
+      // `/D` incluye a las carpetas; sin shell: la ruta va como un solo argumento.
+      const r = await this.ejecutar(rutaSistema32(this.entorno, 'attrib.exe'), ['/D', ruta], {
+        timeoutMs: 10_000,
+      });
+      return r.codigo === 0 ? interpretarAtributos(r.stdout) : null;
+    } catch {
+      return null;
     }
   }
 

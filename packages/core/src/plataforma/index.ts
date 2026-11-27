@@ -124,6 +124,7 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'esAdministrador',
   'unidadesLocales',
   'infoEquipo',
+  'atributosArchivo',
   'aPapelera',
   'registrarPapelera',
 ];

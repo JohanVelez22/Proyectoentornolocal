@@ -308,6 +308,11 @@ export const PARAMETROS_ERROR = {
   'disco.caducado': [],
   'disco.entrada_invalida': [],
   'disco.fallo': [],
+  // info de archivo (D55)
+  'info.ruta_invalida': [],
+  'info.no_existe': [],
+  'info.enlace': [],
+  'info.hash_grande': ['maximo'],
   // compartir carpeta o archivo (D52)
   'compartir.confirmacion_requerida': [],
   'compartir.ocupado': [],

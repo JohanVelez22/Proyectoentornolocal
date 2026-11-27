@@ -368,6 +368,11 @@ export interface CapacidadesPlataforma {
    */
   infoEquipo(): Promise<InfoEquipo>;
   /**
+   * Atributos de solo lectura y oculto de un archivo o carpeta (D55, «Info de archivo»). Solo
+   * consulta; `null` si no se pudieron leer.
+   */
+  atributosArchivo(ruta: string): Promise<AtributosArchivo | null>;
+  /**
    * Manda un archivo a la papelera del sistema. La papelera la pone la app (en Electron,
    * `shell.trashItem` desde main) con `registrarPapelera`. Devuelve false si no hay papelera o
    * no se pudo: en ese caso quien llama NO borra el archivo.
@@ -375,6 +380,12 @@ export interface CapacidadesPlataforma {
   aPapelera(ruta: string): Promise<boolean>;
   /** La app inyecta aquí cómo se manda algo a la papelera. */
   registrarPapelera(enviar: (ruta: string) => Promise<void>): void;
+}
+
+/** Atributos de un archivo o carpeta que el sistema de archivos de Node no da en Windows. */
+export interface AtributosArchivo {
+  soloLectura: boolean;
+  oculto: boolean;
 }
 
 export type CategoriaLimpieza =

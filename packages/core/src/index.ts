@@ -176,6 +176,7 @@ export * from './herramientas/usoDiscoServicio';
 export * from './compartir/compartir';
 export type { AccesoCompartido } from './compartir/servidor';
 export * from './herramientas/imagenes';
+export * from './herramientas/infoArchivo';
 export * from './herramientas/pdf';
 export * from './herramientas/zip';
 export * from './conversor/conversor';

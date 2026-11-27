@@ -38,6 +38,7 @@ import type {
   ResultadoEscritura,
   ServicioSistema,
   TerminalDisponible,
+  AtributosArchivo,
   UnidadDisco,
 } from './tipos';
 
@@ -526,6 +527,14 @@ export class PlataformaFalsa implements PlataformaCompleta {
 
   async unidadesLocales(): Promise<UnidadDisco[]> {
     return this.unidades.map((u) => ({ ...u }));
+  }
+
+  /** Atributos que devuelve `atributosArchivo`, por ruta (sin entrada: no se pudieron leer). */
+  atributos = new Map<string, AtributosArchivo>();
+
+  async atributosArchivo(ruta: string): Promise<AtributosArchivo | null> {
+    const a = this.atributos.get(ruta);
+    return a ? { ...a } : null;
   }
 
   /** Lo que devuelve `infoEquipo` (la prueba pone aquí el equipo). */

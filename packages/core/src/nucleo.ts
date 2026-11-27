@@ -358,6 +358,12 @@ import {
 } from './herramientas/puertos';
 import { limpiarBom, type ResultadoBom } from './herramientas/bom';
 import { guardarImagen, leerImagen, type ImagenLeida } from './herramientas/imagenes';
+import {
+  calcularHashesRuta,
+  leerInfoRuta,
+  type HashesArchivo,
+  type InfoRuta,
+} from './herramientas/infoArchivo';
 import { optimizarPdf, type ResultadoPdf } from './herramientas/pdf';
 import type { EjecutorTrabajo } from './conversor/protocolo';
 import { comprimirZip, type ResultadoZip } from './herramientas/zip';
@@ -4043,6 +4049,19 @@ export class Nucleo {
   /** Imagen elegida en un diálogo, con dimensiones y peso ya acotados (no se decodifica aquí). */
   leerImagen(ruta: string): Promise<ImagenLeida> {
     return leerImagen(ruta);
+  }
+
+  /**
+   * Metadatos de un archivo o carpeta elegido o soltado por el usuario (D55). Solo lectura; la ruta
+   * la comprobó el IPC contra `RutasElegidas` y aquí se valida otra vez su forma.
+   */
+  infoRuta(ruta: string): Promise<InfoRuta> {
+    return leerInfoRuta(ruta, { plataforma: this.plataforma });
+  }
+
+  /** MD5, SHA-1 y SHA-256 de un archivo (hasta 200 MB), por flujo. */
+  hashesRuta(ruta: string): Promise<HashesArchivo> {
+    return calcularHashesRuta(ruta);
   }
 
   /** Guarda una imagen convertida o comprimida en un archivo nuevo (nunca pisa uno existente). */
