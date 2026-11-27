@@ -171,7 +171,7 @@ describe('respeta reducir movimiento', () => {
 describe('anillo de foco visible con teclado (D54a, C2)', () => {
   const css = readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'estilos.css'), 'utf8');
   const regla = (selector: RegExp): string => {
-    const m = new RegExp(`${selector.source}[^{]*\{([^}]*)\}`, 's').exec(css);
+    const m = new RegExp(`${selector.source}[^{]*[{]([^}]*)[}]`, 's').exec(css);
     return m?.[1] ?? '';
   };
 
