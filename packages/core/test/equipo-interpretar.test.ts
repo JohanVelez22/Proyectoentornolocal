@@ -3,6 +3,7 @@ import {
   SCRIPT_EQUIPO,
   SCRIPT_NVIDIA_SMI,
   combinarGpus,
+  esGpuIntegrada,
   interpretarEquipo,
   interpretarNvidiaSmi,
 } from '../src/plataforma/equipoWin';
@@ -199,6 +200,52 @@ describe('combinarGpus (VRAM: nvidia-smi > registro > WMI si es fiable)', () => 
     ];
     const g = combinarGpus(wmi, [], smi);
     expect(g.map((x) => x.vramBytes)).toEqual([16 * GIB, 8 * GIB]);
+  });
+});
+
+describe('GPU integrada (no cuenta como VRAM)', () => {
+  it('se marca por el nombre', () => {
+    for (const n of [
+      'Intel(R) UHD Graphics 630',
+      'Intel(R) Iris(R) Xe Graphics',
+      'Intel(R) HD Graphics 520',
+      'Intel(R) Arc(TM) Graphics',
+      'AMD Radeon(TM) Graphics',
+      'AMD Radeon(TM) Vega 8 Graphics',
+      'AMD Radeon(TM) 780M Graphics',
+    ]) {
+      expect(esGpuIntegrada(n), n).toBe(true);
+    }
+  });
+  it('las tarjetas dedicadas no se marcan', () => {
+    for (const n of [
+      'NVIDIA GeForce RTX 3060 Laptop GPU',
+      'AMD Radeon RX 6700 XT',
+      'Intel(R) Arc(TM) A770 Graphics',
+      'AMD Radeon(TM) RX Vega 56',
+    ]) {
+      expect(esGpuIntegrada(n), n).toBe(false);
+    }
+  });
+  it('combinarGpus añade integrada: true solo a las integradas, aunque declaren 8 GiB', () => {
+    const r = combinarGpus(
+      [
+        { nombre: 'NVIDIA GeForce RTX 3060 Laptop GPU', wmi: 0 },
+        { nombre: 'AMD Radeon(TM) Graphics', wmi: 0 },
+      ],
+      [
+        { nombre: 'NVIDIA GeForce RTX 3060 Laptop GPU', vram: 6 * GIB },
+        { nombre: 'AMD Radeon(TM) Graphics', vram: 8 * GIB },
+      ],
+      [],
+    );
+    expect(r[0]).not.toHaveProperty('integrada');
+    expect(r[1]).toMatchObject({ vramBytes: 8 * GIB, integrada: true });
+  });
+  it('interpretarEquipo la marca en la lectura completa', () => {
+    const e = interpretarEquipo(SALIDA);
+    expect(e.gpus[1]!.integrada).toBe(true);
+    expect(e.gpus[0]!.integrada).toBeUndefined();
   });
 });
 

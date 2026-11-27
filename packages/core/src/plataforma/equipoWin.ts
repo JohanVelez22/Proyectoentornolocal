@@ -74,6 +74,15 @@ const RELLENO =
 const GPU_VIRTUAL =
   /(remote display|virtual|basic display|basic render|hyper-v|vmware svga|displaylink|indirect display|parsec|meta )/i;
 
+/**
+ * GPU integrada (comparte la RAM del equipo): su «memoria» no es VRAM dedicada, por grande que la
+ * declare el controlador. Por el nombre, porque Windows no lo dice de otra forma fiable.
+ */
+export const GPU_INTEGRADA =
+  /(Intel\(R\) (UHD|Iris|HD)|Intel\(R\) Arc\(TM\) Graphics$|Intel\(R\) Graphics$|Radeon\(TM\) (Vega |)Graphics|Radeon\(TM\) \d{3,4}M( Graphics)?$|Vega \d+ Graphics|Adreno)/i;
+
+export const esGpuIntegrada = (nombre: string): boolean => GPU_INTEGRADA.test(nombre);
+
 const LIMITE_TEXTO = 120;
 /** AdapterRAM es de 32 bits: a partir de aquí el valor es un tope, no la memoria real. */
 const TOPE_WMI = 4_000_000_000;
@@ -147,18 +156,19 @@ export function combinarGpus(
   const usadasReg = new Set<GpuRegistro>();
   const usadasNv = new Set<GpuNvidia>();
   return wmi.map((g) => {
+    const marca = esGpuIntegrada(g.nombre) ? { integrada: true } : {};
     const nv = emparejar(g.nombre, nvidia, usadasNv);
     if (nv && nv.vramBytes > 0) {
-      return { nombre: g.nombre, vramBytes: nv.vramBytes, origenVram: 'nvidia-smi' };
+      return { nombre: g.nombre, vramBytes: nv.vramBytes, origenVram: 'nvidia-smi', ...marca };
     }
     const rg = emparejar(g.nombre, registro, usadasReg);
     if (rg && rg.vram !== null && rg.vram > 0) {
-      return { nombre: g.nombre, vramBytes: rg.vram, origenVram: 'registro' };
+      return { nombre: g.nombre, vramBytes: rg.vram, origenVram: 'registro', ...marca };
     }
     if (g.wmi !== null && g.wmi > 0 && g.wmi < TOPE_WMI) {
-      return { nombre: g.nombre, vramBytes: g.wmi, origenVram: 'wmi' };
+      return { nombre: g.nombre, vramBytes: g.wmi, origenVram: 'wmi', ...marca };
     }
-    return { nombre: g.nombre, vramBytes: null, origenVram: null };
+    return { nombre: g.nombre, vramBytes: null, origenVram: null, ...marca };
   });
 }
 
