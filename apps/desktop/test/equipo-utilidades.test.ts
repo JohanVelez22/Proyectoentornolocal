@@ -42,10 +42,17 @@ describe('rellenar', () => {
 });
 
 describe('lineasEquipo', () => {
+  it('añade la compilación solo si la versión no la trae ya', () => {
+    const e = { ...equipo, so: { nombre: 'Windows', version: '10.0', compilacion: '26300' } };
+    const por = Object.fromEntries(lineasEquipo(e, t).map((x) => [x.etiqueta, x.valor]));
+    expect(por[t.so]).toBe('Windows 10.0 (compilación 26300)');
+  });
+
   it('da una línea por dato, con el texto «desconocido» donde falte', () => {
     const l = lineasEquipo(equipo, t);
     const por = Object.fromEntries(l.map((x) => [x.etiqueta, x.valor]));
-    expect(por[t.so]).toBe('Windows 11 Home 10.0.26300 (compilación 26300)');
+    // La versión ya termina en la compilación: no se repite.
+    expect(por[t.so]).toBe('Windows 11 Home 10.0.26300');
     expect(por[t.cpu]).toContain('AMD Ryzen 7 5800H');
     expect(por[t.cpu]).toContain('8');
     expect(por[t.cpu]).toContain('16');

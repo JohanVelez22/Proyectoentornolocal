@@ -64,7 +64,7 @@ export function lineasEquipo(e: InfoEquipo, t: TextosEquipo): LineaEquipo[] {
   l.push({
     etiqueta: t.so,
     valor: so
-      ? e.so.compilacion
+      ? e.so.compilacion && !so.endsWith(`.${e.so.compilacion}`)
         ? `${so} (${rellenar(t.compilacion, { n: e.so.compilacion })})`
         : so
       : t.desconocido,
