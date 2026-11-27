@@ -215,6 +215,34 @@ const TEXTOS = {
     carpetaDatosInvalida:
       'WOLFCORE_DATOS non è una cartella dati valida: deve essere assoluta, non di sistema e diversa dalla cartella reale (e dalla precedente). L’app si chiude senza modificare nulla.',
   },
+  ru: {
+    abrir: 'Открыть',
+    iniciarTodo: 'Запустить всё',
+    detenerTodo: 'Остановить всё',
+    salir: 'Выход',
+    workspaces: 'Workspaces',
+    workspaceParcial: 'частично',
+    preguntaApagar: 'Остановить службы?',
+    siApagar: 'Да, остановить',
+    noApagar: 'Нет, оставить работать',
+    cancelar: 'Отмена',
+    cliTitulo: 'Команда терминала (wolf)',
+    cliTunelInternet:
+      'Команда терминала хочет опубликовать {dominio} в интернете через {proveedor}. Любой, у кого есть ссылка, сможет открыть сайт.',
+    cliTunelTailnet:
+      'Команда терминала хочет открыть доступ к {dominio} для устройств вашей tailnet ({proveedor}).',
+    cliPublicoEn: 'Публичный адрес: https://{publico}',
+    cliDatosReales:
+      'ВНИМАНИЕ: {dominio} содержит РЕАЛЬНЫЕ ДАННЫЕ. Чтобы продолжить, выберите ниже его точный домен. Если вы этого не запрашивали, нажмите «Отмена».',
+    cliPublicar: 'Опубликовать',
+    cliPhpGlobal:
+      'Команда терминала хочет переключить PHP во всех терминалах на версию {version}.',
+    cliCambiar: 'Изменить',
+    carpetaDatosAislada:
+      'тестовая папка данных без изменения hosts, PATH и системных сертификатов',
+    carpetaDatosInvalida:
+      'WOLFCORE_DATOS не является допустимой папкой данных: путь должен быть абсолютным, не системным и отличным от основной (и предыдущей) папки. Приложение закрывается без изменений.',
+  },
 } satisfies Record<IdiomaUi, Record<string, string>>;
 
 export type TextosMain = (typeof TEXTOS)['es'];
