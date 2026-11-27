@@ -113,6 +113,35 @@ describe('supervisor de Uso del disco (D51)', () => {
     }
   });
 
+  it('acepta rutas largas de Windows (hasta 32 767) en los tops y nodos «otros» con denegados (M1/M2)', async () => {
+    const larga = 'C:' + String.fromCharCode(92) + 'x'.repeat(5000);
+    const datos = {
+      ...resultadoMinimo,
+      archivosTop: [{ ruta: larga, tamano: 5 }],
+      carpetasTop: [{ ruta: larga, tamano: 5, archivos: 1 }],
+      enlaces: [larga],
+      arbol: {
+        ...arbolMinimo,
+        hijos: [{ nombre: '', tipo: 'otros', tamano: 0, archivos: 0, denegados: 300 }],
+      },
+    };
+    const p = new Falso();
+    const e = crearEjecutorUsoDiscoSupervisado({ lanzar: () => p, memoriaDe: () => 1 });
+    const pr = e(MSG, { plazoMs: 5000 });
+    p.decir({ tipo: 'fin', ok: true, datos });
+    expect((await pr).ok).toBe(true);
+    // Más de 32 767 sigue rechazándose.
+    const q = new Falso();
+    const e2 = crearEjecutorUsoDiscoSupervisado({ lanzar: () => q, memoriaDe: () => 1 });
+    const pr2 = e2(MSG, { plazoMs: 5000 });
+    q.decir({
+      tipo: 'fin',
+      ok: true,
+      datos: { ...datos, archivosTop: [{ ruta: 'x'.repeat(32_768), tamano: 5 }] },
+    });
+    expect(await codigoDe(pr2)).toBe('disco.fallo');
+  });
+
   it('un error con código del catálogo pasa tal cual', async () => {
     const p = new Falso();
     const e = crearEjecutorUsoDiscoSupervisado({ lanzar: () => p, memoriaDe: () => 1 });

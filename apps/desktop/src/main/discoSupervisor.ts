@@ -36,7 +36,8 @@ const CODIGOS_CONOCIDOS: ReadonlySet<string> = new Set(CODIGOS_ERROR);
 /** Lo que el árbol puede traer como máximo: un árbol podado son unos miles de nodos. */
 const MAX_NODOS = 30_000;
 const MAX_PROFUNDIDAD = 100;
-const MAX_TEXTO = 4096;
+/** Una ruta de Windows puede llegar a 32 767 caracteres (rutas largas). */
+const MAX_TEXTO = 32_767;
 
 const esObjeto = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -59,6 +60,7 @@ function arbolValido(raiz: unknown): boolean {
     if (!esTexto(n.nombre, 1024) || !esNumero(n.tamano)) return false;
     if (n.tipo !== 'carpeta' && n.tipo !== 'archivo' && n.tipo !== 'otros') return false;
     if (n.archivos !== undefined && !esNumero(n.archivos)) return false;
+    if (n.denegados !== undefined && !esNumero(n.denegados)) return false;
     if (n.denegado !== undefined && n.denegado !== true) return false;
     if (n.hijos === undefined) return true;
     return Array.isArray(n.hijos) && n.hijos.every((h) => ir(h, nivel + 1));
