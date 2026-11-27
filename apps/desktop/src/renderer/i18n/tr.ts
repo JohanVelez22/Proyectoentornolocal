@@ -2316,7 +2316,7 @@ export const tr: TextosParciales = {
         claveGuardada: (f: string) => `Kayıtlı: ••••${f}`,
         claveNueva: 'Kaydetmek için anahtarı yazın',
         claveAyuda:
-          'Bu bilgisayarda şifreli saklanır ve bir daha gösterilmez. Değiştirmek istemiyorsanız boş bırakın.',
+          'Bu bilgisayarda şifreli saklanır ve asla tekrar gösterilmez. Değiştirmek istemiyorsanız boş bırakın.',
         remitente: 'Test göndereni (isteğe bağlı)',
         remitenteAyuda:
           'Birçok sağlayıcı yalnızca doğrulanmış gönderen veya alan adından gönderir. Boş bırakırsanız gönderen hedef adresin kendisi olur.',
@@ -2483,7 +2483,7 @@ export const tr: TextosParciales = {
       claveGuardada: (final: string) =>
         `Kayıtlı bir anahtar var (${final}). Yalnızca değiştirmek istiyorsanız yenisini yazın.`,
       claveAyuda:
-        'Bu bilgisayarda şifreli saklanır ve bir daha gösterilmez. Yalnızca son 4 karakter görünür.',
+        'Bu bilgisayarda şifreli saklanır ve asla tekrar gösterilmez. Yalnızca son 4 karakter görünür.',
       claveOpcional: 'Yerel sunucular (LM Studio) için isteğe bağlıdır.',
       borrarClave: 'Anahtarı sil',
       guardar: 'Kaydet',

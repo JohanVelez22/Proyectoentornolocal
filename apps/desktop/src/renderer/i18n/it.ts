@@ -1526,7 +1526,7 @@ export const it: TextosParciales = {
     dialogoBorrar: {
       titulo: (base: string) => `Eliminare il database ${base}?`,
       texto: (base: string, motor: string) =>
-        `Verranno eliminati il database ${base} di ${motor} e tutti i suoi dati. L’azione non è reversibile. Se le serve, esegua prima un backup.`,
+        `Verranno eliminati il database ${base} di ${motor} e tutti i suoi dati. Non è possibile annullare l’operazione. Se le serve, esegua prima un backup.`,
       pedir: (base: string) => `Per confermare, digiti ${base}`,
       boton: 'Elimina database',
       hecho: (base: string) => `Database ${base} eliminato`,
@@ -2373,7 +2373,7 @@ export const it: TextosParciales = {
         claveGuardada: (f: string) => `Salvata: ••••${f}`,
         claveNueva: 'Inserisca la password per salvarla',
         claveAyuda:
-          'Viene salvata cifrata su questo computer e non viene più mostrata. La lasci vuota per non modificarla.',
+          'Viene salvata cifrata su questo computer e non viene mai più mostrata. La lasci vuota per non modificarla.',
         remitente: 'Mittente del test (opzionale)',
         remitenteAyuda:
           'Molti provider inviano solo da un mittente o un dominio verificato. Se lo lascia vuoto, il mittente è lo stesso indirizzo di destinazione.',
@@ -2543,7 +2543,7 @@ export const it: TextosParciales = {
       claveGuardada: (final: string) =>
         `È presente una chiave salvata (${final}). Ne inserisca un'altra solo se desidera sostituirla.`,
       claveAyuda:
-        'Viene salvata cifrata su questo computer e non viene più mostrata. Sono visibili solo gli ultimi 4 caratteri.',
+        'Viene salvata cifrata su questo computer e non viene mai più mostrata. Sono visibili solo gli ultimi 4 caratteri.',
       claveOpcional: 'Opzionale per server locali (LM Studio).',
       borrarClave: 'Eliminare la chiave',
       guardar: 'Salvare',
@@ -4405,7 +4405,7 @@ export const it: TextosParciales = {
         'I suoi dati restano su disco: reinstallando questa versione, l’istanza li riaprirà.',
       borrarDatos: 'Elimina anche i dati',
       borrarAviso: (id: string) =>
-        `Verrà eliminata la cartella dati di ${id} con tutti i suoi database. Non è reversibile. Digiti "${id}" per confermare.`,
+        `Verrà eliminata la cartella dati di ${id} con tutti i suoi database. Non è possibile annullare l’operazione. Digiti "${id}" per confermare.`,
       escriba: (id: string) => `Digiti ${id} per confermare`,
       desinstalar: 'Disinstalla',
       desinstalarYBorrar: 'Disinstalla ed elimina dati',

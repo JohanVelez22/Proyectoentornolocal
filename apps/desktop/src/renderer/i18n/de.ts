@@ -1890,7 +1890,7 @@ export const de: TextosParciales = {
     tokenNgrok: 'ngrok-Token',
     tokenExpose: 'Expose-Token',
     tokenAyuda:
-      'Wird verschlüsselt auf diesem Computer gespeichert und nur beim Öffnen des Tunnels übergeben; niemals im Klartext angezeigt.',
+      'Wird verschlüsselt auf diesem Computer gespeichert und nur beim Öffnen des Tunnels übergeben; er wird nie angezeigt.',
     tokenPlaceholder: 'Token hier einfügen',
     guardarToken: 'Token speichern',
     borrarToken: 'Token löschen',

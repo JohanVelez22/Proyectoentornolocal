@@ -1619,7 +1619,7 @@ export const zh: TextosParciales = {
     tokenSinGuardar: '尚未保存令牌。',
     tokenNgrok: 'ngrok 令牌',
     tokenExpose: 'Expose 令牌',
-    tokenAyuda: '加密保存在本机，仅在打开隧道时传递给程序；绝不显示明文。',
+    tokenAyuda: '加密保存在本机，仅在打开隧道时传递给程序；绝不会显示。',
     tokenPlaceholder: '在此粘贴令牌',
     guardarToken: '保存令牌',
     borrarToken: '删除令牌',

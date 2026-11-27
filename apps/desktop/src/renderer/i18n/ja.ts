@@ -1845,7 +1845,7 @@ export const ja: TextosParciales = {
     tokenNgrok: 'ngrok トークン',
     tokenExpose: 'Expose トークン',
     tokenAyuda:
-      'このPCに暗号化して保存され、トンネルを開くときだけプログラムに渡されます。表示はされません。',
+      'このPCに暗号化して保存され、トンネルを開くときだけプログラムに渡されます。一切表示されません。',
     tokenPlaceholder: 'ここにトークンを貼り付け',
     guardarToken: 'トークンを保存',
     borrarToken: 'トークンを削除',
