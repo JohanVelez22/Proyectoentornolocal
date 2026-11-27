@@ -24,6 +24,18 @@ import { ru } from './ru';
 import { tr } from './tr';
 import { uk } from './uk';
 import { zh } from './zh';
+import { deExtra } from './extra/de';
+import { hiExtra } from './extra/hi';
+import { idExtra } from './extra/id';
+import { itExtra } from './extra/it';
+import { jaExtra } from './extra/ja';
+import { koExtra } from './extra/ko';
+import { nlExtra } from './extra/nl';
+import { plExtra } from './extra/pl';
+import { ruExtra } from './extra/ru';
+import { trExtra } from './extra/tr';
+import { ukExtra } from './extra/uk';
+import { zhExtra } from './extra/zh';
 
 export type { Textos, TextosParciales } from './es';
 
@@ -56,26 +68,41 @@ export function completar<T extends object>(base: T, parcial: unknown): T {
 }
 
 /**
+ * Fusión profunda de dos diccionarios parciales: lo de `extra` pisa a `base` hoja a hoja (los
+ * arreglos y las funciones se toman enteros). Devuelve un objeto nuevo.
+ */
+export function fusionar(base: unknown, extra: unknown): TextosParciales {
+  const b = esObjeto(base) ? base : {};
+  const e = esObjeto(extra) ? extra : {};
+  const res: Record<string, unknown> = { ...b };
+  for (const [k, v] of Object.entries(e)) {
+    res[k] = esObjeto(v) && esObjeto(b[k]) ? fusionar(b[k], v) : v;
+  }
+  return res as TextosParciales;
+}
+
+/**
  * Diccionarios tal como se escribieron: es, en, pt y fr completos (el compilador lo exige) y los
- * demás idiomas con `TextosParciales`, que pueden dejar claves sin traducir.
+ * demás idiomas con `TextosParciales`, que pueden dejar claves sin traducir. Las claves añadidas
+ * después de su traducción inicial viven en `extra/<idioma>.ts` y se fusionan encima.
  */
 export const fuentes: Record<IdiomaUi, TextosParciales> = {
   es,
   en,
   pt,
   fr,
-  de,
-  it,
-  ru,
-  zh,
-  ja,
-  ko,
-  hi,
-  tr,
-  id,
-  pl,
-  nl,
-  uk,
+  de: fusionar(de, deExtra),
+  it: fusionar(it, itExtra),
+  ru: fusionar(ru, ruExtra),
+  zh: fusionar(zh, zhExtra),
+  ja: fusionar(ja, jaExtra),
+  ko: fusionar(ko, koExtra),
+  hi: fusionar(hi, hiExtra),
+  tr: fusionar(tr, trExtra),
+  id: fusionar(id, idExtra),
+  pl: fusionar(pl, plExtra),
+  nl: fusionar(nl, nlExtra),
+  uk: fusionar(uk, ukExtra),
 };
 
 /**

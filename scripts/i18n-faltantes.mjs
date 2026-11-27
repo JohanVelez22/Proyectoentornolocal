@@ -55,10 +55,29 @@ const { IDIOMAS_UI } = await jiti.import(join(RAIZ, 'packages/core/src/constante
 const BASE = ['es', 'en', 'pt', 'fr'];
 const idiomas = IDIOMAS_UI.filter((i) => i !== 'en' && (!filtro || filtro.includes(i)));
 
-const cargar = async (i) => (await jiti.import(join(DESKTOP, `renderer/i18n/${i}.ts`)))[i];
-const en = await cargar('en');
-
 const esNodo = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+
+/** Igual que `fusionar` de `i18n/index.ts`: lo de `extra` pisa a `base` hoja a hoja. */
+function fusionar(base, extra) {
+  const res = { ...(esNodo(base) ? base : {}) };
+  for (const [k, v] of Object.entries(esNodo(extra) ? extra : {})) {
+    res[k] = esNodo(v) && esNodo(res[k]) ? fusionar(res[k], v) : v;
+  }
+  return res;
+}
+
+/** Diccionario tal como lo usa la app: el principal más su `extra/<idioma>.ts`, si existe. */
+const cargar = async (i) => {
+  const base = (await jiti.import(join(DESKTOP, `renderer/i18n/${i}.ts`)))[i];
+  if (BASE.includes(i)) return base;
+  try {
+    const extra = (await jiti.import(join(DESKTOP, `renderer/i18n/extra/${i}.ts`)))[`${i}Extra`];
+    return fusionar(base, extra);
+  } catch {
+    return base;
+  }
+};
+const en = await cargar('en');
 
 /** Parámetros de una función: `(a, b: x) =>` ya sin tipos (jiti los quita). */
 function parametros(f) {
