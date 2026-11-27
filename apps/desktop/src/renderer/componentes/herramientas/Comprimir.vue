@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { nombreDeRuta } from '@pel/core';
 import { NAlert, NButton } from 'naive-ui';
 import { ref } from 'vue';
 import type { ResultadoPdf, ResultadoZip } from '../../../shared/api';
@@ -17,7 +18,7 @@ const zip = ref<ResultadoZip | null>(null);
 const pdfOrigen = ref<string | null>(null);
 const pdf = ref<ResultadoPdf | null>(null);
 
-const nombreDe = (ruta: string): string => ruta.split(/[\\/]/).filter(Boolean).pop() ?? ruta;
+const nombreDe = (ruta: string): string => nombreDeRuta(ruta) || ruta;
 
 function agregar(rutas: string[]): void {
   zip.value = null;

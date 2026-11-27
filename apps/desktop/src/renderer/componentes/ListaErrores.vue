@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { nombreDeRuta } from '@pel/core';
 import { NTag } from 'naive-ui';
 import type { ResumenError } from '../../shared/api';
 import { formatearFecha, textos } from '../i18n';
@@ -14,7 +15,7 @@ const emit = defineEmits<{ elegir: [huella: string] }>();
 const t = textos.depuracion;
 
 /** Último tramo de la ruta (la completa va en el detalle). */
-const nombreArchivo = (a: string): string => a.split(/[\\/]/).pop() ?? a;
+const nombreArchivo = (a: string): string => nombreDeRuta(a) || a;
 </script>
 
 <template>

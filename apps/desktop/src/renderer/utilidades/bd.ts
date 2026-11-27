@@ -1,3 +1,4 @@
+import { nombreDeRuta } from '@pel/core';
 import type {
   EstadoServicio,
   FormatoRespaldo,
@@ -66,7 +67,7 @@ const EXTENSIONES = /(\.(sql|dump|backup|bak|pgdump|psql|gz|zip|rar|7z|tar|tgz|b
  * `C:\…\Backup-08-10-2026.sql` → `backup_08_10_2026`. Siempre cumple la regla del motor.
  */
 export function nombreDesdeArchivo(ruta: string, motor: MotorBd): string {
-  const archivo = ruta.split(/[\\/]/).pop() ?? '';
+  const archivo = nombreDeRuta(ruta);
   let n = archivo
     .replace(EXTENSIONES, '')
     .normalize('NFD')

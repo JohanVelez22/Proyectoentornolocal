@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { nombreDeRuta } from '@pel/core';
 import { NAlert, NButton, NRadioButton, NRadioGroup } from 'naive-ui';
 import { computed, onMounted, ref } from 'vue';
 import type { Conversion, Formato } from '../../../shared/api';
@@ -19,7 +20,7 @@ const a = ref<Formato | null>(null);
 const resultado = ref<{ destino: string; bytes: number } | null>(null);
 const tipoNoSoportado = ref(false);
 
-const nombreDe = (ruta: string): string => ruta.split(/[\\/]/).filter(Boolean).pop() ?? ruta;
+const nombreDe = (ruta: string): string => nombreDeRuta(ruta) || ruta;
 
 const destinos = computed(() => conversiones.value.filter((c) => c.de === de.value));
 const motor = computed(() => destinos.value.find((c) => c.a === a.value)?.motor ?? null);

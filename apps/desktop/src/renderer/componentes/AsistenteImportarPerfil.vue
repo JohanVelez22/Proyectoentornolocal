@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { nombreDeRuta } from '@pel/core';
 import {
   NAlert,
   NButton,
@@ -113,7 +114,7 @@ const pasoActual = computed(
   () => ({ archivo: 1, revisar: 2, confirmar: 3, importando: 3, fin: 4 })[fase.value],
 );
 const sitiosImportables = computed(() => vista.value?.sitios.filter((s) => !s.omitido) ?? []);
-const nombreArchivo = computed(() => archivo.value?.split(/[\\/]/).pop() ?? '');
+const nombreArchivo = computed(() => nombreDeRuta(archivo.value ?? ''));
 
 function limpiarFrase(): void {
   // Una cadena de JavaScript no se puede pisar: se suelta la referencia en cuanto deja de hacer falta.

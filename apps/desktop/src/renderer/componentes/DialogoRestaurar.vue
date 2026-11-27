@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { nombreDeRuta } from '@pel/core';
 import { DocumentAttach, ShieldCheckmark, Warning } from '@vicons/ionicons5';
 import { NButton, NForm, NFormItem, NIcon, NInput, NModal, NSpin, NTag } from 'naive-ui';
 import { computed, ref, watch } from 'vue';
@@ -34,7 +35,7 @@ const base = ref('');
 const escrito = ref('');
 
 const nombreMotor = computed(() => textos.bd.motores[props.motor] ?? props.motor);
-const nombreArchivo = computed(() => archivo.value?.split(/[\\/]/).pop() ?? '');
+const nombreArchivo = computed(() => nombreDeRuta(archivo.value ?? ''));
 const corriendo = computed(() => paso.value === 'operacion' && bd.enCurso);
 const operacion = computed(() => (paso.value === 'operacion' ? bd.operacion : null));
 

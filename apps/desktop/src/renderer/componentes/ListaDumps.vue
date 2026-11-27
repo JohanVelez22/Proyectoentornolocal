@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { nombreDeRuta } from '@pel/core';
 import { NTag } from 'naive-ui';
 import type { ResumenDump } from '../../shared/api';
 import { formatearFecha, textos } from '../i18n';
@@ -14,7 +15,7 @@ const emit = defineEmits<{ elegir: [id: string] }>();
 const t = textos.depuracion;
 const hora = (f: string): string =>
   formatearFecha(f, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-const nombreArchivo = (a: string | null): string => (a ? (a.split(/[\\/]/).pop() ?? a) : '');
+const nombreArchivo = (a: string | null): string => (a ? nombreDeRuta(a) || a : '');
 </script>
 
 <template>

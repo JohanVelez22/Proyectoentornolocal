@@ -25,6 +25,8 @@ describe('utilidades de Bases de datos', () => {
       'backup_08_10_2026',
     );
     expect(nombreDesdeArchivo('D:/x/Diamantes Prod.sql.gz', 'mysql')).toBe('diamantes_prod');
+    expect(nombreDesdeArchivo('/home/u/Respaldos/Tienda Prod.sql', 'mysql')).toBe('tienda_prod');
+    expect(nombreDesdeArchivo('C:\\a/b\\Mixta.sql', 'mysql')).toBe('mixta');
     expect(nombreDesdeArchivo('tienda.dump', 'postgresql')).toBe('tienda');
     expect(nombreDesdeArchivo('Año—Café (v2).zip', 'mariadb')).toBe('ano_cafe_v2');
     expect(nombreDesdeArchivo('respaldo.tar.gz', 'mysql')).toBe('respaldo');
