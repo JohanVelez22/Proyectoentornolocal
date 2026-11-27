@@ -13,6 +13,8 @@ export interface GpuEquipo {
   vramBytes: number | null;
   /** De dónde salió la VRAM: `nvidia-smi`, el registro del adaptador o WMI (solo si < 4 GB). */
   origenVram: 'nvidia-smi' | 'registro' | 'wmi' | null;
+  /** GPU integrada (comparte la RAM): su «VRAM» no cuenta como memoria de vídeo. */
+  integrada?: boolean;
 }
 
 export interface DiscoEquipo {

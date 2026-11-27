@@ -5,6 +5,8 @@ import {
   MARGEN_HOLGADO,
   RESERVA_SISTEMA_BYTES,
   SOBRECARGA_BYTES,
+  MARGEN_DISCO_BYTES,
+  TOPE_RECOMENDADO_CPU_BYTES,
   VRAM_MINIMA_UTIL,
   clasificarModelo,
   memoriaNecesaria,
@@ -51,12 +53,9 @@ describe('clasificarModelo', () => {
     expect(r.disponibleBytes).toBe(8 * GIB);
   });
 
-  it('con GPU: va justo en la VRAM → puede ir lento', () => {
+  it('con GPU: va justo en la VRAM (y sin RAM que lo salve) → puede ir lento', () => {
     // 7B necesita ≈5,3 GiB; en 6 GiB cabe, pero sin el 20 % de margen
-    const r = clasificarModelo(
-      { nombre: 'm', tamanoBytes: siete },
-      equipo({ ramGiB: 32, vramGiB: 6 }),
-    );
+    const r = clasificarModelo({ nombre: 'm', tamanoBytes: siete }, equipo({ vramGiB: 6 }));
     expect(r).toMatchObject({ nivel: 'lento', motivo: 'justo-vram', memoria: 'vram' });
   });
 
@@ -77,6 +76,75 @@ describe('clasificarModelo', () => {
   it('sin GPU: cabe en la RAM pero justo → puede ir lento', () => {
     const r = clasificarModelo({ nombre: 'm', tamanoBytes: catorce }, equipo({ ramGiB: 16 }));
     expect(r).toMatchObject({ nivel: 'lento', motivo: 'ram-justo' });
+  });
+
+  it('sin GPU: un 70B en 64 GiB cabe pero en la CPU va a ≈1 token/s → puede ir lento', () => {
+    const r = clasificarModelo({ nombre: '70b', tamanoBytes: 45 * GB }, equipo({ ramGiB: 64 }));
+    expect(r.nivel).toBe('lento');
+  });
+
+  it('sin GPU: un 7B en 64 GiB → recomendado; el techo de «recomendado» es 6 GiB', () => {
+    expect(TOPE_RECOMENDADO_CPU_BYTES).toBe(6 * GIB);
+    expect(
+      clasificarModelo({ nombre: '7b', tamanoBytes: siete }, equipo({ ramGiB: 64 })).nivel,
+    ).toBe('recomendado');
+    // 14B (≈10,4 GiB necesarios): cabe de sobra en la RAM, pero pasa del techo de la CPU
+    expect(
+      clasificarModelo({ nombre: '14b', tamanoBytes: catorce }, equipo({ ramGiB: 64 })).nivel,
+    ).toBe('lento');
+  });
+
+  it('tener GPU nunca empeora el veredicto frente a no tenerla', () => {
+    const tamanos = [1, 2, 4.7, 6, 9, 20, 45].map((g) => g * GB);
+    for (const ramGiB of [8, 16, 32, 64]) {
+      for (const vramGiB of [2, 3, 4, 6, 8, 12, 24]) {
+        for (const t of tamanos) {
+          const sin = clasificarModelo({ nombre: 'm', tamanoBytes: t }, equipo({ ramGiB }));
+          const con = clasificarModelo(
+            { nombre: 'm', tamanoBytes: t },
+            equipo({ ramGiB, vramGiB }),
+          );
+          const orden = { 'no-cabe': 0, lento: 1, recomendado: 2 } as Record<string, number>;
+          expect(
+            orden[con.nivel],
+            `ram ${ramGiB} vram ${vramGiB} tam ${t / GB}`,
+          ).toBeGreaterThanOrEqual(orden[sin.nivel]!);
+        }
+      }
+    }
+  });
+
+  it('con una GPU de 8 GiB, un 14B (en la RAM) nunca sale peor que sin GPU', () => {
+    const sin = clasificarModelo({ nombre: '14b', tamanoBytes: catorce }, equipo({ ramGiB: 32 }));
+    const con = clasificarModelo(
+      { nombre: '14b', tamanoBytes: catorce },
+      equipo({ ramGiB: 32, vramGiB: 8 }),
+    );
+    expect(sin.nivel).toBe('lento');
+    expect(con.nivel).toBe('lento');
+  });
+
+  it('una GPU pequeña no empeora a un 7B que sin ella ya era recomendado', () => {
+    const r = clasificarModelo(
+      { nombre: '7b', tamanoBytes: siete },
+      equipo({ ramGiB: 32, vramGiB: 6 }),
+    );
+    expect(r.nivel).toBe('recomendado');
+  });
+
+  it('las GPU integradas no cuentan como VRAM, aunque declaren varios GiB', () => {
+    const e = equipo({ ramGiB: 16 });
+    e.gpus = [
+      {
+        nombre: 'Intel(R) Iris(R) Xe Graphics',
+        vramBytes: 8 * GIB,
+        origenVram: 'registro',
+        integrada: true,
+      },
+    ];
+    const r = clasificarModelo({ nombre: 'm', tamanoBytes: catorce }, e);
+    expect(r).toMatchObject({ nivel: 'lento', memoria: 'ram' });
+    expect(sugerirParaEquipo(e).memoria).toBe('ram');
   });
 
   it('no cabe ni en la VRAM ni en la RAM → no cabe', () => {
@@ -117,6 +185,21 @@ describe('clasificarModelo', () => {
     const e = equipo({ ramGiB: 16 });
     e.gpus = [{ nombre: 'X', vramBytes: null, origenVram: null }];
     expect(clasificarModelo({ nombre: 'm', tamanoBytes: siete }, e).motivo).toBe('cabe-ram');
+  });
+
+  it('el disco exige además 1 GiB de margen tras la descarga', () => {
+    expect(MARGEN_DISCO_BYTES).toBe(GIB);
+    const e = equipo({ ramGiB: 32, vramGiB: 24 });
+    const justo = clasificarModelo(
+      { nombre: 'm', tamanoBytes: siete, libreDiscoBytes: siete + 0.5 * GIB },
+      e,
+    );
+    expect(justo).toMatchObject({ nivel: 'no-cabe', motivo: 'sin-disco' });
+    const holgado = clasificarModelo(
+      { nombre: 'm', tamanoBytes: siete, libreDiscoBytes: siete + GIB },
+      e,
+    );
+    expect(holgado.nivel).toBe('recomendado');
   });
 
   it('el disco libre insuficiente es «no cabe», salvo que el modelo ya esté instalado', () => {
@@ -171,6 +254,15 @@ describe('sugerirParaEquipo («modelos de hasta ≈NB»)', () => {
       memoria: 'ram',
     });
   });
+  it('64 GiB de RAM sin GPU → sigue limitado a 7B', () => {
+    expect(sugerirParaEquipo(equipo({ ramGiB: 64 }))).toMatchObject({
+      parametrosMaxB: 7,
+      memoria: 'ram',
+    });
+  });
+  it('una GPU pequeña no baja la sugerencia por debajo de la que daría la RAM', () => {
+    expect(sugerirParaEquipo(equipo({ ramGiB: 32, vramGiB: 3 })).parametrosMaxB).toBe(7);
+  });
   it('24 GiB de VRAM → hasta ≈14B; 32 GiB → ≈32B', () => {
     expect(sugerirParaEquipo(equipo({ ramGiB: 64, vramGiB: 24 })).parametrosMaxB).toBe(14);
     expect(sugerirParaEquipo(equipo({ ramGiB: 64, vramGiB: 32 })).parametrosMaxB).toBe(32);
@@ -193,6 +285,8 @@ describe('sugerirParaEquipo («modelos de hasta ≈NB»)', () => {
       equipo({ ramGiB: 16, vramGiB: 8 }),
       equipo({ ramGiB: 16 }),
       equipo({ ramGiB: 32, vramGiB: 12 }),
+      equipo({ ramGiB: 64 }),
+      equipo({ ramGiB: 32, vramGiB: 3 }),
     ]) {
       const s = sugerirParaEquipo(e);
       const tam = s.parametrosMaxB! * BYTES_POR_MIL_MILLONES;
