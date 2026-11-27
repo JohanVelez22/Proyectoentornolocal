@@ -4,6 +4,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -171,7 +172,11 @@ describe('entorno y argumentos de cada ejecución', () => {
     expect(l.env.GIT_SSH_COMMAND).toBeUndefined();
     expect(l.env.GH_TOKEN).toBeUndefined();
     expect(l.env.PATH).toBe('/bin');
-    expect(dentro(l.cwd!)).toBe(true);
+    // El cwd es el realpath de la carpeta de trabajo (en macOS /var es /private/var; en Windows el
+    // temporal puede venir con nombres cortos 8.3).
+    const real = realpathSync(raiz);
+    expect(l.cwd!.toLowerCase().startsWith(real.toLowerCase() + path.sep)).toBe(true);
+    expect(path.basename(l.cwd!)).toBe('trabajo');
     const a = l.args.join(' ');
     for (const c of [
       'user.name=Practica',
