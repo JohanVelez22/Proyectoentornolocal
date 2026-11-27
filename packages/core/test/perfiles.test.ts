@@ -1714,7 +1714,8 @@ describe('importarPerfil en otro equipo: se reasigna, se marca y se sigue', () =
         versionCatalogo('php', v, 'fuerte'),
       );
       return {
-        buscarVersion: async (s, v) => filas.find((f) => f.servicio === s && f.version === v) ?? null,
+        buscarVersion: async (s, v) =>
+          filas.find((f) => f.servicio === s && f.version === v) ?? null,
         versionesDeRama: async (_s, rama) => filas.filter((f) => f.version.startsWith(`${rama}.`)),
         ramaInstalada: async () => false,
         ...extra,

@@ -6372,7 +6372,8 @@ export const en: Textos = {
         instalada: 'Already installed',
         descargar: 'Will be downloaded with its fingerprint verified',
         pendienteDebil: 'Pending: no strong fingerprint, install it by hand',
-        sustituida: (v: string) => `It is no longer in the catalog: ${v} will be installed instead.`,
+        sustituida: (v: string) =>
+          `It is no longer in the catalog: ${v} will be installed instead.`,
         pendienteFuera: 'Pending: it is no longer in the catalog',
         huellas: {
           fuerte: 'SHA-256 or SHA-512 fingerprint',
@@ -6550,7 +6551,7 @@ export const en: Textos = {
       sitio_repetido: 'The site is repeated in the profile.',
       no_disponible: 'That version is no longer in the catalog.',
       version_sustituida:
-        "That version is no longer in the catalog: the latest of its branch was installed.",
+        'That version is no longer in the catalog: the latest of its branch was installed.',
       huella_debil: 'That version has no strong checksum: install it by hand from Versions.',
       tope_descargas:
         'Not downloaded to avoid too many downloads at once: install it from Versions.',

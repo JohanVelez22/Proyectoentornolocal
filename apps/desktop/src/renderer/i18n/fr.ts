@@ -6577,7 +6577,8 @@ export const fr: Textos = {
         instalada: 'Déjà installée',
         descargar: 'Sera téléchargée avec son empreinte vérifiée',
         pendienteDebil: "En attente : pas d'empreinte forte, installez-la à la main",
-        sustituida: (v: string) => `Elle n'est plus dans le catalogue : ${v} sera installée à la place.`,
+        sustituida: (v: string) =>
+          `Elle n'est plus dans le catalogue : ${v} sera installée à la place.`,
         pendienteFuera: "En attente : elle n'est plus dans le catalogue",
         huellas: {
           fuerte: 'Empreinte SHA-256 ou SHA-512',

@@ -43,11 +43,7 @@ export interface DepsTuneles {
     Partial<
       Pick<
         PlataformaCompleta,
-        | 'buscarEjecutable'
-        | 'tailscale'
-        | 'procesosDelUsuario'
-        | 'inicioDeProceso'
-        | 'matarArbol'
+        'buscarEjecutable' | 'tailscale' | 'procesosDelUsuario' | 'inicioDeProceso' | 'matarArbol'
       >
     >;
   ejecutor?: Ejecutor;

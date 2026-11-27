@@ -373,7 +373,9 @@ const tipoDe = (e: string): 'success' | 'warning' | 'error' | 'default' =>
             <strong>{{ v.servicio }} {{ v.version }}</strong>
             <NTag size="small" :bordered="false">{{ t.versiones.huellas[v.huella] }}</NTag>
             <span class="ayuda">{{ t.versiones[estadoVersion(v)] }}</span>
-            <small v-if="v.sustituta" class="ayuda">{{ t.versiones.sustituida(v.sustituta) }}</small>
+            <small v-if="v.sustituta" class="ayuda">{{
+              t.versiones.sustituida(v.sustituta)
+            }}</small>
           </li>
         </ul>
         <p v-if="vista.descargas > 0" class="ayuda">{{ t.versiones.descargas(vista.descargas) }}</p>
