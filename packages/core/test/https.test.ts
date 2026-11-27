@@ -216,6 +216,22 @@ describe('GestorHttps', () => {
     expect(await g.puertoUsable(443)).toBe(false);
   });
 
+  it('estadoPuerto: un dueño con ruta conocida fuera de nuestro bin/nginx es ajeno sin mirar los hijos (D40)', async () => {
+    const g = gestorHttps();
+    pidNginx = 10;
+    duenos.set(443, { pid: 11, nombre: 'nginx.exe' });
+    rutasProceso.set(11, 'C:/Otro/nginx/nginx.exe');
+    descendientesFalla = true;
+    expect((await g.estadoPuerto(443)).estado).toBe('ajeno');
+    // Aunque figure entre los hijos del maestro, su ruta manda.
+    descendientesFalla = false;
+    hijosNginx.set(10, [11]);
+    expect((await g.estadoPuerto(443)).estado).toBe('ajeno');
+    // Una ruta con el prefijo parecido pero de otra carpeta tampoco es nuestra.
+    rutasProceso.set(11, `${path.dirname(path.dirname(rutasProceso.get(11)!))}x`);
+    expect((await g.estadoPuerto(443)).estado).toBe('ajeno');
+  });
+
   it('puertoUsable: libre y propio sí; ocupado por otro no', async () => {
     const g = gestorHttps();
     expect(await g.puertoUsable(443)).toBe(true);

@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import forge from 'node-forge';
+import { rutaDentroDe } from '../plataforma/sistema';
 import type { Plataforma, ResultadoEscritura } from '../plataforma/tipos';
 import type { Rutas } from '../rutas';
 import { emitirCertificado, generarCA, huellaSha1, type ParCertificado } from './ca';
@@ -315,7 +316,10 @@ export class GestorHttps {
     const ruta = this.d.plataforma.rutaProceso
       ? await this.d.plataforma.rutaProceso(dueno.pid).catch(() => null)
       : null;
-    if (ruta && this.esDeNuestroNginx(ruta)) return { estado: 'propio', dueno };
+    if (ruta) {
+      // Con la ruta conocida decide ella: no es nuestro y no hace falta mirar los hijos.
+      return { estado: this.esDeNuestroNginx(ruta) ? 'propio' : 'ajeno', dueno };
+    }
     if (maestro !== null && this.d.plataforma.descendientes) {
       // En Windows el socket que escucha suele figurar a nombre del worker (hijo del maestro).
       const hijos = await this.d.plataforma.descendientes([maestro]).catch(() => null);
@@ -327,9 +331,7 @@ export class GestorHttps {
   }
 
   private esDeNuestroNginx(ruta: string): boolean {
-    const norm = (t: string): string => path.resolve(t).replaceAll('\\', '/').toLowerCase();
-    const raiz = norm(path.dirname(this.d.rutas.bin('nginx', 'x')));
-    return norm(ruta).startsWith(`${raiz}/`);
+    return rutaDentroDe(path.dirname(this.d.rutas.bin('nginx', 'x')), ruta);
   }
 
   /** Programa ajeno que ocupa el puerto HTTPS, o null si está libre, lo usa nuestro nginx o no se sabe. */
