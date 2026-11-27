@@ -182,7 +182,7 @@ export const koExtra: TextosParciales = {
       'doctor.firewall_sin_cambios':
         '변경된 규칙이 없습니다. 표시된 내용과 더 이상 일치하지 않거나 변경할 수 없었습니다.',
       'doctor.firewall_registro_fallido':
-        '규칙 사본을 etc/cortafuegos-quitadas.json에 저장할 수 없어 아무것도 변경하지 않았습니다.',
+        '규칙 사본을 보호된 레지스트리 키 HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos에 저장할 수 없어 아무것도 변경하지 않았습니다.',
       'catalogo.paquete_invalido':
         '다운로드한 패키지가 안전하지 않습니다(폴더 밖 경로, 링크 또는 과도한 크기).',
       'catalogo.extraccion_fallo': '다운로드한 .7z 패키지를 읽거나 압축 해제할 수 없습니다.',
@@ -1013,7 +1013,7 @@ export const koExtra: TextosParciales = {
     },
     reparaciones: {
       firewall:
-        '해당 인바운드 방화벽 규칙을 정확한 이름으로 하나씩 삭제합니다. 다시 만들 수 있도록 먼저 etc/cortafuegos-quitadas.json에 사본을 저장합니다. 다른 프로그램의 규칙은 절대 건드리지 않습니다.',
+        '해당 인바운드 방화벽 규칙을 정확한 이름으로 하나씩 삭제합니다. 다시 만들 수 있도록 먼저 보호된 레지스트리 키 HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos에 사본을 저장합니다. 다른 프로그램의 규칙은 절대 건드리지 않습니다.',
       firewall_restaurar:
         '선택한 규칙을 보호된 사본(etc/의 파일이 아님)에서, 표시된 것과 같은 프로그램, 프로필, 프로토콜, 포트, 주소로 다시 만듭니다. 해당 프로그램이 다시 네트워크 연결을 받을 수 있게 됩니다.',
     },

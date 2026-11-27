@@ -745,7 +745,7 @@ export const en: Textos = {
       'doctor.firewall_sin_cambios':
         'No rule was changed: they no longer match what was shown, or they could not be changed.',
       'doctor.firewall_registro_fallido':
-        'The copy of the rules could not be saved to etc/cortafuegos-quitadas.json: nothing was changed.',
+        'The copy of the rules could not be saved to the protected registry key HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos: nothing was changed.',
       'doctor.servicio_en_error': '{servicio} is in an error state.',
       'doctor.revision_fallida': 'The {revision} check could not be completed.',
       'doctor.confirmacion_requerida': 'Confirm the fix before applying it.',
@@ -4813,7 +4813,7 @@ export const en: Textos = {
       antivirus:
         'Adding the data folder to the antivirus exclusions is up to you, with the command shown.',
       firewall:
-        'Remove those inbound firewall rules, one by one and by their exact name. A copy is saved first in etc/cortafuegos-quitadas.json so they can be recreated. Rules of other programs are never touched.',
+        'Remove those inbound firewall rules, one by one and by their exact name. A copy is saved first in the protected registry key HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos so they can be recreated. Rules of other programs are never touched.',
       firewall_restaurar:
         'Recreate the rules you tick, with the same program, profile, protocol, ports and addresses that are shown, from the protected copy (not from the file in etc/). Those programs will be able to accept network connections again.',
       reintentar_servicio: 'Start the service again.',

@@ -187,7 +187,7 @@ export const idExtra: TextosParciales = {
       'doctor.firewall_sin_cambios':
         'Tidak ada aturan yang diubah: tidak lagi sesuai dengan yang ditampilkan, atau tidak dapat diubah.',
       'doctor.firewall_registro_fallido':
-        'Salinan aturan tidak dapat disimpan ke etc/cortafuegos-quitadas.json: tidak ada yang diubah.',
+        'Salinan aturan tidak dapat disimpan ke kunci registri terlindungi HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos: tidak ada yang diubah.',
       'catalogo.paquete_invalido':
         'Paket yang diunduh tidak aman (jalur di luar folder, tautan, atau ukuran berlebihan).',
       'catalogo.extraccion_fallo': 'Paket .7z yang diunduh tidak dapat dibaca atau diekstrak.',
@@ -1035,7 +1035,7 @@ export const idExtra: TextosParciales = {
     },
     reparaciones: {
       firewall:
-        'Hapus aturan firewall masuk tersebut, satu per satu dan menurut nama persisnya. Salinan disimpan lebih dulu di etc/cortafuegos-quitadas.json agar dapat dibuat ulang. Aturan program lain tidak pernah disentuh.',
+        'Hapus aturan firewall masuk tersebut, satu per satu dan menurut nama persisnya. Salinan disimpan lebih dulu di kunci registri terlindungi HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos agar dapat dibuat ulang. Aturan program lain tidak pernah disentuh.',
       firewall_restaurar:
         'Buat ulang aturan yang Anda centang, dengan program, profil, protokol, port, dan alamat yang sama seperti yang ditampilkan, dari salinan terlindungi (bukan dari berkas di etc/). Program-program itu akan dapat menerima koneksi jaringan lagi.',
     },

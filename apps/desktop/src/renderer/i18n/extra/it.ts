@@ -198,7 +198,7 @@ export const itExtra: TextosParciales = {
       'doctor.firewall_sin_cambios':
         'Non è stata modificata alcuna regola: non corrispondono più a quanto mostrato oppure non è stato possibile modificarle.',
       'doctor.firewall_registro_fallido':
-        'Non è stato possibile salvare la copia delle regole in etc/cortafuegos-quitadas.json: non è stato modificato nulla.',
+        'Non è stato possibile salvare la copia delle regole nella chiave di registro protetta HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos: non è stato modificato nulla.',
       'catalogo.paquete_invalido':
         'Il pacchetto scaricato non è sicuro (percorsi fuori dalla cartella, collegamenti o dimensioni eccessive).',
       'catalogo.extraccion_fallo':
@@ -1108,7 +1108,7 @@ export const itExtra: TextosParciales = {
     },
     reparaciones: {
       firewall:
-        'Rimuove queste regole in entrata del firewall, una per una e con il loro nome esatto. Prima viene salvata una copia in etc/cortafuegos-quitadas.json per poterle ricreare. Le regole di altri programmi non vengono mai toccate.',
+        'Rimuove queste regole in entrata del firewall, una per una e con il loro nome esatto. Prima viene salvata una copia nella chiave di registro protetta HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos per poterle ricreare. Le regole di altri programmi non vengono mai toccate.',
       firewall_restaurar:
         'Ricrea le regole che seleziona, con lo stesso programma, profilo, protocollo, porte e indirizzi mostrati, dalla copia protetta (non dal file in etc/). Quei programmi potranno di nuovo accettare connessioni di rete.',
     },

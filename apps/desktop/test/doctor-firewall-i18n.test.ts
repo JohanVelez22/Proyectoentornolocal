@@ -24,7 +24,7 @@ describe('Doctor: cortafuegos (D46) en es, en, pt y fr', () => {
       expect(errores['doctor.firewall_reglas_acotadas']).toContain('{cantidad}');
       const d = t.doctor;
       const rep = d.reparaciones as Record<string, string>;
-      expect(rep.firewall).toContain('cortafuegos-quitadas.json');
+      expect(rep.firewall).toContain('Cortafuegos');
       expect(rep.firewall_restaurar).toBeTruthy();
       expect(d.dialogo.sinSeleccion).toBeTruthy();
       expect(d.dialogo.reglas).toBeTruthy();

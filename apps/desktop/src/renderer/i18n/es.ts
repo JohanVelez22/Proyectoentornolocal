@@ -752,7 +752,7 @@ export const es = {
       'doctor.firewall_sin_cambios':
         'No se cambió ninguna regla: ya no coinciden con lo que se mostró o no se pudieron cambiar.',
       'doctor.firewall_registro_fallido':
-        'No se pudo guardar la copia de las reglas en etc/cortafuegos-quitadas.json: no se cambió nada.',
+        'No se pudo guardar la copia de las reglas en el registro protegido HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos: no se cambió nada.',
       'doctor.servicio_en_error': '{servicio} está en error.',
       'doctor.revision_fallida': 'No se pudo completar la revisión {revision}.',
       'doctor.confirmacion_requerida': 'Confirme la reparación antes de aplicarla.',
@@ -4844,7 +4844,7 @@ export const es = {
       antivirus:
         'Agregar la carpeta de datos a las exclusiones del antivirus lo decide usted, con el comando que se muestra.',
       firewall:
-        'Quitar esas reglas de entrada del cortafuegos, una por una y por su nombre exacto. Antes se guarda una copia en etc/cortafuegos-quitadas.json para poder recrearlas. Las reglas de otros programas nunca se tocan.',
+        'Quitar esas reglas de entrada del cortafuegos, una por una y por su nombre exacto. Antes se guarda una copia en el registro protegido HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos para poder recrearlas. Las reglas de otros programas nunca se tocan.',
       firewall_restaurar:
         'Volver a crear las reglas que marque, con los mismos programa, perfil, protocolo, puertos y direcciones que se muestran, a partir de la copia protegida (no del archivo de etc/). Esos programas volverán a poder recibir conexiones de la red.',
       reintentar_servicio: 'Volver a iniciar el servicio.',

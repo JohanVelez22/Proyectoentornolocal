@@ -192,7 +192,7 @@ export const jaExtra: TextosParciales = {
       'doctor.firewall_sin_cambios':
         'ルールは変更されていません。表示された内容と一致しなくなったか、変更できませんでした。',
       'doctor.firewall_registro_fallido':
-        'ルールのコピーを etc/cortafuegos-quitadas.json に保存できなかったため、何も変更していません。',
+        'ルールのコピーを 保護されたレジストリキー HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos に保存できなかったため、何も変更していません。',
       'catalogo.paquete_invalido':
         'ダウンロードしたパッケージは安全ではありません（フォルダー外のパス、リンク、または過大なサイズ）。',
       'catalogo.extraccion_fallo':
@@ -1052,7 +1052,7 @@ export const jaExtra: TextosParciales = {
     },
     reparaciones: {
       firewall:
-        'これらの受信ファイアウォールルールを、正確な名前で 1 件ずつ削除します。先に etc/cortafuegos-quitadas.json にコピーを保存するため、再作成できます。他のプログラムのルールには一切触れません。',
+        'これらの受信ファイアウォールルールを、正確な名前で 1 件ずつ削除します。先に 保護されたレジストリキー HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos にコピーを保存するため、再作成できます。他のプログラムのルールには一切触れません。',
       firewall_restaurar:
         '選択したルールを、保護されたコピー（etc/ のファイルではありません）から、表示されているものと同じプログラム、プロファイル、プロトコル、ポート、アドレスで再作成します。それらのプログラムは、再びネットワーク接続を受け付けられるようになります。',
     },

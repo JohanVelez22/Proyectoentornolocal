@@ -186,7 +186,7 @@ export const trExtra: TextosParciales = {
       'doctor.firewall_sin_cambios':
         'Hiçbir kural değiştirilmedi: artık gösterilenle eşleşmiyorlar veya değiştirilemediler.',
       'doctor.firewall_registro_fallido':
-        'Kuralların kopyası etc/cortafuegos-quitadas.json dosyasına kaydedilemedi: hiçbir şey değiştirilmedi.',
+        'Kuralların kopyası HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos korumalı kayıt defteri anahtarına kaydedilemedi: hiçbir şey değiştirilmedi.',
       'catalogo.paquete_invalido':
         'İndirilen paket güvenli değil (klasör dışındaki yollar, bağlantılar veya aşırı boyut).',
       'catalogo.extraccion_fallo': 'İndirilen .7z paketi okunamadı veya çıkarılamadı.',
@@ -1039,7 +1039,7 @@ export const trExtra: TextosParciales = {
     },
     reparaciones: {
       firewall:
-        'Bu gelen trafik güvenlik duvarı kurallarını tek tek ve tam adlarıyla kaldırın. Yeniden oluşturulabilmeleri için önce etc/cortafuegos-quitadas.json içine bir kopya kaydedilir. Diğer programların kurallarına asla dokunulmaz.',
+        'Bu gelen trafik güvenlik duvarı kurallarını tek tek ve tam adlarıyla kaldırın. Yeniden oluşturulabilmeleri için önce HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos korumalı kayıt defteri anahtarının içine bir kopya kaydedilir. Diğer programların kurallarına asla dokunulmaz.',
       firewall_restaurar:
         'İşaretlediğiniz kuralları, korumalı kopyadan (etc/ içindeki dosyadan değil) gösterilenle aynı program, profil, protokol, bağlantı noktaları ve adreslerle yeniden oluşturun. Bu programlar yeniden ağ bağlantılarını kabul edebilecek.',
     },

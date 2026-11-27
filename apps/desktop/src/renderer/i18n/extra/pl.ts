@@ -203,7 +203,7 @@ export const plExtra: TextosParciales = {
       'doctor.firewall_sin_cambios':
         'Żadna reguła nie została zmieniona: nie zgadzają się już z pokazanymi lub nie udało się ich zmienić.',
       'doctor.firewall_registro_fallido':
-        'Nie udało się zapisać kopii reguł w etc/cortafuegos-quitadas.json: nic nie zmieniono.',
+        'Nie udało się zapisać kopii reguł w chronionym kluczu rejestru HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos: nic nie zmieniono.',
       'catalogo.paquete_invalido':
         'Pobrany pakiet nie jest bezpieczny (ścieżki poza folderem, dowiązania lub nadmierny rozmiar).',
       'catalogo.extraccion_fallo': 'Nie udało się odczytać ani wypakować pobranego pakietu .7z.',
@@ -1107,7 +1107,7 @@ export const plExtra: TextosParciales = {
     },
     reparaciones: {
       firewall:
-        'Usuń te przychodzące reguły zapory, jedna po drugiej, według ich dokładnej nazwy. Najpierw kopia jest zapisywana w etc/cortafuegos-quitadas.json, aby można je było utworzyć ponownie. Reguły innych programów nigdy nie są ruszane.',
+        'Usuń te przychodzące reguły zapory, jedna po drugiej, według ich dokładnej nazwy. Najpierw kopia jest zapisywana w chronionym kluczu rejestru HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos, aby można je było utworzyć ponownie. Reguły innych programów nigdy nie są ruszane.',
       firewall_restaurar:
         'Utwórz ponownie zaznaczone reguły z tym samym programem, profilem, protokołem, portami i adresami, które są pokazane, z chronionej kopii (a nie z pliku w etc/). Te programy znów będą mogły przyjmować połączenia sieciowe.',
     },

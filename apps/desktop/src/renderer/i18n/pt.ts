@@ -759,7 +759,7 @@ export const pt: Textos = {
       'doctor.firewall_sin_cambios':
         'Nenhuma regra foi alterada: elas já não coincidem com o que foi mostrado ou não puderam ser alteradas.',
       'doctor.firewall_registro_fallido':
-        'Não foi possível salvar a cópia das regras em etc/cortafuegos-quitadas.json: nada foi alterado.',
+        'Não foi possível salvar a cópia das regras no registro protegido HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos: nada foi alterado.',
       'doctor.servicio_en_error': '{servicio} está com erro.',
       'doctor.revision_fallida': 'Não foi possível concluir a verificação {revision}.',
       'doctor.confirmacion_requerida': 'Confirme o reparo antes de aplicá-lo.',
@@ -4857,7 +4857,7 @@ export const pt: Textos = {
       antivirus:
         'Adicionar a pasta de dados às exclusões do antivírus é decisão sua, com o comando mostrado.',
       firewall:
-        'Remover essas regras de entrada do firewall, uma por uma e pelo nome exato. Antes é guardada uma cópia em etc/cortafuegos-quitadas.json para poder recriá-las. As regras de outros programas nunca são tocadas.',
+        'Remover essas regras de entrada do firewall, uma por uma e pelo nome exato. Antes é guardada uma cópia no registro protegido HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos para poder recriá-las. As regras de outros programas nunca são tocadas.',
       firewall_restaurar:
         'Recriar as regras marcadas, com o mesmo programa, perfil, protocolo, portas e endereços que são mostrados, a partir da cópia protegida (não do arquivo em etc/). Esses programas voltarão a poder receber conexões da rede.',
       reintentar_servicio: 'Iniciar o serviço de novo.',

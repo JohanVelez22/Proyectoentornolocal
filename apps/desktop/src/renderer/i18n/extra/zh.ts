@@ -153,7 +153,7 @@ export const zhExtra: TextosParciales = {
         '部分规则已删除，但其他规则未删除：它们在显示列表后已更改、不属于 WolfCore Dev，或 Windows 不允许删除。请检查列表。',
       'doctor.firewall_sin_cambios': '未更改任何规则：它们与显示的内容已不一致，或无法更改。',
       'doctor.firewall_registro_fallido':
-        '无法将规则副本保存到 etc/cortafuegos-quitadas.json：未做任何更改。',
+        '无法将规则副本保存到 受保护的注册表项 HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos：未做任何更改。',
       'catalogo.paquete_invalido': '下载的软件包不安全（路径超出文件夹、含链接或体积过大）。',
       'catalogo.extraccion_fallo': '无法读取或解压下载的 .7z 软件包。',
       'runtimes.falta_runtime': '此项目未安装 {nombre}：请在“服务”中安装。',
@@ -920,7 +920,7 @@ export const zhExtra: TextosParciales = {
     },
     reparaciones: {
       firewall:
-        '按确切名称逐条删除这些入站防火墙规则。删除前会先将副本保存到 etc/cortafuegos-quitadas.json，以便重新创建。绝不会改动其他程序的规则。',
+        '按确切名称逐条删除这些入站防火墙规则。删除前会先将副本保存到 受保护的注册表项 HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos，以便重新创建。绝不会改动其他程序的规则。',
       firewall_restaurar:
         '根据受保护的副本（而非 etc/ 中的文件），按显示的相同程序、配置文件、协议、端口和地址，重新创建您勾选的规则。这些程序将可以再次接受网络连接。',
     },

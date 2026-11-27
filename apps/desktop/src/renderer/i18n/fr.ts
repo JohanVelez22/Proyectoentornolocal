@@ -793,7 +793,7 @@ export const fr: Textos = {
       'doctor.firewall_sin_cambios':
         'Aucune règle n’a été modifiée : elles ne correspondent plus à ce qui était affiché ou n’ont pas pu être modifiées.',
       'doctor.firewall_registro_fallido':
-        'La copie des règles n’a pas pu être enregistrée dans etc/cortafuegos-quitadas.json : rien n’a été modifié.',
+        'La copie des règles n’a pas pu être enregistrée dans le registre protégé HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos : rien n’a été modifié.',
       'doctor.servicio_en_error': '{servicio} est en erreur.',
       'doctor.revision_fallida': 'La vérification {revision} n’a pas pu être menée à terme.',
       'doctor.confirmacion_requerida': 'Confirmez la réparation avant de l’appliquer.',
@@ -4976,7 +4976,7 @@ export const fr: Textos = {
       antivirus:
         'Ajouter le dossier de données aux exclusions de l’antivirus est votre décision, avec la commande affichée.',
       firewall:
-        'Supprimer ces règles entrantes du pare-feu, une par une et par leur nom exact. Une copie est d’abord enregistrée dans etc/cortafuegos-quitadas.json pour pouvoir les recréer. Les règles des autres programmes ne sont jamais touchées.',
+        'Supprimer ces règles entrantes du pare-feu, une par une et par leur nom exact. Une copie est d’abord enregistrée dans le registre protégé HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos pour pouvoir les recréer. Les règles des autres programmes ne sont jamais touchées.',
       firewall_restaurar:
         'Recréer les règles que vous cochez, avec les mêmes programme, profil, protocole, ports et adresses que ceux affichés, à partir de la copie protégée (et non du fichier de etc/). Ces programmes pourront de nouveau recevoir des connexions du réseau.',
       reintentar_servicio: 'Redémarrer le service.',

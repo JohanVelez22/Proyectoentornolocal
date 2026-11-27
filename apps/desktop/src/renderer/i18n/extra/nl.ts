@@ -202,7 +202,7 @@ export const nlExtra: TextosParciales = {
       'doctor.firewall_sin_cambios':
         'Er is geen regel gewijzigd: ze komen niet meer overeen met wat getoond werd of konden niet worden gewijzigd.',
       'doctor.firewall_registro_fallido':
-        'De kopie van de regels kon niet worden opgeslagen in etc/cortafuegos-quitadas.json: er is niets gewijzigd.',
+        'De kopie van de regels kon niet worden opgeslagen in de beveiligde registersleutel HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos: er is niets gewijzigd.',
       'catalogo.paquete_invalido':
         'Het gedownloade pakket is niet veilig (paden buiten de map, koppelingen of overmatige grootte).',
       'catalogo.extraccion_fallo':
@@ -1113,7 +1113,7 @@ export const nlExtra: TextosParciales = {
     },
     reparaciones: {
       firewall:
-        "Verwijder die inkomende firewallregels, één voor één en op hun exacte naam. Eerst wordt een kopie opgeslagen in etc/cortafuegos-quitadas.json zodat ze opnieuw kunnen worden aangemaakt. Regels van andere programma's worden nooit aangeraakt.",
+        "Verwijder die inkomende firewallregels, één voor één en op hun exacte naam. Eerst wordt een kopie opgeslagen in de beveiligde registersleutel HKLM\\SOFTWARE\\WolfCoreDev\\Cortafuegos zodat ze opnieuw kunnen worden aangemaakt. Regels van andere programma's worden nooit aangeraakt.",
       firewall_restaurar:
         "Maak de regels die u aanvinkt opnieuw aan, met hetzelfde programma, profiel, protocol, dezelfde poorten en adressen als getoond, vanuit de beveiligde kopie (niet vanuit het bestand in etc/). Die programma's kunnen dan weer netwerkverbindingen accepteren.",
     },
