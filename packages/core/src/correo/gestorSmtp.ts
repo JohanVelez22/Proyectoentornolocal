@@ -1,0 +1,204 @@
+import { lookup } from 'node:dns/promises';
+import { isIP } from 'node:net';
+import { ErrorWolf } from '../errores';
+import type { Config } from '../tipos';
+import {
+  probarEnvio as probarEnvioReal,
+  type OpcionesProbarEnvio,
+  type ResultadoEnvio,
+} from './probarEnvio';
+import {
+  bloqueEnvSmtp,
+  esDireccionNoPublica,
+  hostEsLocal,
+  ProveedorSmtpSchema,
+  type ProveedorSmtp,
+} from './proveedores';
+
+/** Un envío de prueba por proveedor cada 15 s y, entre todos, 10 por hora. */
+export const INTERVALO_PRUEBA_MS = 15_000;
+export const MAX_PRUEBAS_POR_HORA = 10;
+const HORA_MS = 3_600_000;
+
+export interface DepsGestorSmtp {
+  leerConfig(): Promise<Config>;
+  modificarConfig(fn: (c: Config) => void): Promise<void>;
+  /** Reloj en ms (pruebas). */
+  ahora?: () => number;
+  /** Envío real (pruebas: uno falso o con opciones propias). */
+  enviar?: (
+    p: ProveedorSmtp,
+    clave: string,
+    para: string,
+    o?: OpcionesProbarEnvio,
+  ) => Promise<ResultadoEnvio>;
+  opcionesEnvio?: OpcionesProbarEnvio;
+  /** Direcciones de un nombre (pruebas); por defecto el DNS del sistema. */
+  resolver?: (host: string) => Promise<string[]>;
+}
+
+/** Plazo de la consulta de DNS al guardar: si no responde, se sigue (el envío la repite). */
+const PLAZO_DNS_GUARDAR_MS = 3000;
+
+async function resolverDns(host: string): Promise<string[]> {
+  return (await lookup(host, { all: true, verbatim: true })).map((a) => a.address);
+}
+
+/**
+ * Proveedores SMTP remotos: su configuración NO secreta (`config.json` → `correo.proveedores`) y
+ * la prueba de envío. La clave nunca pasa por aquí salvo como argumento de `probar` y de
+ * `bloqueEnv`, y no se guarda ni se registra.
+ */
+export class GestorSmtp {
+  private enCurso = false;
+  private readonly ultimo = new Map<string, number>();
+  private envios: number[] = [];
+
+  constructor(private readonly d: DepsGestorSmtp) {}
+
+  private ahora(): number {
+    return (this.d.ahora ?? Date.now)();
+  }
+
+  async proveedores(): Promise<ProveedorSmtp[]> {
+    return (await this.d.leerConfig()).correo.proveedores;
+  }
+
+  async proveedor(id: string): Promise<ProveedorSmtp> {
+    const p = (await this.proveedores()).find((x) => x.id === id);
+    if (!p)
+      throw new ErrorWolf('correo.proveedor_no_existe', 'El proveedor de correo ya no existe.');
+    return p;
+  }
+
+  /**
+   * Crea o actualiza un proveedor. Un host que por su forma es de este equipo o de la red local
+   * (IP privada, `localhost`, `.local`…) exige `confirmarRedLocal`; si no, nunca se guarda. Si ya
+   * tenía clave y cambia el host, el puerto o el usuario, exige `confirmarCambio` (la clave
+   * guardada se mandaría a otro destino).
+   */
+  async guardar(
+    datos: unknown,
+    o: { confirmarRedLocal?: true; tieneClave?: boolean; confirmarCambio?: true } = {},
+  ): Promise<ProveedorSmtp[]> {
+    const r = ProveedorSmtpSchema.safeParse(datos);
+    if (!r.success) {
+      throw new ErrorWolf('correo.proveedor_invalido', 'Los datos del proveedor no son válidos.');
+    }
+    const nuevo: ProveedorSmtp = { ...r.data };
+    delete nuevo.redLocal;
+    const previo = (await this.proveedores()).find((x) => x.id === nuevo.id);
+    // `redLocal` solo lo da una confirmación: la de esta llamada o la que ya tenía el mismo host.
+    if (o.confirmarRedLocal === true) nuevo.redLocal = true;
+    else if (previo?.redLocal === true && previo.host === nuevo.host) nuevo.redLocal = true;
+    else if (hostEsLocal(nuevo.host) || (await this.resuelveALocal(nuevo.host))) {
+      throw new ErrorWolf(
+        'correo.host_local',
+        'El servidor SMTP apunta a este equipo o a la red local: confírmelo para usarlo.',
+      );
+    }
+    if (
+      previo &&
+      o.tieneClave === true &&
+      (previo.host !== nuevo.host ||
+        previo.puerto !== nuevo.puerto ||
+        previo.usuario !== nuevo.usuario) &&
+      o.confirmarCambio !== true
+    ) {
+      throw new ErrorWolf(
+        'correo.cambia_con_clave',
+        'El proveedor tiene una clave guardada: confirme que quiere enviarla al nuevo servidor.',
+      );
+    }
+    await this.d.modificarConfig((c) => {
+      const lista = c.correo.proveedores.filter((x) => x.id !== nuevo.id);
+      const i = c.correo.proveedores.findIndex((x) => x.id === nuevo.id);
+      lista.splice(i < 0 ? lista.length : i, 0, nuevo);
+      c.correo.proveedores = lista;
+    });
+    return this.proveedores();
+  }
+
+  /**
+   * ¿El nombre se resuelve a una dirección de este equipo o de la red local? Una consulta que
+   * falla o tarda no cuenta (es de mejor esfuerzo): `probar` vuelve a comprobarlo al conectar.
+   */
+  private async resuelveALocal(host: string): Promise<boolean> {
+    if (isIP(host) !== 0) return esDireccionNoPublica(host);
+    try {
+      const direcciones = await Promise.race([
+        (this.d.resolver ?? resolverDns)(host),
+        new Promise<string[]>((_, rechazar) =>
+          setTimeout(() => rechazar(new Error('plazo')), PLAZO_DNS_GUARDAR_MS).unref(),
+        ),
+      ]);
+      return direcciones.some((d) => esDireccionNoPublica(d));
+    } catch {
+      return false;
+    }
+  }
+
+  /** Quita el proveedor y lo desvincula de los proyectos que lo usaban (vuelven al captador). */
+  async borrar(id: string): Promise<void> {
+    await this.proveedor(id);
+    await this.d.modificarConfig((c) => {
+      c.correo.proveedores = c.correo.proveedores.filter((x) => x.id !== id);
+      for (const s of c.sitios) {
+        if (s.correo?.modo === 'smtp' && s.correo.proveedor === id) delete s.correo;
+      }
+    });
+  }
+
+  /**
+   * Un correo de prueba. Una prueba a la vez, una cada 15 s por proveedor y 10 por hora en total
+   * (cuenta también los intentos fallidos, para no encadenar claves malas contra el proveedor).
+   */
+  async probar(id: string, clave: string, para: string): Promise<ResultadoEnvio> {
+    const p = await this.proveedor(id);
+    if (this.enCurso) {
+      throw new ErrorWolf('correo.ocupado', 'Ya hay una prueba de envío en curso.');
+    }
+    const t = this.ahora();
+    this.envios = this.envios.filter((x) => t - x < HORA_MS);
+    const previo = this.ultimo.get(id);
+    if (previo !== undefined && t - previo < INTERVALO_PRUEBA_MS) {
+      throw new ErrorWolf('correo.limite', 'Espere unos segundos antes de otra prueba.', {
+        segundos: Math.ceil((INTERVALO_PRUEBA_MS - (t - previo)) / 1000),
+      });
+    }
+    if (this.envios.length >= MAX_PRUEBAS_POR_HORA) {
+      throw new ErrorWolf('correo.limite', 'Se alcanzó el máximo de pruebas por hora.', {
+        segundos: Math.ceil((HORA_MS - (t - this.envios[0]!)) / 1000),
+      });
+    }
+    this.enCurso = true;
+    // Se cuenta antes de enviar: un host rechazado o un fallo también gastan el cupo.
+    this.ultimo.set(id, t);
+    this.envios.push(t);
+    try {
+      const enviar = this.d.enviar ?? probarEnvioReal;
+      return await enviar(p, clave, para, this.d.opcionesEnvio);
+    } finally {
+      this.enCurso = false;
+    }
+  }
+
+  /** Variables `MAIL_*` del proveedor; `MAIL_PASSWORD` solo con la clave (tras confirmar). */
+  async bloqueEnv(id: string, clave: string | null): Promise<Record<string, string>> {
+    return bloqueEnvSmtp(await this.proveedor(id), clave);
+  }
+
+  /** Fija a dónde envía correo un proyecto. */
+  async usarEnSitio(
+    sitioId: string,
+    modo: { modo: 'captador' } | { modo: 'smtp'; proveedor: string },
+  ): Promise<void> {
+    if (modo.modo === 'smtp') await this.proveedor(modo.proveedor);
+    await this.d.modificarConfig((c) => {
+      const s = c.sitios.find((x) => x.id === sitioId);
+      if (!s) throw new ErrorWolf('proyectos.no_existe', `No existe el proyecto ${sitioId}`);
+      if (modo.modo === 'smtp') s.correo = { modo: 'smtp', proveedor: modo.proveedor };
+      else delete s.correo;
+    });
+  }
+}

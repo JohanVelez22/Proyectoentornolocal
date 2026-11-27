@@ -1,0 +1,65 @@
+[
+  {
+    "tag_name": "8.10.3",
+    "name": "Redis 8.10.3 for Windows",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-10-27T01:30:21Z",
+    "assets": [
+      {
+        "name": "Redis-8.10.3-Windows-x64-msys2-with-Service.zip",
+        "size": 20447009,
+        "digest": "sha256:fcfca988bee40378ceb8fbf6f44f0bb5d9ec131bd2599274513e710ca843d659",
+        "browser_download_url": "https://github.com/redis-windows/redis-windows/releases/download/8.10.3/Redis-8.10.3-Windows-x64-msys2-with-Service.zip"
+      },
+      {
+        "name": "Redis-8.10.3-Windows-x64-msys2.zip",
+        "size": 14036243,
+        "digest": "sha256:af16df340525b431e9ec8dabfd625d5e7a233f82805b5418819904ea909c447f",
+        "browser_download_url": "https://github.com/redis-windows/redis-windows/releases/download/8.10.3/Redis-8.10.3-Windows-x64-msys2.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "8.10.2",
+    "name": "Redis 8.10.2 for Windows",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-09-18T01:28:52Z",
+    "assets": [
+      {
+        "name": "Redis-8.10.2-Windows-x64-msys2-with-Service.zip",
+        "size": 20347510,
+        "digest": "sha256:aa43edcf35773607a29d3d5a9f6fd6825d2c8177e6e83ca91f91866a9329da27",
+        "browser_download_url": "https://github.com/redis-windows/redis-windows/releases/download/8.10.2/Redis-8.10.2-Windows-x64-msys2-with-Service.zip"
+      },
+      {
+        "name": "Redis-8.10.2-Windows-x64-msys2.zip",
+        "size": 13938657,
+        "digest": "sha256:7c8cebd50347eaa1d9e784da842ed47a4f33394637835531d6614777b950ee85",
+        "browser_download_url": "https://github.com/redis-windows/redis-windows/releases/download/8.10.2/Redis-8.10.2-Windows-x64-msys2.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "8.8.3",
+    "name": "Redis 8.8.3 for Windows",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-09-19T02:17:20Z",
+    "assets": [
+      {
+        "name": "Redis-8.8.3-Windows-x64-msys2-with-Service.zip",
+        "size": 20028560,
+        "digest": "sha256:0f842daffb25797ad8717a19bc47d35fb04a3a94fe547e6fac8c17eed3db57fb",
+        "browser_download_url": "https://github.com/redis-windows/redis-windows/releases/download/8.8.3/Redis-8.8.3-Windows-x64-msys2-with-Service.zip"
+      },
+      {
+        "name": "Redis-8.8.3-Windows-x64-msys2.zip",
+        "size": 13619667,
+        "digest": "sha256:c2ebc76c007a12c96d7dd64e252a194d9e6a06fe801dfb834ca071314fd662e7",
+        "browser_download_url": "https://github.com/redis-windows/redis-windows/releases/download/8.8.3/Redis-8.8.3-Windows-x64-msys2.zip"
+      }
+    ]
+  }
+]

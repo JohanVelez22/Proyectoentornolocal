@@ -1,0 +1,499 @@
+<script setup lang="ts">
+import logo from '../assets/logo.png';
+import {
+  Albums as IconoProyectos,
+  Bug as IconoDepuracion,
+  Chatbubbles as IconoAgentes,
+  CodeSlash as IconoPhp,
+  Construct as IconoHerramientas,
+  Cube as IconoContenedores,
+  DocumentText as IconoRegistros,
+  Home as IconoInicio,
+  Layers as IconoBases,
+  Mail as IconoCorreo,
+  Medkit as IconoDoctor,
+  Server as IconoServicios,
+  Settings as IconoAjustes,
+  Sparkles as IconoIa,
+  Search as IconoBuscar,
+  SwapHorizontal as IconoTuneles,
+} from '@vicons/ionicons5';
+import {
+  NIcon,
+  NLayout,
+  NLayoutContent,
+  NLayoutHeader,
+  NLayoutSider,
+  NMenu,
+  useNotification,
+  type MenuOption,
+} from 'naive-ui';
+import type { Aviso } from '../../shared/api';
+import { computed, h, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { api } from '../api';
+import { useAccion } from '../composables/useAccion';
+import { argsDeAviso, useVersiones } from '../stores/versiones';
+import { destinoVersion, rutaConFoco } from '../utilidades/foco';
+import { solicitudes } from '../composables/solicitudes';
+import AsistenteInicio from './AsistenteInicio.vue';
+import BotonMemoria from './BotonMemoria.vue';
+import CampanaAvisos from './CampanaAvisos.vue';
+import ConfirmacionMcp from './ConfirmacionMcp.vue';
+import PanelAvisos from './PanelAvisos.vue';
+import PanelMemoria from './PanelMemoria.vue';
+import PaletaComandos from './PaletaComandos.vue';
+import SelectorIdioma from './SelectorIdioma.vue';
+import SelectorTema from './SelectorTema.vue';
+import { idioma, textos } from '../i18n';
+import { gruposVisibles } from '../navegacion';
+import { usePreferencias } from '../stores/preferencias';
+import { useSitios } from '../stores/sitios';
+import type { SeccionNav } from '../router';
+import { detenerEntorno, iniciarEntorno } from '../stores/entorno';
+import { resumenPastilla } from '../utilidades/pastilla';
+import { useAvisos } from '../stores/avisos';
+import { useServicios } from '../stores/servicios';
+import { useTuneles } from '../stores/tuneles';
+
+const route = useRoute();
+const router = useRouter();
+const versiones = useVersiones();
+const servicios = useServicios();
+const tuneles = useTuneles();
+const { ejecutar } = useAccion();
+const notification = useNotification();
+
+const avisos = useAvisos();
+const panelAvisos = ref(false);
+const panelMemoria = ref(false);
+const contraido = ref(false);
+const falloArranque = ref(false);
+
+const preferencias = usePreferencias();
+const sitios = useSitios();
+
+const icono = (c: Component) => () => h(NIcon, null, { default: () => h(c) });
+const ICONOS: Record<SeccionNav, Component> = {
+  inicio: IconoInicio,
+  proyectos: IconoProyectos,
+  agentes: IconoAgentes,
+  servicios: IconoServicios,
+  php: IconoPhp,
+  basesDeDatos: IconoBases,
+  correo: IconoCorreo,
+  ia: IconoIa,
+  tuneles: IconoTuneles,
+  contenedores: IconoContenedores,
+  herramientas: IconoHerramientas,
+  depuracion: IconoDepuracion,
+  doctor: IconoDoctor,
+  registros: IconoRegistros,
+  ajustes: IconoAjustes,
+};
+const item = (k: SeccionNav): MenuOption => ({
+  key: k,
+  // El recorrido de bienvenida resalta la entrada por el atributo data-nav de su texto.
+  label: () => h('span', { 'data-nav': k }, textos.nav[k]),
+  icon: icono(ICONOS[k]),
+});
+/** Barra lateral agrupada (se rearma al cambiar de idioma). */
+const opciones = computed<MenuOption[]>(() => [
+  ...gruposVisibles(preferencias.seccionesAvanzadas).map((g) => ({
+    type: 'group' as const,
+    key: `grupo-${g.grupo}`,
+    label: textos.navGrupos[g.grupo],
+    children: g.secciones.map(item),
+  })),
+  { type: 'divider' as const, key: 'division' },
+  item('ajustes'),
+]);
+
+const seccion = computed<SeccionNav>(() => route.meta.seccion ?? 'inicio');
+const titulo = computed(() => textos.nav[seccion.value]);
+
+const pastilla = computed(() =>
+  resumenPastilla({
+    cargado: servicios.cargado,
+    fallo: falloArranque.value,
+    encendidos: servicios.encendidos,
+    tuneles: tuneles.activos.length,
+    hayError: servicios.lista.some((s) => s.estado === 'error'),
+  }),
+);
+
+function navegar(clave: string): void {
+  void router.push({ name: clave });
+}
+
+/** Lleva a la pantalla de la acción de un aviso (si su ruta existe en la aplicación). */
+function abrirAviso(a: Aviso): void {
+  panelAvisos.value = false;
+  const ruta = a.accion?.ruta;
+  // Versión nueva: Servicios → Versiones del servicio y, si el aviso lo ofrece, el diálogo de
+  // actualización (que es el único que actualiza).
+  if (ruta === 'servicios.versiones') {
+    const args = argsDeAviso(a.accion?.args);
+    if (!args) {
+      const foco = a.accion?.foco;
+      void router.push(foco ? rutaConFoco(ruta, foco) : { name: ruta });
+      return;
+    }
+    // La pestaña se desplaza hasta la tarjeta de la versión nueva y la resalta (D41).
+    void router
+      .push(destinoVersion(args.servicio, args.version))
+      .then(() => versiones.abrirDesdeAviso(args))
+      .catch(() => undefined);
+    return;
+  }
+  if (!ruta || !router.hasRoute(ruta)) return;
+  const foco = a.accion?.foco;
+  void router.push(foco ? rutaConFoco(ruta, foco) : { name: ruta });
+}
+
+// Primer uso: el asistente se abre solo una vez, con el entorno ya leído y sin proyectos.
+let asistenteRevisado = false;
+watch(
+  () => [preferencias.cargado, servicios.cargado, preferencias.asistenteVisto] as const,
+  ([prefs, entorno, visto]) => {
+    if (asistenteRevisado || !prefs || !entorno) return;
+    asistenteRevisado = true;
+    if (!visto && sitios.lista.length === 0) solicitudes.asistente = true;
+  },
+  { immediate: true },
+);
+
+let bajaAviso: (() => void) | null = null;
+let bajaCaptura: (() => void) | null = null;
+
+onMounted(() => {
+  // El historial no es imprescindible: si no carga, la campana queda en cero.
+  void avisos.cargar().catch(() => undefined);
+  avisos.iniciar(abrirAviso);
+  void ejecutar(
+    'arranque',
+    async () => {
+      await iniciarEntorno();
+      return true;
+    },
+    { tituloError: textos.errores.arranque },
+  ).then((ok) => {
+    falloArranque.value = !ok;
+    if (ok) void mostrarAvisoInicio();
+  });
+  // Avisos que llegan después (p. ej. un servicio automático que no encendió).
+  bajaAviso = api().on('aviso:inicio', () => void mostrarAvisoInicio());
+  // Una captura de pantalla pasó al conversor de imágenes (D35): se abre esa herramienta.
+  bajaCaptura = api().on('captura:imagen', () => {
+    solicitudes.herramienta = 'imagenes';
+    void router.push({ name: 'herramientas' });
+  });
+});
+
+/** Aviso del arranque (p. ej. la migración de la carpeta de datos): queda hasta que se cierra. */
+async function mostrarAvisoInicio(): Promise<void> {
+  let aviso: string | null = null;
+  try {
+    aviso = await api().avisoInicio();
+  } catch {
+    return; // no es imprescindible: el resto de la interfaz ya funciona
+  }
+  if (!aviso) return;
+  notification.info({ title: textos.avisoInicio.titulo, content: aviso, closable: true });
+}
+onBeforeUnmount(() => {
+  bajaAviso?.();
+  bajaCaptura?.();
+  avisos.detener();
+  detenerEntorno();
+});
+</script>
+
+<template>
+  <NLayout has-sider class="marco">
+    <NLayoutSider
+      bordered
+      collapse-mode="width"
+      :collapsed-width="64"
+      :width="216"
+      :collapsed="contraido"
+      show-trigger="bar"
+      :native-scrollbar="false"
+      @collapse="contraido = true"
+      @expand="contraido = false"
+    >
+      <div class="marca" :class="{ contraida: contraido }">
+        <img class="logo" :src="logo" alt="" aria-hidden="true" width="32" height="32" />
+        <div v-if="!contraido" class="marca-texto">
+          <strong>{{ textos.app.nombre }}</strong>
+          <span>{{ textos.app.lema }}</span>
+        </div>
+      </div>
+      <NMenu
+        :value="seccion"
+        :options="opciones"
+        :collapsed="contraido"
+        :collapsed-width="64"
+        :collapsed-icon-size="20"
+        :icon-size="18"
+        :indent="20"
+        @update:value="navegar"
+      />
+    </NLayoutSider>
+
+    <NLayout class="principal">
+      <NLayoutHeader class="cabecera">
+        <div class="fila-cabecera">
+          <h1>{{ titulo }}</h1>
+          <!-- Buscador general (Ctrl+K) centrado en la barra; en ventanas estrechas queda como icono. -->
+          <div class="cabecera-centro">
+            <button
+              type="button"
+              class="buscador"
+              :aria-label="textos.barra.paleta"
+              :title="textos.barra.paleta"
+              @click="solicitudes.paleta = true"
+            >
+              <NIcon :size="16" aria-hidden="true"><IconoBuscar /></NIcon>
+              <span class="buscador-texto">{{ textos.barra.paleta }}</span>
+              <kbd>{{ textos.barra.atajoPaleta }}</kbd>
+            </button>
+          </div>
+          <div class="cabecera-acciones">
+            <BotonMemoria @abrir="panelMemoria = true" />
+            <CampanaAvisos @abrir="panelAvisos = true" />
+            <SelectorIdioma compacto />
+            <SelectorTema compacto />
+            <div
+              class="pastilla"
+              :class="{ viva: pastilla.tono === 'viva', alerta: pastilla.tono === 'alerta' }"
+              role="status"
+              :title="pastilla.texto"
+            >
+              <span class="pastilla-punto" aria-hidden="true" />
+              <span class="pastilla-texto">{{ pastilla.texto }}</span>
+            </div>
+          </div>
+        </div>
+      </NLayoutHeader>
+      <NLayoutContent class="contenido" :native-scrollbar="false" content-class="contenido-interno">
+        <RouterView v-slot="{ Component: vista }">
+          <Transition name="vista" mode="out-in">
+            <!-- Al cambiar de idioma la vista se vuelve a montar: ningún texto queda copiado viejo. -->
+            <component :is="vista" :key="`${route.name?.toString()}-${idioma}`" />
+          </Transition>
+        </RouterView>
+      </NLayoutContent>
+    </NLayout>
+    <!-- Confirmaciones del servidor MCP: una sola instancia para toda la ventana. -->
+    <PanelAvisos v-model:visible="panelAvisos" @abrir="abrirAviso" />
+    <PanelMemoria v-model:visible="panelMemoria" />
+    <ConfirmacionMcp />
+    <PaletaComandos />
+    <AsistenteInicio />
+  </NLayout>
+</template>
+
+<style scoped>
+.marco {
+  height: 100vh;
+}
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 18px 14px;
+  min-height: 40px;
+}
+.marca.contraida {
+  justify-content: center;
+  padding-inline: 0;
+}
+.logo {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  flex: none;
+}
+.marca-texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.marca-texto strong {
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.marca-texto span {
+  font-size: 11px;
+  opacity: 0.72;
+  /* El lema entero, en dos líneas si hace falta: nunca con puntos suspensivos. */
+  line-height: 1.25;
+}
+.principal {
+  height: 100vh;
+}
+/*
+ * Título a la izquierda, buscador centrado y controles a la derecha. Las dos columnas de los lados
+ * miden lo mismo (--lado), así el buscador queda en el centro de la barra y no del hueco que sobra.
+ */
+.cabecera {
+  height: 60px;
+  padding: 0 28px;
+  container-type: inline-size;
+  /* La barra arrastra la ventana; el buscador y los controles no (ver más abajo). */
+  -webkit-app-region: drag;
+}
+.fila-cabecera {
+  --lado: 280px;
+  display: grid;
+  grid-template-columns: minmax(var(--lado), 1fr) minmax(0, 520px) minmax(var(--lado), 1fr);
+  align-items: center;
+  column-gap: 16px;
+  height: 100%;
+}
+.cabecera h1 {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+.cabecera-centro {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+.cabecera-acciones {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  -webkit-app-region: no-drag;
+}
+.buscador {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 520px;
+  min-width: 0;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(128, 128, 128, 0.28);
+  border-radius: 999px;
+  background: rgba(128, 128, 128, 0.07);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: text;
+  -webkit-app-region: no-drag;
+}
+.buscador:hover {
+  border-color: rgba(var(--acento-rgb), 0.6);
+}
+.buscador:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+.buscador-texto {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.75;
+}
+.buscador kbd {
+  flex: none;
+  font-family: var(--fuente);
+  font-size: 11px;
+  opacity: 0.76;
+}
+.pastilla-texto {
+  display: none;
+  white-space: nowrap;
+}
+/* Ventana ancha: sobra sitio para el texto de la pastilla de estado. */
+@container (min-width: 1440px) {
+  .fila-cabecera {
+    --lado: 470px;
+  }
+  .pastilla {
+    padding: 5px 12px;
+  }
+  .pastilla-texto {
+    display: inline;
+  }
+}
+/* Ventana estrecha: el buscador pasa a un icono y deja su sitio al título y a los controles. */
+@container (max-width: 900px) {
+  .buscador {
+    width: 34px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  .buscador-texto,
+  .buscador kbd {
+    display: none;
+  }
+}
+.pastilla {
+  margin-left: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid rgba(128, 128, 128, 0.22);
+  background: rgba(128, 128, 128, 0.07);
+}
+.pastilla-punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #8a8f98;
+}
+.pastilla.viva .pastilla-punto {
+  background: #16a34a;
+}
+.pastilla.alerta .pastilla-punto {
+  background: #dc2626;
+}
+.contenido {
+  height: calc(100vh - 60px);
+}
+:deep(.contenido-interno) {
+  padding: 4px 28px 32px;
+  max-width: 1180px;
+}
+.vista-enter-active,
+.vista-leave-active {
+  transition:
+    opacity var(--transicion) ease,
+    transform var(--transicion) ease;
+}
+.vista-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+.vista-leave-to {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .vista-enter-active,
+  .vista-leave-active {
+    transition: none;
+  }
+}
+</style>

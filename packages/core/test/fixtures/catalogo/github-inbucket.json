@@ -1,0 +1,68 @@
+[
+  {
+    "assets": [
+      {
+        "browser_download_url": "https://github.com/inbucket/inbucket/releases/download/v3.2.0/inbucket_3.2.0_checksums.txt",
+        "digest": "sha256:f57871c13707744bbcde1c25e899338d1cf98564fad4dac3837f20c852e9c94c",
+        "name": "inbucket_3.2.0_checksums.txt"
+      },
+      {
+        "browser_download_url": "https://github.com/inbucket/inbucket/releases/download/v3.2.0/inbucket_3.2.0_linux_amd64.tar.gz",
+        "digest": "sha256:0d7d76ed7e66b0700c38aeef7ad1f086e4a159ce554abd92c95052d0838e0e24",
+        "name": "inbucket_3.2.0_linux_amd64.tar.gz"
+      },
+      {
+        "browser_download_url": "https://github.com/inbucket/inbucket/releases/download/v3.2.0/inbucket_3.2.0_windows_amd64.zip",
+        "digest": "sha256:ad307e52863e9281098d4340adcb8dc677c114fbe9a3351b5cdce348792c31b3",
+        "name": "inbucket_3.2.0_windows_amd64.zip"
+      }
+    ],
+    "draft": false,
+    "prerelease": false,
+    "tag_name": "v3.2.0"
+  },
+  {
+    "assets": [
+      {
+        "browser_download_url": "https://github.com/inbucket/inbucket/releases/download/v3.1.1/inbucket_3.1.1_checksums.txt",
+        "digest": "sha256:f5b7942557a81e07c1d69a17c2f258d0676898d6ed177eaabbdda42ca8b6bd7b",
+        "name": "inbucket_3.1.1_checksums.txt"
+      },
+      {
+        "browser_download_url": "https://github.com/inbucket/inbucket/releases/download/v3.1.1/inbucket_3.1.1_linux_amd64.tar.gz",
+        "digest": "sha256:43e50cf04b4c01c29bd0acdcd06e3f9f4484cfa57c31c06cdbc575606cf64f80",
+        "name": "inbucket_3.1.1_linux_amd64.tar.gz"
+      },
+      {
+        "browser_download_url": "https://github.com/inbucket/inbucket/releases/download/v3.1.1/inbucket_3.1.1_windows_amd64.zip",
+        "digest": "sha256:232fb49c92f88505be1feceb4be90b70ca59bb7853216dee7c8b2814c85235d0",
+        "name": "inbucket_3.1.1_windows_amd64.zip"
+      }
+    ],
+    "draft": false,
+    "prerelease": false,
+    "tag_name": "v3.1.1"
+  },
+  {
+    "assets": [
+      {
+        "browser_download_url": "https://github.com/inbucket/inbucket/releases/download/v3.1.0/inbucket_3.1.0_checksums.txt",
+        "digest": "sha256:c1b69345c921e3159ae2cfacd039cd918c1de35f572eb5ae685b36fca166fd7d",
+        "name": "inbucket_3.1.0_checksums.txt"
+      },
+      {
+        "browser_download_url": "https://github.com/inbucket/inbucket/releases/download/v3.1.0/inbucket_3.1.0_linux_amd64.tar.gz",
+        "digest": "sha256:854a4a878b7bcc953425ba8997289f40f56fb3a9fb8715e168972e31eb7f43a1",
+        "name": "inbucket_3.1.0_linux_amd64.tar.gz"
+      },
+      {
+        "browser_download_url": "https://github.com/inbucket/inbucket/releases/download/v3.1.0/inbucket_3.1.0_windows_amd64.zip",
+        "digest": "sha256:bf7276bf814811d440939e4236459820a4c0ef00c9ce122a3e403d039e7936d1",
+        "name": "inbucket_3.1.0_windows_amd64.zip"
+      }
+    ],
+    "draft": false,
+    "prerelease": false,
+    "tag_name": "v3.1.0"
+  }
+]

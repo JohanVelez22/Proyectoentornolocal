@@ -1,0 +1,90 @@
+{
+  "releases": {
+    "13.1.1": {
+      "release_id": "13.1.1",
+      "release_name": "MariaDB Server 13.1.1 RC",
+      "date_of_release": "2026-09-15",
+      "release_notes_url": "",
+      "change_log": "",
+      "files": [
+        {
+          "file_id": 17006,
+          "file_name": "mariadb-13.1.1.tar.gz",
+          "package_type": "gzipped tar file",
+          "os": "Source",
+          "cpu": null,
+          "checksum": {
+            "md5sum": "d28bccd87500aee285cc9924a628536c",
+            "sha1sum": "280f2398543173ce1733db1300e692bb8d1739f7",
+            "sha256sum": "6d6b69bddcf6d33935064f23ed3d47948f6d19438711b2a81087eb28d9d255c7",
+            "sha512sum": "5f600c6dd6a1a60b5d0b45a9bb82f16c6052c50165d36d937fbe4ee494ccea26c7d9ca09f25780e1eda74980b83d01c6b4d89533be1e680ea7cfca977fe97b1f"
+          },
+          "file_download_url": "http://downloads.mariadb.org/rest-api/mariadb/13.1.1/mariadb-13.1.1.tar.gz",
+          "signature": null,
+          "checksum_url": "http://downloads.mariadb.org/rest-api/mariadb/13.1.1/mariadb-13.1.1.tar.gz/checksum/",
+          "signature_url": "http://downloads.mariadb.org/rest-api/mariadb/13.1.1/mariadb-13.1.1.tar.gz/signature/"
+        },
+        {
+          "file_id": 17008,
+          "file_name": "mariadb-13.1.1-winx64.msi",
+          "package_type": "MSI Package",
+          "os": "Windows",
+          "cpu": "x86_64",
+          "checksum": {
+            "md5sum": "151f3faaa93dd366777e5e18f9fa6ad2",
+            "sha1sum": "0f24c47c04d2e37e24046605f4fe4f548444042d",
+            "sha256sum": "eea3b9144e51e5fc5140f66c4b28209e304c7fcd857a74139288ec053773d4bf",
+            "sha512sum": "fff71f94c87d60f2eeec84db6203c316bc8cd6261df6f0ae0a521e2b2de6a7177b692b12d4e62ce0b6c9f0e2db2052bf213f82ed17f4797c348aeaabd280e01c"
+          },
+          "file_download_url": "http://downloads.mariadb.org/rest-api/mariadb/13.1.1/mariadb-13.1.1-winx64.msi",
+          "signature": null,
+          "checksum_url": "http://downloads.mariadb.org/rest-api/mariadb/13.1.1/mariadb-13.1.1-winx64.msi/checksum/",
+          "signature_url": "http://downloads.mariadb.org/rest-api/mariadb/13.1.1/mariadb-13.1.1-winx64.msi/signature/"
+        },
+        {
+          "file_id": 17009,
+          "file_name": "mariadb-13.1.1-winx64.zip",
+          "package_type": "ZIP file",
+          "os": "Windows",
+          "cpu": "x86_64",
+          "checksum": {
+            "md5sum": "3c774037366310e9e709db2fc130b0b4",
+            "sha1sum": "77f0138de9ebb8877843c07e1465e84788d3f488",
+            "sha256sum": "a77ed92e6d7d8fee5768d2483b32113d5ca5cdc4b0c6addfc154622066ef40e4",
+            "sha512sum": "7acad06df44c2064569c86b81baf337c4693679bd6fa73bdf2814b990845394035493b99a19728946d16e44defbccb2e40ca0857c7309d32d47ad74c7a0968e5"
+          },
+          "file_download_url": "http://downloads.mariadb.org/rest-api/mariadb/13.1.1/mariadb-13.1.1-winx64.zip",
+          "signature": null,
+          "checksum_url": "http://downloads.mariadb.org/rest-api/mariadb/13.1.1/mariadb-13.1.1-winx64.zip/checksum/",
+          "signature_url": "http://downloads.mariadb.org/rest-api/mariadb/13.1.1/mariadb-13.1.1-winx64.zip/signature/"
+        }
+      ]
+    },
+    "13.1.0": {
+      "release_id": "13.1.0",
+      "release_name": "MariaDB Server 13.1.0 Preview",
+      "date_of_release": "2026-06-19",
+      "release_notes_url": "",
+      "change_log": "",
+      "files": [
+        {
+          "file_id": 16941,
+          "file_name": "mariadb-13.1.0.tar.gz",
+          "package_type": "gzipped tar file",
+          "os": "Source",
+          "cpu": null,
+          "checksum": {
+            "md5sum": "3e537b33f086c14ecb7c8bf855a6f12f",
+            "sha1sum": "c9a3c198042d43d9744a5e29b28475c966c8e89f",
+            "sha256sum": "fbeea784cd191b3723862e2c9cf2e155f468ddf7dbd47629f592a2a8fa8acb2f",
+            "sha512sum": "07f7c0810f221ac2416c2f00432aaad6b793c6795eb8ed5f3f202f9947995f27733de8507ac272fabd14bf8daafa9acb94038f31300dbab711435832a14653c9"
+          },
+          "file_download_url": "http://downloads.mariadb.org/rest-api/mariadb/13.1.0/mariadb-13.1.0.tar.gz",
+          "signature": null,
+          "checksum_url": "http://downloads.mariadb.org/rest-api/mariadb/13.1.0/mariadb-13.1.0.tar.gz/checksum/",
+          "signature_url": "http://downloads.mariadb.org/rest-api/mariadb/13.1.0/mariadb-13.1.0.tar.gz/signature/"
+        }
+      ]
+    }
+  }
+}

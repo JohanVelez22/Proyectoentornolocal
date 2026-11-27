@@ -36,7 +36,7 @@
 
 ---
 
-### Tarea 1: Monorepo, herramientas y CI
+### Task 1: Monorepo, herramientas y CI
 
 **Files:**
 - Create: `package.json` (workspaces `packages/*`, `apps/*`; scripts `test`, `lint`, `typecheck`, `dev`, `build`), `tsconfig.base.json` (strict, `moduleResolution: bundler`, ES2023), `eslint.config.mjs` (typescript-eslint + vue), `.prettierrc`, `.editorconfig`, `README.md` (qué es, cómo correrlo y estado por fase)
@@ -50,7 +50,7 @@
 - [ ] Paso 4: `npm test`, `npm run lint` y `npm run typecheck` terminan en verde.
 - [ ] Paso 5: commit `chore: monorepo con core, lint, pruebas y CI`.
 
-### Tarea 2: Tipos, rutas, almacén y eventos
+### Task 2: Tipos, rutas, almacén y eventos
 
 **Files:**
 - Create: `packages/core/src/tipos.ts`, `src/rutas.ts`, `src/almacen.ts`, `src/eventos.ts`
@@ -82,7 +82,7 @@
 - [ ] Paso 4: correr las pruebas y confirmar que pasan.
 - [ ] Paso 5: commit `feat(core): tipos, rutas, almacén validado y bus de eventos`.
 
-### Tarea 3: Detección de proyecto y generación de Nginx
+### Task 3: Detección de proyecto y generación de Nginx
 
 **Files:**
 - Create: `packages/core/src/sitios/detectar.ts`, `src/nginx/plantillas.ts`, `src/nginx/principal.ts`
@@ -109,7 +109,7 @@
 - [ ] Paso 4: correr las pruebas y confirmar que pasan.
 - [ ] Paso 5: commit `feat(core): detección de proyectos y plantillas nginx`.
 
-### Tarea 4: Archivo hosts y plataforma Windows
+### Task 4: Archivo hosts y plataforma Windows
 
 **Files:**
 - Create: `packages/core/src/hosts/bloque.ts`, `src/hosts/hosts.ts`, `src/plataforma/tipos.ts`, `src/plataforma/win.ts`, `src/plataforma/index.ts`
@@ -144,7 +144,7 @@
 - [ ] Paso 4: correr las pruebas y confirmar que pasan.
 - [ ] Paso 5: commit `feat(core): bloque de hosts con elevación y plataforma Windows`.
 
-### Tarea 5: Catálogo e instalador
+### Task 5: Catálogo e instalador
 
 **Files:**
 - Create: `packages/core/src/catalogo/catalogo.json`, `src/catalogo/catalogo.ts`, `src/catalogo/instalador.ts`
@@ -170,7 +170,7 @@
 - [ ] Paso 4: correr las pruebas y confirmar que pasan.
 - [ ] Paso 5: commit `feat(core): catálogo oficial e instalador verificado`.
 
-### Tarea 6: Supervisor de procesos
+### Task 6: Supervisor de procesos
 
 **Files:**
 - Create: `packages/core/src/procesos/supervisor.ts`, `src/procesos/sonda.ts`
@@ -200,7 +200,7 @@
 - [ ] Paso 4: correr las pruebas y confirmar que pasan.
 - [ ] Paso 5: commit `feat(core): supervisor de procesos con reinicio y readopción`.
 
-### Tarea 7: Servicios Nginx y PHP
+### Task 7: Servicios Nginx y PHP
 
 **Files:**
 - Create: `packages/core/src/servicios/nginx.ts`, `src/servicios/php.ts`, `src/servicios/servicios.ts`
@@ -222,7 +222,7 @@
 - [ ] Paso 4: correr las pruebas y confirmar que pasan.
 - [ ] Paso 5: commit `feat(core): servicios nginx y php-cgi con grupos de trabajadores`.
 
-### Tarea 8: Gestor de sitios
+### Task 8: Gestor de sitios
 
 **Files:**
 - Create: `packages/core/src/sitios/sitios.ts`
@@ -250,7 +250,7 @@
 - [ ] Paso 4: correr las pruebas y confirmar que pasan.
 - [ ] Paso 5: commit `feat(core): gestor de sitios ilimitados con validación y reversión`.
 
-### Tarea 9: Túneles rápidos y URL base
+### Task 9: Túneles rápidos y URL base
 
 **Files:**
 - Create: `packages/core/src/tuneles/url.ts`, `src/tuneles/tuneles.ts`, `src/sitios/urlbase.ts`
@@ -272,7 +272,7 @@
 - [ ] Paso 4: correr las pruebas y confirmar que pasan.
 - [ ] Paso 5: commit `feat(core): túneles rápidos por sitio y url base temporal`.
 
-### Tarea 10: Fachada Nucleo
+### Task 10: Fachada Nucleo
 
 **Files:**
 - Create: `packages/core/src/nucleo.ts`. Modify: `src/index.ts` (exportar la API pública).
@@ -286,7 +286,7 @@
 - [ ] Paso 4: correr las pruebas y confirmar que pasan.
 - [ ] Paso 5: commit `feat(core): fachada Nucleo`.
 
-### Tarea 11: App de escritorio: base, IPC y bandeja
+### Task 11: App de escritorio: base, IPC y bandeja
 
 **Files:**
 - Create: `apps/desktop/package.json` (dependencias: electron, electron-vite, vue, pinia, vue-router, naive-ui, @vicons/ionicons5, electron-builder), `electron.vite.config.ts` (`externalizeDepsPlugin({ exclude: ['@pel/core'] })`), `electron-builder.yml` (appId `com.johanvelez.entornolocal`, productName `Entorno Local`, NSIS por usuario sin admin), `src/main/index.ts`, `src/main/ipc.ts`, `src/main/bandeja.ts`, `src/preload/index.ts`, `src/shared/api.ts`, `resources/icono.png`
@@ -308,7 +308,7 @@
 - [ ] Paso 4: correr la prueba y confirmar que pasa. `npm run dev -w apps/desktop` abre la ventana sin errores en la consola.
 - [ ] Paso 5: commit `feat(desktop): electron con ipc tipado, instancia única y bandeja`.
 
-### Tarea 12: Interfaz: estructura, Inicio y Servicios
+### Task 12: Interfaz: estructura, Inicio y Servicios
 
 **Files:**
 - Create: `apps/desktop/src/renderer/index.html`, `src/renderer/main.ts`, `App.vue` (barra lateral: Inicio, Sitios, Servicios, Túneles, Ajustes; tema según el sistema con `useOsTheme`), `i18n/es.ts`, `stores/servicios.ts`, `stores/sitios.ts`, `stores/tuneles.ts` (los stores se suscriben a los eventos y nunca piden refresco manual), `vistas/Inicio.vue`, `vistas/Servicios.vue`, `vistas/Ajustes.vue`, `componentes/EstadoPunto.vue`
@@ -325,7 +325,7 @@ Comportamiento:
 - [ ] Paso 4: correr la prueba y confirmar que pasa.
 - [ ] Paso 5: commit `feat(ui): estructura, inicio, servicios y ajustes`.
 
-### Tarea 13: Interfaz: Sitios y Túneles
+### Task 13: Interfaz: Sitios y Túneles
 
 **Files:**
 - Create: `apps/desktop/src/renderer/vistas/Sitios.vue`, `vistas/Tuneles.vue`, `componentes/FormSitio.vue`, `componentes/FilaSitio.vue`, `componentes/InterruptorTunel.vue`
@@ -342,7 +342,7 @@ Comportamiento:
 - [ ] Paso 2: verificación manual en `npm run dev` (en la tarea 14 con binarios reales).
 - [ ] Paso 3: commit `feat(ui): sitios con detección, aviso de hosts y túneles por sitio`.
 
-### Tarea 14: Prueba real en Windows, empaquetado y README
+### Task 14: Prueba real en Windows, empaquetado y README
 
 **Files:**
 - Create: `packages/core/test/integracion/windows.int.test.ts` (se ejecuta con `npm run test:win`; se salta fuera de win32): instala Nginx y PHP 8.4 reales en una carpeta temporal, con el puerto de Nginx en 8089 para no chocar. Crea un sitio estático y uno laravel mínimo (un `public/index.php` que hace echo) sin tocar hosts: el hosts se sustituye por una Plataforma envoltorio. Hace un `fetch` con la cabecera `Host` y espera 200 con el texto esperado. Después apaga todo.

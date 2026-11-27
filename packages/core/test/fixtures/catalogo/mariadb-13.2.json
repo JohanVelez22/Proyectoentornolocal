@@ -1,0 +1,30 @@
+{
+  "releases": {
+    "13.2.0": {
+      "release_id": "13.2.0",
+      "release_name": "MariaDB Server 13.2.0 Preview",
+      "date_of_release": "2026-09-23",
+      "release_notes_url": "",
+      "change_log": "",
+      "files": [
+        {
+          "file_id": 17013,
+          "file_name": "mariadb-13.2.0.tar.gz",
+          "package_type": "gzipped tar file",
+          "os": "Source",
+          "cpu": null,
+          "checksum": {
+            "md5sum": "c1f25f33ab29a63701941f4627883db7",
+            "sha1sum": "e5088afebec0ab57ec5f3eaa9ea6a12f9cb76f1a",
+            "sha256sum": "5b6a588e86f1169fef44760846b6e9e96b08d7a7e52fb4b887c5feb06ca39f3a",
+            "sha512sum": "70c8fae5c1d3c89295eaee64dce44b7de6fb9e9bc33052e521a438a22d7c3062b232da4b2e56509abc8d0450c1c8aeed679cb5dd0c8226bfd4d7253d8bc0bb6d"
+          },
+          "file_download_url": "http://downloads.mariadb.org/rest-api/mariadb/13.2.0/mariadb-13.2.0.tar.gz",
+          "signature": null,
+          "checksum_url": "http://downloads.mariadb.org/rest-api/mariadb/13.2.0/mariadb-13.2.0.tar.gz/checksum/",
+          "signature_url": "http://downloads.mariadb.org/rest-api/mariadb/13.2.0/mariadb-13.2.0.tar.gz/signature/"
+        }
+      ]
+    }
+  }
+}

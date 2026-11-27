@@ -1,0 +1,52 @@
+import { useMessage, useNotification } from 'naive-ui';
+import { reactive } from 'vue';
+import { textos } from '../i18n';
+import { mensajeDeError } from '../utilidades/errores';
+
+export { mensajeDeError };
+
+interface OpcionesAccion {
+  /** Mensaje breve si sale bien. */
+  exito?: string;
+  /** Título de la notificación si falla. */
+  tituloError?: string;
+}
+
+/**
+ * Envuelve una llamada al núcleo: marca la clave como ocupada y, si falla, muestra el mensaje
+ * claro del núcleo en una notificación (nunca una traza).
+ */
+export function useAccion() {
+  const notification = useNotification();
+  const message = useMessage();
+  const ocupadas = reactive(new Set<string>());
+
+  async function ejecutar<T>(
+    clave: string,
+    fn: () => Promise<T>,
+    opciones: OpcionesAccion = {},
+  ): Promise<T | undefined> {
+    ocupadas.add(clave);
+    try {
+      const r = await fn();
+      if (opciones.exito) message.success(opciones.exito);
+      return r;
+    } catch (e) {
+      // Detenido a propósito mientras arrancaba: es una parada normal, no un error.
+      if ((e as { codigo?: unknown } | null)?.codigo === 'detenido-al-iniciar') return undefined;
+      notification.error({
+        title: opciones.tituloError ?? textos.errores.titulo,
+        content: mensajeDeError(e),
+        duration: 10000,
+        keepAliveOnHover: true,
+      });
+      return undefined;
+    } finally {
+      ocupadas.delete(clave);
+    }
+  }
+
+  const ocupado = (clave: string): boolean => ocupadas.has(clave);
+
+  return { ejecutar, ocupado };
+}

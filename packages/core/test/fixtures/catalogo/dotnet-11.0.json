@@ -1,0 +1,32 @@
+{
+  "channel-version": "11.0",
+  "latest-sdk": "11.0.100",
+  "releases": [
+    {
+      "release-version": "11.0.100",
+      "sdk": {
+        "version": "11.0.100",
+        "files": [
+          {
+            "name": "dotnet-sdk-win-x64.exe",
+            "rid": "win-x64",
+            "url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/11.0.100/dotnet-sdk-11.0.100-win-x64.exe",
+            "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+          },
+          {
+            "name": "dotnet-sdk-win-x64.zip",
+            "rid": "win-x64",
+            "url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/11.0.100/dotnet-sdk-11.0.100-win-x64.zip",
+            "hash": "efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef"
+          }
+        ]
+      },
+      "sdks": [
+        {
+          "version": "11.0.100",
+          "files": []
+        }
+      ]
+    }
+  ]
+}

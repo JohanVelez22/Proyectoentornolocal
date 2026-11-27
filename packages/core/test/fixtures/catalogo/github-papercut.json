@@ -1,0 +1,83 @@
+[
+  {
+    "assets": [
+      {
+        "browser_download_url": "https://github.com/ChangemakerStudios/Papercut-SMTP/releases/download/8.1.0/Papercut.Smtp.Service.8.1.0-win-x64.zip",
+        "digest": "sha256:a0735593b52ac9886991bb8f3f4b1a0eafae5ca65681808ae0fcabe76e9cb29f",
+        "name": "Papercut.Smtp.Service.8.1.0-win-x64.zip"
+      },
+      {
+        "browser_download_url": "https://github.com/ChangemakerStudios/Papercut-SMTP/releases/download/8.1.0/PapercutSMTP-win-arm64-stable-Setup.exe",
+        "digest": "sha256:d66581d2c7db15273f891b96d11379697e0ae7c3f02295eae4a26b35402ae1eb",
+        "name": "PapercutSMTP-win-arm64-stable-Setup.exe"
+      },
+      {
+        "browser_download_url": "https://github.com/ChangemakerStudios/Papercut-SMTP/releases/download/8.1.0/PapercutSMTP-win-x64-stable-Setup.exe",
+        "digest": "sha256:94772b2dcbbbeee323f62207fec4c97c7882f1689b0a1aaf0d0de0e5c65a11b7",
+        "name": "PapercutSMTP-win-x64-stable-Setup.exe"
+      },
+      {
+        "browser_download_url": "https://github.com/ChangemakerStudios/Papercut-SMTP/releases/download/8.1.0/PapercutSMTP-win-x86-stable-Setup.exe",
+        "digest": "sha256:7da3d7171a260991e3864c76433f0802d99aff732c4e5ed7efd9a759629bc5f3",
+        "name": "PapercutSMTP-win-x86-stable-Setup.exe"
+      }
+    ],
+    "draft": false,
+    "prerelease": false,
+    "tag_name": "8.1.0"
+  },
+  {
+    "assets": [
+      {
+        "browser_download_url": "https://github.com/ChangemakerStudios/Papercut-SMTP/releases/download/8.0.2/Papercut.Smtp.Service.8.0.2-win-x64.zip",
+        "digest": "sha256:462967ccd8ad1a8c454ac6e83070e230e37bdc53f2d98c6e1d2b4be8e20ae07c",
+        "name": "Papercut.Smtp.Service.8.0.2-win-x64.zip"
+      },
+      {
+        "browser_download_url": "https://github.com/ChangemakerStudios/Papercut-SMTP/releases/download/8.0.2/PapercutSMTP-win-arm64-stable-Setup.exe",
+        "digest": "sha256:1e323c55c2f671b5cbf0c8f1974dc258542278b15d29467ad3a663bd7b088886",
+        "name": "PapercutSMTP-win-arm64-stable-Setup.exe"
+      },
+      {
+        "browser_download_url": "https://github.com/ChangemakerStudios/Papercut-SMTP/releases/download/8.0.2/PapercutSMTP-win-x64-stable-Setup.exe",
+        "digest": "sha256:187671eda780e7c046f42bd0638d2380e4c93778779a8ff008bb81a8a5b64081",
+        "name": "PapercutSMTP-win-x64-stable-Setup.exe"
+      },
+      {
+        "browser_download_url": "https://github.com/ChangemakerStudios/Papercut-SMTP/releases/download/8.0.2/PapercutSMTP-win-x86-stable-Setup.exe",
+        "digest": "sha256:1858c624620f0ecb526f13169005e37b79411c9cd1a440cf2a19dda332253a22",
+        "name": "PapercutSMTP-win-x86-stable-Setup.exe"
+      }
+    ],
+    "draft": false,
+    "prerelease": false,
+    "tag_name": "8.0.2"
+  },
+  {
+    "assets": [
+      {
+        "browser_download_url": "https://github.com/ChangemakerStudios/Papercut-SMTP/releases/download/8.0.1/Papercut.Smtp.Service.8.0.1-win-x64.zip",
+        "digest": "sha256:27105057d9094828c5dd9b9f616f23eb4be5087c270a6714b5498c73e5dde1b8",
+        "name": "Papercut.Smtp.Service.8.0.1-win-x64.zip"
+      },
+      {
+        "browser_download_url": "https://github.com/ChangemakerStudios/Papercut-SMTP/releases/download/8.0.1/PapercutSMTP-win-arm64-stable-Setup.exe",
+        "digest": "sha256:ed7c02bb3b52e2d5b1d595c17e7e9d8c167657675983409c1a149db3c5620a36",
+        "name": "PapercutSMTP-win-arm64-stable-Setup.exe"
+      },
+      {
+        "browser_download_url": "https://github.com/ChangemakerStudios/Papercut-SMTP/releases/download/8.0.1/PapercutSMTP-win-x64-stable-Setup.exe",
+        "digest": "sha256:e9adae879f7dc37f01c1948da53caeb81826cebe047e7d8476167821be8e4f1d",
+        "name": "PapercutSMTP-win-x64-stable-Setup.exe"
+      },
+      {
+        "browser_download_url": "https://github.com/ChangemakerStudios/Papercut-SMTP/releases/download/8.0.1/PapercutSMTP-win-x86-stable-Setup.exe",
+        "digest": "sha256:8969e3d196028ff1f8f23e721565f183b257a0c1e74666674939bc52d7dab360",
+        "name": "PapercutSMTP-win-x86-stable-Setup.exe"
+      }
+    ],
+    "draft": false,
+    "prerelease": false,
+    "tag_name": "8.0.1"
+  }
+]

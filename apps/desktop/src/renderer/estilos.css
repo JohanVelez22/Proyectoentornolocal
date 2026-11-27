@@ -1,0 +1,119 @@
+:root {
+  --fuente:
+    'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont,
+    'Helvetica Neue', Arial, sans-serif;
+  --fuente-mono: 'Cascadia Mono', 'Cascadia Code', Consolas, 'SF Mono', Menlo, monospace;
+  /* Acento (App.vue los cambia según el tema y la preferencia). */
+  --acento: #4f5bd5;
+  --acento-rgb: 79, 91, 213;
+  --acento-claro: #6470e0;
+  --acento-oscuro: #3d48b8;
+  /* Texto sobre un fondo del color del acento (blanco u oscuro según el contraste): lo fija App.vue. */
+  --sobre-acento: #fff;
+  /* Duración de las transiciones de la interfaz. */
+  --transicion: 150ms;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--fuente);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/*
+ * Colores de texto con contraste AA (4.5:1) sobre el fondo de cada tema. Los tonos de los
+ * puntos e iconos (3:1) pueden seguir siendo más vivos; el texto usa estos.
+ */
+:root {
+  --texto-ok: #15803d;
+  --texto-aviso: #b45309;
+  --texto-error: #dc2626;
+  --texto-enlace: #4f5bd5;
+  --texto-peligro: #b91c1c;
+}
+:root[data-tema='oscuro'] {
+  --texto-ok: #4ade80;
+  --texto-aviso: #fbbf24;
+  --texto-error: #f87171;
+  --texto-enlace: #8b93ff;
+  --texto-peligro: #fca5a5;
+}
+
+/* Barra de desplazamiento discreta en ambos temas. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.35);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Resumen de la receta en el diálogo "Reinstalar dependencias" (se pinta fuera del componente). */
+.resumen-aviso {
+  margin: 0 0 8px;
+  color: #b45309;
+}
+.resumen-texto {
+  margin: 0 0 6px;
+}
+.resumen-pasos {
+  margin: 0;
+  padding-left: 20px;
+  font-family: var(--fuente-mono);
+  font-size: 12px;
+  word-break: break-word;
+}
+
+/* Estados vacíos con ilustración: el hueco del icono de NEmpty toma el tamaño del dibujo. */
+.n-empty .n-empty__icon:has(.ilustracion) {
+  width: auto;
+  height: auto;
+  margin-bottom: 4px;
+}
+
+/*
+ * Navegación con foco visual (useFoco): halo con el acento del tema que se desvanece en 2,5 s.
+ * Con `prefers-reduced-motion` se usa un borde estático de 1,5 s, sin animación ni scroll suave.
+ */
+@keyframes foco-halo {
+  0%,
+  60% {
+    box-shadow:
+      0 0 0 3px rgba(var(--acento-rgb), 0.85),
+      0 0 18px 4px rgba(var(--acento-rgb), 0.4);
+  }
+  100% {
+    box-shadow:
+      0 0 0 3px rgba(var(--acento-rgb), 0),
+      0 0 18px 4px rgba(var(--acento-rgb), 0);
+  }
+}
+.foco-halo {
+  border-radius: 8px;
+  animation: foco-halo 2.5s ease-out;
+}
+.foco-estatico {
+  border-radius: 8px;
+  outline: 3px solid var(--acento);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .foco-halo {
+    animation: none;
+    outline: 3px solid var(--acento);
+    outline-offset: 2px;
+  }
+}

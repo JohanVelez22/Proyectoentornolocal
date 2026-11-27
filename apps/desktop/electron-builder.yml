@@ -1,0 +1,216 @@
+appId: com.johanvelez.wolfcoredev
+productName: WolfCore Dev
+directories:
+  output: release
+  buildResources: resources
+files:
+  - out/**
+# El hilo de trabajo de la auditoría de contraseñas carga bcryptjs por su ruta absoluta desde un
+# `Worker` con `eval`: fuera del .asar para que la ruta sea la de un archivo real.
+asarUnpack:
+  - node_modules/bcryptjs/**
+  # pdf-lib (D33) y sus dependencias también: el hilo que optimiza PDF las carga igual.
+  # El conversor de documentos (D34) corre en un `Worker` con `eval` que carga mammoth, exceljs y
+  # pdfjs-dist por su ruta absoluta: ellos y TODAS sus dependencias fuera del .asar. Lo exige
+  # `test/empaquetado.test.ts` (calcula la lista desde node_modules).
+  - node_modules/@fast-csv/format/**
+  - node_modules/@fast-csv/parse/**
+  - node_modules/@pdf-lib/standard-fonts/**
+  - node_modules/@pdf-lib/upng/**
+  - node_modules/@xmldom/xmldom/**
+  - node_modules/archiver/**
+  - node_modules/archiver-utils/**
+  - node_modules/array-buffer-byte-length/**
+  - node_modules/arraybuffer.prototype.slice/**
+  - node_modules/async/**
+  - node_modules/async-function/**
+  - node_modules/available-typed-arrays/**
+  - node_modules/balanced-match/**
+  - node_modules/base64-js/**
+  - node_modules/big-integer/**
+  - node_modules/binary/**
+  - node_modules/bl/**
+  - node_modules/brace-expansion/**
+  - node_modules/buffer/**
+  - node_modules/buffer-indexof-polyfill/**
+  - node_modules/buffers/**
+  - node_modules/call-bind/**
+  - node_modules/call-bind-apply-helpers/**
+  - node_modules/call-bound/**
+  - node_modules/chainsaw/**
+  - node_modules/compress-commons/**
+  - node_modules/concat-map/**
+  - node_modules/core-util-is/**
+  - node_modules/crc-32/**
+  - node_modules/crc32-stream/**
+  - node_modules/data-view-buffer/**
+  - node_modules/data-view-byte-length/**
+  - node_modules/data-view-byte-offset/**
+  - node_modules/dayjs/**
+  - node_modules/define-data-property/**
+  - node_modules/define-properties/**
+  - node_modules/dingbat-to-unicode/**
+  - node_modules/duck/**
+  - node_modules/dunder-proto/**
+  - node_modules/duplexer2/**
+  - node_modules/end-of-stream/**
+  - node_modules/es-abstract/**
+  - node_modules/es-abstract-get/**
+  - node_modules/es-define-property/**
+  - node_modules/es-errors/**
+  - node_modules/es-object-atoms/**
+  - node_modules/es-set-tostringtag/**
+  - node_modules/es-to-primitive/**
+  - node_modules/exceljs/**
+  - node_modules/fast-csv/**
+  - node_modules/for-each/**
+  - node_modules/fs-constants/**
+  - node_modules/fs.realpath/**
+  - node_modules/fstream/**
+  - node_modules/function-bind/**
+  - node_modules/function.prototype.name/**
+  - node_modules/functions-have-names/**
+  - node_modules/generator-function/**
+  - node_modules/get-intrinsic/**
+  - node_modules/get-proto/**
+  - node_modules/get-symbol-description/**
+  - node_modules/glob/**
+  - node_modules/globalthis/**
+  - node_modules/gopd/**
+  - node_modules/graceful-fs/**
+  - node_modules/has-bigints/**
+  - node_modules/has-property-descriptors/**
+  - node_modules/has-proto/**
+  - node_modules/has-symbols/**
+  - node_modules/has-tostringtag/**
+  - node_modules/hasown/**
+  - node_modules/ieee754/**
+  - node_modules/immediate/**
+  - node_modules/inflight/**
+  - node_modules/inherits/**
+  - node_modules/internal-slot/**
+  - node_modules/is-array-buffer/**
+  - node_modules/is-async-function/**
+  - node_modules/is-bigint/**
+  - node_modules/is-boolean-object/**
+  - node_modules/is-callable/**
+  - node_modules/is-data-view/**
+  - node_modules/is-date-object/**
+  - node_modules/is-document.all/**
+  - node_modules/is-finalizationregistry/**
+  - node_modules/is-generator-function/**
+  - node_modules/is-map/**
+  - node_modules/is-negative-zero/**
+  - node_modules/is-number-object/**
+  - node_modules/is-regex/**
+  - node_modules/is-set/**
+  - node_modules/is-shared-array-buffer/**
+  - node_modules/is-string/**
+  - node_modules/is-symbol/**
+  - node_modules/is-typed-array/**
+  - node_modules/is-weakmap/**
+  - node_modules/is-weakref/**
+  - node_modules/is-weakset/**
+  - node_modules/isarray/**
+  - node_modules/jszip/**
+  - node_modules/lazystream/**
+  - node_modules/lie/**
+  - node_modules/listenercount/**
+  - node_modules/lodash.defaults/**
+  - node_modules/lodash.difference/**
+  - node_modules/lodash.escaperegexp/**
+  - node_modules/lodash.flatten/**
+  - node_modules/lodash.groupby/**
+  - node_modules/lodash.isboolean/**
+  - node_modules/lodash.isequal/**
+  - node_modules/lodash.isfunction/**
+  - node_modules/lodash.isnil/**
+  - node_modules/lodash.isplainobject/**
+  - node_modules/lodash.isundefined/**
+  - node_modules/lodash.union/**
+  - node_modules/lodash.uniq/**
+  - node_modules/lop/**
+  - node_modules/mammoth/**
+  - node_modules/math-intrinsics/**
+  - node_modules/minimatch/**
+  - node_modules/minimist/**
+  - node_modules/mkdirp/**
+  - node_modules/normalize-path/**
+  - node_modules/object-inspect/**
+  - node_modules/object-keys/**
+  - node_modules/object.assign/**
+  - node_modules/once/**
+  - node_modules/option/**
+  - node_modules/own-keys/**
+  - node_modules/pako/**
+  - node_modules/path-is-absolute/**
+  - node_modules/pdf-lib/**
+  - node_modules/pdfjs-dist/**
+  - node_modules/possible-typed-array-names/**
+  - node_modules/process-nextick-args/**
+  - node_modules/readable-stream/**
+  - node_modules/readdir-glob/**
+  - node_modules/reflect.getprototypeof/**
+  - node_modules/regexp.prototype.flags/**
+  - node_modules/rimraf/**
+  - node_modules/safe-array-concat/**
+  - node_modules/safe-buffer/**
+  - node_modules/safe-push-apply/**
+  - node_modules/safe-regex-test/**
+  - node_modules/saxes/**
+  - node_modules/set-function-length/**
+  - node_modules/set-function-name/**
+  - node_modules/set-proto/**
+  - node_modules/setimmediate/**
+  - node_modules/side-channel/**
+  - node_modules/side-channel-list/**
+  - node_modules/side-channel-map/**
+  - node_modules/side-channel-weakmap/**
+  - node_modules/stop-iteration-iterator/**
+  - node_modules/string.prototype.trim/**
+  - node_modules/string.prototype.trimend/**
+  - node_modules/string.prototype.trimstart/**
+  - node_modules/string_decoder/**
+  - node_modules/tar-stream/**
+  - node_modules/tmp/**
+  - node_modules/traverse/**
+  - node_modules/typed-array-buffer/**
+  - node_modules/typed-array-byte-length/**
+  - node_modules/typed-array-byte-offset/**
+  - node_modules/typed-array-length/**
+  - node_modules/typedarray.prototype.slice/**
+  - node_modules/unbox-primitive/**
+  - node_modules/underscore/**
+  - node_modules/util-deprecate/**
+  - node_modules/which-boxed-primitive/**
+  - node_modules/which-builtin-type/**
+  - node_modules/which-collection/**
+  - node_modules/which-typed-array/**
+  - node_modules/wrappy/**
+  - node_modules/xmlchars/**
+  - node_modules/zip-stream/**
+# El proceso principal va empaquetado por electron-vite y no usa módulos nativos. Sin esto,
+# electron-builder intenta compilar dtrace-provider (opcional de bunyan, vía ftp-srv) y exige
+# Visual Studio en el equipo que arma el instalador.
+npmRebuild: false
+# El comando `wolf` corre sobre el Electron de la app como Node (ELECTRON_RUN_AS_NODE=1, que pone
+# wolf.exe / wolf.cmd solo para ese proceso). Eso necesita el fuse RunAsNode ENCENDIDO, que es el valor
+# por defecto de Electron: no agregar `electronFuses` con `runAsNode: false` sin antes cambiar el
+# cliente (apps/desktop/src/cli). `test/cli.test.ts` lo vigila.
+# El icono de ventana y bandeja se lee en tiempo de ejecución desde process.resourcesPath.
+extraResources:
+  - from: resources/icono.png
+    to: icono.png
+  - from: resources/icono.ico
+    to: icono.ico
+  - from: resources/icono-bandeja.png
+    to: icono-bandeja.png
+win:
+  target: nsis
+  icon: resources/icono.ico
+nsis:
+  installerIcon: resources/icono.ico
+  uninstallerIcon: resources/icono.ico
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true

@@ -1,0 +1,24 @@
+[
+  {
+    "binary": {
+      "architecture": "x64",
+      "image_type": "jdk",
+      "jvm_impl": "hotspot",
+      "os": "windows",
+      "package": {
+        "checksum": "5fac419f00d2256941a6b1253a827bb8b904da215a1ec0667035e5592811c1dc",
+        "link": "https://github.com/adoptium/temurin27-binaries/releases/download/jdk-27.0.1.0.2%2B1/OpenJDK27U-jdk_x64_windows_hotspot_27.0.1.0.2_1.zip",
+        "name": "OpenJDK27U-jdk_x64_windows_hotspot_27.0.1.0.2_1.zip"
+      }
+    },
+    "release_name": "jdk-27.0.1.0.2+1",
+    "vendor": "eclipse",
+    "version": {
+      "build": 0,
+      "major": 27,
+      "minor": 0,
+      "security": 1,
+      "patch": 0
+    }
+  }
+]

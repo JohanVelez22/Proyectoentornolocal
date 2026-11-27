@@ -1,0 +1,460 @@
+import { readdir, stat, statfs } from 'node:fs/promises';
+import path from 'node:path';
+import type { ProgresoIa } from '../eventos';
+import { forma, numero, objeto, pedirJsonIa } from './http';
+import {
+  ordenarModelos,
+  validarModeloIa,
+  type ClienteIa,
+  type ContextoCliente,
+  type ModeloIa,
+} from './proveedores';
+
+export const SUGERIDOS = ['llama3.2', 'qwen2.5-coder', 'mistral', 'nomic-embed-text'];
+
+const BASE_POR_DEFECTO = 'http://127.0.0.1:11434';
+/** Nombres de modelo de Ollama aceptados (p. ej. llama3.2, qwen2.5-coder:7b). */
+export const NOMBRE_MODELO_OLLAMA = /^[a-z0-9][a-z0-9._:/-]{0,127}$/i;
+const NOMBRE_VALIDO = NOMBRE_MODELO_OLLAMA;
+
+const MS_LISTA = 5_000;
+const MS_PROBAR = 120_000;
+const MS_SIN_DATOS = 60_000;
+const REGISTRO_POR_DEFECTO = 'https://registry.ollama.ai';
+const MS_REGISTRO = 8_000;
+const MS_ENTRE_EVENTOS = 100; // como mucho 10 eventos por segundo y modelo
+
+export interface ModeloOllama {
+  nombre: string;
+  tamanoBytes: number;
+  modificado: string;
+}
+
+type RespuestaHttp = {
+  ok: boolean;
+  status?: number;
+  json(): Promise<unknown>;
+  body?: ReadableStream<Uint8Array> | null;
+};
+type Fetch = (url: string, init?: RequestInit) => Promise<RespuestaHttp>;
+
+export interface OpcionesOllama {
+  /** URL base según el puerto configurado. */
+  base?: () => string;
+  /** Carpeta de modelos (OLLAMA_MODELS). */
+  modelosDir: () => string;
+  emitir?: (p: ProgresoIa) => void;
+  fetch?: Fetch;
+  ahora?: () => number;
+  /** Registro de modelos de Ollama (solo para saber el tamaño antes de descargar). */
+  registro?: () => string;
+  /** Bytes libres de la unidad de `ruta` (por omisión `statfs`; pruebas). */
+  espacioLibre?: (ruta: string) => Promise<number>;
+}
+
+/** Lo que se muestra antes de descargar; `null` = no se pudo saber. */
+export interface InfoDescargaOllama {
+  tamanoBytes: number | null;
+  libreBytes: number | null;
+}
+
+export class ErrorOllama extends Error {
+  constructor(
+    mensaje: string,
+    readonly codigo?: 'cancelado' | 'apagado' | 'tiempo',
+  ) {
+    super(mensaje);
+    this.name = 'ErrorOllama';
+  }
+}
+
+const APAGADO = 'Encienda Ollama para usar la IA local';
+
+export class ClienteOllama {
+  private readonly descargas = new Map<string, AbortController>();
+  private readonly base: () => string;
+  private readonly peticion: Fetch;
+  private readonly ahora: () => number;
+
+  constructor(private readonly op: OpcionesOllama) {
+    this.base = op.base ?? (() => BASE_POR_DEFECTO);
+    this.peticion = op.fetch ?? ((u, i) => fetch(u, i) as Promise<RespuestaHttp>);
+    this.ahora = op.ahora ?? Date.now;
+  }
+
+  private validar(nombre: string): void {
+    // Los tramos `.` y `..` no son nombres de modelo y, en la ruta del registro, la recorrerían.
+    const sinPuntos = nombre
+      .split(':')[0]!
+      .split('/')
+      .every((t) => t !== '.' && t !== '..');
+    if (!NOMBRE_VALIDO.test(nombre) || !sinPuntos) {
+      throw new ErrorOllama(
+        'Nombre de modelo no válido. Use letras, números y . _ : / - (por ejemplo llama3.2).',
+      );
+    }
+  }
+
+  /** Petición con tiempo máximo; traduce "servicio apagado" y "tiempo agotado". */
+  private async llamar(ruta: string, init: RequestInit, ms: number): Promise<RespuestaHttp> {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), ms);
+    try {
+      return await this.peticion(`${this.base()}${ruta}`, { ...init, signal: ctl.signal });
+    } catch {
+      if (ctl.signal.aborted) {
+        throw new ErrorOllama('Ollama tardó demasiado en responder. Inténtelo de nuevo.', 'tiempo');
+      }
+      throw new ErrorOllama(APAGADO, 'apagado');
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  /** Detalle ": mensaje" del cuerpo de error de Ollama, o cadena vacía. */
+  private async detalleError(r: RespuestaHttp): Promise<string> {
+    try {
+      const d = (await r.json()) as { error?: unknown };
+      if (typeof d.error === 'string') return `: ${d.error}`;
+    } catch {
+      /* sin cuerpo */
+    }
+    return '';
+  }
+
+  // La lectura del cuerpo no tiene tiempo máximo propio: el servicio es local y la espera de
+  // la cabecera ya está acotada por `llamar`.
+  private async leerJson<T>(r: RespuestaHttp): Promise<T> {
+    if (!r.ok) {
+      throw new ErrorOllama(
+        `Ollama respondió con un error (${r.status ?? 'desconocido'})${await this.detalleError(r)}.`,
+      );
+    }
+    return (await r.json()) as T;
+  }
+
+  async modelos(): Promise<ModeloOllama[]> {
+    const r = await this.llamar('/api/tags', {}, MS_LISTA);
+    const d = await this.leerJson<{
+      models?: { name: string; size?: number; modified_at?: string }[];
+    }>(r);
+    return (d.models ?? []).map((m) => ({
+      nombre: m.name,
+      tamanoBytes: typeof m.size === 'number' ? m.size : 0,
+      modificado: m.modified_at ?? '',
+    }));
+  }
+
+  async borrar(nombre: string): Promise<void> {
+    this.validar(nombre);
+    const r = await this.llamar(
+      '/api/delete',
+      {
+        method: 'DELETE',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ model: nombre }),
+      },
+      MS_LISTA,
+    );
+    // Ollama 0.40 responde 200 con el cuerpo vacío: el éxito no se parsea como JSON.
+    if (!r.ok) await this.leerJson(r);
+  }
+
+  async probar(nombre: string, texto: string): Promise<string> {
+    this.validar(nombre);
+    const r = await this.llamar(
+      '/api/generate',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ model: nombre, prompt: texto, stream: false }),
+      },
+      MS_PROBAR,
+    );
+    const d = await this.leerJson<{ response?: unknown }>(r);
+    return typeof d.response === 'string' ? d.response : '';
+  }
+
+  /**
+   * Tamaño de un modelo (suma de las capas de su manifiesto en el registro de Ollama; no baja
+   * nada) y espacio libre de la unidad de los modelos. Lo que no se pueda saber, va como `null`.
+   */
+  async infoDescarga(nombre: string): Promise<InfoDescargaOllama> {
+    this.validar(nombre);
+    const [tamanoBytes, libreBytes] = await Promise.all([
+      this.tamanoEnRegistro(nombre),
+      this.libre(),
+    ]);
+    return { tamanoBytes, libreBytes };
+  }
+
+  private async tamanoEnRegistro(nombre: string): Promise<number | null> {
+    const dos = nombre.toLowerCase().split(':');
+    const tramos = dos[0]!.split('/');
+    if (dos.length > 2 || tramos.length > 2 || tramos.some((t) => t === '')) return null;
+    const codificados = tramos.map((t) => encodeURIComponent(t));
+    const ruta = codificados.length === 1 ? `library/${codificados[0]}` : codificados.join('/');
+    const url = `${(this.op.registro ?? (() => REGISTRO_POR_DEFECTO))()}/v2/${ruta}/manifests/${encodeURIComponent(dos[1] || 'latest')}`;
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), MS_REGISTRO);
+    try {
+      const r = await this.peticion(url, {
+        headers: { accept: 'application/vnd.docker.distribution.manifest.v2+json' },
+        signal: ctl.signal,
+      });
+      if (!r.ok) return null;
+      const m = (await r.json()) as { config?: { size?: unknown }; layers?: unknown };
+      if (!Array.isArray(m.layers)) return null;
+      let total = typeof m.config?.size === 'number' ? m.config.size : 0;
+      for (const l of m.layers) {
+        const n = (l as { size?: unknown } | null)?.size;
+        if (typeof n !== 'number' || !Number.isFinite(n) || n < 0) return null;
+        total += n;
+      }
+      return total > 0 ? total : null;
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  private async libre(): Promise<number | null> {
+    // La carpeta de modelos puede no existir aún: se mide la primera que exista hacia arriba.
+    let dir = this.op.modelosDir();
+    try {
+      for (let i = 0; i < 12; i++) {
+        try {
+          await stat(dir);
+          break;
+        } catch {
+          const padre = path.dirname(dir);
+          if (padre === dir) break;
+          dir = padre;
+        }
+      }
+      if (this.op.espacioLibre) return await this.op.espacioLibre(dir);
+      const s = await statfs(dir);
+      return Number(s.bavail) * Number(s.bsize);
+    } catch {
+      return null;
+    }
+  }
+
+  /** Aborta la descarga en curso; false si no había ninguna. */
+  cancelarDescarga(nombre: string): boolean {
+    const clave = nombre.toLowerCase();
+    const ctl = this.descargas.get(clave);
+    if (!ctl) return false;
+    ctl.abort();
+    this.descargas.delete(clave);
+    return true;
+  }
+
+  async descargar(nombre: string): Promise<void> {
+    this.validar(nombre);
+    const clave = nombre.toLowerCase();
+    if (this.descargas.has(clave)) {
+      throw new ErrorOllama(`Ya se está descargando ${nombre}.`);
+    }
+    const ctl = new AbortController();
+    this.descargas.set(clave, ctl);
+    let estancado = false;
+    let temporizador: ReturnType<typeof setTimeout> | undefined;
+    const armar = (): void => {
+      clearTimeout(temporizador);
+      temporizador = setTimeout(() => {
+        estancado = true;
+        ctl.abort();
+      }, MS_SIN_DATOS);
+    };
+    const abortado = (): ErrorOllama =>
+      estancado
+        ? new ErrorOllama(`La descarga de ${nombre} se detuvo: Ollama no envía datos.`, 'tiempo')
+        : new ErrorOllama('Descarga cancelada', 'cancelado');
+
+    let lector: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    try {
+      armar();
+      let r: RespuestaHttp;
+      try {
+        r = await this.peticion(`${this.base()}/api/pull`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ model: nombre, stream: true }),
+          signal: ctl.signal,
+        });
+      } catch {
+        if (ctl.signal.aborted) throw abortado();
+        throw new ErrorOllama(APAGADO, 'apagado');
+      }
+      if (!r.ok || !r.body) {
+        const detalle = r.ok ? '' : await this.detalleError(r);
+        r.body?.cancel().catch(() => {});
+        throw new ErrorOllama(
+          `Ollama no pudo descargar ${nombre} (error ${r.status ?? 'desconocido'})${detalle}.`,
+        );
+      }
+
+      lector = r.body.getReader();
+      let exito = false;
+      const dec = new TextDecoder('utf-8');
+      let resto = '';
+      let ultimoEmitido = -Infinity;
+      let pendiente: ProgresoIa | undefined;
+
+      const linea = (texto: string): void => {
+        if (!texto.trim()) return;
+        let d: { status?: string; completed?: number; total?: number; error?: string };
+        try {
+          d = JSON.parse(texto);
+        } catch {
+          return; // línea ajena: se ignora
+        }
+        if (typeof d.error === 'string') {
+          throw new ErrorOllama(`Ollama no pudo descargar ${nombre}: ${d.error}`);
+        }
+        if (d.status === 'success') exito = true;
+        const p: ProgresoIa = {
+          modelo: nombre,
+          estado: d.status ?? '',
+          completado: typeof d.completed === 'number' ? d.completed : 0,
+          total: typeof d.total === 'number' ? d.total : 0,
+        };
+        const t = this.ahora();
+        if (t - ultimoEmitido >= MS_ENTRE_EVENTOS) {
+          ultimoEmitido = t;
+          pendiente = undefined;
+          this.op.emitir?.(p);
+        } else {
+          pendiente = p;
+        }
+      };
+
+      try {
+        for (;;) {
+          const { done, value } = await lector.read();
+          if (done) break;
+          armar();
+          resto += dec.decode(value, { stream: true });
+          const partes = resto.split('\n');
+          resto = partes.pop() ?? '';
+          for (const p of partes) linea(p);
+        }
+      } catch (e) {
+        if (e instanceof ErrorOllama) throw e;
+        if (ctl.signal.aborted) throw abortado();
+        throw new ErrorOllama(`Se interrumpió la descarga de ${nombre}.`);
+      }
+      resto += dec.decode();
+      linea(resto);
+      if (!exito) {
+        throw new ErrorOllama(`Se interrumpió la descarga de ${nombre}; inténtelo de nuevo.`);
+      }
+      // Siempre se emite el estado final.
+      if (pendiente) this.op.emitir?.(pendiente);
+    } finally {
+      clearTimeout(temporizador);
+      if (lector) {
+        lector.cancel().catch(() => {});
+        try {
+          lector.releaseLock();
+        } catch {
+          /* aún hay una lectura pendiente */
+        }
+      }
+      if (this.descargas.get(clave) === ctl) this.descargas.delete(clave);
+    }
+  }
+
+  /** Suma el tamaño de todos los archivos de la carpeta de modelos (0 si no existe). */
+  async espacioUsado(): Promise<number> {
+    const sumar = async (dir: string): Promise<number> => {
+      let entradas;
+      try {
+        entradas = await readdir(dir, { withFileTypes: true });
+      } catch {
+        return 0;
+      }
+      let total = 0;
+      for (const e of entradas) {
+        const p = path.join(dir, e.name);
+        if (e.isDirectory()) total += await sumar(p);
+        else if (e.isFile()) {
+          try {
+            total += (await stat(p)).size;
+          } catch {
+            /* desapareció mientras se leía */
+          }
+        }
+      }
+      return total;
+    };
+    return sumar(this.op.modelosDir());
+  }
+}
+
+/**
+ * Adaptador de Ollama a `ClienteIa` (para un proveedor `ollama` de la lista, local o remoto):
+ * `GET /api/tags` y `POST /api/chat` sin flujo, con `num_predict` como tope de la respuesta.
+ * Sin clave; si se configura una (Ollama detrás de un proxy), va como `Authorization: Bearer`.
+ */
+export function clienteIaOllama(ctx: ContextoCliente): ClienteIa {
+  const cabeceras = (clave: string | null): Record<string, string> =>
+    clave ? { authorization: `Bearer ${clave}` } : {};
+  return {
+    async modelos(clave, o) {
+      const k = ctx.exigirClave(clave);
+      const d = objeto(
+        await pedirJsonIa({
+          tipo: ctx.tipo,
+          url: `${ctx.base}/api/tags`,
+          metodo: 'GET',
+          cabeceras: cabeceras(k),
+          clave: k,
+          ...(o?.senal ? { senal: o.senal } : {}),
+          plazoMs: ctx.plazoMs,
+          fetchImpl: ctx.fetchImpl,
+        }),
+      );
+      if (!d || !Array.isArray(d.models)) throw forma();
+      const lista: ModeloIa[] = [];
+      for (const m of d.models) {
+        const n = objeto(m)?.name;
+        if (typeof n === 'string' && n) lista.push({ id: n, nombre: n });
+      }
+      return ordenarModelos(lista);
+    },
+
+    async mensaje(clave, modelo, texto, o) {
+      validarModeloIa(modelo);
+      const k = ctx.exigirClave(clave);
+      const d = objeto(
+        await pedirJsonIa({
+          tipo: ctx.tipo,
+          url: `${ctx.base}/api/chat`,
+          metodo: 'POST',
+          cabeceras: cabeceras(k),
+          cuerpo: {
+            model: modelo,
+            messages: [{ role: 'user', content: texto }],
+            stream: false,
+            options: { num_predict: ctx.maxTokens(o) },
+          },
+          clave: k,
+          ...(o?.senal ? { senal: o.senal } : {}),
+          plazoMs: ctx.plazoMs,
+          fetchImpl: ctx.fetchImpl,
+        }),
+      );
+      const contenido = objeto(d?.message)?.content;
+      if (typeof contenido !== 'string') throw forma();
+      const entrada = numero(d?.prompt_eval_count);
+      const salida = numero(d?.eval_count);
+      return {
+        texto: contenido,
+        ...(entrada !== undefined && salida !== undefined ? { tokens: { entrada, salida } } : {}),
+      };
+    },
+  };
+}

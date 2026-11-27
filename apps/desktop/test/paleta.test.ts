@@ -1,0 +1,94 @@
+import { describe, expect, it } from 'vitest';
+import {
+  comandoNuevoProyecto,
+  filtrarComandos,
+  moverSeleccion,
+  normalizar,
+  puntuar,
+  type Comando,
+} from '../src/renderer/utilidades/paleta';
+
+const c = (id: string, titulo: string, extra: Partial<Comando> = {}): Comando => ({
+  id,
+  grupo: 'general',
+  titulo,
+  ejecutar: () => undefined,
+  ...extra,
+});
+
+const COMANDOS = [
+  c('ir-inicio', 'Ir a Inicio'),
+  c('ir-tuneles', 'Ir a Túneles'),
+  c('ir-servicios', 'Ir a Servicios'),
+  c('enc-nginx', 'Encender Nginx'),
+  c('enc-php', 'Encender PHP 8.4'),
+  c('abrir-tienda', 'Abrir Tienda en el navegador', { detalle: 'tienda.test' }),
+  c('traer-tienda', 'Traer cambios en Tienda', { detalle: 'tienda.test' }),
+  c('herr-puertos', 'Abrir Puertos en uso', { claves: 'ports netstat' }),
+];
+
+const ids = (l: Comando[]) => l.map((x) => x.id);
+
+describe('paleta de comandos', () => {
+  it('normalizar quita tildes y mayúsculas', () => {
+    expect(normalizar('Túneles ÁÉ')).toBe('tuneles ae');
+  });
+
+  it('sin consulta devuelve todo en el orden original', () => {
+    expect(ids(filtrarComandos(COMANDOS, '  '))).toEqual(ids(COMANDOS));
+  });
+
+  it('encuentra sin tildes y con mayúsculas', () => {
+    expect(ids(filtrarComandos(COMANDOS, 'TUNEL'))).toEqual(['ir-tuneles']);
+  });
+
+  it('todas las palabras deben aparecer, en cualquier orden', () => {
+    expect(ids(filtrarComandos(COMANDOS, 'tienda traer'))).toEqual(['traer-tienda']);
+    expect(filtrarComandos(COMANDOS, 'tienda mysql')).toEqual([]);
+  });
+
+  it('acepta subsecuencias (difusa) y pone primero lo contiguo', () => {
+    const r = ids(filtrarComandos(COMANDOS, 'ngx'));
+    expect(r[0]).toBe('enc-nginx');
+    const s = ids(filtrarComandos(COMANDOS, 'serv'));
+    expect(s[0]).toBe('ir-servicios');
+  });
+
+  it('el comienzo de una palabra gana a una coincidencia en medio', () => {
+    const a = puntuar({ titulo: 'Encender PHP' }, 'php')!;
+    const b = puntuar({ titulo: 'Abrir aphpx' }, 'php')!;
+    expect(a).toBeGreaterThan(b);
+  });
+
+  it('busca también en el detalle y las claves, con menos peso que el título', () => {
+    expect(ids(filtrarComandos(COMANDOS, 'netstat'))).toEqual(['herr-puertos']);
+    const enTitulo = puntuar({ titulo: 'Tienda' }, 'tienda')!;
+    const enDetalle = puntuar({ titulo: 'Otro', detalle: 'tienda' }, 'tienda')!;
+    expect(enTitulo).toBeGreaterThan(enDetalle);
+  });
+
+  it('respeta el máximo', () => {
+    expect(filtrarComandos(COMANDOS, '', 3)).toHaveLength(3);
+  });
+
+  it('moverSeleccion da la vuelta en ambos sentidos', () => {
+    expect(moverSeleccion(0, 3, -1)).toBe(2);
+    expect(moverSeleccion(2, 3, 1)).toBe(0);
+    expect(moverSeleccion(0, 0, 1)).toBe(0);
+  });
+});
+
+describe('comando «Nuevo proyecto»', () => {
+  it('el comando "Nuevo proyecto" va en proyectos y lo encuentran nuevo, crear y los tipos', () => {
+    let llamado = 0;
+    const nuevo = comandoNuevoProyecto('Crear un proyecto nuevo', () => void llamado++);
+    expect(nuevo).toMatchObject({ id: 'nuevo-proyecto', grupo: 'proyectos' });
+    const todos = [...COMANDOS, nuevo];
+    for (const q of ['nuevo proyecto', 'crear proyecto', 'new project', 'laravel', 'wordpress']) {
+      expect(ids(filtrarComandos(todos, q)), q).toContain('nuevo-proyecto');
+    }
+    expect(ids(filtrarComandos(todos, 'nuevo proyecto'))[0]).toBe('nuevo-proyecto');
+    void nuevo.ejecutar();
+    expect(llamado).toBe(1);
+  });
+});

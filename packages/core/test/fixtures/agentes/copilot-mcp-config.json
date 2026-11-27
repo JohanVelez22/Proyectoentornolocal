@@ -1,0 +1,5 @@
+{
+  "mcpServers": {
+    "otro": { "type": "http", "url": "https://otro.ejemplo.test/mcp", "tools": ["*"] }
+  }
+}

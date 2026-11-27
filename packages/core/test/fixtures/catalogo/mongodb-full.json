@@ -1,0 +1,763 @@
+{
+  "versions": [
+    {
+      "changes": "https://jira.mongodb.org/issues/?jql=project%20%3D%20SERVER%20AND%20fixVersion%20%3D%20%229.0.8%22%20ORDER%20BY%20status%20DESC%2C%20priority%20DESC",
+      "continuous_release": false,
+      "current": true,
+      "date": "11/05/2026",
+      "development_release": false,
+      "downloads": [
+        {
+          "arch": "ppc64le",
+          "archive": {
+            "debug_symbols": "https://downloads.mongodb.com/linux/mongodb-linux-ppc64le-enterprise-rhel81-debugsymbols-9.0.8.tgz",
+            "sha1": "c1a263d3c335492c1112f1cdb3c796b78cc43112",
+            "sha256": "5048fb3c497e2cedc664ffa341a054b6933229fec4ce5053bc3a5a3c7a7c0a27",
+            "url": "https://downloads.mongodb.com/linux/mongodb-linux-ppc64le-enterprise-rhel81-9.0.8.tgz"
+          },
+          "crypt_shared": {
+            "sha1": "8779f0cfa3c984b4ab1d74debf06fbe36de300c6",
+            "sha256": "281d1869a8e8b86663b928743ebb49b75df2147c424fea1514698dc44dc398eb",
+            "url": "https://downloads.mongodb.com/linux/mongo_crypt_shared_v1-linux-ppc64le-enterprise-rhel81-9.0.8.tgz"
+          },
+          "cryptd": {
+            "sha1": "1fb21df63a21c3a81998007e66092413943e8dcd",
+            "sha256": "fe6b9cbd94162285bdecfc9f61c54d72b3738baf46a154c6d025d41ea2b3c4d5",
+            "url": "https://downloads.mongodb.com/linux/mongodb-cryptd-linux-ppc64le-enterprise-rhel81-9.0.8.tgz"
+          },
+          "edition": "enterprise",
+          "target": "rhel81"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "6c66ede6cd6579f616cbfdee521257b1db744e38",
+            "sha256": "ee18c81847efebd869564e8ec42ca37b0cac7fe353c321969c5db16c3b7e4e8e",
+            "url": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-9.0.8.zip"
+          },
+          "edition": "base",
+          "msi": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-9.0.8-signed.msi",
+          "target": "windows"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "abb2af521fc1aebf999b56bf599b7d2814f52514",
+            "sha256": "c2f77666afb5a6791a94656c02842805f5f25624c8823454a70ced31a6c6bd0e",
+            "url": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-9.0.8.zip"
+          },
+          "crypt_shared": {
+            "sha1": "f974f5adcf1b778fac55b91a9455f5bdc35f69b2",
+            "sha256": "4a8adc9da90c966fc82841b9d32f34c54a27094e3bc6f94509fb42f0ebdd989e",
+            "url": "https://downloads.mongodb.com/windows/mongo_crypt_shared_v1-windows-x86_64-enterprise-9.0.8.zip"
+          },
+          "cryptd": {
+            "sha1": "b11977f49135ee8b29791a8272a3ad31535d1f6c",
+            "sha256": "2f507d0f36f5d4c7beac237abbf1185e5dbccac6ec52190ae63d63a389152b33",
+            "url": "https://downloads.mongodb.com/windows/mongodb-cryptd-windows-x86_64-enterprise-9.0.8.zip"
+          },
+          "edition": "enterprise",
+          "msi": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-9.0.8-signed.msi",
+          "target": "windows"
+        }
+      ],
+      "githash": "115a0fe2dcd8edd5bacd4557bd2e741a8e080665",
+      "lts_release": true,
+      "notes": "https://docs.mongodb.org/master/release-notes/9.0/",
+      "production_release": true,
+      "public_githash": "115a0fe2dcd8edd5bacd4557bd2e741a8e080665",
+      "release_candidate": false,
+      "version": "9.0.8"
+    },
+    {
+      "changes": "https://jira.mongodb.org/issues/?jql=project%20%3D%20SERVER%20AND%20fixVersion%20%3D%20%229.0.7%22%20ORDER%20BY%20status%20DESC%2C%20priority%20DESC",
+      "continuous_release": false,
+      "current": false,
+      "date": "10/30/2026",
+      "development_release": false,
+      "downloads": [
+        {
+          "arch": "x86_64",
+          "archive": {
+            "debug_symbols": "https://downloads.mongodb.com/linux/mongodb-linux-x86_64-enterprise-ubuntu2604-debugsymbols-9.0.7.tgz",
+            "sha1": "a839512375f5c2a98790d68be61e0856d1c34732",
+            "sha256": "8137efde64647decec66f58d0292696ac635b89098e1a4ad651de7212feaf89f",
+            "url": "https://downloads.mongodb.com/linux/mongodb-linux-x86_64-enterprise-ubuntu2604-9.0.7.tgz"
+          },
+          "crypt_shared": {
+            "sha1": "07be6431d1b6ab0eb28cace91105ee3d2c51688d",
+            "sha256": "7c74da7adece37e338f420d37f5ddd1317affe63375443d54a76450d64dfdf09",
+            "url": "https://downloads.mongodb.com/linux/mongo_crypt_shared_v1-linux-x86_64-enterprise-ubuntu2604-9.0.7.tgz"
+          },
+          "cryptd": {
+            "sha1": "4c1e5ca24b4d7af3bb790c0da6009da529f3b372",
+            "sha256": "3f0bc6055437c13f85dd411c7fd770ccf69b31b635d2e4e0f5b0b13d405eeb42",
+            "url": "https://downloads.mongodb.com/linux/mongodb-cryptd-linux-x86_64-enterprise-ubuntu2604-9.0.7.tgz"
+          },
+          "edition": "enterprise",
+          "target": "ubuntu2604"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "757b3fa8b9764b227fd8ea418300d943465f75b6",
+            "sha256": "7dfd6a703ce895c13079ce588e74dd4c955ed767ba4168bc31cbc6a2769a3dea",
+            "url": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-9.0.7.zip"
+          },
+          "edition": "base",
+          "msi": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-9.0.7-signed.msi",
+          "target": "windows"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "3404615943367696dbb641ce8f1b524f95d6a869",
+            "sha256": "eeb716fe681f4ec45c61b5a39c67b07d033a7f816e7710e150b33d2eda84b7b0",
+            "url": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-9.0.7.zip"
+          },
+          "crypt_shared": {
+            "sha1": "0302dcbd430cfc395f68c6c4db31168c1f37cd45",
+            "sha256": "803c74172fa6586900c8695f5f55697de8f7047cf074eaaa8d033527684a612e",
+            "url": "https://downloads.mongodb.com/windows/mongo_crypt_shared_v1-windows-x86_64-enterprise-9.0.7.zip"
+          },
+          "cryptd": {
+            "sha1": "116f61920de9abc2573e674f9a853f2ed396c31f",
+            "sha256": "12b961c24245463414f5dd0d5903f34532d403d739b72043e0a6c8cdd1426be5",
+            "url": "https://downloads.mongodb.com/windows/mongodb-cryptd-windows-x86_64-enterprise-9.0.7.zip"
+          },
+          "edition": "enterprise",
+          "msi": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-9.0.7-signed.msi",
+          "target": "windows"
+        }
+      ],
+      "githash": "490348b4bbbf1bceb434baa206d7857e3ec1ec8a",
+      "lts_release": true,
+      "notes": "https://docs.mongodb.org/master/release-notes/9.0/",
+      "production_release": true,
+      "public_githash": "490348b4bbbf1bceb434baa206d7857e3ec1ec8a",
+      "release_candidate": false,
+      "version": "9.0.7"
+    },
+    {
+      "changes": "https://jira.mongodb.org/issues/?jql=project%20%3D%20SERVER%20AND%20fixVersion%20%3D%20%229.0.4%22%20ORDER%20BY%20status%20DESC%2C%20priority%20DESC",
+      "continuous_release": false,
+      "current": false,
+      "date": "09/30/2026",
+      "development_release": false,
+      "downloads": [
+        {
+          "arch": "ppc64le",
+          "archive": {
+            "debug_symbols": "https://downloads.mongodb.com/linux/mongodb-linux-ppc64le-enterprise-rhel81-debugsymbols-9.0.4.tgz",
+            "sha1": "b92def34049c5a4720cfe4154fd9f45762b845f0",
+            "sha256": "4a96c8ca46f40e48d34f76a599b214c2c210fffa1985afa4d9ceeb67b7d1e7c4",
+            "url": "https://downloads.mongodb.com/linux/mongodb-linux-ppc64le-enterprise-rhel81-9.0.4.tgz"
+          },
+          "crypt_shared": {
+            "sha1": "141b358f073b808eb072d3e912aa4702d32d65a4",
+            "sha256": "c225fdbd166247105a4c8128ec06648a113673ab1a7abcf248c4736726086a4f",
+            "url": "https://downloads.mongodb.com/linux/mongo_crypt_shared_v1-linux-ppc64le-enterprise-rhel81-9.0.4.tgz"
+          },
+          "cryptd": {
+            "sha1": "106f482a8f2a0970f2d361ccc98824c16d3dc0c2",
+            "sha256": "97061f169e10977e426c588a104d77e1d1edab4856258ce438e23e228c5fc373",
+            "url": "https://downloads.mongodb.com/linux/mongodb-cryptd-linux-ppc64le-enterprise-rhel81-9.0.4.tgz"
+          },
+          "edition": "enterprise",
+          "target": "rhel81"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "8be56bebf4019854b9487241823bd46c3c117de9",
+            "sha256": "1e6234c8c33e75de3659a7e1104cb12f1cb68ae41cba60b625537c1ed9256d43",
+            "url": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-9.0.4.zip"
+          },
+          "edition": "base",
+          "msi": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-9.0.4-signed.msi",
+          "target": "windows"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "39b5072f9bf4cae213665d8ae82e18365fafcaa2",
+            "sha256": "efdf2145673b94ef59eef90a6caff13afe007a22568f854a2be9b3df67b6918e",
+            "url": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-9.0.4.zip"
+          },
+          "crypt_shared": {
+            "sha1": "cdf7e785ced8fe0491c8c7202797326124a9be45",
+            "sha256": "3d97f80074a69e92202d6e208b9a13a22fe39ba70e0cce890db4a3806093afb0",
+            "url": "https://downloads.mongodb.com/windows/mongo_crypt_shared_v1-windows-x86_64-enterprise-9.0.4.zip"
+          },
+          "cryptd": {
+            "sha1": "7b0964e430d3f056c4fa87e2d0c8cea1a6b6599a",
+            "sha256": "fc2a4ddfd0a254b6a6702c031230c285da00471bb2be0d12a5ec6e352bb8c71b",
+            "url": "https://downloads.mongodb.com/windows/mongodb-cryptd-windows-x86_64-enterprise-9.0.4.zip"
+          },
+          "edition": "enterprise",
+          "msi": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-9.0.4-signed.msi",
+          "target": "windows"
+        }
+      ],
+      "githash": "64ade602b836c9adeffba7fa038c887ffab56196",
+      "lts_release": true,
+      "notes": "https://docs.mongodb.org/master/release-notes/9.0/",
+      "production_release": true,
+      "public_githash": "246de92935f8636f4f90889d418b31ae70dbaafd",
+      "release_candidate": false,
+      "version": "9.0.4"
+    },
+    {
+      "changes": "https://jira.mongodb.org/issues/?jql=project%20%3D%20SERVER%20AND%20fixVersion%20%3D%20%229.0.2%22%20ORDER%20BY%20status%20DESC%2C%20priority%20DESC",
+      "continuous_release": false,
+      "current": false,
+      "date": "09/17/2026",
+      "development_release": false,
+      "downloads": [
+        {
+          "arch": "ppc64le",
+          "archive": {
+            "debug_symbols": "https://downloads.mongodb.com/linux/mongodb-linux-ppc64le-enterprise-rhel81-debugsymbols-9.0.2.tgz",
+            "sha1": "55c613f57ff9d34a6c623434664dd550f6bc8061",
+            "sha256": "ec56ee5da1dcca2d40c6b70bea80aedf371e571f6e881ee0b125add53efcf8f1",
+            "url": "https://downloads.mongodb.com/linux/mongodb-linux-ppc64le-enterprise-rhel81-9.0.2.tgz"
+          },
+          "crypt_shared": {
+            "sha1": "17339004dc2f4e2d332fa75fb31c28410fe6b3c4",
+            "sha256": "2e27c1a678437708c800b905c276799f045803569c038683aaf2238416b93f4b",
+            "url": "https://downloads.mongodb.com/linux/mongo_crypt_shared_v1-linux-ppc64le-enterprise-rhel81-9.0.2.tgz"
+          },
+          "cryptd": {
+            "sha1": "475e2531068c747be360b77d90503b877ad8f99e",
+            "sha256": "5d687d17b1ed24b8e43b2554395776ac2fbf4c6960284315951d864393b15f74",
+            "url": "https://downloads.mongodb.com/linux/mongodb-cryptd-linux-ppc64le-enterprise-rhel81-9.0.2.tgz"
+          },
+          "edition": "enterprise",
+          "target": "rhel81"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "1925a9073fd63f0b318f72adc8191520296ca384",
+            "sha256": "2cabba2e80b90bcd1c1096845711975199104148c849a007984cb3ee4d237406",
+            "url": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-9.0.2.zip"
+          },
+          "edition": "base",
+          "msi": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-9.0.2-signed.msi",
+          "target": "windows"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "2e06d0a6bd98b28254c34b3ee58f2e86a63950af",
+            "sha256": "d99a9d5dba2bcb0eb9c23cd63cdbc1cfe79cbc5ecdadae43892ead1bdab1524d",
+            "url": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-9.0.2.zip"
+          },
+          "crypt_shared": {
+            "sha1": "1f523f115fb46a899b8ae04699e732492a3a7a94",
+            "sha256": "0faaed1acdef6109fc09e35d3451fb0f497ee6011d69d9fa9582ead50e78e223",
+            "url": "https://downloads.mongodb.com/windows/mongo_crypt_shared_v1-windows-x86_64-enterprise-9.0.2.zip"
+          },
+          "cryptd": {
+            "sha1": "ad23ae4915fd4b8447eacc13c7f41c853f00999b",
+            "sha256": "0af3f9e099890241d2dc184f275f90415f860c3032b2a7396352465861771e8b",
+            "url": "https://downloads.mongodb.com/windows/mongodb-cryptd-windows-x86_64-enterprise-9.0.2.zip"
+          },
+          "edition": "enterprise",
+          "msi": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-9.0.2-signed.msi",
+          "target": "windows"
+        }
+      ],
+      "githash": "c4d309807b94ac30edcca32e35e88a9598eadfc8",
+      "lts_release": true,
+      "notes": "https://docs.mongodb.org/master/release-notes/9.0/",
+      "production_release": true,
+      "public_githash": "c4d309807b94ac30edcca32e35e88a9598eadfc8",
+      "release_candidate": false,
+      "version": "9.0.2"
+    },
+    {
+      "changes": "https://jira.mongodb.org/issues/?jql=project%20%3D%20SERVER%20AND%20fixVersion%20%3D%20%229.0.0-rc0%22%20ORDER%20BY%20status%20DESC%2C%20priority%20DESC",
+      "continuous_release": false,
+      "current": false,
+      "date": "07/14/2026",
+      "development_release": false,
+      "downloads": [
+        {
+          "arch": "ppc64le",
+          "archive": {
+            "debug_symbols": "https://downloads.mongodb.com/linux/mongodb-linux-ppc64le-enterprise-rhel81-debugsymbols-9.0.0-rc0.tgz",
+            "sha1": "3fba450ce83dc7e59ce19633bc9b6d3e625db69c",
+            "sha256": "d49e983b6f3411868a771b31ddb2d0d1fdeba65f2c00165749591003e0b125df",
+            "url": "https://downloads.mongodb.com/linux/mongodb-linux-ppc64le-enterprise-rhel81-9.0.0-rc0.tgz"
+          },
+          "crypt_shared": {
+            "sha1": "c4865441ab02d368e0036963f6f48707a6f687f5",
+            "sha256": "79917a9a5f48dcc93bd7c605cc04baae6161f29c14e92ec354c980ef7fcdeac8",
+            "url": "https://downloads.mongodb.com/linux/mongo_crypt_shared_v1-linux-ppc64le-enterprise-rhel81-9.0.0-rc0.tgz"
+          },
+          "cryptd": {
+            "sha1": "ae471015a0d2231e8fab448f195fe7e95b85c5d8",
+            "sha256": "a7ff264b0ec8073afb0c67f4e99318f7007533733154e3fb9e8c9f05be377f20",
+            "url": "https://downloads.mongodb.com/linux/mongodb-cryptd-linux-ppc64le-enterprise-rhel81-9.0.0-rc0.tgz"
+          },
+          "edition": "enterprise",
+          "target": "rhel81"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "5e33ddd4dc3d6d1c43bec3ed710631e056898d36",
+            "sha256": "b392407ec7104477f8d428d190882b2cb0653a0d8bd13337fd6694478fef2a5e",
+            "url": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-9.0.0-rc0.zip"
+          },
+          "edition": "base",
+          "msi": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-9.0.0-rc0-signed.msi",
+          "target": "windows"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "7cecf092c7ece77948e6c12950d31139924e49a3",
+            "sha256": "3be2c8207610edd38734f00c7f98a193c912b24e3d56b21c9b82cadc81a19a3f",
+            "url": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-9.0.0-rc0.zip"
+          },
+          "crypt_shared": {
+            "sha1": "06bb2e70ce135820b5643d25e4a7ab85e15bf0df",
+            "sha256": "36eff2efab6ccb2a7a17f36b2a1c0897d3a60681c314a61e2421c052c133bcf1",
+            "url": "https://downloads.mongodb.com/windows/mongo_crypt_shared_v1-windows-x86_64-enterprise-9.0.0-rc0.zip"
+          },
+          "cryptd": {
+            "sha1": "9b4f7f929a03ba4859e6462470a43fa165fe451a",
+            "sha256": "87447c38ff56f32dfcdf25f6c7f6a45eda6ce391b222a9136db85478930aa18b",
+            "url": "https://downloads.mongodb.com/windows/mongodb-cryptd-windows-x86_64-enterprise-9.0.0-rc0.zip"
+          },
+          "edition": "enterprise",
+          "msi": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-9.0.0-rc0-signed.msi",
+          "target": "windows"
+        }
+      ],
+      "githash": "99f9fbcb5b1a8e3684a4d25fcf9a762fbeef01e4",
+      "lts_release": true,
+      "notes": "https://docs.mongodb.org/master/release-notes/9.0/",
+      "production_release": false,
+      "public_githash": "99f9fbcb5b1a8e3684a4d25fcf9a762fbeef01e4",
+      "release_candidate": true,
+      "version": "9.0.0-rc0"
+    },
+    {
+      "changes": "https://jira.mongodb.org/issues/?jql=project%20%3D%20SERVER%20AND%20fixVersion%20%3D%20%228.3.17%22%20ORDER%20BY%20status%20DESC%2C%20priority%20DESC",
+      "continuous_release": false,
+      "current": true,
+      "date": "11/05/2026",
+      "development_release": false,
+      "downloads": [
+        {
+          "arch": "ppc64le",
+          "archive": {
+            "debug_symbols": "https://downloads.mongodb.com/linux/mongodb-linux-ppc64le-enterprise-rhel81-debugsymbols-8.3.17.tgz",
+            "sha1": "cbd2adde64c613cb119a80d621984f7007d932e7",
+            "sha256": "3846756b492ef321669917e55709fa48cdc705efed9979a12fb6a10a70b1d68c",
+            "url": "https://downloads.mongodb.com/linux/mongodb-linux-ppc64le-enterprise-rhel81-8.3.17.tgz"
+          },
+          "crypt_shared": {
+            "sha1": "c885e905dadcb2ec647873e54d7de2d2deb0c8f2",
+            "sha256": "e5bed73d77d5d64618a0951fdf6dc84513f72a2d5baae091ba91f3312784b324",
+            "url": "https://downloads.mongodb.com/linux/mongo_crypt_shared_v1-linux-ppc64le-enterprise-rhel81-8.3.17.tgz"
+          },
+          "cryptd": {
+            "sha1": "56b8184ab1434ebe1f16cf019dbbe1dec8a28df4",
+            "sha256": "8699cc149b21188b16604781e5281a3cd5f86984cebc6079d125d99725f03f4e",
+            "url": "https://downloads.mongodb.com/linux/mongodb-cryptd-linux-ppc64le-enterprise-rhel81-8.3.17.tgz"
+          },
+          "edition": "enterprise",
+          "target": "rhel81"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "331da7c0bd0dc24fd8f2ef954fa497a163dea6db",
+            "sha256": "a858f6140a640aab173c96d6ba9e7d321c666746185c994a91a22dcc3fb2a266",
+            "url": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-8.3.17.zip"
+          },
+          "edition": "base",
+          "msi": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-8.3.17-signed.msi",
+          "target": "windows"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "5c5e6c12db9a7064a840d44be63981d98eacdbd1",
+            "sha256": "3b7eaa285132770605de3a618a9a5f2f4fdacddae8f356fa701cf2d80e980f4d",
+            "url": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-8.3.17.zip"
+          },
+          "crypt_shared": {
+            "sha1": "a08c12b55ceff59c327bb9382d121b365e49b3b4",
+            "sha256": "d948a42da3d9d941ef863db9e743e4e9d5288687bbb20e289ddb6bb16a393679",
+            "url": "https://downloads.mongodb.com/windows/mongo_crypt_shared_v1-windows-x86_64-enterprise-8.3.17.zip"
+          },
+          "cryptd": {
+            "sha1": "037bb1261b916159064665f196b33b82746581a4",
+            "sha256": "108199e4fa62f76bd13f9ae4c333ef2288b38908fb8f62f852673be95f59ba37",
+            "url": "https://downloads.mongodb.com/windows/mongodb-cryptd-windows-x86_64-enterprise-8.3.17.zip"
+          },
+          "edition": "enterprise",
+          "msi": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-8.3.17-signed.msi",
+          "target": "windows"
+        }
+      ],
+      "githash": "0e98d1f48d12e4364176246ea81ff9583c48739b",
+      "lts_release": true,
+      "notes": "https://docs.mongodb.org/master/release-notes/8.3/",
+      "production_release": true,
+      "public_githash": "0e98d1f48d12e4364176246ea81ff9583c48739b",
+      "release_candidate": false,
+      "version": "8.3.17"
+    },
+    {
+      "changes": "https://jira.mongodb.org/issues/?jql=project%20%3D%20SERVER%20AND%20fixVersion%20%3D%20%228.3.16%22%20ORDER%20BY%20status%20DESC%2C%20priority%20DESC",
+      "continuous_release": false,
+      "current": false,
+      "date": "10/30/2026",
+      "development_release": false,
+      "downloads": [
+        {
+          "arch": "x86_64",
+          "archive": {
+            "debug_symbols": "https://downloads.mongodb.com/linux/mongodb-linux-x86_64-enterprise-ubuntu2404-debugsymbols-8.3.16.tgz",
+            "sha1": "9b4486f29b2c454d52426d66dc72b613d21b2fbb",
+            "sha256": "44f3968d4dc81154bc75f00f7ead7a3c2038e432aaf58bffec789a4559c1e3a9",
+            "url": "https://downloads.mongodb.com/linux/mongodb-linux-x86_64-enterprise-ubuntu2404-8.3.16.tgz"
+          },
+          "crypt_shared": {
+            "sha1": "e1f6d6aa0a8f2138571836b0ded0d7ace9d4792a",
+            "sha256": "b50e6f216855ab4b1b77fb5d288e7d22df6a1352648847d7e8f40b293d070ee0",
+            "url": "https://downloads.mongodb.com/linux/mongo_crypt_shared_v1-linux-x86_64-enterprise-ubuntu2404-8.3.16.tgz"
+          },
+          "cryptd": {
+            "sha1": "4a89feea4a484817dfeee346d78799b20df89fca",
+            "sha256": "140ab216a32ee0cc6be9ee76b411a922a999ca856f4d018face6aa52589f1700",
+            "url": "https://downloads.mongodb.com/linux/mongodb-cryptd-linux-x86_64-enterprise-ubuntu2404-8.3.16.tgz"
+          },
+          "edition": "enterprise",
+          "target": "ubuntu2404"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "63b1862c4644234d3a7038f56a73fd335587c3aa",
+            "sha256": "7ab28c7d6c574eba23b38eaf98236e0cbd9cfd093020a8f6feb8954a0850bfe2",
+            "url": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-8.3.16.zip"
+          },
+          "edition": "base",
+          "msi": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-8.3.16-signed.msi",
+          "target": "windows"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "e84295d55d8bc550816d005fcdb20d8c17b27a30",
+            "sha256": "58a933113b94ee45bf96df627f6e5b4b07fa3ce6577787173dd70537db35b7a1",
+            "url": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-8.3.16.zip"
+          },
+          "crypt_shared": {
+            "sha1": "de802ea0fc2910cdd5e4f86aeb8586d86ce804b4",
+            "sha256": "1f50974527459a55117fd5330a25f08c803285a2182e2efae46aff83e5caf350",
+            "url": "https://downloads.mongodb.com/windows/mongo_crypt_shared_v1-windows-x86_64-enterprise-8.3.16.zip"
+          },
+          "cryptd": {
+            "sha1": "e92174ca6974085b7f492b207bc82da48b75b43e",
+            "sha256": "b89d90edf00ab03225110511bd2da780021cf65fea5bdfc5e8665f19c95686f5",
+            "url": "https://downloads.mongodb.com/windows/mongodb-cryptd-windows-x86_64-enterprise-8.3.16.zip"
+          },
+          "edition": "enterprise",
+          "msi": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-8.3.16-signed.msi",
+          "target": "windows"
+        }
+      ],
+      "githash": "4a1cdaed86c9311a18f848101868aadc1aff1a6e",
+      "lts_release": true,
+      "notes": "https://docs.mongodb.org/master/release-notes/8.3/",
+      "production_release": true,
+      "public_githash": "4a1cdaed86c9311a18f848101868aadc1aff1a6e",
+      "release_candidate": false,
+      "version": "8.3.16"
+    },
+    {
+      "changes": "https://jira.mongodb.org/issues/?jql=project%20%3D%20SERVER%20AND%20fixVersion%20%3D%20%228.3.13%22%20ORDER%20BY%20status%20DESC%2C%20priority%20DESC",
+      "continuous_release": false,
+      "current": false,
+      "date": "09/24/2026",
+      "development_release": false,
+      "downloads": [
+        {
+          "arch": "ppc64le",
+          "archive": {
+            "debug_symbols": "https://downloads.mongodb.com/linux/mongodb-linux-ppc64le-enterprise-rhel81-debugsymbols-8.3.13.tgz",
+            "sha1": "689ee0a36b21951bc9fee19b5fdc6d0e5b8f2338",
+            "sha256": "122d2697558dd9cf7fb2c7674df790b620c031d72a738bfb298a40a031c97132",
+            "url": "https://downloads.mongodb.com/linux/mongodb-linux-ppc64le-enterprise-rhel81-8.3.13.tgz"
+          },
+          "crypt_shared": {
+            "sha1": "e3fff98a95b3a4c9917568d86a52dea890866ef7",
+            "sha256": "9db762a37b6979e7ed0dfd9cc46131acd8ab582fd132933dc3edd3c001d763d2",
+            "url": "https://downloads.mongodb.com/linux/mongo_crypt_shared_v1-linux-ppc64le-enterprise-rhel81-8.3.13.tgz"
+          },
+          "cryptd": {
+            "sha1": "13b1653bd942860547726c9361e9b591c54879d6",
+            "sha256": "6d013b51844610643f1eeb9542e73bb7c07af89a5fead4205675062dceacd76a",
+            "url": "https://downloads.mongodb.com/linux/mongodb-cryptd-linux-ppc64le-enterprise-rhel81-8.3.13.tgz"
+          },
+          "edition": "enterprise",
+          "target": "rhel81"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "c36eef81ec037425b8198798b061216759b90331",
+            "sha256": "61fcc2b2ac3a295ba2d8c80f678f01502b96647d835f0159b694c507035b5238",
+            "url": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-8.3.13.zip"
+          },
+          "edition": "base",
+          "msi": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-8.3.13-signed.msi",
+          "target": "windows"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "26ded696ca3fb5af2d93bd6ab64d33c767ac9ca5",
+            "sha256": "7137509235349b8ec691331ffa10f56b22ca871b937b5b384d88d014414504c5",
+            "url": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-8.3.13.zip"
+          },
+          "crypt_shared": {
+            "sha1": "8ad902bba54fd3f0f3a18432964c8e9d78d22c5b",
+            "sha256": "93519d2d1ebc26cba7e5b523fe7086cf3daf83ed689423dc3405209d4945ebae",
+            "url": "https://downloads.mongodb.com/windows/mongo_crypt_shared_v1-windows-x86_64-enterprise-8.3.13.zip"
+          },
+          "cryptd": {
+            "sha1": "4d13f5b2be5ea0b9f8bff4f3e14b43a5be045977",
+            "sha256": "01bb7bb4b44587e72897d1ac7d69501d0017b74b68405d27490059e7fbd53c06",
+            "url": "https://downloads.mongodb.com/windows/mongodb-cryptd-windows-x86_64-enterprise-8.3.13.zip"
+          },
+          "edition": "enterprise",
+          "msi": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-8.3.13-signed.msi",
+          "target": "windows"
+        }
+      ],
+      "githash": "3b8a5e1f78cf7b94c40a78ad3fe93708cdca8323",
+      "lts_release": true,
+      "notes": "https://docs.mongodb.org/master/release-notes/8.3/",
+      "production_release": true,
+      "public_githash": "3b8a5e1f78cf7b94c40a78ad3fe93708cdca8323",
+      "release_candidate": false,
+      "version": "8.3.13"
+    },
+    {
+      "changes": "https://jira.mongodb.org/issues/?jql=project%20%3D%20SERVER%20AND%20fixVersion%20%3D%20%228.1.3%22%20ORDER%20BY%20status%20DESC%2C%20priority%20DESC",
+      "continuous_release": true,
+      "current": false,
+      "date": "08/08/2025",
+      "development_release": true,
+      "downloads": [
+        {
+          "arch": "x86_64",
+          "archive": {
+            "debug_symbols": "https://downloads.mongodb.com/linux/mongodb-linux-x86_64-enterprise-ubuntu2404-debugsymbols-8.1.3.tgz",
+            "sha1": "7430fc6cf41916e336d34a66595ca9daffc8622a",
+            "sha256": "15fe4dbc3d0b4fee4bd3408139d0d4c54247ad68dc588d9efe00878b4a334b0d",
+            "url": "https://downloads.mongodb.com/linux/mongodb-linux-x86_64-enterprise-ubuntu2404-8.1.3.tgz"
+          },
+          "crypt_shared": {
+            "sha1": "dac231fe2831b2db45a201512529b233c90b3d34",
+            "sha256": "8a950a7343cb653b477b2c811b2dd0f8fc728ea354b5a03b3e99b00649537a74",
+            "url": "https://downloads.mongodb.com/linux/mongo_crypt_shared_v1-linux-x86_64-enterprise-ubuntu2404-8.1.3.tgz"
+          },
+          "cryptd": {
+            "sha1": "01746738307c344c8c8026990d127629babeed32",
+            "sha256": "af46c69ef3d8ae467a6a662b8ce00740fbcc838c39e1cb4c99ceb016d9df795f",
+            "url": "https://downloads.mongodb.com/linux/mongodb-cryptd-linux-x86_64-enterprise-ubuntu2404-8.1.3.tgz"
+          },
+          "edition": "enterprise",
+          "target": "ubuntu2404"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "9b1d71757ebcc932d31baa46a995d55af334898c",
+            "sha256": "844daeb5ebf6024cd5cde3fbb2f8cc4f823e0c46d6d1aeee9fbc6b9818197715",
+            "url": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-8.1.3.zip"
+          },
+          "edition": "base",
+          "msi": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-8.1.3-signed.msi",
+          "target": "windows"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "e5cca80623f2bfbe552032ef0af91a9bb5980e3a",
+            "sha256": "bf48eba4c36760cbb4522b88c07dd349678c44ca7740709ea4c66a8b7dc00e15",
+            "url": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-8.1.3.zip"
+          },
+          "crypt_shared": {
+            "sha1": "c272e883cca11c03728916a5867a4077611de143",
+            "sha256": "16128fad371666843327537813a961a02d812326bca3bc1a8ac35172d86bb093",
+            "url": "https://downloads.mongodb.com/windows/mongo_crypt_shared_v1-windows-x86_64-enterprise-8.1.3.zip"
+          },
+          "cryptd": {
+            "sha1": "936f829f14da8be42fd22731b263b707b7631e6f",
+            "sha256": "6375f01bcbca4f377ee96882e4b74fa335d96654b1ef52e25caad9b06033cca5",
+            "url": "https://downloads.mongodb.com/windows/mongodb-cryptd-windows-x86_64-enterprise-8.1.3.zip"
+          },
+          "edition": "enterprise",
+          "msi": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-8.1.3-signed.msi",
+          "target": "windows"
+        }
+      ],
+      "githash": "e75b9b9b7f5d689cba1ad4a8d743d49bcffccc68",
+      "lts_release": false,
+      "notes": "https://docs.mongodb.org/master/release-notes/8.1/",
+      "production_release": false,
+      "public_githash": "867d0c339d52f6aab864035ae8cee645de670420",
+      "release_candidate": false,
+      "version": "8.1.3"
+    },
+    {
+      "changes": "https://jira.mongodb.org/issues/?jql=project%20%3D%20SERVER%20AND%20fixVersion%20%3D%20%228.0.38%22%20ORDER%20BY%20status%20DESC%2C%20priority%20DESC",
+      "continuous_release": false,
+      "current": true,
+      "date": "11/05/2026",
+      "development_release": false,
+      "downloads": [
+        {
+          "arch": "ppc64le",
+          "archive": {
+            "debug_symbols": "https://downloads.mongodb.com/linux/mongodb-linux-ppc64le-enterprise-rhel81-debugsymbols-8.0.38.tgz",
+            "sha1": "fc4d60e67bcb17595443bd4f5c689c449edabe89",
+            "sha256": "3c42b49a165b25ff0cd126aba6a68862985bd11b41952b241003eea3435f8092",
+            "url": "https://downloads.mongodb.com/linux/mongodb-linux-ppc64le-enterprise-rhel81-8.0.38.tgz"
+          },
+          "crypt_shared": {
+            "sha1": "700f613bfa0f2fbc5966d8456fe41fa6864fede3",
+            "sha256": "20ea47936bc9026bd01639b8385270de2921764cd13f02250899398da3b09de0",
+            "url": "https://downloads.mongodb.com/linux/mongo_crypt_shared_v1-linux-ppc64le-enterprise-rhel81-8.0.38.tgz"
+          },
+          "cryptd": {
+            "sha1": "d8210554a5954c40c05c08f4609adbeae0306b81",
+            "sha256": "e998d382c3ea4c010d6f7abc51a14ccd8f08ee30c2e520f711375514b486ca11",
+            "url": "https://downloads.mongodb.com/linux/mongodb-cryptd-linux-ppc64le-enterprise-rhel81-8.0.38.tgz"
+          },
+          "edition": "enterprise",
+          "target": "rhel81"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "bf52cdfc28b047bdf6caaa4fe4e436fdfeaa598a",
+            "sha256": "85147ae32f9bb9a2e5a0a3875b0ffcc4423ab7a49bc4f75cb4bbc9811883d3de",
+            "url": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-8.0.38.zip"
+          },
+          "edition": "base",
+          "msi": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-8.0.38-signed.msi",
+          "target": "windows"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "aca3672d4e1d36bdd3d58a35e0a238df2f396c68",
+            "sha256": "8f45204894ddc55d2e6f3d035a5336607e7ba29af70b8eed5019356698ec65f7",
+            "url": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-8.0.38.zip"
+          },
+          "crypt_shared": {
+            "sha1": "6dc2842c87447e230b8d340ed6182484cd3b9808",
+            "sha256": "619bbd3ad546e715eb437f1e4d5d2a7b770c191099cf618ffc03b64e0c9c25e3",
+            "url": "https://downloads.mongodb.com/windows/mongo_crypt_shared_v1-windows-x86_64-enterprise-8.0.38.zip"
+          },
+          "cryptd": {
+            "sha1": "7ba1910ebc2304aabb5420ed63a74a0482fe3cf9",
+            "sha256": "ae5374188ed10102c1a02eced82a77b8163ecc13016dc3280ef16030f245b788",
+            "url": "https://downloads.mongodb.com/windows/mongodb-cryptd-windows-x86_64-enterprise-8.0.38.zip"
+          },
+          "edition": "enterprise",
+          "msi": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-8.0.38-signed.msi",
+          "target": "windows"
+        }
+      ],
+      "githash": "b2f7afe3a6838999fd375c7a7ea678189f795568",
+      "lts_release": true,
+      "notes": "https://docs.mongodb.org/master/release-notes/8.0/",
+      "production_release": true,
+      "public_githash": "11d6674e73e4b36060314e68d7a12656d6a12aab",
+      "release_candidate": false,
+      "version": "8.0.38"
+    },
+    {
+      "changes": "https://jira.mongodb.org/issues/?jql=project%20%3D%20SERVER%20AND%20fixVersion%20%3D%20%226.0.30%22%20ORDER%20BY%20status%20DESC%2C%20priority%20DESC",
+      "continuous_release": false,
+      "current": true,
+      "date": "10/30/2026",
+      "development_release": false,
+      "downloads": [
+        {
+          "arch": "x86_64",
+          "archive": {
+            "debug_symbols": "https://downloads.mongodb.com/linux/mongodb-linux-x86_64-enterprise-ubuntu2204-debugsymbols-6.0.30.tgz",
+            "sha1": "e6ab97b329a9e4dede3bdd78c1bc3df91eba06ba",
+            "sha256": "36029a7bcf86c69809ed5297df12836bd39824a61bc329abd9b02adb10419f9f",
+            "url": "https://downloads.mongodb.com/linux/mongodb-linux-x86_64-enterprise-ubuntu2204-6.0.30.tgz"
+          },
+          "crypt_shared": {
+            "sha1": "5a7035b8662fdf3661a74839b12a4f293ffe5d2d",
+            "sha256": "21f18efe5cf42460a73d8d17ca4668a1335c590be0d397e05cfc128c7a0fe8d9",
+            "url": "https://downloads.mongodb.com/linux/mongo_crypt_shared_v1-linux-x86_64-enterprise-ubuntu2204-6.0.30.tgz"
+          },
+          "cryptd": {
+            "sha1": "c95223e7f96cfc00ddf23aadaad47baa2065396f",
+            "sha256": "bb0f04e70e5dac3f5a93571e5205a101705107a1982983539491b8d2f14ac93e",
+            "url": "https://downloads.mongodb.com/linux/mongodb-cryptd-linux-x86_64-enterprise-ubuntu2204-6.0.30.tgz"
+          },
+          "edition": "enterprise",
+          "target": "ubuntu2204"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "2f4f8537a80eb09f34317e5f57de6449bf2d78d0",
+            "sha256": "dbe6989de4a4e6a1d335d872cade9e5a7f6301e778ea9cbd7f81347eb9efa2c9",
+            "url": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-6.0.30.zip"
+          },
+          "edition": "base",
+          "msi": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-6.0.30-signed.msi",
+          "target": "windows"
+        },
+        {
+          "arch": "x86_64",
+          "archive": {
+            "sha1": "935c70e2924d5060ec195bc7f60e8fd4695ef943",
+            "sha256": "be6a392aea002b91e1179c95a955137036a52deb1ec4284b7e460199cb1d316f",
+            "url": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-6.0.30.zip"
+          },
+          "crypt_shared": {
+            "sha1": "e75972ea32697fc022a009f61e07182b70fb8af9",
+            "sha256": "a9cb1b8deea317607c67427e3af904b16d534db9d86b206872aad4ce911eb7b5",
+            "url": "https://downloads.mongodb.com/windows/mongo_crypt_shared_v1-windows-x86_64-enterprise-6.0.30.zip"
+          },
+          "cryptd": {
+            "sha1": "c1b885ef3b2d219cc00ab6bc0b310b7296b98eaa",
+            "sha256": "e5528b44b5fbfadb3a569367f23a1acb868a1c667ebb05e42db3e55417aeeea1",
+            "url": "https://downloads.mongodb.com/windows/mongodb-cryptd-windows-x86_64-enterprise-6.0.30.zip"
+          },
+          "edition": "enterprise",
+          "msi": "https://downloads.mongodb.com/windows/mongodb-windows-x86_64-enterprise-6.0.30-signed.msi",
+          "target": "windows"
+        }
+      ],
+      "githash": "c03e51fea7737ca7bece6881d65801eb5cc2cf01",
+      "lts_release": true,
+      "notes": "https://docs.mongodb.org/master/release-notes/6.0/",
+      "production_release": true,
+      "public_githash": "c03e51fea7737ca7bece6881d65801eb5cc2cf01",
+      "release_candidate": false,
+      "version": "6.0.30"
+    }
+  ]
+}

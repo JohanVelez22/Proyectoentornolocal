@@ -1,0 +1,6 @@
+{
+  "ui": { "theme": "dark" },
+  "mcpServers": {
+    "otro": { "command": "node", "args": ["otro.js"] }
+  }
+}

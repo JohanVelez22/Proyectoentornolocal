@@ -142,7 +142,7 @@ Modelo: `{ id, nombre, dominio (*.test), alias[], carpeta, tipo: laravel|codeign
   - En "reglas extra" van las del proyecto, como las cabeceras de seguridad o los `deny` propios de Diamantes.
 - **Detección automática** al elegir una carpeta: si existe `artisan`, es Laravel y la versión de PHP se toma de `composer.json`, `require.php`. Si existen `application/` y `system/core/CodeIgniter.php`, es CodeIgniter 3.
 - Al guardar se genera el vhost, se valida con `nginx -t` (si falla, se revierte y se muestra el error) y Nginx se recarga en caliente.
-- **URL base durante un túnel** (opcional por sitio): al abrir el túnel se reescribe esa variable del `.env` con el enlace público, y al cerrarlo se restaura el valor anterior. Antes de cambiar se guarda una copia en `.env.pel-respaldo`. Es lo que hoy hace `wolfcore.ps1` para CodeIgniter.
+- **URL base durante un túnel** (opcional por sitio): al abrir el túnel se reescribe esa variable del `.env` con el enlace público, y al cerrarlo se restaura el valor anterior. Antes de cambiar se guarda una copia en `run/urlbase-<id>.respaldo` dentro de la carpeta de datos del programa (no en el proyecto, para no copiar secretos al repositorio del cliente). Es lo que hoy hace `wolfcore.ps1` para CodeIgniter.
 
 ### Archivo hosts
 - Solo se administra un bloque:

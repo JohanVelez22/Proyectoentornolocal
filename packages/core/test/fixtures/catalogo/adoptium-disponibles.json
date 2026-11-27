@@ -1,0 +1,6 @@
+{
+  "available_lts_releases": [21, 25],
+  "available_releases": [21, 25, 26, 27],
+  "most_recent_feature_release": 27,
+  "most_recent_lts": 25
+}

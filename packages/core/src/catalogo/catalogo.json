@@ -1,0 +1,487 @@
+{
+  "nginx": [
+    {
+      "version": "1.30.6",
+      "url": "https://nginx.org/download/nginx-1.30.6.zip",
+      "sha256": "c6ee35edb0a861063323f709192ae50d1eefaf2ea7d00678bd2b22d8542dc61e",
+      "formato": "zip",
+      "subcarpeta": "nginx-1.30.6",
+      "ejecutable": "nginx.exe"
+    }
+  ],
+  "cloudflared": [
+    {
+      "version": "2026.11.1",
+      "url": "https://github.com/cloudflare/cloudflared/releases/download/2026.11.1/cloudflared-windows-amd64.exe",
+      "sha256": "341deda3db5ec498a0482254d6c38c0b7cf01a30c37bb5dd95d2216d08955e35",
+      "formato": "exe",
+      "ejecutable": "cloudflared.exe"
+    }
+  ],
+  "mysql": [
+    {
+      "version": "8.4.13",
+      "url": "https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-8.4.13-winx64.zip",
+      "sha256": "e9cd98b1d23f122987b1afca26ad942efec5891481103d48ae3cde237fa3ea54",
+      "formato": "zip",
+      "subcarpeta": "mysql-8.4.13-winx64",
+      "ejecutable": "bin/mysqld.exe"
+    }
+  ],
+  "mariadb": [
+    {
+      "version": "11.4.14",
+      "url": "https://archive.mariadb.org/mariadb-11.4.14/winx64-packages/mariadb-11.4.14-winx64.zip",
+      "sha256": "9d9b410eb7b65f6616f29d933d76ee90cf7af4ba179a2d437e0f09f5bf6650df",
+      "formato": "zip",
+      "subcarpeta": "mariadb-11.4.14-winx64",
+      "ejecutable": "bin/mariadbd.exe"
+    }
+  ],
+  "postgresql": [
+    {
+      "version": "17.12",
+      "url": "https://get.enterprisedb.com/postgresql/postgresql-17.12-1-windows-x64-binaries.zip",
+      "sha256": "a2cd8a774389347b70be7748ac4a37ef43cb6ee539c5fc3e85ae264b15e4a04c",
+      "formato": "zip",
+      "ejecutable": "pgsql/bin/postgres.exe"
+    }
+  ],
+  "redis": [
+    {
+      "version": "8.10.3",
+      "url": "https://github.com/redis-windows/redis-windows/releases/download/8.10.3/Redis-8.10.3-Windows-x64-msys2.zip",
+      "sha256": "af16df340525b431e9ec8dabfd625d5e7a233f82805b5418819904ea909c447f",
+      "formato": "zip",
+      "subcarpeta": "Redis-8.10.3-Windows-x64-msys2",
+      "ejecutable": "redis-server.exe"
+    }
+  ],
+  "mongodb": [
+    {
+      "version": "8.0.38",
+      "url": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-8.0.38.zip",
+      "sha256": "85147ae32f9bb9a2e5a0a3875b0ffcc4423ab7a49bc4f75cb4bbc9811883d3de",
+      "formato": "zip",
+      "subcarpeta": "mongodb-win32-x86_64-windows-8.0.38",
+      "ejecutable": "bin/mongod.exe"
+    }
+  ],
+  "mongosh": [
+    {
+      "version": "2.14.2",
+      "url": "https://downloads.mongodb.com/compass/mongosh-2.14.2-win32-x64.zip",
+      "sha256": "93072fa3466fdd309c3e40ec0b1e8b805a90ef7e455868320117b3d2c756a4bc",
+      "formato": "zip",
+      "subcarpeta": "mongosh-2.14.2-win32-x64",
+      "ejecutable": "bin/mongosh.exe"
+    }
+  ],
+  "mailpit": [
+    {
+      "version": "1.34.0",
+      "url": "https://github.com/axllent/mailpit/releases/download/v1.34.0/mailpit-windows-amd64.zip",
+      "sha256": "8f080d41374bf22686606374a0a483c8563c1bf29ae078179792392ff8c911d7",
+      "formato": "zip",
+      "ejecutable": "mailpit.exe"
+    }
+  ],
+  "smtp4dev": [
+    {
+      "version": "3.16.1",
+      "url": "https://github.com/rnwood/smtp4dev/releases/download/3.16.1/Rnwood.Smtp4dev-win-x64-3.16.1.zip",
+      "sha256": "0c69374d909ab7b61312f8c4edce4da46474d6dd4f25e289fe1d61643e62a3a1",
+      "formato": "zip",
+      "ejecutable": "Rnwood.Smtp4dev.exe"
+    }
+  ],
+  "inbucket": [
+    {
+      "version": "3.2.0",
+      "url": "https://github.com/inbucket/inbucket/releases/download/v3.2.0/inbucket_3.2.0_windows_amd64.zip",
+      "sha256": "ad307e52863e9281098d4340adcb8dc677c114fbe9a3351b5cdce348792c31b3",
+      "formato": "zip",
+      "subcarpeta": "inbucket_3.2.0_windows_amd64",
+      "ejecutable": "inbucket.exe"
+    }
+  ],
+  "papercut": [
+    {
+      "version": "8.1.0",
+      "url": "https://github.com/ChangemakerStudios/Papercut-SMTP/releases/download/8.1.0/Papercut.Smtp.Service.8.1.0-win-x64.zip",
+      "sha256": "a0735593b52ac9886991bb8f3f4b1a0eafae5ca65681808ae0fcabe76e9cb29f",
+      "formato": "zip",
+      "ejecutable": "Papercut.Service.exe"
+    }
+  ],
+  "ollama": [
+    {
+      "version": "0.40.16",
+      "url": "https://github.com/ollama/ollama/releases/download/v0.40.16/ollama-windows-amd64.zip",
+      "sha256": "50fcf5ad54277f2fa5d173ebfc93bcb017adbc0c9ef2314daabc96ca9e6aa64e",
+      "formato": "zip",
+      "ejecutable": "ollama.exe"
+    }
+  ],
+  "meilisearch": [
+    {
+      "version": "1.58.0",
+      "url": "https://github.com/meilisearch/meilisearch/releases/download/v1.58.0/meilisearch-windows-amd64.exe",
+      "sha256": "9199197db4a260ca079296de89364a1e2e725703dcefc44340c36f62d3bcf8fe",
+      "formato": "exe",
+      "ejecutable": "meilisearch.exe"
+    }
+  ],
+  "composer": [
+    {
+      "version": "2.11.2",
+      "url": "https://getcomposer.org/download/2.11.2/composer.phar",
+      "sha256": "dd158c0afd41d15fac89e1b4e47b5d42911fe316c3687cd5edac98319b25d028",
+      "formato": "archivo",
+      "ejecutable": "composer.phar"
+    }
+  ],
+  "adminer": [
+    {
+      "version": "6.3.0",
+      "url": "https://github.com/vrana/adminer/releases/download/v6.3.0/adminer-6.3.0.php",
+      "sha256": "641e1a31e8cc333a309e202ef9446e1fd38c2069ed5f9ee509b80d70089d0503",
+      "formato": "archivo",
+      "ejecutable": "adminer.php"
+    }
+  ],
+  "phpmyadmin": [
+    {
+      "version": "5.2.3",
+      "url": "https://files.phpmyadmin.net/phpMyAdmin/5.2.3/phpMyAdmin-5.2.3-all-languages.zip",
+      "sha256": "2d2e13c735366d318425c78e4ee2cc8fc648d77faba3ddea2cd516e43885733f",
+      "formato": "zip",
+      "subcarpeta": "phpMyAdmin-5.2.3-all-languages",
+      "ejecutable": "index.php",
+      "php": {
+        "min": "7.2",
+        "maxExclusivo": "8.4"
+      }
+    }
+  ],
+  "pgvector-src": [
+    {
+      "version": "0.8.7",
+      "url": "https://github.com/pgvector/pgvector/archive/refs/tags/v0.8.7.zip",
+      "sha256": "7b3b8188a5cc0aa96db3c8f3fca1e78a8a612c46545065490c76448705c6b29e",
+      "formato": "zip",
+      "subcarpeta": "pgvector-0.8.7",
+      "ejecutable": "Makefile.win"
+    }
+  ],
+  "node": [
+    {
+      "version": "26.13.1",
+      "url": "https://nodejs.org/dist/v26.13.1/node-v26.13.1-win-x64.zip",
+      "sha256": "e2edda75bfb089654705cf65a13b58933bfd5f57148e8ebda916f58a2474f1f7",
+      "formato": "zip",
+      "subcarpeta": "node-v26.13.1-win-x64",
+      "ejecutable": "node.exe"
+    },
+    {
+      "version": "24.22.3",
+      "url": "https://nodejs.org/dist/v24.22.3/node-v24.22.3-win-x64.zip",
+      "sha256": "e612af99f626ab415ea225af6bce5c971feb448cb5cae250bb1c3fa50c5f7d9f",
+      "formato": "zip",
+      "subcarpeta": "node-v24.22.3-win-x64",
+      "ejecutable": "node.exe"
+    }
+  ],
+  "python": [
+    {
+      "version": "3.13.17",
+      "url": "https://api.nuget.org/v3-flatcontainer/python/3.13.17/python.3.13.17.nupkg",
+      "sha256": "dce409744b088f94c6e37ba41f8100c384c27e029e843237364c602d30d475e5",
+      "formato": "zip",
+      "subcarpeta": "tools",
+      "ejecutable": "python.exe"
+    },
+    {
+      "version": "3.12.10",
+      "url": "https://api.nuget.org/v3-flatcontainer/python/3.12.10/python.3.12.10.nupkg",
+      "sha256": "0eb85c2dfccccf1b17352de4c397f69194035b7d37149eacc16f1147d93de3b8",
+      "formato": "zip",
+      "subcarpeta": "tools",
+      "ejecutable": "python.exe"
+    }
+  ],
+  "java": [
+    {
+      "version": "25.0.5.1",
+      "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5.1%2B2/OpenJDK25U-jdk_x64_windows_hotspot_25.0.5.1_2.zip",
+      "sha256": "849d380ab0a64d9098e7d3a2de28beb73841c3b255c8284f019ccd8748c5eb5b",
+      "formato": "zip",
+      "subcarpeta": "jdk-25.0.5.1+2",
+      "ejecutable": "bin/java.exe"
+    },
+    {
+      "version": "21.0.13.1",
+      "url": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13.1%2B2/OpenJDK21U-jdk_x64_windows_hotspot_21.0.13.1_2.zip",
+      "sha256": "bbebea1469996b276683c9299c227b294f85c847039c82633218186a4ad4fbf2",
+      "formato": "zip",
+      "subcarpeta": "jdk-21.0.13.1+2",
+      "ejecutable": "bin/java.exe"
+    },
+    {
+      "version": "17.0.21.1",
+      "url": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.21.1%2B2/OpenJDK17U-jdk_x64_windows_hotspot_17.0.21.1_2.zip",
+      "sha256": "eafba0944f777abdc74d5aad16049c9b5a1275b6ce99e2939ba9f7f3e6f08c87",
+      "formato": "zip",
+      "subcarpeta": "jdk-17.0.21.1+2",
+      "ejecutable": "bin/java.exe"
+    }
+  ],
+  "dotnet": [
+    {
+      "version": "10.0.404",
+      "url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.404/dotnet-sdk-10.0.404-win-x64.zip",
+      "sha512": "330ddd2665b43cd2e428216a0d8ea1ac7bb19b5434fdc530e62010dc3b52823a620bf95489d628e1ed6f5122401793ee4887cca4a019122361a1231497f632ee",
+      "formato": "zip",
+      "ejecutable": "dotnet.exe"
+    },
+    {
+      "version": "8.0.428",
+      "url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.428/dotnet-sdk-8.0.428-win-x64.zip",
+      "sha512": "cce1dc5cfb2c5b73ddd9d3658f6009deb85be3a58dbec44a6dfe3910bb32b044ad2fc6bb28c77aded70c73270a204d207fe790dcb82ffca6c7b42c1335b51c21",
+      "formato": "zip",
+      "ejecutable": "dotnet.exe"
+    }
+  ],
+  "go": [
+    {
+      "version": "1.27.4",
+      "url": "https://go.dev/dl/go1.27.4.windows-amd64.zip",
+      "sha256": "178ab98950ac69ab25069307dc6ade79f3816e414cce95b4da166a115cde1e7e",
+      "formato": "zip",
+      "subcarpeta": "go",
+      "ejecutable": "bin/go.exe"
+    }
+  ],
+  "rust": [
+    {
+      "version": "1.100.0",
+      "url": "https://static.rust-lang.org/rustup/archive/1.29.3/x86_64-pc-windows-msvc/rustup-init.exe",
+      "sha256": "38027d51d69a5d05493627a0634dbea52d6cd793c8f072d2373d3f4163eec7db",
+      "formato": "exe",
+      "ejecutable": "rustup-init.exe"
+    }
+  ],
+  "bun": [
+    {
+      "version": "1.4.5",
+      "url": "https://github.com/oven-sh/bun/releases/download/bun-v1.4.5/bun-windows-x64.zip",
+      "sha256": "815ab45ec7f549abf87e6869584b506eab088e24225683957b7e150b47d6de30",
+      "formato": "zip",
+      "subcarpeta": "bun-windows-x64",
+      "ejecutable": "bun.exe"
+    }
+  ],
+  "deno": [
+    {
+      "version": "2.9.8",
+      "url": "https://github.com/denoland/deno/releases/download/v2.9.8/deno-x86_64-pc-windows-msvc.zip",
+      "sha256": "cba84b26e0df5ae7f74fc66b86a95b866872a86292ebd84fa1e959927edd93bf",
+      "formato": "zip",
+      "ejecutable": "deno.exe"
+    }
+  ],
+  "zig": [
+    {
+      "version": "0.17.1",
+      "url": "https://ziglang.org/download/0.17.1/zig-x86_64-windows-0.17.1.zip",
+      "sha256": "b03f477a1943673e02aca0f570e8030dffd536ce1f45cbc4d3326ec31159562e",
+      "formato": "zip",
+      "subcarpeta": "zig-x86_64-windows-0.17.1",
+      "ejecutable": "zig.exe"
+    }
+  ],
+  "kotlin": [
+    {
+      "version": "2.4.21",
+      "url": "https://github.com/JetBrains/kotlin/releases/download/v2.4.21/kotlin-compiler-2.4.21.zip",
+      "sha256": "7cc140e76daf416a0424a5557f99afd7ca89ebd463ea1101261e3e01c33e75cd",
+      "formato": "zip",
+      "subcarpeta": "kotlinc",
+      "ejecutable": "bin/kotlinc.bat"
+    }
+  ],
+  "dart": [
+    {
+      "version": "3.14.1",
+      "url": "https://storage.googleapis.com/dart-archive/channels/stable/release/3.14.1/sdk/dartsdk-windows-x64-release.zip",
+      "sha256": "fb2550f71e3408f2a69ff6ee29573f341991a927f8bc9ad0601dd3c9b19945c8",
+      "formato": "zip",
+      "subcarpeta": "dart-sdk",
+      "ejecutable": "bin/dart.exe"
+    }
+  ],
+  "extensionesPhp": [
+    {
+      "nombre": "xdebug",
+      "version": "3.5.3",
+      "rama": "8.1",
+      "variante": "nts-vs16-x64",
+      "url": "https://xdebug.org/files/php_xdebug-3.5.3-8.1-nts-vs16-x86_64.dll",
+      "sha256": "15bb3abcd0755af8378550793bcf7603636add31dc4a04d24bfd2a1f764399b4",
+      "formato": "archivo",
+      "zend": true
+    },
+    {
+      "nombre": "xdebug",
+      "version": "3.5.3",
+      "rama": "8.1",
+      "variante": "ts-vs16-x64",
+      "url": "https://xdebug.org/files/php_xdebug-3.5.3-8.1-ts-vs16-x86_64.dll",
+      "sha256": "8a90f1fd3e199a07e3039fc857330ca098a71bf9622e88a878efaa1b1b6fe358",
+      "formato": "archivo",
+      "zend": true
+    },
+    {
+      "nombre": "xdebug",
+      "version": "3.5.3",
+      "rama": "8.2",
+      "variante": "nts-vs16-x64",
+      "url": "https://xdebug.org/files/php_xdebug-3.5.3-8.2-nts-vs16-x86_64.dll",
+      "sha256": "b449eda7eeefc80c651fac334582c5f0877cd72cfe55fc1c5f0f98bf6a4edb94",
+      "formato": "archivo",
+      "zend": true
+    },
+    {
+      "nombre": "xdebug",
+      "version": "3.5.3",
+      "rama": "8.2",
+      "variante": "ts-vs16-x64",
+      "url": "https://xdebug.org/files/php_xdebug-3.5.3-8.2-ts-vs16-x86_64.dll",
+      "sha256": "56a62ebd342a143ced245f30de375f5b907ba50efaacf42801a5dd280006e127",
+      "formato": "archivo",
+      "zend": true
+    },
+    {
+      "nombre": "xdebug",
+      "version": "3.5.3",
+      "rama": "8.3",
+      "variante": "nts-vs16-x64",
+      "url": "https://xdebug.org/files/php_xdebug-3.5.3-8.3-nts-vs16-x86_64.dll",
+      "sha256": "4c80487592484c36d21a7006a53738dfc07884fc6867720ddc5c11559371cdce",
+      "formato": "archivo",
+      "zend": true
+    },
+    {
+      "nombre": "xdebug",
+      "version": "3.5.3",
+      "rama": "8.3",
+      "variante": "ts-vs16-x64",
+      "url": "https://xdebug.org/files/php_xdebug-3.5.3-8.3-ts-vs16-x86_64.dll",
+      "sha256": "c178f05068a6f0cef4a37eaca6003a56120004bf4ac20db6ff20f6f1ce0b439e",
+      "formato": "archivo",
+      "zend": true
+    },
+    {
+      "nombre": "xdebug",
+      "version": "3.5.3",
+      "rama": "8.4",
+      "variante": "nts-vs17-x64",
+      "url": "https://xdebug.org/files/php_xdebug-3.5.3-8.4-nts-vs17-x86_64.dll",
+      "sha256": "a94d4fcfe4086a300b2decaf7c04e59f4981aa5e56992d48b55c5e49dfd9b9ee",
+      "formato": "archivo",
+      "zend": true
+    },
+    {
+      "nombre": "xdebug",
+      "version": "3.5.3",
+      "rama": "8.4",
+      "variante": "ts-vs17-x64",
+      "url": "https://xdebug.org/files/php_xdebug-3.5.3-8.4-ts-vs17-x86_64.dll",
+      "sha256": "b9c79caec87f2b289df4b7bfa64b64f01c97956c9ac7ddb936302b79aec65cda",
+      "formato": "archivo",
+      "zend": true
+    },
+    {
+      "nombre": "xdebug",
+      "version": "3.5.3",
+      "rama": "8.5",
+      "variante": "nts-vs17-x64",
+      "url": "https://xdebug.org/files/php_xdebug-3.5.3-8.5-nts-vs17-x86_64.dll",
+      "sha256": "0a0d52bf276dad7e5f90ac30a5110b3119d291b20c118be0cb7f5752064f1811",
+      "formato": "archivo",
+      "zend": true
+    },
+    {
+      "nombre": "xdebug",
+      "version": "3.5.3",
+      "rama": "8.5",
+      "variante": "ts-vs17-x64",
+      "url": "https://xdebug.org/files/php_xdebug-3.5.3-8.5-ts-vs17-x86_64.dll",
+      "sha256": "c75623ba050ddef734ba28a957e92df9ce5b8dfdb1a0569e5071bd6b68a12292",
+      "formato": "archivo",
+      "zend": true
+    }
+  ],
+  "ruby": [
+    {
+      "version": "4.0.10-1",
+      "url": "https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-4.0.10-1/rubyinstaller-4.0.10-1-x64.7z",
+      "sha256": "0d8f693bb4027378d2c92c285c0bb405f9825623bfbf2caad0d52acabbd4978c",
+      "formato": "7z",
+      "subcarpeta": "rubyinstaller-4.0.10-1-x64",
+      "ejecutable": "bin/ruby.exe"
+    },
+    {
+      "version": "3.4.13-1",
+      "url": "https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-3.4.13-1/rubyinstaller-3.4.13-1-x64.7z",
+      "sha256": "228d698c2311dee6207017634faac64a07b7208cdc7a6a50972c4b19d9153a42",
+      "formato": "7z",
+      "subcarpeta": "rubyinstaller-3.4.13-1-x64",
+      "ejecutable": "bin/ruby.exe"
+    },
+    {
+      "version": "3.3.14-1",
+      "url": "https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-3.3.14-1/rubyinstaller-3.3.14-1-x64.7z",
+      "sha256": "03b6ed68fba9e632f0f6e93af99c1bc55315e1bfad0296a105268296cbcdb8ba",
+      "formato": "7z",
+      "subcarpeta": "rubyinstaller-3.3.14-1-x64",
+      "ejecutable": "bin/ruby.exe"
+    }
+  ],
+  "maven": [
+    {
+      "version": "3.10.2",
+      "url": "https://archive.apache.org/dist/maven/maven-3/3.10.2/binaries/apache-maven-3.10.2-bin.zip",
+      "sha512": "a24007fbf26eb885de8ba07c54fa05bb12e97082d16bfcd37283708b9db60232768435a0165ef0ed7c1309af843c11bf797f9959b9ca0a7343b055a165d8761c",
+      "formato": "zip",
+      "subcarpeta": "apache-maven-3.10.2",
+      "ejecutable": "bin/mvn.cmd"
+    },
+    {
+      "version": "3.9.16",
+      "url": "https://archive.apache.org/dist/maven/maven-3/3.9.16/binaries/apache-maven-3.9.16-bin.zip",
+      "sha512": "ed41650d42485cfc243fad22158caf9cbb5dc408ce7a09ddb94dd42a019de929ca43065bfa450612cf12bf78b5cafa3884b96c090de326ff590448c933454af3",
+      "formato": "zip",
+      "subcarpeta": "apache-maven-3.9.16",
+      "ejecutable": "bin/mvn.cmd"
+    }
+  ],
+  "gradle": [
+    {
+      "version": "9.9.2",
+      "url": "https://services.gradle.org/distributions/gradle-9.9.2-bin.zip",
+      "sha256": "971fcd7150ca4ba04852c0b2ca0d2d0ab9468e14b03473eab19528809914c76b",
+      "formato": "zip",
+      "subcarpeta": "gradle-9.9.2",
+      "ejecutable": "bin/gradle.bat"
+    },
+    {
+      "version": "8.14.8",
+      "url": "https://services.gradle.org/distributions/gradle-8.14.8-bin.zip",
+      "sha256": "94da89692fc3ca6d2d0ce6bb48548762ea0f1897ba444286f5c7f3759c7af651",
+      "formato": "zip",
+      "subcarpeta": "gradle-8.14.8",
+      "ejecutable": "bin/gradle.bat"
+    }
+  ]
+}

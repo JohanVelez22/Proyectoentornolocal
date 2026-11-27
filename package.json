@@ -1,0 +1,34 @@
+{
+  "name": "proyectoentornolocal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WolfCore Dev: gestor propio de entorno de desarrollo local",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "test:win": "npm run test:win -w @pel/core",
+    "lint": "eslint . && prettier --check .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev": "npm run dev --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "test:win:pgvector": "npm run test:win:pgvector -w @pel/core"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9",
+    "eslint": "^9",
+    "eslint-plugin-vue": "^10.12.1",
+    "prettier": "^3",
+    "typescript": "^5",
+    "typescript-eslint": "^8",
+    "vitest": "^5.1.0",
+    "vue-eslint-parser": "^10.4.2"
+  }
+}

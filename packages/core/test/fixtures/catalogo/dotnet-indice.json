@@ -1,0 +1,49 @@
+{
+  "releases-index": [
+    {
+      "channel-version": "11.0",
+      "latest-release": "11.0.100",
+      "latest-sdk": "11.0.100",
+      "support-phase": "preview",
+      "release-type": "sts",
+      "eol-date": null,
+      "releases.json": "https://builds.dotnet.microsoft.com/dotnet/release-metadata/11.0/releases.json"
+    },
+    {
+      "channel-version": "10.0",
+      "latest-release": "10.0.404",
+      "latest-sdk": "10.0.404",
+      "support-phase": "active",
+      "release-type": "lts",
+      "eol-date": "2028-11-14",
+      "releases.json": "https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json"
+    },
+    {
+      "channel-version": "9.0",
+      "latest-release": "9.0.321",
+      "latest-sdk": "9.0.321",
+      "support-phase": "eol",
+      "release-type": "sts",
+      "eol-date": "2026-11-10",
+      "releases.json": "https://builds.dotnet.microsoft.com/dotnet/release-metadata/9.0/releases.json"
+    },
+    {
+      "channel-version": "8.0",
+      "latest-release": "8.0.428",
+      "latest-sdk": "8.0.428",
+      "support-phase": "eol",
+      "release-type": "lts",
+      "eol-date": "2026-11-10",
+      "releases.json": "https://builds.dotnet.microsoft.com/dotnet/release-metadata/8.0/releases.json"
+    },
+    {
+      "channel-version": "6.0",
+      "latest-release": "6.0.428",
+      "latest-sdk": "6.0.428",
+      "support-phase": "eol",
+      "release-type": "lts",
+      "eol-date": "2024-11-12",
+      "releases.json": "https://builds.dotnet.microsoft.com/dotnet/release-metadata/6.0/releases.json"
+    }
+  ]
+}

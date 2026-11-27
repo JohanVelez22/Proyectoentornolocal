@@ -1,0 +1,10 @@
+node_modules
+dist
+out
+release
+coverage
+.superpowers
+package-lock.json
+docs
+# Páginas HTML reales recortadas: se guardan tal cual las sirve el sitio.
+packages/core/test/fixtures/**/*.html

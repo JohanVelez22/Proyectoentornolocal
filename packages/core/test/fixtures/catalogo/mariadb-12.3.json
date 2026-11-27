@@ -1,0 +1,184 @@
+{
+  "releases": {
+    "12.3.3": {
+      "release_id": "12.3.3",
+      "release_name": "MariaDB Server 12.3.3",
+      "date_of_release": "2026-08-22",
+      "release_notes_url": "",
+      "change_log": "",
+      "files": [
+        {
+          "file_id": 16990,
+          "file_name": "mariadb-12.3.3.tar.gz",
+          "package_type": "gzipped tar file",
+          "os": "Source",
+          "cpu": null,
+          "checksum": {
+            "md5sum": "83d962d0f5917a0445786cc31337b118",
+            "sha1sum": "b657e37f81cbaaf54712035af19afa3bc3af1ff8",
+            "sha256sum": "e99d739fd4a55f9a11dea7bd2287a262673e287550af3071c8469dd2bec0c163",
+            "sha512sum": "b9f4d063bbed1aaad52992228e6ac9572fa224509d807da8569a89e87803665148ac74204de72a8256791d844c81e5c6d43e7b16fea15c5c1aceed678f4fd634"
+          },
+          "file_download_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.3/mariadb-12.3.3.tar.gz",
+          "signature": null,
+          "checksum_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.3/mariadb-12.3.3.tar.gz/checksum/",
+          "signature_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.3/mariadb-12.3.3.tar.gz/signature/"
+        },
+        {
+          "file_id": 16992,
+          "file_name": "mariadb-12.3.3-winx64.msi",
+          "package_type": "MSI Package",
+          "os": "Windows",
+          "cpu": "x86_64",
+          "checksum": {
+            "md5sum": "e31c4909ee82e7db5f0e714cea4e90fe",
+            "sha1sum": "497dcf674f0a1732b87365d869ad7c9f0af46ca8",
+            "sha256sum": "811a38a862c1c55325b6ba8a757b381923e51dee4fe3cde95887b0ae2490c02d",
+            "sha512sum": "aaed51ed1ccb265c3aa1662d50e4a99edbeafa404033ac8de607c63a7a574bcfc8537049488d0bc733ca61b5c79103301e2b7b2dee15e2747203e897293ae5cc"
+          },
+          "file_download_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.3/mariadb-12.3.3-winx64.msi",
+          "signature": null,
+          "checksum_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.3/mariadb-12.3.3-winx64.msi/checksum/",
+          "signature_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.3/mariadb-12.3.3-winx64.msi/signature/"
+        },
+        {
+          "file_id": 16993,
+          "file_name": "mariadb-12.3.3-winx64.zip",
+          "package_type": "ZIP file",
+          "os": "Windows",
+          "cpu": "x86_64",
+          "checksum": {
+            "md5sum": "7a625eb0739e7bebd15d3a3e2ec4d13a",
+            "sha1sum": "f0ab4843495c283e3dd0cd193325d1e4f507a682",
+            "sha256sum": "4b5706b47148b47c8f36963c8352d1ddee37a1287b4690428f631a74b09b85a0",
+            "sha512sum": "00cbaec1743ce5b4a6d1664a68f440d5115dc35802bba54269c706af52a6dab25873186b1846d1ce931d3c1c9bd5cace7cf7d08c44df67bc5f44efafec175543"
+          },
+          "file_download_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.3/mariadb-12.3.3-winx64.zip",
+          "signature": null,
+          "checksum_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.3/mariadb-12.3.3-winx64.zip/checksum/",
+          "signature_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.3/mariadb-12.3.3-winx64.zip/signature/"
+        }
+      ]
+    },
+    "12.3.4": {
+      "release_id": "12.3.4",
+      "release_name": "MariaDB Server 12.3.4",
+      "date_of_release": "2026-11-17",
+      "release_notes_url": "",
+      "change_log": "",
+      "files": [
+        {
+          "file_id": 17072,
+          "file_name": "mariadb-12.3.4.tar.gz",
+          "package_type": "gzipped tar file",
+          "os": "Source",
+          "cpu": null,
+          "checksum": {
+            "md5sum": "df7a6ac8ce06f6bf08221ab8f96feb88",
+            "sha1sum": "5251e0614a153c72e3ca47104b2ab674c15039de",
+            "sha256sum": "75aae4d48df905734e24a85b955bbcdc43f4b122b450bc4ad2bc92f5d1ac578d",
+            "sha512sum": "d99557b03bcdab0465e0459380951055ad22a0a387088de5dcb045c8900cf9130d8194fc63047fe7bf4c0dcd280bbd67978ec4e6bb9265043f55028646c823e5"
+          },
+          "file_download_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.4/mariadb-12.3.4.tar.gz",
+          "signature": null,
+          "checksum_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.4/mariadb-12.3.4.tar.gz/checksum/",
+          "signature_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.4/mariadb-12.3.4.tar.gz/signature/"
+        },
+        {
+          "file_id": 17074,
+          "file_name": "mariadb-12.3.4-winx64.msi",
+          "package_type": "MSI Package",
+          "os": "Windows",
+          "cpu": "x86_64",
+          "checksum": {
+            "md5sum": "40d79209b9d2b7066f713d6c5a17afab",
+            "sha1sum": "45cf9fd665109539a7cb5b633998b48c3d9a06b1",
+            "sha256sum": "5defb68d4d899dbd0900759af6cbe01a1dbeaf6b2322134c8fd4793c9b88ecac",
+            "sha512sum": "5cd792052178f4a4121e89913dd8a956f01a4eb9328f3c6c6a9fa53021b76170768d641432ab41d4473459cdadbc36e7371a3b8b2203d44e15c0070294b0acd5"
+          },
+          "file_download_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.4/mariadb-12.3.4-winx64.msi",
+          "signature": null,
+          "checksum_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.4/mariadb-12.3.4-winx64.msi/checksum/",
+          "signature_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.4/mariadb-12.3.4-winx64.msi/signature/"
+        },
+        {
+          "file_id": 17075,
+          "file_name": "mariadb-12.3.4-winx64.zip",
+          "package_type": "ZIP file",
+          "os": "Windows",
+          "cpu": "x86_64",
+          "checksum": {
+            "md5sum": "44f7a4390325e9db940083356e92c604",
+            "sha1sum": "348b1a7ef296eb59568370ccadfadcc0459186ac",
+            "sha256sum": "178020ae8ff7d0caf77b5a3ad7e33e574e13001352d31b02503f97224e4b1f77",
+            "sha512sum": "be573a9a70243712284d79f46763c80cd30479e11671c791af73ac9ab707aad4c1f6b9c66456c4f0139e9a3abd39adcc94d9ad25414124abb4e318df2f264b0b"
+          },
+          "file_download_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.4/mariadb-12.3.4-winx64.zip",
+          "signature": null,
+          "checksum_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.4/mariadb-12.3.4-winx64.zip/checksum/",
+          "signature_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.4/mariadb-12.3.4-winx64.zip/signature/"
+        }
+      ]
+    },
+    "12.3.2": {
+      "release_id": "12.3.2",
+      "release_name": "MariaDB Server 12.3.2",
+      "date_of_release": "2026-05-29",
+      "release_notes_url": "",
+      "change_log": "",
+      "files": [
+        {
+          "file_id": 16907,
+          "file_name": "mariadb-12.3.2.tar.gz",
+          "package_type": "gzipped tar file",
+          "os": "Source",
+          "cpu": null,
+          "checksum": {
+            "md5sum": "e6ec06ab51a7afa581562499616624a4",
+            "sha1sum": "9713b2d2e524c3ed0642a22389d993f890c5adaf",
+            "sha256sum": "82798714baf2f3456ed2f311fc803dc120f2bf3b82358e773847d628cdb4b670",
+            "sha512sum": "6107d5a9ae9b42def47d6d8d8f76ecbb0620e8b5c095c8923f868ad9f1e36de39ee79de528223308555a4fdb5980d86a55be81842d53e73ce0220a96c27739f6"
+          },
+          "file_download_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.2/mariadb-12.3.2.tar.gz",
+          "signature": null,
+          "checksum_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.2/mariadb-12.3.2.tar.gz/checksum/",
+          "signature_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.2/mariadb-12.3.2.tar.gz/signature/"
+        },
+        {
+          "file_id": 16909,
+          "file_name": "mariadb-12.3.2-winx64.msi",
+          "package_type": "MSI Package",
+          "os": "Windows",
+          "cpu": "x86_64",
+          "checksum": {
+            "md5sum": "5e97780409b72da67d96def2b9a74708",
+            "sha1sum": "a41692f84e318c0dc76bf58937c235a4d737cd6b",
+            "sha256sum": "5a964e4f1c719aa1d4b065236a0a7a343cb7592e6a21d1acb6fd1d426683b912",
+            "sha512sum": "0ff097a3234c741995e28144597e8b5ca15123bf3084db01da126c31b5364d70deab70dcf33901d275991f9c657f936e1f0a30053ed51b8a4ab437c067823cf9"
+          },
+          "file_download_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.2/mariadb-12.3.2-winx64.msi",
+          "signature": null,
+          "checksum_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.2/mariadb-12.3.2-winx64.msi/checksum/",
+          "signature_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.2/mariadb-12.3.2-winx64.msi/signature/"
+        },
+        {
+          "file_id": 16910,
+          "file_name": "mariadb-12.3.2-winx64.zip",
+          "package_type": "ZIP file",
+          "os": "Windows",
+          "cpu": "x86_64",
+          "checksum": {
+            "md5sum": "63ddb7dfc5aa5d6d490085c01b7016e8",
+            "sha1sum": "474831074060c6e3f25aeea031c1cd35f4e06d83",
+            "sha256sum": "67347c129eb9c5923d002ea34fbfa27c60eb95d36dd73b85af2651cdeceecac5",
+            "sha512sum": "0e3c80940b35e431501ffb6d71f5983652f88fe2fc22dc73a580909ced88729b0a6d4736102126091360d9554d8d8494f606d421ed76cb1ce565a70da8e43c47"
+          },
+          "file_download_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.2/mariadb-12.3.2-winx64.zip",
+          "signature": null,
+          "checksum_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.2/mariadb-12.3.2-winx64.zip/checksum/",
+          "signature_url": "http://downloads.mariadb.org/rest-api/mariadb/12.3.2/mariadb-12.3.2-winx64.zip/signature/"
+        }
+      ]
+    }
+  }
+}

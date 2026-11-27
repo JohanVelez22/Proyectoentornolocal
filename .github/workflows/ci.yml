@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verificar:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+
+  # Empaquetado (electron-builder --dir: sin instalador ni firma) en los tres sistemas y prueba de humo
+  # sobre la app empaquetada y sobre out/. La prueba solo corre en Windows: el núcleo aún no tiene
+  # plataforma para macOS ni Linux ("Plataforma aún no soportada (fase 4)": la app muestra un error y
+  # se cierra, no hay ventana que recorrer; lo vimos en CI al probarlo). En Windows arranca con una
+  # carpeta de datos nueva, recorre las vistas y falla con ventana en blanco, vista vacía o errores o
+  # avisos de consola (CSP incluidos). El CI normal no lo veía: el build ocultaba un renderer que
+  # en `npm run dev` salía en blanco.
+  humo:
+    name: empaquetado y humo (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Compilar (electron-vite + CLI)
+        run: npm run build -w @pel/desktop
+      - name: Prueba de humo sobre out/ (solo Windows)
+        if: runner.os == 'Windows'
+        run: npm run humo -w @pel/desktop -- --out
+      - name: Empaquetar (sin instalador)
+        run: npm run dist:dir -w @pel/desktop
+      - name: Prueba de humo del empaquetado (solo Windows)
+        if: runner.os == 'Windows'
+        run: npm run humo -w @pel/desktop

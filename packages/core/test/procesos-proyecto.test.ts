@@ -1,0 +1,1126 @@
+import { EventEmitter } from 'node:events';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { delimiter, dirname, join } from 'node:path';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { carpetaTemporal } from './temporales';
+import { Eventos, type EventosNucleo } from '../src/eventos';
+import type { Plataforma } from '../src/plataforma/tipos';
+import { ErrorDetenidoAlIniciar, Supervisor, type DefProceso } from '../src/procesos/supervisor';
+import {
+  idSupervisor,
+  ProcesosProyecto,
+  separarIdSupervisor,
+  type DepsProcesosProyecto,
+  type SupervisorProcesos,
+} from '../src/proyectos/procesos';
+import { Runtimes } from '../src/runtimes/runtimes';
+import { Rutas } from '../src/rutas';
+import { Servicios } from '../src/servicios/servicios';
+import {
+  ProcesoProyectoSchema,
+  SitioSchema,
+  type EstadoServicio,
+  type ProcesoProyecto,
+  type Sitio,
+} from '../src/tipos';
+
+/* ───────────── Armado ───────────── */
+
+type EstadoSup = ReturnType<SupervisorProcesos['estado']>;
+
+/** Supervisor falso: guarda las definiciones y los ids detenidos. */
+class SupervisorFalso implements SupervisorProcesos {
+  readonly iniciados: DefProceso[] = [];
+  readonly detenidos: string[] = [];
+  readonly estados = new Map<string, EstadoSup>();
+  readonly mensajes = new Map<string, string>();
+  alIniciar?: (def: DefProceso) => Promise<void>;
+  private readonly oyentesTermino: Array<
+    (id: string, codigo: number | null, sinCodigo: boolean) => void
+  > = [];
+
+  alTerminar(fn: (id: string, codigo: number | null, sinCodigo: boolean) => void): void {
+    this.oyentesTermino.push(fn);
+  }
+  /** Simula la salida definitiva de un proceso. */
+  terminar(id: string, codigo: number | null, sinCodigo = false): void {
+    this.estados.delete(id);
+    for (const fn of this.oyentesTermino) fn(id, codigo, sinCodigo);
+  }
+
+  async iniciar(def: DefProceso): Promise<void> {
+    this.iniciados.push(def);
+    this.estados.set(def.id, 'encendido');
+    await this.alIniciar?.(def);
+  }
+  async detener(id: string): Promise<void> {
+    this.detenidos.push(id);
+    this.estados.delete(id);
+  }
+  estado(id: string): EstadoSup {
+    return this.estados.get(id) ?? 'apagado';
+  }
+  pid(id: string): number | null {
+    return this.estados.has(id) ? 4242 : null;
+  }
+  mensaje(id: string): string | undefined {
+    return this.mensajes.get(id);
+  }
+  readonly contadores = new Map<string, number>();
+  reinicios(id: string): number {
+    return this.contadores.get(id) ?? 0;
+  }
+  ids(): string[] {
+    return [...this.estados.keys()];
+  }
+}
+
+const proceso = (extra: Partial<ProcesoProyecto> & { id: string }): ProcesoProyecto =>
+  ProcesoProyectoSchema.parse({ comando: ['npm', 'run', 'dev'], ...extra });
+
+interface Armado {
+  base: string;
+  carpeta: string;
+  rutas: Rutas;
+  sitios: Sitio[];
+  sup: SupervisorFalso;
+  procesos: ProcesosProyecto;
+  nodeDir: string;
+  pythonDir: string;
+  phpExe: string;
+  phpIni: string;
+}
+
+interface OpcionesArmado {
+  procesos?: ProcesoProyecto[];
+  sitio?: Partial<Sitio>;
+  avisos?: string[];
+  sinNode?: boolean;
+  supervisor?: SupervisorProcesos;
+  confianza?: DepsProcesosProyecto['confianza'];
+  depuracion?: DepsProcesosProyecto['depuracion'];
+  entorno?: NodeJS.ProcessEnv;
+  eventos?: Eventos<EventosNucleo>;
+  /** Dependencias extra (escuchas, precarga de Node, vigilancia). */
+  extra?: Partial<DepsProcesosProyecto>;
+}
+
+async function armar(o: OpcionesArmado = {}): Promise<Armado> {
+  const base = await carpetaTemporal('pel-procs-base-');
+  const carpeta = await carpetaTemporal('pel-procs-proy-');
+  const rutas = new Rutas(base);
+  const nodeDir = rutas.bin('node', '22.1.0');
+  const pythonDir = rutas.bin('python', '3.12.10');
+  const phpExe = join(base, 'bin', 'php', '8.4', 'php.exe');
+  const phpIni = join(base, 'etc', 'php', '8.4', 'php.ini');
+  const sitios: Sitio[] = [
+    SitioSchema.parse({
+      id: 'demo',
+      nombre: 'Demo',
+      dominio: 'demo.test',
+      carpeta,
+      tipo: 'node',
+      procesos: o.procesos ?? [proceso({ id: 'vite', puerto: 5173 })],
+      ...o.sitio,
+    }),
+  ];
+  const sup = new SupervisorFalso();
+  const procesos = new ProcesosProyecto({
+    rutas,
+    supervisor: o.supervisor ?? sup,
+    leerSitios: async () => sitios,
+    entorno: o.entorno ?? { Path: 'C:\\Windows\\system32', OTRA: 'secreto-del-usuario' },
+    runtimes: {
+      paraProyecto: async () => ({
+        ...(o.sinNode ? {} : { node: '22.1.0' }),
+        python: '3.12.10',
+        avisos: o.avisos ?? [],
+      }),
+      carpetasPath: (v) => [
+        ...(v.node
+          ? [rutas.bin('node', v.node), join(rutas.bin('node', v.node), 'node_modules', '.bin')]
+          : []),
+        ...(v.python
+          ? [rutas.bin('python', v.python), join(rutas.bin('python', v.python), 'Scripts')]
+          : []),
+      ],
+      rutaBin: (tipo, version) => rutas.bin(tipo, version),
+    },
+    php: async () => ({ exe: phpExe, ini: phpIni }),
+    ...(o.eventos ? { eventos: o.eventos } : {}),
+    ...(o.confianza ? { confianza: o.confianza } : {}),
+    ...(o.depuracion ? { depuracion: o.depuracion } : {}),
+    ...(o.extra ?? {}),
+  });
+  return { base, carpeta, rutas, sitios, sup, procesos, nodeDir, pythonDir, phpExe, phpIni };
+}
+
+const pathDe = (def: DefProceso): string[] => (def.env?.Path ?? '').split(';');
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+/* ───────────── Ids ───────────── */
+
+describe('ids de supervisor', () => {
+  it('proy-<sitio>-<proceso>; el último guion separa (el sitio puede llevar guiones)', () => {
+    expect(idSupervisor('demo', 'vite')).toBe('proy-demo-vite');
+    expect(idSupervisor('mi-tienda-2', 'queue_work')).toBe('proy-mi-tienda-2-queue_work');
+    expect(separarIdSupervisor('proy-mi-tienda-2-queue_work')).toEqual({
+      sitioId: 'mi-tienda-2',
+      procesoId: 'queue_work',
+    });
+    expect(separarIdSupervisor('nginx')).toBeNull();
+    expect(separarIdSupervisor('proy-solo')).toBeNull();
+    expect(separarIdSupervisor('tunel-demo')).toBeNull();
+  });
+
+  it('rechaza ids con separadores o caracteres de ruta', () => {
+    expect(() => idSupervisor('demo', 'a-b')).toThrow(/Id de proceso no válido/);
+    expect(() => idSupervisor('demo', '..')).toThrow(/Id de proceso no válido/);
+    expect(() => idSupervisor('de/mo', 'vite')).toThrow(/Id de proyecto no válido/);
+    expect(() => idSupervisor('..\\x', 'vite')).toThrow(/Id de proyecto no válido/);
+    expect(() => idSupervisor('', 'vite')).toThrow(/Id de proyecto no válido/);
+  });
+
+  it('el esquema cambia los guiones del id por guiones bajos y `proxy` vale false por defecto', () => {
+    // Un config.json viejo con 'npm-dev' no queda marcado como corrupto.
+    expect(ProcesoProyectoSchema.parse({ id: 'npm-dev', comando: ['x'] }).id).toBe('npm_dev');
+    expect(ProcesoProyectoSchema.safeParse({ id: '-x', comando: ['x'] }).success).toBe(false);
+    expect(ProcesoProyectoSchema.parse({ id: 'npm_dev', comando: ['x'] }).proxy).toBe(false);
+  });
+});
+
+/* ───────────── Iniciar ───────────── */
+
+describe('iniciar', () => {
+  it('lanza sin shell el npm del proyecto, en su carpeta, con log en logs/proyectos', async () => {
+    const a = await armar();
+    await a.procesos.iniciar('demo', 'vite');
+    expect(a.sup.iniciados).toHaveLength(1);
+    const def = a.sup.iniciados[0]!;
+    expect(def.id).toBe('proy-demo-vite');
+    // Un proceso de proyecto puede terminar solo: sin código conocido no se tiene por caído (D39).
+    expect(def.terminaSolo).toBe(true);
+    expect(def.comando).toBe(join(a.nodeDir, 'node.exe'));
+    expect(def.args).toEqual([
+      join(a.nodeDir, 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+      'run',
+      'dev',
+    ]);
+    expect(def.cwd).toBe(a.carpeta);
+    // El puerto es informativo (proxy): no se usa como sonda de salud del supervisor.
+    expect(def.puerto).toBeUndefined();
+    expect(def.puertoInformativo).toBe(5173);
+    // Al readoptar se exige la misma hora de creación (node.exe es muy común).
+    expect(def.exigirInicio).toBe(true);
+    expect(def.reiniciar).toBe(false);
+    expect(def.log).toBe(a.rutas.logs('proyectos', 'demo-vite.log'));
+    expect(await readFile(def.log, 'utf8')).toMatch(/\[WolfCore Dev\] .* > npm run dev\n/);
+  });
+
+  it('un sitio importado de un perfil (D26) no corre procesos hasta que se confíe en él', async () => {
+    const a = await armar({ sitio: { origen: 'perfil' } });
+    await expect(a.procesos.iniciar('demo', 'vite')).rejects.toMatchObject({
+      codigo: 'proyectos.no_confiado',
+    });
+    expect(a.sup.iniciados).toEqual([]);
+    const b = await armar({ sitio: { origen: 'perfil', confiado: true, pendiente: 'carpeta' } });
+    await expect(b.procesos.iniciar('demo', 'vite')).rejects.toMatchObject({
+      codigo: 'proyectos.no_confiado',
+    });
+    const c = await armar({ sitio: { origen: 'perfil', confiado: true } });
+    await c.procesos.iniciar('demo', 'vite');
+    expect(c.sup.iniciados).toHaveLength(1);
+  });
+
+  it('confianza de la CA: el proceso recibe las variables de ConfianzaCa (con la carpeta de trabajo)', async () => {
+    const pedidos: { carpeta: string; venv?: string }[] = [];
+    const a = await armar({
+      confianza: {
+        envProyecto: async (s, o) => {
+          pedidos.push({ carpeta: s.carpeta, ...(o?.carpetaVenv ? { venv: o.carpetaVenv } : {}) });
+          return { NODE_EXTRA_CA_CERTS: 'ca.crt', SSL_CERT_FILE: 'bundle.pem' };
+        },
+      },
+    });
+    await a.procesos.iniciar('demo', 'vite');
+    const def = a.sup.iniciados[0]!;
+    expect(def.env?.NODE_EXTRA_CA_CERTS).toBe('ca.crt');
+    expect(def.env?.SSL_CERT_FILE).toBe('bundle.pem');
+    expect(pedidos).toEqual([{ carpeta: a.carpeta, venv: a.carpeta }]);
+  });
+
+  it('captura de dumps: PYTHONPATH con wolfdump primero y el del usuario después, solo si está activa', async () => {
+    const depuracion = { carpetaPython: async () => join('D', 'etc', 'python') };
+    const sin = await armar({ depuracion });
+    await sin.procesos.iniciar('demo', 'vite');
+    expect(sin.sup.iniciados[0]!.env?.PYTHONPATH).toBeUndefined();
+    expect(sin.sup.iniciados[0]!.env?.WOLFCORE_SITIO).toBeUndefined();
+
+    const con = await armar({
+      depuracion,
+      sitio: { capturaDumps: true },
+      entorno: { Path: 'C:\\Windows', PYTHONPATH: join('U', 'libs') },
+    });
+    await con.procesos.iniciar('demo', 'vite');
+    const env = con.sup.iniciados[0]!.env!;
+    expect(env.PYTHONPATH).toBe([join('D', 'etc', 'python'), join('U', 'libs')].join(delimiter));
+    expect(env.WOLFCORE_SITIO).toBe('demo');
+
+    // Si no se pudo preparar wolfdump, el proceso arranca igual.
+    const roto = await armar({
+      depuracion: {
+        carpetaPython: async () => {
+          throw new Error('sin disco');
+        },
+      },
+      sitio: { capturaDumps: true },
+    });
+    await roto.procesos.iniciar('demo', 'vite');
+    expect(roto.sup.iniciados[0]!.env?.PYTHONPATH).toBeUndefined();
+  });
+
+  it('si la confianza falla, el proceso arranca igual (sin esas variables)', async () => {
+    const a = await armar({
+      confianza: {
+        envProyecto: async () => {
+          throw new Error('roto');
+        },
+      },
+    });
+    await a.procesos.iniciar('demo', 'vite');
+    expect(a.sup.iniciados[0]!.env?.NODE_EXTRA_CA_CERTS).toBeUndefined();
+  });
+
+  it('PATH: Scripts del .venv antes que Node y Python del runtime, luego tools\\bin y el PATH', async () => {
+    const a = await armar();
+    await mkdir(join(a.carpeta, '.venv', 'Scripts'), { recursive: true });
+    await a.procesos.iniciar('demo', 'vite');
+    const def = a.sup.iniciados[0]!;
+    expect(pathDe(def)).toEqual([
+      join(a.carpeta, '.venv', 'Scripts'),
+      a.nodeDir,
+      join(a.nodeDir, 'node_modules', '.bin'),
+      a.pythonDir,
+      join(a.pythonDir, 'Scripts'),
+      a.rutas.herramientas('bin'),
+      'C:\\Windows\\system32',
+    ]);
+    expect(def.env?.VIRTUAL_ENV).toBe(join(a.carpeta, '.venv'));
+    // Solo las variables que cambian: el resto del entorno no se copia (ni a estado.json).
+    expect(def.env?.OTRA).toBeUndefined();
+    expect(def.env?.PATH).toBeUndefined();
+  });
+
+  it('Python en subcarpeta: .venv del cwd, UTF-8 forzado y PORT (QA 6)', async () => {
+    const a = await armar({
+      sitio: { tipo: 'fastapi', php: null },
+      procesos: [
+        proceso({
+          id: 'uvicorn',
+          comando: ['python', '-m', 'uvicorn', 'app.main:app'],
+          cwd: 'admin',
+          puerto: 8001,
+        }),
+      ],
+    });
+    await mkdir(join(a.carpeta, 'admin', '.venv', 'Scripts'), { recursive: true });
+    await a.procesos.iniciar('demo', 'uvicorn');
+    const def = a.sup.iniciados[0]!;
+    expect(def.env?.PYTHONUTF8).toBe('1');
+    expect(def.env?.PYTHONIOENCODING).toBe('utf-8');
+    expect(def.env?.VIRTUAL_ENV).toBe(join(a.carpeta, 'admin', '.venv'));
+    expect(def.env?.PORT).toBe('8001');
+    // Los servidores que leen HOST (Express, Nest) escuchan solo en 127.0.0.1.
+    expect(def.env?.HOST).toBe('127.0.0.1');
+  });
+
+  it('python usa el del .venv; php lleva su php.ini y PHPRC', async () => {
+    const a = await armar({
+      sitio: { tipo: 'laravel', php: '8.4' },
+      procesos: [
+        proceso({ id: 'api', comando: ['python', '-m', 'uvicorn', 'app:app'] }),
+        proceso({ id: 'cola', comando: ['php', 'artisan', 'queue:work'] }),
+      ],
+    });
+    await mkdir(join(a.carpeta, '.venv', 'Scripts'), { recursive: true });
+    await writeFile(join(a.carpeta, '.venv', 'Scripts', 'python.exe'), '');
+    await a.procesos.iniciar('demo', 'api');
+    await a.procesos.iniciar('demo', 'cola');
+    const [api, cola] = a.sup.iniciados;
+    expect(api!.comando).toBe(join(a.carpeta, '.venv', 'Scripts', 'python.exe'));
+    expect(api!.args).toEqual(['-m', 'uvicorn', 'app:app']);
+    expect(cola!.comando).toBe(a.phpExe);
+    expect(cola!.args).toEqual(['-c', a.phpIni, 'artisan', 'queue:work']);
+    expect(cola!.env?.PHPRC).toBe(join(a.base, 'etc', 'php', '8.4'));
+    expect(pathDe(cola!)[0]).toBe(join(a.base, 'bin', 'php', '8.4'));
+  });
+
+  it('cwd: una subcarpeta del proyecto sí; fuera del proyecto no', async () => {
+    const a = await armar({
+      procesos: [
+        proceso({ id: 'front', cwd: 'frontend' }),
+        proceso({ id: 'fuera', cwd: '..\\otro' }),
+      ],
+    });
+    await mkdir(join(a.carpeta, 'frontend'));
+    await a.procesos.iniciar('demo', 'front');
+    expect(a.sup.iniciados[0]!.cwd).toBe(join(a.carpeta, 'frontend'));
+    await expect(a.procesos.iniciar('demo', 'fuera')).rejects.toThrow(/dentro del proyecto/);
+  });
+
+  it('un programa relativo con carpetas se resuelve desde la carpeta del proceso', async () => {
+    const a = await armar({ procesos: [proceso({ id: 'srv', comando: ['bin\\srv.exe', '-v'] })] });
+    await a.procesos.iniciar('demo', 'srv');
+    expect(a.sup.iniciados[0]!.comando).toBe(join(a.carpeta, 'bin', 'srv.exe'));
+  });
+
+  it('los avisos de los runtimes van saneados al principio del log y a estados()', async () => {
+    const a = await armar({
+      avisos: ['Node 18 no está instalado. Instálelo desde Servicios.', 'token ghp_abcDEF123456'],
+    });
+    await a.procesos.iniciar('demo', 'vite');
+    const log = await readFile(a.procesos.rutaLog('demo', 'vite'), 'utf8');
+    const lineas = log.trimEnd().split('\n');
+    expect(lineas[0]).toMatch(/Aviso: Node 18 no está instalado/);
+    expect(lineas[1]).toMatch(/Aviso: token ghp_\*\*\*$/);
+    expect(lineas[2]).toMatch(/> npm run dev$/);
+    expect(log).not.toContain('abcDEF123456');
+    const [e] = await a.procesos.estados('demo');
+    expect(e!.avisos).toEqual([
+      'Node 18 no está instalado. Instálelo desde Servicios.',
+      'token ghp_***',
+    ]);
+  });
+
+  it('sin Node: no llega al supervisor, queda en error con el motivo en el log', async () => {
+    const a = await armar({ sinNode: true });
+    await expect(a.procesos.iniciar('demo', 'vite')).rejects.toThrow(/No hay Node instalado/);
+    expect(a.sup.iniciados).toEqual([]);
+    const [e] = await a.procesos.estados('demo');
+    expect(e!.estado).toBe('error');
+    expect(e!.mensaje).toMatch(/No hay Node instalado/);
+    expect(await readFile(e!.log, 'utf8')).toMatch(/No se pudo iniciar: No hay Node instalado/);
+    // detener limpia el error.
+    await a.procesos.detener('demo', 'vite');
+    expect((await a.procesos.estados('demo'))[0]!.estado).toBe('apagado');
+  });
+
+  it('rechaza .cmd y .bat (necesitan consola) y procesos o proyectos inexistentes', async () => {
+    const a = await armar({ procesos: [proceso({ id: 'bat', comando: ['dev.cmd'] })] });
+    await expect(a.procesos.iniciar('demo', 'bat')).rejects.toThrow(/\.cmd y \.bat/);
+    await expect(a.procesos.iniciar('demo', 'nada')).rejects.toThrow(/no tiene el proceso nada/);
+    await expect(a.procesos.iniciar('otro', 'vite')).rejects.toThrow(/No existe el proyecto otro/);
+  });
+
+  it('detenido mientras arrancaba: no es un error', async () => {
+    const a = await armar();
+    a.sup.alIniciar = async (def) => {
+      throw new ErrorDetenidoAlIniciar(def.id);
+    };
+    await expect(a.procesos.iniciar('demo', 'vite')).resolves.toBeUndefined();
+  });
+
+  it('un detener durante la preparación impide que arranque', async () => {
+    let soltar!: () => void;
+    const espera = new Promise<void>((r) => (soltar = r));
+    const a = await armar();
+    const original = a.procesos['d'].runtimes.paraProyecto;
+    a.procesos['d'].runtimes.paraProyecto = async (s) => {
+      await espera;
+      return original(s);
+    };
+    const inicio = a.procesos.iniciar('demo', 'vite');
+    await a.procesos.detener('demo', 'vite');
+    soltar();
+    await inicio;
+    expect(a.sup.iniciados).toEqual([]);
+  });
+
+  it('detenerSitio y detenerTodos también cancelan un iniciar en preparación', async () => {
+    for (const detener of ['detenerSitio', 'detenerTodos'] as const) {
+      let soltar!: () => void;
+      const espera = new Promise<void>((r) => (soltar = r));
+      const a = await armar();
+      const original = a.procesos['d'].runtimes.paraProyecto;
+      a.procesos['d'].runtimes.paraProyecto = async (s) => {
+        await espera;
+        return original(s);
+      };
+      const inicio = a.procesos.iniciar('demo', 'vite');
+      await (detener === 'detenerSitio'
+        ? a.procesos.detenerSitio('demo')
+        : a.procesos.detenerTodos());
+      soltar();
+      await inicio;
+      expect(a.sup.iniciados).toEqual([]);
+    }
+  });
+
+  it('iniciar sobre un proceso ya encendido no hace nada (ni escribe en el log)', async () => {
+    const a = await armar();
+    a.sup.estados.set('proy-demo-vite', 'encendido');
+    await a.procesos.iniciar('demo', 'vite');
+    expect(a.sup.iniciados).toEqual([]);
+    await expect(readFile(a.procesos.rutaLog('demo', 'vite'), 'utf8')).rejects.toThrow();
+  });
+
+  it('estados() expone el contador de reinicios', async () => {
+    const a = await armar();
+    await a.procesos.iniciar('demo', 'vite');
+    a.sup.contadores.set('proy-demo-vite', 3);
+    expect((await a.procesos.estados('demo'))[0]!.reinicios).toBe(3);
+  });
+});
+
+/* ───────────── Estados, proxy y auto-inicio ───────────── */
+
+describe('estados', () => {
+  it('el proxy apunta al proceso marcado aunque otro con puerto vaya antes', async () => {
+    const a = await armar({
+      sitio: { tipo: 'fastapi' },
+      procesos: [
+        proceso({ id: 'vite', puerto: 5173 }),
+        proceso({ id: 'uvicorn', comando: ['python', '-m', 'uvicorn'], puerto: 8001, proxy: true }),
+      ],
+    });
+    const e = await a.procesos.estados('demo');
+    expect(e.map((x) => [x.procesoId, x.proxy])).toEqual([
+      ['vite', false],
+      ['uvicorn', true],
+    ]);
+  });
+
+  it('sin marca, el proxy es el primero con puerto; en un sitio estático nadie es proxy', async () => {
+    const a = await armar({
+      procesos: [proceso({ id: 'cola' }), proceso({ id: 'vite', puerto: 5173 })],
+    });
+    expect((await a.procesos.estados('demo')).map((x) => x.proxy)).toEqual([false, true]);
+    a.sitios[0] = { ...a.sitios[0]!, tipo: 'estatico' };
+    expect((await a.procesos.estados('demo')).map((x) => x.proxy)).toEqual([false, false]);
+  });
+
+  it('estadosServicio: categoría proyecto con el id del supervisor, PID y puerto', async () => {
+    const a = await armar();
+    await a.procesos.iniciar('demo', 'vite');
+    expect(await a.procesos.estadosServicio()).toEqual<EstadoServicio[]>([
+      {
+        id: 'proy-demo-vite',
+        nombre: 'vite (demo.test)',
+        categoria: 'proyecto',
+        version: null,
+        estado: 'encendido',
+        puertos: [5173],
+        pid: 4242,
+      },
+    ]);
+  });
+});
+
+describe('autoIniciar', () => {
+  it('arranca solo los marcados y no relanza los que ya están en marcha', async () => {
+    const a = await armar({
+      procesos: [
+        proceso({ id: 'vite', autoIniciar: true }),
+        proceso({ id: 'cola' }),
+        proceso({ id: 'api', autoIniciar: true, comando: ['node', 'server.js'] }),
+      ],
+    });
+    a.sup.estados.set('proy-demo-api', 'encendido'); // readoptado
+    expect(await a.procesos.autoIniciar()).toEqual([]);
+    expect(a.sup.iniciados.map((d) => d.id)).toEqual(['proy-demo-vite']);
+  });
+
+  it('un fallo no impide arrancar el resto y vuelve en la lista de errores', async () => {
+    const a = await armar({
+      procesos: [
+        proceso({ id: 'malo', autoIniciar: true, comando: ['x.bat'] }),
+        proceso({ id: 'vite', autoIniciar: true }),
+      ],
+    });
+    const errores = await a.procesos.autoIniciar();
+    expect(errores).toHaveLength(1);
+    expect(errores[0]).toMatch(/^demo\.test: No se pudo iniciar malo/);
+    expect(a.sup.iniciados.map((d) => d.id)).toEqual(['proy-demo-vite']);
+  });
+
+  it('se corta si el núcleo se cierra', async () => {
+    const a = await armar({ procesos: [proceso({ id: 'vite', autoIniciar: true })] });
+    expect(await a.procesos.autoIniciar(() => false)).toEqual([]);
+    expect(a.sup.iniciados).toEqual([]);
+  });
+
+  it('antes detiene los procesos que quedaron sin proyecto', async () => {
+    const a = await armar({ procesos: [] });
+    a.sup.estados.set('proy-viejo-vite', 'encendido');
+    a.sup.estados.set('nginx', 'encendido');
+    await a.procesos.autoIniciar();
+    expect(a.sup.detenidos).toEqual(['proy-viejo-vite']);
+  });
+});
+
+/* ───────────── Detener y borrado ───────────── */
+
+describe('detener', () => {
+  it('detenerSitio detiene solo los procesos de ese proyecto (no los de "demo-2")', async () => {
+    const a = await armar({ procesos: [proceso({ id: 'vite' }), proceso({ id: 'cola' })] });
+    a.sitios.push(SitioSchema.parse({ ...a.sitios[0]!, id: 'demo-2', dominio: 'demo-2.test' }));
+    await a.procesos.iniciar('demo', 'vite');
+    await a.procesos.iniciar('demo', 'cola');
+    await a.procesos.iniciar('demo-2', 'vite');
+    a.sup.estados.set('nginx', 'encendido');
+    await a.procesos.detenerSitio('demo');
+    expect(a.sup.detenidos.sort()).toEqual(['proy-demo-cola', 'proy-demo-vite']);
+    expect(a.sup.ids().sort()).toEqual(['nginx', 'proy-demo-2-vite']);
+  });
+
+  it('detenerTodos detiene todos los procesos de proyecto y ningún servicio', async () => {
+    const a = await armar();
+    await a.procesos.iniciar('demo', 'vite');
+    a.sup.estados.set('php-8.4-0', 'encendido');
+    a.sup.estados.set('tunel-demo', 'encendido');
+    expect(await a.procesos.detenerTodos()).toEqual([]);
+    expect(a.sup.detenidos).toEqual(['proy-demo-vite']);
+  });
+
+  it('detenerHuerfanos detiene un proceso quitado del proyecto', async () => {
+    const a = await armar({ procesos: [proceso({ id: 'vite' }), proceso({ id: 'cola' })] });
+    await a.procesos.iniciar('demo', 'vite');
+    await a.procesos.iniciar('demo', 'cola');
+    a.sitios[0] = { ...a.sitios[0]!, procesos: [a.sitios[0]!.procesos[0]!] };
+    await a.procesos.detenerHuerfanos();
+    expect(a.sup.detenidos).toEqual(['proy-demo-cola']);
+  });
+
+  it('Servicios.detenerTodo detiene primero los procesos de proyecto y los muestra en estados', async () => {
+    const orden: string[] = [];
+    const base = await carpetaTemporal('pel-procs-serv-');
+    const s = new Servicios({
+      rutas: new Rutas(base),
+      plataforma: {} as Plataforma,
+      supervisor: {
+        estado: () => 'apagado',
+        pid: () => null,
+        iniciar: async () => undefined,
+        detener: async (id: string) => {
+          orden.push(id);
+        },
+      } as never,
+      instalador: { instalados: async () => [], instalado: async () => false } as never,
+      leerConfig: async () => (await import('../src/tipos')).ConfigSchema.parse({}),
+      modificarConfig: async () => undefined,
+      definiciones: [],
+      sonda: async () => false,
+      procesosProyecto: {
+        estadosServicio: async () => [
+          {
+            id: 'proy-demo-vite',
+            nombre: 'vite (demo.test)',
+            categoria: 'proyecto',
+            version: null,
+            estado: 'encendido',
+            puertos: [5173],
+            pid: 8,
+          },
+        ],
+        detenerTodos: async () => {
+          orden.push('procesos');
+          return [];
+        },
+      },
+    });
+    await s.detenerTodo().catch(() => undefined);
+    expect(orden[0]).toBe('procesos');
+    expect((await s.estados()).map((e) => e.id)).toContain('proy-demo-vite');
+  });
+});
+
+/* ───────────── Muerte en bucle (Review Focus 4) ───────────── */
+
+class HijoFalso extends EventEmitter {
+  constructor(readonly pid: number) {
+    super();
+  }
+  unref = vi.fn();
+}
+
+async function supervisorReal(): Promise<{
+  supervisor: Supervisor;
+  hijos: HijoFalso[];
+  vivos: Set<number>;
+  matados: number[];
+  emitidos: EstadoServicio[];
+}> {
+  const base = await carpetaTemporal('pel-procs-bucle-');
+  const rutas = new Rutas(base);
+  await mkdir(dirname(rutas.estado()), { recursive: true });
+  const vivos = new Set<number>();
+  const hijos: HijoFalso[] = [];
+  let siguiente = 1000;
+  const matados: number[] = [];
+  const plataforma = {
+    procesoVivo: async (pid: number) =>
+      vivos.has(pid) ? { vivo: true, ejecutable: 'node.exe' } : { vivo: false },
+    matarArbol: async (pid: number) => {
+      matados.push(pid);
+      vivos.delete(pid);
+    },
+    inicioProceso: async (pid: number) => (vivos.has(pid) ? `t${pid}` : null),
+  } as unknown as Plataforma;
+  const spawn = (() => {
+    const h = new HijoFalso(siguiente++);
+    vivos.add(h.pid);
+    hijos.push(h);
+    return h;
+  }) as never;
+  const eventos = new Eventos<EventosNucleo>();
+  const emitidos: EstadoServicio[] = [];
+  eventos.on('servicio:estado', (e) => emitidos.push(e));
+  vi.useFakeTimers();
+  const supervisor = new Supervisor(rutas, plataforma, eventos, {
+    spawn,
+    lanzarOculto: null,
+    sonda: async () => false,
+  });
+  return { supervisor, hijos, vivos, matados, emitidos };
+}
+
+describe('proceso:terminado', () => {
+  const montar = async () => {
+    const eventos = new Eventos<EventosNucleo>();
+    const emitidos: EventosNucleo['proceso:terminado'][] = [];
+    eventos.on('proceso:terminado', (e) => emitidos.push(e));
+    const a = await armar({ eventos, procesos: [proceso({ id: 'vite' })] });
+    return { a, emitidos };
+  };
+
+  it('emite sitio, id de supervisor y código cuando un proceso termina', async () => {
+    const { a, emitidos } = await montar();
+    a.sup.terminar('proy-demo-vite', 0);
+    a.sup.terminar('proy-demo-vite', 2);
+    a.sup.terminar('proy-demo-vite', null);
+    expect(emitidos).toEqual([
+      { id: 'proy-demo-vite', sitioId: 'demo', codigo: 0 },
+      { id: 'proy-demo-vite', sitioId: 'demo', codigo: 2 },
+      { id: 'proy-demo-vite', sitioId: 'demo', codigo: null },
+    ]);
+  });
+
+  it('un término sin código conocido lo marca con sinCodigo (D39)', async () => {
+    const { a, emitidos } = await montar();
+    a.sup.terminar('proy-demo-vite', null, true);
+    expect(emitidos).toEqual([
+      { id: 'proy-demo-vite', sitioId: 'demo', codigo: null, sinCodigo: true },
+    ]);
+  });
+
+  it('ignora lo que no es un proceso de proyecto (servicios, túneles)', async () => {
+    const { a, emitidos } = await montar();
+    a.sup.terminar('nginx', 0);
+    a.sup.terminar('tunel-demo', 1);
+    expect(emitidos).toEqual([]);
+  });
+});
+
+describe('supervisor real', () => {
+  it('un puerto que no responde no mata el proceso (el puerto es informativo)', async () => {
+    const { supervisor, hijos, matados } = await supervisorReal();
+    const a = await armar({ supervisor, procesos: [proceso({ id: 'vite', puerto: 5173 })] });
+    await a.procesos.iniciar('demo', 'vite');
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(supervisor.estado('proy-demo-vite')).toBe('encendido');
+    expect(matados).toEqual([]);
+    expect(hijos).toHaveLength(1);
+    expect((await a.procesos.estados('demo'))[0]!.puerto).toBe(5173);
+    await supervisor.cerrar();
+  });
+
+  it('muerte en bucle: espera creciente y error con el final del log, sin más lanzamientos', async () => {
+    const { supervisor, hijos, vivos, emitidos } = await supervisorReal();
+    const a = await armar({
+      supervisor,
+      procesos: [proceso({ id: 'vite', reiniciar: true })],
+    });
+    await a.procesos.iniciar('demo', 'vite');
+    const log = a.procesos.rutaLog('demo', 'vite');
+    // npm run dev sin dependencias: escribe el error y muere enseguida, cada vez.
+    const morir = async (): Promise<void> => {
+      await writeFile(log, "Error: Cannot find module 'vite'\n", { flag: 'a' });
+      const h = hijos.at(-1)!;
+      vivos.delete(h.pid);
+      h.emit('exit', 1, null);
+    };
+    for (const espera of [1000, 2000, 4000, 8000, 16000]) {
+      await morir();
+      expect(supervisor.estado('proy-demo-vite')).toBe('iniciando');
+      await vi.advanceTimersByTimeAsync(espera);
+    }
+    expect(hijos).toHaveLength(6);
+    expect((await a.procesos.estados('demo'))[0]!.reinicios).toBe(5);
+    await morir();
+    expect(supervisor.estado('proy-demo-vite')).toBe('error');
+    // Ya no se relanza: ni temporizadores ni procesos nuevos.
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    expect(hijos).toHaveLength(6);
+    const [e] = await a.procesos.estados('demo');
+    expect(e!.estado).toBe('error');
+    expect(e!.mensaje).toContain("Cannot find module 'vite'");
+    expect(emitidos.at(-1)?.estado).toBe('error');
+    await supervisor.cerrar();
+  });
+});
+
+describe('D5: proceso de un proyecto Go con su runtime', () => {
+  it('go.mod + Go instalado: GOROOT, GOPATH y el bin de Go al principio del PATH del proceso', async () => {
+    const a = await armar({
+      procesos: [proceso({ id: 'api', comando: ['go', 'run', '.'] })],
+    });
+    const go = a.rutas.bin('go', '1.27.4');
+    await mkdir(join(go, 'bin'), { recursive: true });
+    await writeFile(join(go, 'bin', 'go.exe'), 'x');
+    await writeFile(join(a.carpeta, 'go.mod'), 'module demo\n\ngo 1.22\n');
+    // El resolutor real (no el falso del armado) decide por los archivos del proyecto.
+    (a.procesos as unknown as { d: { runtimes: unknown } }).d.runtimes = new Runtimes(a.rutas);
+    await a.procesos.iniciar('demo', 'api');
+    const def = a.sup.iniciados[0]!;
+    expect(def.env?.GOROOT).toBe(go);
+    expect(def.env?.GOPATH).toBe(join(a.base, 'cache', 'go'));
+    expect(pathDe(def)[0]).toBe(join(go, 'bin'));
+    // D39: la ruta completa del go.exe del runtime (con «go» a secas el lanzador rechazaba el proceso).
+    expect(def.comando).toBe(join(go, 'bin', 'go.exe'));
+    expect(def.args).toEqual(['run', '.']);
+  });
+});
+
+describe('D11: proceso de un proyecto Deno con su runtime', () => {
+  it('deno.json + Deno instalado: DENO_DIR en la carpeta de datos y deno.exe al principio del PATH', async () => {
+    const a = await armar({
+      procesos: [proceso({ id: 'web', comando: ['deno', 'task', 'dev'] })],
+    });
+    const deno = a.rutas.bin('deno', '2.9.8');
+    await mkdir(deno, { recursive: true });
+    await writeFile(join(deno, 'deno.exe'), 'x');
+    await writeFile(join(a.carpeta, 'deno.json'), '{"tasks":{"dev":"deno run main.ts"}}');
+    (a.procesos as unknown as { d: { runtimes: unknown } }).d.runtimes = new Runtimes(a.rutas);
+    await a.procesos.iniciar('demo', 'web');
+    const def = a.sup.iniciados[0]!;
+    expect(def.env?.DENO_DIR).toBe(join(a.base, 'cache', 'deno'));
+    expect(pathDe(def)[0]).toBe(deno);
+    expect(def.comando).toBe('deno');
+    expect(def.args).toEqual(['task', 'dev']);
+  });
+
+  it('un proyecto de Kotlin con Java y Kotlin instalados lleva KOTLIN_HOME y JAVA_HOME', async () => {
+    const a = await armar({
+      procesos: [proceso({ id: 'app', comando: ['kotlinc', 'Main.kt'] })],
+    });
+    const kotlin = a.rutas.bin('kotlin', '2.4.21');
+    const java = a.rutas.bin('java', '21.0.13.1');
+    await mkdir(join(kotlin, 'bin'), { recursive: true });
+    await mkdir(join(java, 'bin'), { recursive: true });
+    await writeFile(join(kotlin, 'bin', 'kotlinc.bat'), 'x');
+    await writeFile(join(java, 'bin', 'java.exe'), 'x');
+    await writeFile(join(a.carpeta, 'Main.kt'), 'fun main() {}');
+    (a.procesos as unknown as { d: { runtimes: unknown } }).d.runtimes = new Runtimes(a.rutas);
+    await a.procesos.iniciar('demo', 'app');
+    const def = a.sup.iniciados[0]!;
+    expect(def.env?.KOTLIN_HOME).toBe(kotlin);
+    expect(def.env?.JAVA_HOME).toBe(java);
+    expect(pathDe(def).slice(0, 2)).toEqual([join(java, 'bin'), join(kotlin, 'bin')]);
+  });
+});
+
+/* ───────────── D47: escucha solo en local ───────────── */
+
+describe('D47: precarga de Node y vigilancia de las escuchas', () => {
+  type Fila = { protocolo: 'TCP'; direccion: string; puerto: number; pid: number };
+  const fila = (direccion: string, puerto: number, pid = 4242): Fila => ({
+    protocolo: 'TCP',
+    direccion,
+    puerto,
+    pid,
+  });
+  const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const vigilado = (id = 'servidor', puerto = 8123) =>
+    proceso({ id, puerto, proxy: true, comando: ['npm', 'run', 'start'] });
+  const RAPIDO = { intervaloMs: 1, intervaloLentoMs: 1, rapidoMs: 5 };
+  /** `escuchas` falso: lo que devuelve `filas(pid)` por cada PID pedido; cuenta las tomas. */
+  const falsas = (
+    filas: (pid: number, toma: number) => Fila[],
+    o: { completa?: (toma: number) => boolean; antes?: () => Promise<void> } = {},
+  ) => {
+    const tomas: number[][] = [];
+    let dentro = 0;
+    let maximo = 0;
+    return {
+      tomas,
+      /** Mayor número de llamadas a la vez (debe ser 1: las pasadas no se solapan). */
+      maximo: () => maximo,
+      escuchas: async (pids: number[]) => {
+        tomas.push(pids);
+        dentro++;
+        maximo = Math.max(maximo, dentro);
+        try {
+          await o.antes?.();
+          return {
+            escuchas: new Map(
+              pids.map((p) => [
+                p,
+                filas(p, tomas.length).map((f) => ({ ...f, nombre: 'java.exe' })),
+              ]),
+            ),
+            completa: o.completa?.(tomas.length) ?? true,
+          };
+        } finally {
+          dentro--;
+        }
+      },
+    };
+  };
+
+  it('npm con puerto recibe NODE_OPTIONS con la precarga, sumada a la del usuario', async () => {
+    const a = await armar({
+      procesos: [vigilado()],
+      entorno: { Path: 'C:/Windows', NODE_OPTIONS: '--max-old-space-size=512' },
+      extra: { escuchaLocal: async () => 'C:/datos con espacio/escucha-local.cjs' },
+    });
+    await a.procesos.iniciar('demo', 'servidor');
+    expect(a.sup.iniciados[0]!.env?.NODE_OPTIONS).toBe(
+      '--max-old-space-size=512 --require "C:/datos con espacio/escucha-local.cjs"',
+    );
+  });
+
+  it('un proceso que no es de Node, o sin puerto, no recibe la precarga', async () => {
+    const a = await armar({
+      procesos: [
+        proceso({ id: 'rails', puerto: 8124, comando: ['python', '-m', 'http.server'] }),
+        proceso({ id: 'cola', comando: ['npm', 'run', 'queue'] }),
+      ],
+      extra: { escuchaLocal: async () => 'C:/p.cjs' },
+    });
+    await a.procesos.iniciar('demo', 'rails');
+    await a.procesos.iniciar('demo', 'cola');
+    expect(a.sup.iniciados.every((d) => d.env?.NODE_OPTIONS === undefined)).toBe(true);
+  });
+
+  it('una escucha en 0.0.0.0 detiene el proceso por su id y deja el aviso con la dirección', async () => {
+    const eventos = new Eventos<EventosNucleo>();
+    const terminados: string[] = [];
+    eventos.on('proceso:terminado', (e) => terminados.push(e.id));
+    const f = falsas(() => [fila('127.0.0.1', 9229), fila('0.0.0.0', 8123)]);
+    const a = await armar({
+      sitio: { tipo: 'rails' },
+      procesos: [vigilado()],
+      eventos,
+      extra: { escuchas: f.escuchas, vigilancia: RAPIDO },
+    });
+    await a.procesos.iniciar('demo', 'servidor');
+    await esperar(60);
+    expect(a.sup.detenidos).toEqual(['proy-demo-servidor']);
+    const [e] = await a.procesos.estados('demo');
+    expect(e!.estado).toBe('error');
+    expect(e!.mensaje).toMatch(/0\.0\.0\.0:8123/);
+    expect(terminados).toEqual(['proy-demo-servidor']);
+  });
+
+  it('también corta una escucha en ::; una en 127.0.0.1 o ::1 sigue', async () => {
+    for (const [dir, corta] of [
+      ['::', true],
+      ['127.0.0.1', false],
+      ['::1', false],
+    ] as const) {
+      const f = falsas(() => [fila(dir, 8123)]);
+      const a = await armar({
+        sitio: { tipo: 'springboot' },
+        procesos: [vigilado()],
+        extra: { escuchas: f.escuchas, vigilancia: RAPIDO },
+      });
+      await a.procesos.iniciar('demo', 'servidor');
+      await esperar(40);
+      expect(a.sup.detenidos.length > 0).toBe(corta);
+    }
+  });
+
+  it('I2: una escucha pública en OTRO puerto (Kestrel, Spring sin args) corta sin esperar al asignado', async () => {
+    const f = falsas(() => [fila('0.0.0.0', 5000)]);
+    const a = await armar({
+      sitio: { tipo: 'aspnet' },
+      procesos: [vigilado('servidor', 8123)],
+      extra: { escuchas: f.escuchas, vigilancia: RAPIDO },
+    });
+    await a.procesos.iniciar('demo', 'servidor');
+    await esperar(40);
+    expect(a.sup.detenidos).toEqual(['proy-demo-servidor']);
+    expect((await a.procesos.estados('demo'))[0]!.mensaje).toMatch(/0\.0\.0\.0:5000/);
+  });
+
+  it('I2: un arranque tardío (más de 120 pasadas) sigue vigilado y se corta al abrir', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    const f = falsas((_pid, toma) => (toma > 125 ? [fila('0.0.0.0', 8080)] : []));
+    const a = await armar({
+      sitio: { tipo: 'springboot' },
+      procesos: [vigilado()],
+      extra: {
+        escuchas: f.escuchas,
+        vigilancia: { intervaloMs: 1000, intervaloLentoMs: 1000, rapidoMs: 1e9 },
+      },
+    });
+    await a.procesos.iniciar('demo', 'servidor');
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(f.tomas.length).toBeGreaterThanOrEqual(119);
+    expect(a.sup.detenidos).toEqual([]);
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(f.tomas.length).toBeGreaterThan(125);
+    expect(a.sup.detenidos).toEqual(['proy-demo-servidor']);
+  });
+
+  it('I2: tras un reinicio automático (otro PID) se sigue vigilando y se corta', async () => {
+    const f = falsas((pid) => (pid === 5555 ? [fila('0.0.0.0', 8123, pid)] : []));
+    const a = await armar({
+      sitio: { tipo: 'node' },
+      procesos: [vigilado()],
+      extra: { escuchas: f.escuchas, vigilancia: RAPIDO },
+    });
+    await a.procesos.iniciar('demo', 'servidor');
+    await esperar(20);
+    expect(a.sup.detenidos).toEqual([]);
+    // El supervisor reinicia el proceso por su cuenta: mismo id, PID nuevo.
+    a.sup.pid = () => 5555;
+    await esperar(40);
+    expect(a.sup.detenidos).toEqual(['proy-demo-servidor']);
+  });
+
+  it('I2: varios procesos comparten una sola toma por pasada, con todos sus PID', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    const f = falsas(() => []);
+    const a = await armar({
+      sitio: { tipo: 'rails' },
+      procesos: [vigilado('uno', 8123), vigilado('dos', 8124)],
+      extra: {
+        escuchas: f.escuchas,
+        vigilancia: { intervaloMs: 1000, intervaloLentoMs: 1000, rapidoMs: 1e9 },
+      },
+    });
+    a.sup.pid = (id) => (id.endsWith('uno') ? 1001 : 1002);
+    await a.procesos.iniciar('demo', 'uno');
+    await a.procesos.iniciar('demo', 'dos');
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(f.tomas.length).toBeGreaterThanOrEqual(4);
+    // Cada toma trae los dos PID a la vez (nunca una por proceso).
+    for (const t of f.tomas) expect([...t].sort()).toEqual([1001, 1002]);
+  });
+
+  it('I2: al apagarse o detenerse el proceso, la vigilancia para', async () => {
+    const f = falsas(() => []);
+    const a = await armar({
+      sitio: { tipo: 'rails' },
+      procesos: [vigilado()],
+      extra: { escuchas: f.escuchas, vigilancia: RAPIDO },
+    });
+    await a.procesos.iniciar('demo', 'servidor');
+    await esperar(20);
+    await a.procesos.detener('demo', 'servidor');
+    await esperar(10);
+    const tomas = f.tomas.length;
+    await esperar(30);
+    expect(f.tomas.length).toBe(tomas);
+  });
+
+  it('un proceso que no es destino del proxy, o de otro tipo de sitio, no se vigila', async () => {
+    const f = falsas(() => [fila('0.0.0.0', 8200)]);
+    const a = await armar({
+      sitio: { tipo: 'aspnet' },
+      procesos: [proceso({ id: 'otro', puerto: 8200, proxy: false })],
+      extra: { escuchas: f.escuchas, vigilancia: RAPIDO },
+    });
+    await a.procesos.iniciar('demo', 'otro');
+    const b = await armar({
+      sitio: { tipo: 'laravel', php: '8.4' },
+      procesos: [vigilado()],
+      extra: { escuchas: f.escuchas, vigilancia: RAPIDO },
+    });
+    await b.procesos.iniciar('demo', 'servidor');
+    await esperar(30);
+    expect(f.tomas.length).toBe(0);
+  });
+
+  it('M6: un vigilar() durante una pasada lenta no solapa otra pasada ni corta dos veces', async () => {
+    let soltar!: () => void;
+    const lenta = new Promise<void>((r) => (soltar = r));
+    let primera = true;
+    const f = falsas(() => [fila('0.0.0.0', 8123)], {
+      antes: async () => {
+        if (primera) {
+          primera = false;
+          await lenta;
+        }
+      },
+    });
+    const a = await armar({
+      sitio: { tipo: 'rails' },
+      procesos: [vigilado()],
+      extra: { escuchas: f.escuchas, vigilancia: RAPIDO },
+    });
+    await a.procesos.iniciar('demo', 'servidor');
+    await esperar(30); // la primera pasada ya está dentro, esperando
+    // Mientras dura: el proceso se detiene y se vuelve a arrancar (otro vigilar()).
+    await a.procesos.detener('demo', 'servidor');
+    await a.procesos.iniciar('demo', 'servidor');
+    await esperar(30);
+    soltar();
+    await esperar(60);
+    expect(f.maximo()).toBe(1);
+    // El primer arranque ya no era el vigente: solo se corta el segundo, una vez.
+    expect(a.sup.detenidos.filter((d) => d === 'proy-demo-servidor')).toHaveLength(2);
+  });
+
+  it('M8: el mensaje dice qué programa escucha y da la pista de los puertos conocidos', async () => {
+    const casos: [number, RegExp][] = [
+      [8123, /\(java\.exe\)/],
+      [35729, /spring\.devtools\.livereload\.enabled=false/],
+      [9229, /--inspect=127\.0\.0\.1/],
+    ];
+    for (const [puerto, esperado] of casos) {
+      const f = falsas(() => [fila('0.0.0.0', puerto)]);
+      const a = await armar({
+        sitio: { tipo: 'springboot' },
+        procesos: [vigilado()],
+        extra: { escuchas: f.escuchas, vigilancia: RAPIDO },
+      });
+      await a.procesos.iniciar('demo', 'servidor');
+      await esperar(40);
+      const m = (await a.procesos.estados('demo'))[0]!.mensaje!;
+      expect(m, String(puerto)).toMatch(esperado);
+      expect(m).toContain(`0.0.0.0:${puerto}`);
+      expect(a.sup.detenidos).toEqual(['proy-demo-servidor']);
+    }
+  });
+
+  it('M9: sin tabla de procesos avisa una vez, no lo da por bueno y reintenta a ritmo rápido', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    const aviso = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    // Pasadas 1 a 40 sin tabla; la 41 la tiene y trae una escucha pública.
+    const f = falsas((_p, toma) => (toma > 40 ? [fila('0.0.0.0', 8123)] : []), {
+      completa: (toma) => toma > 40,
+    });
+    const a = await armar({
+      sitio: { tipo: 'rails' },
+      procesos: [vigilado()],
+      extra: {
+        escuchas: f.escuchas,
+        // Ritmo lento de 1 hora: si no reintentara a ritmo rápido, no pasaría de 1 toma.
+        vigilancia: { intervaloMs: 1000, intervaloLentoMs: 3_600_000, rapidoMs: 1 },
+      },
+    });
+    await a.procesos.iniciar('demo', 'servidor');
+    await vi.advanceTimersByTimeAsync(45_000);
+    expect(f.tomas.length).toBeGreaterThan(40);
+    expect(aviso.mock.calls.filter((c) => String(c[0]).includes('tabla de procesos'))).toHaveLength(
+      1,
+    );
+    expect(a.sup.detenidos).toEqual(['proy-demo-servidor']);
+    aviso.mockRestore();
+  });
+});
