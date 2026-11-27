@@ -1115,8 +1115,521 @@ export const idExtra: TextosParciales = {
           guardar: 'Simpan dan batalkan',
           remoto: 'Remote lokal',
         },
-        archivos: { titulo: 'Berkas latihan' },
+        archivos: {
+          titulo: 'Berkas latihan',
+          ayuda: 'Hanya berkas ini yang dapat diedit, dengan teks hingga 2000 karakter.',
+          guardar: 'Simpan berkas',
+          guardado: 'Berkas disimpan.',
+          areaTexto: (n) => `Isi ${n}`,
+        },
+        salida: 'Keluaran',
+        salidaVacia: 'Tekan sebuah perintah untuk melihat jawaban git di sini.',
+        codigo: (n) => (n === 0 ? 'Selesai dengan baik' : `Selesai dengan kode ${n}`),
+        truncada: 'Keluaran dipotong.',
+        historial: 'Riwayat',
+        historialVacio: 'Belum ada commit: jalankan git init, git add, dan git commit.',
+        conflicto: {
+          titulo: 'Latihan terpandu: sebuah konflik',
+          intro:
+            'Dua cabang mengubah baris yang sama. Anda akan melihat bagaimana konflik muncul dan cara menyelesaikannya.',
+          paso: (n, total) => `Langkah ${n} dari ${total}`,
+          ejecutar: 'Jalankan langkah ini',
+          hecho: 'Selesai',
+          reempezar: 'Mulai dari awal',
+          esperado: 'Git melaporkan konflik: itu yang diharapkan pada langkah ini.',
+          elegir: {
+            mia: 'Pertahankan yang dari main (hijau)',
+            otra: 'Pertahankan yang dari rama-a (merah)',
+            ambas: 'Pertahankan keduanya',
+          },
+          final: 'Selesai: Anda menyelesaikan sebuah konflik. Lihat riwayatnya.',
+          pasos: [
+            {
+              titulo: 'Siapkan lab',
+              texto: 'Lab direset dan commit pertama dibuat dengan colores.txt (“color: azul”).',
+            },
+            {
+              titulo: 'Ubah baris di rama-a',
+              texto: 'Cabang rama-a dibuat, barisnya menjadi “color: rojo”, lalu di-commit.',
+            },
+            {
+              titulo: 'Ubah baris yang sama di main',
+              texto: 'Kembali ke main, barisnya menjadi “color: verde”, lalu di-commit.',
+            },
+            {
+              titulo: 'Coba merge',
+              texto:
+                'rama-a di-merge ke main. Git tidak tahu baris mana yang harus dipertahankan dan meninggalkan konflik.',
+            },
+            {
+              titulo: 'Pilih satu versi',
+              texto:
+                'Pilih versi baris mana yang dipertahankan. colores.txt sekarang memuat penanda konflik.',
+            },
+            {
+              titulo: 'Konfirmasikan penyelesaian',
+              texto: 'colores.txt di-stage (add) dan commit yang menutup merge dibuat.',
+            },
+          ],
+        },
       },
     },
+  },
+  editorCodigo: {
+    intro: (mb) =>
+      `Editor ringan dengan penyorotan sintaks untuk berkas teks hingga ${mb} MB. Pilih berkas di dialog sistem; penyimpanan selalu meminta konfirmasi dan lebih dulu meninggalkan salinan di folder data WolfCore Dev.`,
+    abrir: 'Buka berkas…',
+    abriendo: 'Membuka…',
+    guardar: 'Simpan',
+    guardando: 'Menyimpan…',
+    recargar: 'Muat ulang dari disk',
+    vacio: 'Buka berkas untuk mulai mengedit.',
+    sinCambios: 'Tanpa perubahan',
+    conCambios: 'Perubahan belum disimpan',
+    posicion: (linea, columna) => `Baris ${linea}, kolom ${columna}`,
+    areaTexto: (nombre) => `Editor kode: ${nombre}`,
+    salirTeclado: 'Untuk keluar dari editor dengan papan ketik, tekan Esc lalu Tab.',
+    guardado: 'Berkas disimpan.',
+    copiaPrevia: (ruta) => `Salinan cadangan: ${ruta}`,
+    cancelar: 'Batal',
+    enlaceDuro:
+      'Berkas ini memiliki lebih dari satu nama di disk (hard link). Menyimpannya memutus tautan itu: nama lain tetap memuat isi lama.',
+    saltosMixtos: {
+      aviso: 'Berkas ini mencampur akhir baris. Menyimpan menormalkan semuanya menjadi LF.',
+      aceptar: 'Saya setuju akhir baris dinormalkan',
+    },
+    envGestor: {
+      aviso:
+        'Berkas .env diedit di variabel proyek, dengan alur rahasianya. Tombol ini membuka .env di akar proyek, yang mungkin bukan berkas yang Anda coba buka.',
+      boton: 'Buka .env di akar proyek',
+    },
+    huellaPerdida: 'Tersimpan, tetapi sidik jari baru tidak dapat dibaca: berkas dimuat ulang.',
+    confirmarGuardar: {
+      titulo: 'Simpan perubahan',
+      texto: (nombre) =>
+        `${nombre} akan ditulis. Sebelumnya, salinan isi yang ada di disk saat ini disimpan di folder data WolfCore Dev.`,
+      boton: 'Simpan dengan salinan cadangan',
+    },
+    refuerzo: {
+      abrirTitulo: 'Berkas sensitif',
+      guardarTitulo: 'Simpan berkas sensitif',
+      secreto:
+        'Berkas ini tampaknya berisi rahasia (kunci privat, token, atau kredensial). Isinya akan ditampilkan di layar.',
+      datosReales:
+        'Berkas ini milik situs yang ditandai memuat data nyata. Perubahan yang salah dapat memengaruhi informasi nyata.',
+      instruccion: (nombre) => `Untuk melanjutkan, ketik nama berkas: ${nombre}`,
+      etiqueta: 'Nama berkas',
+      abrirBoton: 'Tetap buka',
+      guardarBoton: 'Tetap simpan',
+    },
+    cambioExterno: {
+      titulo: 'Berkas berubah di luar editor',
+      texto:
+        'Program lain mengubahnya sejak Anda membukanya, jadi tidak ada yang disimpan. Anda dapat memuat ulang (perubahan Anda hilang) atau menimpanya dengan yang Anda miliki di sini.',
+      recargar: 'Muat ulang dan buang perubahan saya',
+      sobrescribir: 'Timpa…',
+      sobrescribirTitulo: 'Timpa berkas',
+      sobrescribirTexto:
+        'Perubahan yang dibuat program lain akan hilang. Isinya saat ini akan tetap ada di salinan cadangan.',
+      sobrescribirBoton: 'Ya, timpa',
+      volver: 'Kembali',
+    },
+    descartar: {
+      titulo: 'Perubahan belum disimpan',
+      texto:
+        'Ada perubahan yang belum disimpan di editor. Jika Anda melanjutkan, perubahan itu hilang.',
+      confirmar: 'Buang perubahan',
+      seguir: 'Lanjutkan mengedit',
+    },
+    cm: {
+      'Control character': 'Karakter kontrol',
+      'Selection deleted': 'Pilihan dihapus',
+      'Go to line': 'Ke baris',
+      go: 'pergi',
+      Find: 'Cari',
+      Replace: 'Ganti',
+      next: 'berikutnya',
+      previous: 'sebelumnya',
+      all: 'semua',
+      'match case': 'cocokkan huruf besar/kecil',
+      regexp: 'regexp',
+      'by word': 'per kata',
+      replace: 'ganti',
+      'replace all': 'ganti semua',
+      close: 'tutup',
+      'current match': 'kecocokan saat ini',
+      'on line': 'di baris',
+      'replaced match on line $': 'kecocokan di baris $ diganti',
+      'replaced $ matches': '$ kecocokan diganti',
+      'folded code': 'kode terlipat',
+      unfold: 'buka lipatan',
+      to: 'sampai',
+    },
+  },
+  limpiezaDisco: {
+    intro:
+      'Pertama menganalisis dan menampilkan berapa banyak yang dimakan tiap item. Tidak ada yang dihapus sampai Anda mengonfirmasi, dan tidak pernah berjalan sendiri atau di latar belakang.',
+    analizar: 'Analisis',
+    analizando: 'Menganalisis…',
+    cancelarAnalisis: 'Batal',
+    vacio: 'Tidak ada yang perlu dibersihkan.',
+    categorias: {
+      temp: {
+        nombre: 'Berkas sementara',
+        ayuda:
+          'Berkas di folder TEMP Anda yang berusia lebih dari 24 jam. Dihapus permanen; akan dibuat ulang dengan sendirinya.',
+      },
+      'cache-chrome': {
+        nombre: 'Cache Google Chrome',
+        ayuda: 'Hanya folder cache tiap profil; tidak pernah cookie, kata sandi, atau riwayat.',
+      },
+      'cache-edge': {
+        nombre: 'Cache Microsoft Edge',
+        ayuda: 'Hanya folder cache tiap profil; tidak pernah cookie, kata sandi, atau riwayat.',
+      },
+      'cache-brave': {
+        nombre: 'Cache Brave',
+        ayuda: 'Hanya folder cache tiap profil; tidak pernah cookie, kata sandi, atau riwayat.',
+      },
+      'cache-firefox': {
+        nombre: 'Cache Firefox',
+        ayuda: 'Hanya folder cache2 tiap profil; tidak pernah cookie, kata sandi, atau riwayat.',
+      },
+      'wolfcore-descargas': {
+        nombre: 'Unduhan tersimpan WolfCore Dev',
+        ayuda: 'Arsip lepas yang tidak dipakai lagi. Dikirim ke tempat sampah.',
+      },
+      'wolfcore-registros': {
+        nombre: 'Log WolfCore Dev',
+        ayuda: 'Log yang berusia lebih dari 30 hari. Dikirim ke tempat sampah.',
+      },
+      prefetch: {
+        nombre: 'Windows Prefetch',
+        ayuda:
+          'Opsional. Windows membuatnya ulang, tetapi memerlukan WolfCore Dev berjalan sebagai administrator.',
+      },
+    },
+    bloqueos: {
+      'navegador-abierto':
+        'Peramban terbuka atau berjalan di latar belakang: tutup sepenuhnya untuk membersihkan cache-nya (di Edge, matikan juga dorongan startup dan ekstensi latar belakang)',
+      'requiere-admin': 'Memerlukan WolfCore Dev berjalan sebagai administrator',
+      'ruta-vetada': 'Jalur dilindungi: tidak dibersihkan',
+      'temp-no-seguro':
+        'Variabel TEMP mengarah ke folder yang bukan folder sementara pengguna (Dokumen, seluruh drive, jalur jaringan…): tidak dibersihkan',
+    },
+    borradoDefinitivo: 'Dihapus permanen (dibuat ulang dengan sendirinya)',
+    borradoPapelera: 'Dikirim ke tempat sampah sistem',
+    archivos: (n) => (n === 1 ? '1 berkas' : `${n} berkas`),
+    carpetas: 'Menurut folder',
+    truncado: 'Analisis berhenti pada batas berkas: ada lebih banyak daripada yang ditampilkan.',
+    marcadas: (n, t) => `${n} dari ${t} kategori dipilih`,
+    total: (b) => `Sekitar ${b} akan dibebaskan`,
+    limpiar: 'Bersihkan yang dipilih',
+    confirmarTitulo: 'Bersihkan kategori ini?',
+    confirmarTexto: (n) => `${n} kategori akan dibersihkan.`,
+    confirmarDefinitivo: 'TEMP dan cache dihapus permanen (dibuat ulang dengan sendirinya).',
+    confirmarPapelera: 'Log dan unduhan WolfCore Dev masuk ke tempat sampah.',
+    confirmarPrefetch:
+      'Prefetch: Windows membuatnya ulang, tetapi peluncuran pertama program mungkin sedikit lebih lambat.',
+    confirmar: 'Ya, bersihkan',
+    cancelar: 'Batal',
+    detener: 'Hentikan pembersihan',
+    resultadoTitulo: 'Hasil',
+    liberado: (b) => `Dibebaskan: ${b}`,
+    enPapelera: (b) =>
+      `Dari jumlah itu, ${b} ada di tempat sampah (ruang kembali saat Anda mengosongkannya).`,
+    saltados: (n) => `${n} berkas dilewati`,
+    cancelado: 'Pembersihan dibatalkan: yang sudah dihapus tetap terhapus.',
+    topeEjecucion:
+      'Batas berkas per proses tercapai: analisis dan bersihkan lagi untuk melanjutkan.',
+    registroFallido:
+      'Log pembersihan tidak dapat ditulis lagi, jadi pembersihan berhenti: yang dihapus dicatat hingga titik itu.',
+    motivos: {
+      'en-uso': 'Sedang dipakai',
+      enlace: 'Tautan atau titik reparse (tidak diikuti)',
+      protegido: 'Dilindungi (.env, FlyEnv, atau sejenisnya)',
+      cambio: 'Berubah sejak analisis',
+      'sin-papelera': 'Tempat sampah tidak tersedia',
+      ilegible: 'Tidak dapat dibaca',
+      error: 'Kesalahan saat menghapus',
+    },
+    verRegistros: 'Lihat log',
+    registroEn: (r) => `Log pembersihan ini: ${r}`,
+    otraVez: 'Mulai dari awal',
+    protegidas:
+      'Tidak pernah disentuh: data, cadangan, proyek, basis data, atau berkas .env. Tautan tidak diikuti dan tidak ada yang di luar jalur dalam daftar ini yang disentuh.',
+  },
+  preferencias: {
+    asistente: 'Tur selamat datang',
+    asistenteAyuda: 'Tonton lagi tur layar utama: layanan, proyek, basis data, alat, dan Doctor.',
+    asistenteAbrir: 'Tonton tur',
+    avanzadas: 'Tampilkan bagian lanjutan',
+    avanzadasAyuda:
+      'Menambahkan layar yang jarang dipakai ke bilah samping, seperti Kontainer. Juga dapat dijangkau dengan Ctrl+K.',
+  },
+  paleta: {
+    irAServicio: (nombre) => `Buka layanan ${nombre}`,
+    irAProyecto: (nombre) => `Buka proyek ${nombre}`,
+    versionesDe: (nombre) => `Versi ${nombre}`,
+    asistente: 'Tonton tur selamat datang',
+  },
+  env: { bloques: { meilisearch: 'Meilisearch (dengan kuncinya)' } },
+  estadosVacios: {
+    basesSinMotor: {
+      titulo: 'Belum ada mesin basis data',
+      texto:
+        'Pasang MySQL, MariaDB, PostgreSQL, atau MongoDB dari Layanan untuk membuat dan mengelola basis data proyek Anda.',
+      accion: 'Buka Layanan',
+    },
+    serviciosVacio: {
+      titulo: 'Belum ada layanan terpasang',
+      texto:
+        'Layanan (Nginx, PHP, basis data…) adalah yang menjalankan situs Anda. Mulailah dengan Nginx dan PHP, atau dengan basis data.',
+      accion: 'Pasang layanan',
+    },
+    registrosSinFuentes: {
+      titulo: 'Belum ada log',
+      texto:
+        'Log muncul begitu layanan, situs, atau proses menulis baris pertamanya. Nyalakan layanan lalu kembali.',
+      accion: 'Buka Layanan',
+    },
+    registrosElegir: {
+      titulo: 'Pilih log',
+      texto: 'Pilih sumber di pemilih di atas untuk mengikuti barisnya secara langsung.',
+      accion: '',
+    },
+    depuracionVacio: {
+      titulo: 'Belum ada dump yang masuk',
+      texto:
+        'Saat situs menjalankan dump(), dd(), atau wd(), dump-nya langsung muncul di sini. Buka situs Anda dan jalankan kode itu.',
+      accion: '',
+    },
+    depuracionApagado: {
+      titulo: 'Penangkapan mati',
+      texto:
+        'Dengan penangkapan menyala, panggilan dump() dan dd() situs Anda tiba di sini tanpa menyentuh peramban. Nyalakan dan jalankan sebuah situs.',
+      accion: 'Nyalakan penangkapan',
+    },
+    depuracionElegir: {
+      titulo: 'Pilih dump',
+      texto: 'Pilih dump dari daftar untuk melihat isi, berkas, dan URL sumbernya.',
+      accion: '',
+    },
+    erroresVacio: {
+      titulo: 'Tidak ada kesalahan di log',
+      texto:
+        'Kesalahan PHP, Nginx, dan proyek muncul di sini, dikelompokkan, begitu ditulis. Daftar kosong adalah kabar baik.',
+      accion: '',
+    },
+    erroresElegir: {
+      titulo: 'Pilih kesalahan',
+      texto: 'Pilih kesalahan dari daftar untuk melihat jejaknya dan membuka berkas di editor.',
+      accion: '',
+    },
+    doctorSinRevision: {
+      titulo: 'Belum ada pemeriksaan',
+      texto:
+        'Doctor memeriksa port, hosts, sertifikat, dan versi, dan memberi tahu cara memperbaiki yang gagal. Jalankan pemeriksaan pertama.',
+      accion: 'Periksa sekarang',
+    },
+    doctorSinHallazgos: {
+      titulo: 'Semua baik',
+      texto:
+        'Pemeriksaan terakhir tidak menemukan masalah. Periksa lagi jika ada yang berhenti merespons.',
+      accion: 'Periksa lagi',
+    },
+    contenedoresVacio: {
+      titulo: 'Tidak ada kontainer',
+      texto:
+        'Kontainer Docker atau Podman di komputer ini muncul di sini. Buat satu dengan docker run atau docker compose lalu tekan Segarkan.',
+      accion: 'Segarkan',
+    },
+    avisos: {
+      titulo: 'Tidak ada pemberitahuan',
+      texto:
+        'Gangguan layanan, port yang sibuk, dan sertifikat yang akan kedaluwarsa akan muncul di sini.',
+      accion: '',
+    },
+    instantaneas: {
+      titulo: 'Belum ada snapshot',
+      texto:
+        'Snapshot menyimpan keadaan basis data ini agar Anda dapat kembali jika terjadi masalah. Buat yang pertama dengan tombol di atas.',
+      accion: '',
+    },
+    basesSinBases: {
+      titulo: 'Server ini tidak memiliki basis data sendiri',
+      texto: 'Buat basis data untuk proyek Anda atau impor dump yang ada.',
+      accion: 'Buat basis data',
+    },
+    iaNube: {
+      titulo: 'Belum ada penyedia AI',
+      texto:
+        'Penyedia (OpenAI, Anthropic, OpenRouter, dan lainnya) memungkinkan agen Anda memakai model cloud. Kunci disimpan terenkripsi di komputer ini.',
+      accion: 'Tambah penyedia',
+    },
+    iaSinModelos: {
+      titulo: 'Belum ada model lokal',
+      texto: 'Unduh model dari daftar di bawah untuk memakainya secara luring.',
+      accion: '',
+    },
+    versiones: {
+      titulo: 'Tidak ada versi untuk ditampilkan',
+      texto: 'Daftar diunduh dari katalog resmi. Periksa koneksi Anda dan segarkan daftar.',
+      accion: 'Segarkan daftar',
+    },
+    buscar: {
+      titulo: 'Tidak ada kecocokan',
+      texto:
+        'Tidak ada di folder yang cocok dengan pencarian Anda. Coba kata lain, hapus centang “Cocokkan huruf besar/kecil”, atau tinjau filter berkas.',
+      accion: '',
+    },
+  },
+  asistenteInicio: {
+    titulo: 'Tur selamat datang',
+    saltar: 'Lewati',
+    terminar: 'Mulai',
+    cerrar: 'Tutup tur',
+    reabrir: 'Tekan Esc untuk keluar. Anda dapat menontonnya lagi dari Pengaturan › Tampilan.',
+    ir: (destino) => `Buka ${destino}`,
+    pasos: {
+      bienvenida: {
+        titulo: 'Selamat datang di WolfCore Dev',
+        texto:
+          'Lingkungan pengembangan lokal Anda dalam satu jendela: layanan, situs .test dengan HTTPS, basis data, email, dan alat. Tur ini hanya semenit dan tidak mengubah apa pun di komputer Anda.',
+      },
+      servicios: {
+        titulo: 'Layanan',
+        texto:
+          'Nyalakan Nginx, PHP, dan basis data di sini dengan sebuah sakelar. Jika belum terpasang, tab Versi mengunduhnya dengan checksum yang terverifikasi.',
+      },
+      proyectos: {
+        titulo: 'Proyek',
+        texto:
+          'Buat proyek baru atau impor folder atau repositori. Setiap situs mendapat alamat .test sendiri dengan HTTPS.',
+      },
+      bases: {
+        titulo: 'Basis data',
+        texto:
+          'Buat basis data, impor dan ekspor dump, serta cadangkan dan pulihkan tanpa meninggalkan aplikasi.',
+      },
+      herramientas: {
+        titulo: 'Alat dan Ctrl+K',
+        texto:
+          'Editor, pencarian, perbandingan, kata sandi, gambar, dan lainnya, dikelompokkan per bagian. Tekan Ctrl+K di layar mana pun untuk melompat ke yang Anda butuhkan.',
+      },
+      doctor: {
+        titulo: 'Doctor',
+        texto:
+          'Memeriksa port, hosts, sertifikat, dan versi, serta menyarankan cara memperbaiki yang gagal. Buka saat ada yang tidak merespons.',
+      },
+      listo: {
+        titulo: 'Semua siap',
+        texto:
+          'Mulailah dengan menyalakan layanan atau membuat proyek pertama Anda. Anda dapat menonton tur ini lagi dari Pengaturan › Tampilan.',
+      },
+    },
+  },
+  perfiles: {
+    asistente: {
+      versiones: {
+        sustituida: (v) => `Tidak ada lagi di katalog: ${v} akan dipasang sebagai gantinya.`,
+      },
+      resultado: { sustituida: (v) => `${v} dipasang sebagai pengganti versi profil.` },
+    },
+    motivos: {
+      version_sustituida:
+        'Versi itu tidak ada lagi di katalog: versi terbaru dari versi minor yang sama (misalnya, 8.3) dipasang.',
+    },
+  },
+  consultasLentas: {
+    boton: 'Kueri lambat',
+    titulo: (motor) => `Kueri lambat di ${motor}`,
+    descripcion:
+      'Kueri yang memakan waktu lebih lama dari waktu yang Anda pilih, dari yang paling lambat hingga yang paling cepat.',
+    cargando: 'Memuat kueri lambat…',
+    estadoTitulo: 'Status log',
+    estadoActivo: (s) => `Pencatatan menyala: kueri di atas ${s} dtk dicatat.`,
+    estadoApagado: 'Pencatatan mati.',
+    noGestionada:
+      'WolfCore Dev tidak mengelola server ini (misalnya, yang dijalankan program lain): Anda hanya dapat melihatnya di sini, tidak dapat mengubahnya.',
+    umbral: 'Catat kueri di atas (detik)',
+    activar: 'Nyalakan pencatatan',
+    aplicarUmbral: 'Ubah waktu',
+    desactivar: 'Matikan pencatatan',
+    actualizar: 'Baca log lagi',
+    confirmarTitulo: 'Ubah pencatatan kueri lambat',
+    confirmarActivar: (motor, s) =>
+      `Pencatatan akan dinyalakan untuk seluruh server ${motor} (kueri di atas ${s} dtk) dan disimpan di konfigurasinya. Memengaruhi semua basis datanya.`,
+    confirmarDesactivar: (motor) =>
+      `Pencatatan akan dimatikan untuk seluruh server ${motor} dan disimpan di konfigurasinya. Yang sudah tercatat tetap disimpan.`,
+    confirmarBoton: 'Konfirmasikan perubahan',
+    cancelar: 'Batal',
+    activado: 'Pencatatan kueri lambat dinyalakan',
+    desactivado: 'Pencatatan kueri lambat dimatikan',
+    privacidad:
+      'SQL ditampilkan dengan nilainya diganti “?”, karena dapat berisi data pelanggan yang nyata. Tidak ada dari ini yang keluar dari komputer ini atau ditulis ke log aplikasi.',
+    columnas: {
+      duracion: 'Durasi',
+      filas: 'Baris diperiksa',
+      base: 'Basis data',
+      fecha: 'Tanggal',
+      sql: 'Kueri',
+      acciones: 'Tindakan',
+    },
+    sinBase: 'Tidak dikaitkan',
+    verLiteral: 'Tampilkan literal',
+    ocultarLiteral: 'Sembunyikan literal',
+    literalAviso: 'SQL apa adanya, dengan nilainya',
+    sqlOculto: 'SQL disembunyikan',
+    sqlOcultoAyuda:
+      'Kueri ini tidak dapat ditampilkan tanpa mempertaruhkan data nyata: server ini memiliki basis data dengan data nyata atau kueri tidak dapat dikaitkan dengan aman ke sebuah basis data.',
+    copiar: 'Salin',
+    copiado: 'Kueri disalin',
+    truncado: (n) =>
+      `Paling banyak ${n} kueri paling lambat dari ujung log (5 MB terakhir) yang ditampilkan.`,
+    vacioTitulo: 'Belum ada kueri lambat yang tercatat',
+    vacioTextoApagado:
+      'Nyalakan pencatatan dan gunakan situs Anda: kueri yang memakan waktu lebih lama dari waktu yang dipilih akan muncul di sini.',
+    vacioTextoActivo:
+      'Sejauh ini belum ada kueri yang melewati waktu yang dipilih. Gunakan situs Anda dan baca log lagi.',
+  },
+  esquemaBd: {
+    boton: 'Lihat skema',
+    titulo: (base) => `Skema ${base}`,
+    descripcion:
+      'Hanya baca: tabel, kolom, kunci, dan relasi. Tidak ada data dari tabel Anda yang dibaca.',
+    cargando: 'Membaca skema…',
+    error: 'Skema basis data tidak dapat dibaca.',
+    reintentar: 'Coba lagi',
+    buscar: 'Cari tabel',
+    tablas: (n) => plural(n, 'tabel'),
+    vista: 'tampilan',
+    truncado: (n) => `Daftar dipotong menjadi ${n} tabel: basis data memiliki lebih banyak.`,
+    sinResultados: 'Tidak ada tabel yang cocok dengan pencarian.',
+    elegir: 'Pilih tabel dari daftar untuk melihat kolom, kunci, dan relasinya.',
+    columnas: 'Kolom',
+    indices: 'Indeks',
+    sinIndices: 'Tabel ini tidak memiliki indeks.',
+    relaciones: 'Relasi',
+    sinRelaciones: 'Tabel ini tidak memiliki relasi dengan tabel lain.',
+    salientes: 'Mereferensikan',
+    entrantes: 'Direferensikan oleh',
+    alBorrar: 'Saat dihapus:',
+    alActualizar: 'Saat diperbarui:',
+    irA: (tabla) => `Buka tabel ${tabla}`,
+    col: {
+      nombre: 'Kolom',
+      tipo: 'Jenis',
+      nulo: 'Boleh kosong',
+      defecto: 'Bawaan',
+      clave: 'Kunci',
+    },
+    si: 'Ya',
+    no: 'Tidak',
+    pk: 'PK',
+    unico: 'unik',
+    vacioTitulo: 'Basis data ini tidak memiliki tabel',
+    vacioTexto:
+      'Saat Anda membuat tabel (misalnya, dengan migrasi proyek Anda), tabel itu akan muncul di sini.',
   },
 };
