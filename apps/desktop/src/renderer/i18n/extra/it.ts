@@ -328,6 +328,41 @@ export const itExtra: TextosParciales = {
     },
   },
   iaLocal: {
+    compat: {
+      sugerenciaVram:
+        'Per il suo computer: modelli fino a ≈{b}B, che entrano nella memoria della scheda grafica.',
+      sugerenciaRam: 'Per il suo computer: modelli fino a ≈{b}B, che girano nella RAM.',
+      sugerenciaPequena: 'Per il suo computer: solo modelli molto piccoli (meno di 1B).',
+      sugerenciaDesconocida:
+        'Non è stato possibile leggere l’hardware del suo computer, quindi non c’è alcun consiglio.',
+      aviso: 'È solo un’indicazione: può scaricare qualsiasi modello.',
+      comprobando: 'Verifica del suo computer in corso…',
+      niveles: {
+        recomendado: 'Consigliato',
+        lento: 'Potrebbe essere lento',
+        'no-cabe': 'Non entra',
+        desconocido: 'Nessun dato',
+      } as Record<string, string>,
+      motivos: {
+        'cabe-vram':
+          'Entra comodamente nella memoria della scheda grafica (richiede ≈{necesario} su {disponible}).',
+        'justo-vram':
+          'Entra nella scheda grafica, ma appena (richiede ≈{necesario} su {disponible}).',
+        'solo-ram':
+          'Non entra nella scheda grafica e girerà nella RAM (richiede ≈{necesario} su {disponible} utilizzabili): più lento.',
+        'cabe-ram':
+          'Entra comodamente nella RAM (richiede ≈{necesario} su {disponible} utilizzabili).',
+        'ram-justo':
+          'Entra nella RAM, ma appena (richiede ≈{necesario} su {disponible} utilizzabili): potrebbe essere lento.',
+        'sin-memoria':
+          'Richiede ≈{necesario} di memoria e il suo computer dispone di ≈{disponible}.',
+        'sin-disco':
+          'Non c’è abbastanza spazio libero su disco per scaricarlo (restano {disponible}).',
+        'tamano-desconocido':
+          'Non è stato possibile consultare la dimensione del modello (nessuna connessione al registro di Ollama).',
+        'equipo-desconocido': 'Non è stato possibile leggere la memoria del suo computer.',
+      } as Record<string, string>,
+    },
     descargar: {
       confirmarTexto:
         'Può annullare il download in qualsiasi momento; ciò che è già stato scaricato viene scartato.',
@@ -457,7 +492,59 @@ export const itExtra: TextosParciales = {
     },
   },
   herramientas: {
+    entorno: {
+      equipo: {
+        titulo: 'Il mio computer',
+        copiarResumen: 'Copia riepilogo',
+        resumenCopiado: 'Riepilogo copiato',
+        privacidad: 'Il riepilogo non include numeri di serie né identificatori univoci.',
+        desconocido: 'sconosciuto',
+        sinGpu: 'Nessuna rilevata',
+        so: 'Sistema operativo',
+        cpu: 'Processore',
+        ram: 'Memoria RAM',
+        gpu: 'Scheda grafica',
+        placa: 'Scheda madre',
+        disco: 'Disco {u}',
+        compilacion: 'build {n}',
+        nucleosHilos: '{n} core, {h} thread',
+        ramDetalle: '{total} in totale, {libre} liberi',
+        vram: '{v} di VRAM',
+        discoDetalle: '{libre} liberi su {total}',
+        ssd: 'SSD',
+        hdd: 'HDD',
+        resumenTitulo: 'Riepilogo del computer · WolfCore Dev {v}',
+        resumenTituloSinVersion: 'Riepilogo del computer · WolfCore Dev',
+      },
+    },
+    chmod: {
+      permisos: 'Permessi',
+      propietario: 'Proprietario',
+      grupo: 'Gruppo',
+      otros: 'Altri',
+      leer: 'Lettura (r)',
+      escribir: 'Scrittura (w)',
+      ejecutar: 'Esecuzione (x)',
+      especiales: 'Bit speciali',
+      setuid: 'setuid: viene eseguito con i permessi del proprietario',
+      setgid: 'setgid: viene eseguito con i permessi del gruppo',
+      sticky: 'sticky: solo il proprietario può eliminare nella cartella',
+      habituales: 'Valori comuni',
+      octal: 'Ottale',
+      simbolico: 'Simbolico',
+      octalInvalido: 'Inserisca 3 o 4 cifre da 0 a 7 (per esempio 755).',
+      simbolicoInvalido: 'Inserisca 9 caratteri come rwxr-xr-x.',
+      ejemplo: 'Esempio',
+      archivo: 'Nome del file',
+      nota: 'Su Windows non si applica; serve per i server Linux e macOS.',
+      avisoOtros:
+        'Qualsiasi utente del server potrebbe modificarlo: eviti di dare scrittura a «altri».',
+    },
     lista: {
+      chmod: {
+        nombre: 'Permessi chmod',
+        descripcion: 'Caselle, ottale e simbolico, per server Linux e macOS.',
+      },
       clienteHttp: {
         nombre: 'Client HTTP',
         descripcion: 'Provi le API: richieste, ambienti, raccolte e cronologia.',

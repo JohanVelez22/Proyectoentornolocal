@@ -292,6 +292,38 @@ export const idExtra: TextosParciales = {
   },
   ia: { pestanas: { etiqueta: 'Bagian AI', agentes: 'Agen', nube: 'Cloud', local: 'Model lokal' } },
   iaLocal: {
+    compat: {
+      sugerenciaVram: 'Untuk komputer Anda: model hingga ≈{b}B, yang muat di memori kartu grafis.',
+      sugerenciaRam: 'Untuk komputer Anda: model hingga ≈{b}B, yang berjalan di RAM.',
+      sugerenciaPequena: 'Untuk komputer Anda: hanya model yang sangat kecil (di bawah 1B).',
+      sugerenciaDesconocida:
+        'Perangkat keras komputer Anda tidak dapat dibaca, sehingga tidak ada rekomendasi.',
+      aviso: 'Ini hanya panduan: Anda dapat mengunduh model apa pun.',
+      comprobando: 'Memeriksa komputer Anda…',
+      niveles: {
+        recomendado: 'Disarankan',
+        lento: 'Mungkin lambat',
+        'no-cabe': 'Tidak muat',
+        desconocido: 'Tidak ada data',
+      } as Record<string, string>,
+      motivos: {
+        'cabe-vram':
+          'Muat dengan lega di memori kartu grafis (butuh ≈{necesario} dari {disponible}).',
+        'justo-vram':
+          'Muat di kartu grafis, tetapi pas-pasan (butuh ≈{necesario} dari {disponible}).',
+        'solo-ram':
+          'Tidak muat di kartu grafis dan akan berjalan di RAM (butuh ≈{necesario} dari {disponible} yang dapat dipakai): lebih lambat.',
+        'cabe-ram':
+          'Muat dengan lega di RAM (butuh ≈{necesario} dari {disponible} yang dapat dipakai).',
+        'ram-justo':
+          'Muat di RAM, tetapi pas-pasan (butuh ≈{necesario} dari {disponible} yang dapat dipakai): mungkin lambat.',
+        'sin-memoria': 'Butuh memori ≈{necesario}, sedangkan komputer Anda memiliki ≈{disponible}.',
+        'sin-disco': 'Ruang kosong di disk tidak cukup untuk mengunduhnya (tersisa {disponible}).',
+        'tamano-desconocido':
+          'Ukuran model tidak dapat diperiksa (tidak ada koneksi ke registri Ollama).',
+        'equipo-desconocido': 'Memori komputer Anda tidak dapat dibaca.',
+      } as Record<string, string>,
+    },
     descargar: {
       confirmarTexto:
         'Anda dapat membatalkan unduhan kapan saja; bagian yang sudah diunduh akan dibuang.',
@@ -411,7 +443,59 @@ export const idExtra: TextosParciales = {
     },
   },
   herramientas: {
+    entorno: {
+      equipo: {
+        titulo: 'Komputer saya',
+        copiarResumen: 'Salin ringkasan',
+        resumenCopiado: 'Ringkasan disalin',
+        privacidad: 'Ringkasan tidak memuat nomor seri atau pengenal unik.',
+        desconocido: 'tidak diketahui',
+        sinGpu: 'Tidak terdeteksi',
+        so: 'Sistem operasi',
+        cpu: 'Prosesor',
+        ram: 'Memori RAM',
+        gpu: 'Kartu grafis',
+        placa: 'Motherboard',
+        disco: 'Drive {u}',
+        compilacion: 'build {n}',
+        nucleosHilos: '{n} inti, {h} thread',
+        ramDetalle: 'total {total}, kosong {libre}',
+        vram: '{v} VRAM',
+        discoDetalle: '{libre} kosong dari {total}',
+        ssd: 'SSD',
+        hdd: 'HDD',
+        resumenTitulo: 'Ringkasan komputer · WolfCore Dev {v}',
+        resumenTituloSinVersion: 'Ringkasan komputer · WolfCore Dev',
+      },
+    },
+    chmod: {
+      permisos: 'Izin',
+      propietario: 'Pemilik',
+      grupo: 'Grup',
+      otros: 'Lainnya',
+      leer: 'Baca (r)',
+      escribir: 'Tulis (w)',
+      ejecutar: 'Eksekusi (x)',
+      especiales: 'Bit khusus',
+      setuid: 'setuid: berjalan dengan izin pemilik',
+      setgid: 'setgid: berjalan dengan izin grup',
+      sticky: 'sticky: hanya pemilik yang dapat menghapus di dalam folder',
+      habituales: 'Nilai umum',
+      octal: 'Oktal',
+      simbolico: 'Simbolis',
+      octalInvalido: 'Masukkan 3 atau 4 digit dari 0 sampai 7 (misalnya 755).',
+      simbolicoInvalido: 'Masukkan 9 karakter seperti rwxr-xr-x.',
+      ejemplo: 'Contoh',
+      archivo: 'Nama berkas',
+      nota: 'Tidak berlaku di Windows; berguna untuk server Linux dan macOS.',
+      avisoOtros:
+        'Pengguna mana pun di server dapat mengubahnya: hindari memberi izin tulis kepada «lainnya».',
+    },
     lista: {
+      chmod: {
+        nombre: 'Izin chmod',
+        descripcion: 'Kotak centang, oktal, dan simbolis, untuk server Linux dan macOS.',
+      },
       clienteHttp: {
         nombre: 'Klien HTTP',
         descripcion: 'Coba API: permintaan, lingkungan, koleksi, dan riwayat.',

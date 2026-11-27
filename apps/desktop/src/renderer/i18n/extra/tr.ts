@@ -306,6 +306,34 @@ export const trExtra: TextosParciales = {
     },
   },
   iaLocal: {
+    compat: {
+      sugerenciaVram: 'Bilgisayarınız için: ≈{b}B’ye kadar modeller, ekran kartı belleğine sığar.',
+      sugerenciaRam: 'Bilgisayarınız için: ≈{b}B’ye kadar modeller, RAM’de çalışır.',
+      sugerenciaPequena: 'Bilgisayarınız için: yalnızca çok küçük modeller (1B’den az).',
+      sugerenciaDesconocida: 'Bilgisayarınızın donanımı okunamadı, bu yüzden öneri yok.',
+      aviso: 'Bu yalnızca bir yönlendirmedir: istediğiniz modeli indirebilirsiniz.',
+      comprobando: 'Bilgisayarınız denetleniyor…',
+      niveles: {
+        recomendado: 'Önerilir',
+        lento: 'Yavaş olabilir',
+        'no-cabe': 'Sığmaz',
+        desconocido: 'Veri yok',
+      } as Record<string, string>,
+      motivos: {
+        'cabe-vram':
+          'Ekran kartı belleğine rahatça sığar (≈{necesario} gerekir, {disponible} var).',
+        'justo-vram': 'Ekran kartına sığar ama zar zor (≈{necesario} gerekir, {disponible} var).',
+        'solo-ram':
+          'Ekran kartına sığmaz ve RAM’de çalışır (≈{necesario} gerekir, {disponible} kullanılabilir): daha yavaş.',
+        'cabe-ram': 'RAM’e rahatça sığar (≈{necesario} gerekir, {disponible} kullanılabilir).',
+        'ram-justo':
+          'RAM’e sığar ama zar zor (≈{necesario} gerekir, {disponible} kullanılabilir): yavaş olabilir.',
+        'sin-memoria': '≈{necesario} bellek gerekir, bilgisayarınızda ≈{disponible} var.',
+        'sin-disco': 'İndirmek için diskte yeterli boş alan yok ({disponible} kaldı).',
+        'tamano-desconocido': 'Modelin boyutu sorgulanamadı (Ollama kayıt defterine bağlantı yok).',
+        'equipo-desconocido': 'Bilgisayarınızın belleği okunamadı.',
+      } as Record<string, string>,
+    },
     descargar: {
       confirmarTexto:
         'İndirmeyi istediğiniz zaman iptal edebilirsiniz; o ana kadar indirilenler atılır.',
@@ -423,7 +451,60 @@ export const trExtra: TextosParciales = {
     },
   },
   herramientas: {
+    entorno: {
+      equipo: {
+        titulo: 'Bilgisayarım',
+        copiarResumen: 'Özeti kopyala',
+        resumenCopiado: 'Özet kopyalandı',
+        privacidad: 'Özet seri numarası veya benzersiz tanımlayıcı içermez.',
+        desconocido: 'bilinmiyor',
+        sinGpu: 'Algılanmadı',
+        so: 'İşletim sistemi',
+        cpu: 'İşlemci',
+        ram: 'Bellek (RAM)',
+        gpu: 'Ekran kartı',
+        placa: 'Anakart',
+        disco: 'Sürücü {u}',
+        compilacion: 'derleme {n}',
+        nucleosHilos: '{n} çekirdek, {h} iş parçacığı',
+        ramDetalle: 'toplam {total}, boş {libre}',
+        vram: '{v} VRAM',
+        discoDetalle: '{total} içinde {libre} boş',
+        ssd: 'SSD',
+        hdd: 'HDD',
+        resumenTitulo: 'Bilgisayar özeti · WolfCore Dev {v}',
+        resumenTituloSinVersion: 'Bilgisayar özeti · WolfCore Dev',
+      },
+    },
+    chmod: {
+      permisos: 'İzinler',
+      propietario: 'Sahip',
+      grupo: 'Grup',
+      otros: 'Diğerleri',
+      leer: 'Okuma (r)',
+      escribir: 'Yazma (w)',
+      ejecutar: 'Çalıştırma (x)',
+      especiales: 'Özel bitler',
+      setuid: 'setuid: sahibin izinleriyle çalışır',
+      setgid: 'setgid: grubun izinleriyle çalışır',
+      sticky: 'sticky: klasörde yalnızca sahibi silebilir',
+      habituales: 'Sık kullanılan değerler',
+      octal: 'Sekizlik (octal)',
+      simbolico: 'Sembolik',
+      octalInvalido: '0 ile 7 arasında 3 veya 4 rakam girin (örneğin 755).',
+      simbolicoInvalido: 'rwxr-xr-x gibi 9 karakter girin.',
+      ejemplo: 'Örnek',
+      archivo: 'Dosya adı',
+      nota: 'Windows’ta geçerli değildir; Linux ve macOS sunucuları içindir.',
+      avisoOtros:
+        'Sunucudaki herhangi bir kullanıcı bunu değiştirebilir: «diğerleri» için yazma izni vermekten kaçının.',
+    },
     lista: {
+      chmod: {
+        nombre: 'chmod izinleri',
+        descripcion:
+          'Onay kutuları, sekizlik ve sembolik gösterim; Linux ve macOS sunucuları için.',
+      },
       clienteHttp: {
         nombre: 'HTTP istemcisi',
         descripcion: "API'leri deneyin: istekler, ortamlar, koleksiyonlar ve geçmiş.",

@@ -2835,6 +2835,38 @@ export const en: Textos = {
     borrarTexto: (tamano: string) =>
       `This frees ${tamano} of disk space. To use it again you will need to download it again.`,
     borrado: (modelo: string) => `Model ${modelo} deleted`,
+    compat: {
+      sugerenciaVram:
+        'For your computer: models up to ≈{b}B, which fit in the graphics card memory.',
+      sugerenciaRam: 'For your computer: models up to ≈{b}B, which run in RAM.',
+      sugerenciaPequena: 'For your computer: only very small models (under 1B).',
+      sugerenciaDesconocida:
+        "Your computer's hardware could not be read, so there is no recommendation.",
+      aviso: 'This is only guidance: you can download any model.',
+      comprobando: 'Checking your computer…',
+      niveles: {
+        recomendado: 'Recommended',
+        lento: 'May be slow',
+        'no-cabe': 'Does not fit',
+        desconocido: 'No data',
+      } as Record<string, string>,
+      motivos: {
+        'cabe-vram':
+          'Fits comfortably in the graphics card memory (needs ≈{necesario} of {disponible}).',
+        'justo-vram':
+          'Fits in the graphics card, but only just (needs ≈{necesario} of {disponible}).',
+        'solo-ram':
+          'Does not fit in the graphics card and will run in RAM (needs ≈{necesario} of {disponible} usable): slower.',
+        'cabe-ram': 'Fits comfortably in RAM (needs ≈{necesario} of {disponible} usable).',
+        'ram-justo':
+          'Fits in RAM, but only just (needs ≈{necesario} of {disponible} usable): may be slow.',
+        'sin-memoria': 'Needs ≈{necesario} of memory and your computer has ≈{disponible}.',
+        'sin-disco': 'There is not enough free disk space to download it ({disponible} left).',
+        'tamano-desconocido':
+          'The model size could not be checked (no connection to the Ollama registry).',
+        'equipo-desconocido': "Your computer's memory could not be read.",
+      } as Record<string, string>,
+    },
     descargar: {
       titulo: 'Download a model',
       campo: 'Model name',
@@ -3570,7 +3602,33 @@ export const en: Textos = {
     copiado: 'Copied to clipboard',
     limpiar: 'Clear',
     pendienteApi: 'Pending: the core does not expose this information to the UI yet.',
+    chmod: {
+      permisos: 'Permissions',
+      propietario: 'Owner',
+      grupo: 'Group',
+      otros: 'Others',
+      leer: 'Read (r)',
+      escribir: 'Write (w)',
+      ejecutar: 'Execute (x)',
+      especiales: 'Special bits',
+      setuid: "setuid: runs with the owner's permissions",
+      setgid: "setgid: runs with the group's permissions",
+      sticky: 'sticky: only the owner can delete inside the folder',
+      habituales: 'Common values',
+      octal: 'Octal',
+      simbolico: 'Symbolic',
+      octalInvalido: 'Enter 3 or 4 digits from 0 to 7 (for example 755).',
+      simbolicoInvalido: 'Enter 9 characters such as rwxr-xr-x.',
+      ejemplo: 'Example',
+      archivo: 'File name',
+      nota: 'Windows does not use this; it is for Linux and macOS servers.',
+      avisoOtros: 'Any user on the server could modify it: avoid giving write access to "others".',
+    },
     lista: {
+      chmod: {
+        nombre: 'chmod permissions',
+        descripcion: 'Checkboxes, octal and symbolic, for Linux and macOS servers.',
+      },
       qr: { nombre: 'QR generator', descripcion: 'From text or a tunnel link; PNG.' },
       json: { nombre: 'JSON', descripcion: 'Format, validate and minify, with a tree view.' },
       regex: {
@@ -3941,6 +3999,29 @@ export const en: Textos = {
       imagenOmitida: (alt: string) => `[image${alt ? `: ${alt}` : ''}]`,
     },
     entorno: {
+      equipo: {
+        titulo: 'My computer',
+        copiarResumen: 'Copy summary',
+        resumenCopiado: 'Summary copied',
+        privacidad: 'The summary contains no serial numbers or unique identifiers.',
+        desconocido: 'unknown',
+        sinGpu: 'None detected',
+        so: 'Operating system',
+        cpu: 'Processor',
+        ram: 'RAM',
+        gpu: 'Graphics card',
+        placa: 'Motherboard',
+        disco: 'Disk {u}',
+        compilacion: 'build {n}',
+        nucleosHilos: '{n} cores, {h} threads',
+        ramDetalle: '{total} total, {libre} free',
+        vram: '{v} of VRAM',
+        discoDetalle: '{libre} free of {total}',
+        ssd: 'SSD',
+        hdd: 'HDD',
+        resumenTitulo: 'Computer summary · WolfCore Dev {v}',
+        resumenTituloSinVersion: 'Computer summary · WolfCore Dev',
+      },
       aplicacion: 'WolfCore Dev version',
       navegador: 'UI engine',
       plataforma: 'Platform',

@@ -2934,6 +2934,41 @@ export const fr: Textos = {
     borrarTexto: (tamano: string) =>
       `${tamano} d’espace disque seront libérés. Pour le réutiliser, vous devrez le télécharger de nouveau.`,
     borrado: (modelo: string) => `Modèle ${modelo} supprimé`,
+    compat: {
+      sugerenciaVram:
+        'Pour votre ordinateur : modèles jusqu’à ≈{b}B, qui tiennent dans la mémoire de la carte graphique.',
+      sugerenciaRam: 'Pour votre ordinateur : modèles jusqu’à ≈{b}B, qui s’exécutent dans la RAM.',
+      sugerenciaPequena: 'Pour votre ordinateur : seulement de très petits modèles (moins de 1B).',
+      sugerenciaDesconocida:
+        'Le matériel de votre ordinateur n’a pas pu être lu : aucune recommandation.',
+      aviso: 'Ce n’est qu’une indication : vous pouvez télécharger n’importe quel modèle.',
+      comprobando: 'Vérification de votre ordinateur…',
+      niveles: {
+        recomendado: 'Recommandé',
+        lento: 'Peut être lent',
+        'no-cabe': 'Ne tient pas',
+        desconocido: 'Sans données',
+      } as Record<string, string>,
+      motivos: {
+        'cabe-vram':
+          'Tient largement dans la mémoire de la carte graphique (nécessite ≈{necesario} sur {disponible}).',
+        'justo-vram':
+          'Tient dans la carte graphique, mais de justesse (nécessite ≈{necesario} sur {disponible}).',
+        'solo-ram':
+          'Ne tient pas dans la carte graphique et s’exécutera dans la RAM (nécessite ≈{necesario} sur {disponible} utilisables) : plus lent.',
+        'cabe-ram':
+          'Tient largement dans la RAM (nécessite ≈{necesario} sur {disponible} utilisables).',
+        'ram-justo':
+          'Tient dans la RAM, mais de justesse (nécessite ≈{necesario} sur {disponible} utilisables) : peut être lent.',
+        'sin-memoria':
+          'Nécessite ≈{necesario} de mémoire et votre ordinateur dispose de ≈{disponible}.',
+        'sin-disco':
+          'Il n’y a pas assez d’espace disque libre pour le télécharger ({disponible} restants).',
+        'tamano-desconocido':
+          'La taille du modèle n’a pas pu être consultée (pas de connexion au registre d’Ollama).',
+        'equipo-desconocido': 'La mémoire de votre ordinateur n’a pas pu être lue.',
+      } as Record<string, string>,
+    },
     descargar: {
       titulo: 'Télécharger un modèle',
       campo: 'Nom du modèle',
@@ -3695,7 +3730,34 @@ export const fr: Textos = {
     copiado: 'Copié dans le presse-papiers',
     limpiar: 'Effacer',
     pendienteApi: 'En attente : le noyau n’expose pas encore cette information à l’interface.',
+    chmod: {
+      permisos: 'Permissions',
+      propietario: 'Propriétaire',
+      grupo: 'Groupe',
+      otros: 'Autres',
+      leer: 'Lire (r)',
+      escribir: 'Écrire (w)',
+      ejecutar: 'Exécuter (x)',
+      especiales: 'Bits spéciaux',
+      setuid: 'setuid : s’exécute avec les droits du propriétaire',
+      setgid: 'setgid : s’exécute avec les droits du groupe',
+      sticky: 'sticky : seul le propriétaire peut supprimer dans le dossier',
+      habituales: 'Valeurs courantes',
+      octal: 'Octal',
+      simbolico: 'Symbolique',
+      octalInvalido: 'Saisissez 3 ou 4 chiffres de 0 à 7 (par exemple 755).',
+      simbolicoInvalido: 'Saisissez 9 caractères comme rwxr-xr-x.',
+      ejemplo: 'Exemple',
+      archivo: 'Nom du fichier',
+      nota: 'Sous Windows, cela ne s’applique pas ; c’est utile pour les serveurs Linux et macOS.',
+      avisoOtros:
+        'Tout utilisateur du serveur pourrait le modifier : évitez de donner l’écriture à « autres ».',
+    },
     lista: {
+      chmod: {
+        nombre: 'Permissions chmod',
+        descripcion: 'Cases, octal et symbolique, pour les serveurs Linux et macOS.',
+      },
       qr: {
         nombre: 'Générateur de QR',
         descripcion: 'À partir d’un texte ou du lien d’un tunnel ; PNG.',
@@ -4084,6 +4146,29 @@ export const fr: Textos = {
       imagenOmitida: (alt: string) => `[image${alt ? ` : ${alt}` : ''}]`,
     },
     entorno: {
+      equipo: {
+        titulo: 'Mon ordinateur',
+        copiarResumen: 'Copier le résumé',
+        resumenCopiado: 'Résumé copié',
+        privacidad: 'Le résumé ne contient ni numéro de série ni identifiant unique.',
+        desconocido: 'inconnu',
+        sinGpu: 'Aucune détectée',
+        so: 'Système d’exploitation',
+        cpu: 'Processeur',
+        ram: 'Mémoire RAM',
+        gpu: 'Carte graphique',
+        placa: 'Carte mère',
+        disco: 'Disque {u}',
+        compilacion: 'build {n}',
+        nucleosHilos: '{n} cœurs, {h} threads',
+        ramDetalle: '{total} au total, {libre} libres',
+        vram: '{v} de VRAM',
+        discoDetalle: '{libre} libres sur {total}',
+        ssd: 'SSD',
+        hdd: 'HDD',
+        resumenTitulo: 'Résumé de l’ordinateur · WolfCore Dev {v}',
+        resumenTituloSinVersion: 'Résumé de l’ordinateur · WolfCore Dev',
+      },
       aplicacion: 'Version de WolfCore Dev',
       navegador: 'Moteur de l’interface',
       plataforma: 'Plateforme',

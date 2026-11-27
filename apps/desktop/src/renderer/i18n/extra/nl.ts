@@ -333,6 +333,41 @@ export const nlExtra: TextosParciales = {
     },
   },
   iaLocal: {
+    compat: {
+      sugerenciaVram:
+        'Voor uw computer: modellen tot ≈{b}B, die in het geheugen van de grafische kaart passen.',
+      sugerenciaRam: 'Voor uw computer: modellen tot ≈{b}B, die in het werkgeheugen draaien.',
+      sugerenciaPequena: 'Voor uw computer: alleen zeer kleine modellen (minder dan 1B).',
+      sugerenciaDesconocida:
+        'De hardware van uw computer kon niet worden gelezen, dus er is geen aanbeveling.',
+      aviso: 'Dit is slechts een richtlijn: u kunt elk model downloaden.',
+      comprobando: 'Uw computer wordt gecontroleerd…',
+      niveles: {
+        recomendado: 'Aanbevolen',
+        lento: 'Kan traag zijn',
+        'no-cabe': 'Past niet',
+        desconocido: 'Geen gegevens',
+      } as Record<string, string>,
+      motivos: {
+        'cabe-vram':
+          'Past ruim in het geheugen van de grafische kaart (heeft ≈{necesario} nodig van {disponible}).',
+        'justo-vram':
+          'Past in de grafische kaart, maar krap (heeft ≈{necesario} nodig van {disponible}).',
+        'solo-ram':
+          'Past niet in de grafische kaart en draait in het werkgeheugen (heeft ≈{necesario} nodig van {disponible} bruikbaar): trager.',
+        'cabe-ram':
+          'Past ruim in het werkgeheugen (heeft ≈{necesario} nodig van {disponible} bruikbaar).',
+        'ram-justo':
+          'Past in het werkgeheugen, maar krap (heeft ≈{necesario} nodig van {disponible} bruikbaar): kan traag zijn.',
+        'sin-memoria':
+          'Heeft ≈{necesario} geheugen nodig en uw computer beschikt over ≈{disponible}.',
+        'sin-disco':
+          'Er is niet genoeg vrije schijfruimte om het te downloaden ({disponible} over).',
+        'tamano-desconocido':
+          'De grootte van het model kon niet worden opgevraagd (geen verbinding met het register van Ollama).',
+        'equipo-desconocido': 'Het geheugen van uw computer kon niet worden gelezen.',
+      } as Record<string, string>,
+    },
     descargar: {
       confirmarTexto:
         'U kunt de download op elk moment annuleren; wat al is gedownload, wordt verwijderd.',
@@ -462,7 +497,59 @@ export const nlExtra: TextosParciales = {
     },
   },
   herramientas: {
+    entorno: {
+      equipo: {
+        titulo: 'Mijn computer',
+        copiarResumen: 'Samenvatting kopiëren',
+        resumenCopiado: 'Samenvatting gekopieerd',
+        privacidad: 'De samenvatting bevat geen serienummers of unieke identificatiegegevens.',
+        desconocido: 'onbekend',
+        sinGpu: 'Geen gedetecteerd',
+        so: 'Besturingssysteem',
+        cpu: 'Processor',
+        ram: 'Werkgeheugen (RAM)',
+        gpu: 'Grafische kaart',
+        placa: 'Moederbord',
+        disco: 'Schijf {u}',
+        compilacion: 'build {n}',
+        nucleosHilos: '{n} kernen, {h} threads',
+        ramDetalle: '{total} in totaal, {libre} vrij',
+        vram: '{v} VRAM',
+        discoDetalle: '{libre} vrij van {total}',
+        ssd: 'SSD',
+        hdd: 'HDD',
+        resumenTitulo: 'Computeroverzicht · WolfCore Dev {v}',
+        resumenTituloSinVersion: 'Computeroverzicht · WolfCore Dev',
+      },
+    },
+    chmod: {
+      permisos: 'Machtigingen',
+      propietario: 'Eigenaar',
+      grupo: 'Groep',
+      otros: 'Anderen',
+      leer: 'Lezen (r)',
+      escribir: 'Schrijven (w)',
+      ejecutar: 'Uitvoeren (x)',
+      especiales: 'Speciale bits',
+      setuid: 'setuid: draait met de rechten van de eigenaar',
+      setgid: 'setgid: draait met de rechten van de groep',
+      sticky: 'sticky: alleen de eigenaar mag in de map verwijderen',
+      habituales: 'Veelgebruikte waarden',
+      octal: 'Octaal',
+      simbolico: 'Symbolisch',
+      octalInvalido: 'Voer 3 of 4 cijfers van 0 tot 7 in (bijvoorbeeld 755).',
+      simbolicoInvalido: 'Voer 9 tekens in, zoals rwxr-xr-x.',
+      ejemplo: 'Voorbeeld',
+      archivo: 'Bestandsnaam',
+      nota: 'Op Windows niet van toepassing; bedoeld voor Linux- en macOS-servers.',
+      avisoOtros:
+        'Elke gebruiker op de server kan het wijzigen: geef «anderen» liever geen schrijfrechten.',
+    },
     lista: {
+      chmod: {
+        nombre: 'chmod-machtigingen',
+        descripcion: 'Selectievakjes, octaal en symbolisch, voor Linux- en macOS-servers.',
+      },
       clienteHttp: {
         nombre: 'HTTP-client',
         descripcion: "API's uitproberen: verzoeken, omgevingen, collecties en geschiedenis.",

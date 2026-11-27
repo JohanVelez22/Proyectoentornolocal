@@ -280,6 +280,35 @@ export const hiExtra: TextosParciales = {
   },
   ia: { pestanas: { etiqueta: 'AI अनुभाग', agentes: 'एजेंट्स', nube: 'क्लाउड', local: 'लोकल मॉडल' } },
   iaLocal: {
+    compat: {
+      sugerenciaVram: 'आपके कंप्यूटर के लिए: लगभग {b}B तक के मॉडल, जो ग्राफ़िक्स कार्ड की मेमोरी में आ जाते हैं।',
+      sugerenciaRam: 'आपके कंप्यूटर के लिए: लगभग {b}B तक के मॉडल, जो RAM में चलते हैं।',
+      sugerenciaPequena: 'आपके कंप्यूटर के लिए: केवल बहुत छोटे मॉडल (1B से कम)।',
+      sugerenciaDesconocida: 'आपके कंप्यूटर का हार्डवेयर पढ़ा नहीं जा सका, इसलिए कोई सुझाव नहीं है।',
+      aviso: 'यह केवल मार्गदर्शन है: आप कोई भी मॉडल डाउनलोड कर सकते हैं।',
+      comprobando: 'आपके कंप्यूटर की जाँच हो रही है…',
+      niveles: {
+        recomendado: 'अनुशंसित',
+        lento: 'धीमा हो सकता है',
+        'no-cabe': 'नहीं आता',
+        desconocido: 'कोई डेटा नहीं',
+      } as Record<string, string>,
+      motivos: {
+        'cabe-vram':
+          'ग्राफ़िक्स कार्ड की मेमोरी में आराम से आ जाता है (≈{necesario} चाहिए, {disponible} उपलब्ध)।',
+        'justo-vram':
+          'ग्राफ़िक्स कार्ड में आ जाता है, पर बस किसी तरह (≈{necesario} चाहिए, {disponible} उपलब्ध)।',
+        'solo-ram':
+          'ग्राफ़िक्स कार्ड में नहीं आता और RAM में चलेगा (≈{necesario} चाहिए, {disponible} उपयोग योग्य): धीमा।',
+        'cabe-ram': 'RAM में आराम से आ जाता है (≈{necesario} चाहिए, {disponible} उपयोग योग्य)।',
+        'ram-justo':
+          'RAM में आ जाता है, पर बस किसी तरह (≈{necesario} चाहिए, {disponible} उपयोग योग्य): धीमा हो सकता है।',
+        'sin-memoria': '≈{necesario} मेमोरी चाहिए और आपके कंप्यूटर में ≈{disponible} है।',
+        'sin-disco': 'डाउनलोड के लिए डिस्क पर पर्याप्त खाली जगह नहीं है ({disponible} बचे हैं)।',
+        'tamano-desconocido': 'मॉडल का आकार जाँचा नहीं जा सका (Ollama रजिस्ट्री से कनेक्शन नहीं)।',
+        'equipo-desconocido': 'आपके कंप्यूटर की मेमोरी पढ़ी नहीं जा सकी।',
+      } as Record<string, string>,
+    },
     descargar: {
       confirmarTexto:
         'आप डाउनलोड को किसी भी समय रद्द कर सकते हैं; जो हिस्सा पहले डाउनलोड हो चुका है, वह हटा दिया जाता है।',
@@ -397,7 +426,58 @@ export const hiExtra: TextosParciales = {
     },
   },
   herramientas: {
+    entorno: {
+      equipo: {
+        titulo: 'मेरा कंप्यूटर',
+        copiarResumen: 'सारांश कॉपी करें',
+        resumenCopiado: 'सारांश कॉपी हो गया',
+        privacidad: 'सारांश में क्रमांक या अद्वितीय पहचानकर्ता शामिल नहीं हैं।',
+        desconocido: 'अज्ञात',
+        sinGpu: 'कोई नहीं मिला',
+        so: 'ऑपरेटिंग सिस्टम',
+        cpu: 'प्रोसेसर',
+        ram: 'मेमोरी (RAM)',
+        gpu: 'ग्राफ़िक्स कार्ड',
+        placa: 'मदरबोर्ड',
+        disco: 'ड्राइव {u}',
+        compilacion: 'बिल्ड {n}',
+        nucleosHilos: '{n} कोर, {h} थ्रेड',
+        ramDetalle: 'कुल {total}, खाली {libre}',
+        vram: '{v} VRAM',
+        discoDetalle: '{total} में से {libre} खाली',
+        ssd: 'SSD',
+        hdd: 'HDD',
+        resumenTitulo: 'कंप्यूटर का सारांश · WolfCore Dev {v}',
+        resumenTituloSinVersion: 'कंप्यूटर का सारांश · WolfCore Dev',
+      },
+    },
+    chmod: {
+      permisos: 'अनुमतियाँ',
+      propietario: 'स्वामी',
+      grupo: 'समूह',
+      otros: 'अन्य',
+      leer: 'पढ़ना (r)',
+      escribir: 'लिखना (w)',
+      ejecutar: 'चलाना (x)',
+      especiales: 'विशेष बिट',
+      setuid: 'setuid: स्वामी की अनुमतियों के साथ चलता है',
+      setgid: 'setgid: समूह की अनुमतियों के साथ चलता है',
+      sticky: 'sticky: फ़ोल्डर में केवल स्वामी ही हटा सकता है',
+      habituales: 'सामान्य मान',
+      octal: 'ऑक्टल (8-आधारी)',
+      simbolico: 'प्रतीकात्मक',
+      octalInvalido: '0 से 7 तक के 3 या 4 अंक दर्ज करें (जैसे 755)।',
+      simbolicoInvalido: 'rwxr-xr-x जैसे 9 अक्षर दर्ज करें।',
+      ejemplo: 'उदाहरण',
+      archivo: 'फ़ाइल का नाम',
+      nota: 'Windows पर लागू नहीं होता; यह Linux और macOS सर्वरों के लिए है।',
+      avisoOtros: 'सर्वर का कोई भी उपयोगकर्ता इसे बदल सकता है: «अन्य» को लिखने की अनुमति देने से बचें।',
+    },
     lista: {
+      chmod: {
+        nombre: 'chmod अनुमतियाँ',
+        descripcion: 'चेकबॉक्स, ऑक्टल और प्रतीकात्मक रूप, Linux और macOS सर्वरों के लिए।',
+      },
       clienteHttp: {
         nombre: 'HTTP क्लाइंट',
         descripcion: 'API आज़माएँ: अनुरोध, परिवेश, कलेक्शन और इतिहास।',

@@ -2860,6 +2860,39 @@ export const pt: Textos = {
     borrarTexto: (tamano: string) =>
       `${tamano} de disco serão liberados. Para voltar a usá-lo, você terá de baixá-lo de novo.`,
     borrado: (modelo: string) => `Modelo ${modelo} apagado`,
+    compat: {
+      sugerenciaVram:
+        'Para o seu computador: modelos de até ≈{b}B, que cabem na memória da placa de vídeo.',
+      sugerenciaRam: 'Para o seu computador: modelos de até ≈{b}B, que rodam na RAM.',
+      sugerenciaPequena: 'Para o seu computador: apenas modelos muito pequenos (menos de 1B).',
+      sugerenciaDesconocida:
+        'Não foi possível ler o hardware do seu computador, então não há recomendação.',
+      aviso: 'É apenas uma orientação: você pode baixar qualquer modelo.',
+      comprobando: 'Verificando o seu computador…',
+      niveles: {
+        recomendado: 'Recomendado',
+        lento: 'Pode ser lento',
+        'no-cabe': 'Não cabe',
+        desconocido: 'Sem dados',
+      } as Record<string, string>,
+      motivos: {
+        'cabe-vram':
+          'Cabe com folga na memória da placa de vídeo (precisa de ≈{necesario} de {disponible}).',
+        'justo-vram':
+          'Cabe na placa de vídeo, mas por pouco (precisa de ≈{necesario} de {disponible}).',
+        'solo-ram':
+          'Não cabe na placa de vídeo e rodará na RAM (precisa de ≈{necesario} de {disponible} úteis): mais devagar.',
+        'cabe-ram': 'Cabe com folga na RAM (precisa de ≈{necesario} de {disponible} úteis).',
+        'ram-justo':
+          'Cabe na RAM, mas por pouco (precisa de ≈{necesario} de {disponible} úteis): pode ser lento.',
+        'sin-memoria':
+          'Precisa de ≈{necesario} de memória e o seu computador dispõe de ≈{disponible}.',
+        'sin-disco': 'Não há espaço livre no disco para baixá-lo (restam {disponible}).',
+        'tamano-desconocido':
+          'Não foi possível consultar o tamanho do modelo (sem conexão com o registro do Ollama).',
+        'equipo-desconocido': 'Não foi possível ler a memória do seu computador.',
+      } as Record<string, string>,
+    },
     descargar: {
       titulo: 'Baixar um modelo',
       campo: 'Nome do modelo',
@@ -3606,7 +3639,33 @@ export const pt: Textos = {
     copiado: 'Copiado para a área de transferência',
     limpiar: 'Limpar',
     pendienteApi: 'Pendente: o núcleo ainda não expõe esta informação para a interface.',
+    chmod: {
+      permisos: 'Permissões',
+      propietario: 'Proprietário',
+      grupo: 'Grupo',
+      otros: 'Outros',
+      leer: 'Ler (r)',
+      escribir: 'Escrever (w)',
+      ejecutar: 'Executar (x)',
+      especiales: 'Bits especiais',
+      setuid: 'setuid: executa com as permissões do proprietário',
+      setgid: 'setgid: executa com as permissões do grupo',
+      sticky: 'sticky: só o dono pode apagar dentro da pasta',
+      habituales: 'Valores comuns',
+      octal: 'Octal',
+      simbolico: 'Simbólico',
+      octalInvalido: 'Digite 3 ou 4 dígitos de 0 a 7 (por exemplo 755).',
+      simbolicoInvalido: 'Digite 9 caracteres como rwxr-xr-x.',
+      ejemplo: 'Exemplo',
+      archivo: 'Nome do arquivo',
+      nota: 'No Windows não se aplica; serve para servidores Linux e macOS.',
+      avisoOtros: 'Qualquer usuário do servidor poderia modificá-lo: evite dar escrita a «outros».',
+    },
     lista: {
+      chmod: {
+        nombre: 'Permissões chmod',
+        descripcion: 'Caixas, octal e simbólico, para servidores Linux e macOS.',
+      },
       qr: { nombre: 'Gerador de QR', descripcion: 'De um texto ou do link de um túnel; PNG.' },
       json: { nombre: 'JSON', descripcion: 'Formatar, validar e minificar, com árvore.' },
       regex: {
@@ -3982,6 +4041,29 @@ export const pt: Textos = {
       imagenOmitida: (alt: string) => `[imagem${alt ? `: ${alt}` : ''}]`,
     },
     entorno: {
+      equipo: {
+        titulo: 'Meu computador',
+        copiarResumen: 'Copiar resumo',
+        resumenCopiado: 'Resumo copiado',
+        privacidad: 'O resumo não inclui números de série nem identificadores únicos.',
+        desconocido: 'desconhecido',
+        sinGpu: 'Nenhuma detectada',
+        so: 'Sistema operacional',
+        cpu: 'Processador',
+        ram: 'Memória RAM',
+        gpu: 'Placa de vídeo',
+        placa: 'Placa-mãe',
+        disco: 'Disco {u}',
+        compilacion: 'compilação {n}',
+        nucleosHilos: '{n} núcleos, {h} threads',
+        ramDetalle: '{total} no total, {libre} livres',
+        vram: '{v} de VRAM',
+        discoDetalle: '{libre} livres de {total}',
+        ssd: 'SSD',
+        hdd: 'HDD',
+        resumenTitulo: 'Resumo do computador · WolfCore Dev {v}',
+        resumenTituloSinVersion: 'Resumo do computador · WolfCore Dev',
+      },
       aplicacion: 'Versão do WolfCore Dev',
       navegador: 'Motor da interface',
       plataforma: 'Plataforma',

@@ -321,6 +321,36 @@ export const ruExtra: TextosParciales = {
     },
   },
   iaLocal: {
+    compat: {
+      sugerenciaVram: 'Для вашего компьютера: модели до ≈{b}B, помещающиеся в память видеокарты.',
+      sugerenciaRam: 'Для вашего компьютера: модели до ≈{b}B, работающие в оперативной памяти.',
+      sugerenciaPequena: 'Для вашего компьютера: только очень маленькие модели (меньше 1B).',
+      sugerenciaDesconocida:
+        'Не удалось прочитать оборудование вашего компьютера, поэтому рекомендации нет.',
+      aviso: 'Это лишь ориентир: вы можете скачать любую модель.',
+      comprobando: 'Проверяем ваш компьютер…',
+      niveles: {
+        recomendado: 'Рекомендуется',
+        lento: 'Может работать медленно',
+        'no-cabe': 'Не помещается',
+        desconocido: 'Нет данных',
+      } as Record<string, string>,
+      motivos: {
+        'cabe-vram':
+          'Свободно помещается в память видеокарты (нужно ≈{necesario} из {disponible}).',
+        'justo-vram': 'Помещается в видеокарту, но впритык (нужно ≈{necesario} из {disponible}).',
+        'solo-ram':
+          'Не помещается в видеокарту и будет работать в оперативной памяти (нужно ≈{necesario} из {disponible} доступных): медленнее.',
+        'cabe-ram':
+          'Свободно помещается в оперативную память (нужно ≈{necesario} из {disponible} доступных).',
+        'ram-justo':
+          'Помещается в оперативную память, но впритык (нужно ≈{necesario} из {disponible} доступных): может работать медленно.',
+        'sin-memoria': 'Нужно ≈{necesario} памяти, а в вашем компьютере доступно ≈{disponible}.',
+        'sin-disco': 'На диске недостаточно свободного места для загрузки (осталось {disponible}).',
+        'tamano-desconocido': 'Не удалось узнать размер модели (нет соединения с реестром Ollama).',
+        'equipo-desconocido': 'Не удалось прочитать объём памяти вашего компьютера.',
+      } as Record<string, string>,
+    },
     descargar: {
       confirmarTexto: 'Скачивание можно отменить в любой момент; уже скачанное будет удалено.',
       tamano: (t: string) => `Размер загрузки: ${t}.`,
@@ -450,7 +480,59 @@ export const ruExtra: TextosParciales = {
     },
   },
   herramientas: {
+    entorno: {
+      equipo: {
+        titulo: 'Мой компьютер',
+        copiarResumen: 'Скопировать сводку',
+        resumenCopiado: 'Сводка скопирована',
+        privacidad: 'В сводке нет серийных номеров и уникальных идентификаторов.',
+        desconocido: 'неизвестно',
+        sinGpu: 'Не обнаружена',
+        so: 'Операционная система',
+        cpu: 'Процессор',
+        ram: 'Оперативная память',
+        gpu: 'Видеокарта',
+        placa: 'Материнская плата',
+        disco: 'Диск {u}',
+        compilacion: 'сборка {n}',
+        nucleosHilos: 'ядер: {n}, потоков: {h}',
+        ramDetalle: 'всего {total}, свободно {libre}',
+        vram: '{v} видеопамяти',
+        discoDetalle: 'свободно {libre} из {total}',
+        ssd: 'SSD',
+        hdd: 'HDD',
+        resumenTitulo: 'Сводка о компьютере · WolfCore Dev {v}',
+        resumenTituloSinVersion: 'Сводка о компьютере · WolfCore Dev',
+      },
+    },
+    chmod: {
+      permisos: 'Права доступа',
+      propietario: 'Владелец',
+      grupo: 'Группа',
+      otros: 'Остальные',
+      leer: 'Чтение (r)',
+      escribir: 'Запись (w)',
+      ejecutar: 'Выполнение (x)',
+      especiales: 'Специальные биты',
+      setuid: 'setuid: запускается с правами владельца',
+      setgid: 'setgid: запускается с правами группы',
+      sticky: 'sticky: в папке удалять может только владелец',
+      habituales: 'Частые значения',
+      octal: 'Восьмеричный',
+      simbolico: 'Символьный',
+      octalInvalido: 'Введите 3 или 4 цифры от 0 до 7 (например, 755).',
+      simbolicoInvalido: 'Введите 9 символов, например rwxr-xr-x.',
+      ejemplo: 'Пример',
+      archivo: 'Имя файла',
+      nota: 'В Windows не применяется; нужно для серверов Linux и macOS.',
+      avisoOtros:
+        'Любой пользователь сервера сможет его изменить: не давайте право записи группе «остальные».',
+    },
     lista: {
+      chmod: {
+        nombre: 'Права chmod',
+        descripcion: 'Флажки, восьмеричная и символьная запись, для серверов Linux и macOS.',
+      },
       clienteHttp: {
         nombre: 'HTTP-клиент',
         descripcion: 'Пробуйте API: запросы, окружения, коллекции и история.',

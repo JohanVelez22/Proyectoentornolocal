@@ -305,6 +305,40 @@ export const jaExtra: TextosParciales = {
     },
   },
   iaLocal: {
+    compat: {
+      sugerenciaVram:
+        'お使いのコンピューター向け: 約 {b}B までのモデルが、グラフィックスカードのメモリに収まります。',
+      sugerenciaRam: 'お使いのコンピューター向け: 約 {b}B までのモデルが、RAM 上で動作します。',
+      sugerenciaPequena: 'お使いのコンピューター向け: 非常に小さいモデル（1B 未満）のみ。',
+      sugerenciaDesconocida:
+        'お使いのコンピューターのハードウェアを読み取れなかったため、おすすめはありません。',
+      aviso: 'これは目安です。どのモデルでもダウンロードできます。',
+      comprobando: 'コンピューターを確認しています…',
+      niveles: {
+        recomendado: 'おすすめ',
+        lento: '遅い場合があります',
+        'no-cabe': '収まりません',
+        desconocido: 'データなし',
+      } as Record<string, string>,
+      motivos: {
+        'cabe-vram':
+          'グラフィックスカードのメモリに余裕を持って収まります（必要量 約 {necesario}、利用可能 {disponible}）。',
+        'justo-vram':
+          'グラフィックスカードに収まりますが、ぎりぎりです（必要量 約 {necesario}、利用可能 {disponible}）。',
+        'solo-ram':
+          'グラフィックスカードには収まらず、RAM 上で動作します（必要量 約 {necesario}、利用可能 {disponible}）。動作は遅くなります。',
+        'cabe-ram':
+          'RAM に余裕を持って収まります（必要量 約 {necesario}、利用可能 {disponible}）。',
+        'ram-justo':
+          'RAM に収まりますが、ぎりぎりです（必要量 約 {necesario}、利用可能 {disponible}）。遅い場合があります。',
+        'sin-memoria':
+          '約 {necesario} のメモリが必要ですが、お使いのコンピューターでは約 {disponible} です。',
+        'sin-disco': 'ダウンロードするためのディスクの空き容量が足りません（残り {disponible}）。',
+        'tamano-desconocido':
+          'モデルのサイズを確認できませんでした（Ollama のレジストリに接続できません）。',
+        'equipo-desconocido': 'お使いのコンピューターのメモリを読み取れませんでした。',
+      } as Record<string, string>,
+    },
     descargar: {
       confirmarTexto:
         'ダウンロードはいつでもキャンセルできます。ダウンロード済みの分は破棄されます。',
@@ -424,7 +458,59 @@ export const jaExtra: TextosParciales = {
     },
   },
   herramientas: {
+    entorno: {
+      equipo: {
+        titulo: 'お使いのコンピューター',
+        copiarResumen: '概要をコピー',
+        resumenCopiado: '概要をコピーしました',
+        privacidad: '概要にはシリアル番号や一意の識別子は含まれません。',
+        desconocido: '不明',
+        sinGpu: '検出されませんでした',
+        so: 'オペレーティングシステム',
+        cpu: 'プロセッサ',
+        ram: 'メモリ (RAM)',
+        gpu: 'グラフィックスカード',
+        placa: 'マザーボード',
+        disco: 'ドライブ {u}',
+        compilacion: 'ビルド {n}',
+        nucleosHilos: '{n} コア、{h} スレッド',
+        ramDetalle: '合計 {total}、空き {libre}',
+        vram: 'VRAM {v}',
+        discoDetalle: '{total} 中 {libre} 空き',
+        ssd: 'SSD',
+        hdd: 'HDD',
+        resumenTitulo: 'コンピューターの概要 · WolfCore Dev {v}',
+        resumenTituloSinVersion: 'コンピューターの概要 · WolfCore Dev',
+      },
+    },
+    chmod: {
+      permisos: 'パーミッション',
+      propietario: '所有者',
+      grupo: 'グループ',
+      otros: 'その他',
+      leer: '読み取り (r)',
+      escribir: '書き込み (w)',
+      ejecutar: '実行 (x)',
+      especiales: '特殊ビット',
+      setuid: 'setuid: 所有者の権限で実行されます',
+      setgid: 'setgid: グループの権限で実行されます',
+      sticky: 'sticky: フォルダー内で削除できるのは所有者のみです',
+      habituales: 'よく使う値',
+      octal: '8進数',
+      simbolico: 'シンボリック',
+      octalInvalido: '0〜7の数字を3桁または4桁で入力してください（例: 755）。',
+      simbolicoInvalido: 'rwxr-xr-x のような9文字を入力してください。',
+      ejemplo: '例',
+      archivo: 'ファイル名',
+      nota: 'Windows では適用されません。Linux および macOS のサーバー向けです。',
+      avisoOtros:
+        'サーバーのどのユーザーでも変更できてしまいます。「その他」に書き込み権限を与えないでください。',
+    },
     lista: {
+      chmod: {
+        nombre: 'chmod パーミッション',
+        descripcion: 'チェックボックス、8進数、シンボリック表記。Linux と macOS のサーバー向け。',
+      },
       clienteHttp: {
         nombre: 'HTTP クライアント',
         descripcion: 'API を試せます。リクエスト、環境、コレクション、履歴。',

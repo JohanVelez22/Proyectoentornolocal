@@ -288,6 +288,38 @@ export const koExtra: TextosParciales = {
     pestanas: { etiqueta: 'AI 섹션', agentes: '에이전트', nube: '클라우드', local: '로컬 모델' },
   },
   iaLocal: {
+    compat: {
+      sugerenciaVram:
+        '사용 중인 컴퓨터에는 약 {b}B까지의 모델을 권장합니다. 그래픽 카드 메모리에 들어갑니다.',
+      sugerenciaRam: '사용 중인 컴퓨터에는 약 {b}B까지의 모델을 권장합니다. RAM에서 실행됩니다.',
+      sugerenciaPequena: '사용 중인 컴퓨터에는 매우 작은 모델(1B 미만)만 권장합니다.',
+      sugerenciaDesconocida: '컴퓨터의 하드웨어를 읽지 못하여 권장 사항이 없습니다.',
+      aviso: '참고용 안내일 뿐이며, 어떤 모델이든 다운로드할 수 있습니다.',
+      comprobando: '컴퓨터를 확인하는 중…',
+      niveles: {
+        recomendado: '권장',
+        lento: '느릴 수 있음',
+        'no-cabe': '들어가지 않음',
+        desconocido: '데이터 없음',
+      } as Record<string, string>,
+      motivos: {
+        'cabe-vram':
+          '그래픽 카드 메모리에 여유 있게 들어갑니다(필요 약 {necesario}, 사용 가능 {disponible}).',
+        'justo-vram':
+          '그래픽 카드에 들어가지만 빠듯합니다(필요 약 {necesario}, 사용 가능 {disponible}).',
+        'solo-ram':
+          '그래픽 카드에 들어가지 않아 RAM에서 실행됩니다(필요 약 {necesario}, 사용 가능 {disponible}). 더 느립니다.',
+        'cabe-ram': 'RAM에 여유 있게 들어갑니다(필요 약 {necesario}, 사용 가능 {disponible}).',
+        'ram-justo':
+          'RAM에 들어가지만 빠듯합니다(필요 약 {necesario}, 사용 가능 {disponible}). 느릴 수 있습니다.',
+        'sin-memoria':
+          '메모리가 약 {necesario} 필요하지만 컴퓨터에는 약 {disponible}이(가) 있습니다.',
+        'sin-disco': '다운로드할 디스크 여유 공간이 부족합니다({disponible} 남음).',
+        'tamano-desconocido':
+          '모델 크기를 확인하지 못했습니다(Ollama 레지스트리에 연결할 수 없음).',
+        'equipo-desconocido': '컴퓨터의 메모리를 읽지 못했습니다.',
+      } as Record<string, string>,
+    },
     descargar: {
       confirmarTexto: '다운로드는 언제든지 취소할 수 있으며, 이미 받은 부분은 삭제됩니다.',
       tamano: (t) => `다운로드 크기: ${t}.`,
@@ -404,7 +436,59 @@ export const koExtra: TextosParciales = {
     },
   },
   herramientas: {
+    entorno: {
+      equipo: {
+        titulo: '내 컴퓨터',
+        copiarResumen: '요약 복사',
+        resumenCopiado: '요약을 복사했습니다',
+        privacidad: '요약에는 일련번호나 고유 식별자가 포함되지 않습니다.',
+        desconocido: '알 수 없음',
+        sinGpu: '감지되지 않음',
+        so: '운영 체제',
+        cpu: '프로세서',
+        ram: '메모리 (RAM)',
+        gpu: '그래픽 카드',
+        placa: '메인보드',
+        disco: '드라이브 {u}',
+        compilacion: '빌드 {n}',
+        nucleosHilos: '코어 {n}개, 스레드 {h}개',
+        ramDetalle: '전체 {total}, 사용 가능 {libre}',
+        vram: 'VRAM {v}',
+        discoDetalle: '{total} 중 {libre} 사용 가능',
+        ssd: 'SSD',
+        hdd: 'HDD',
+        resumenTitulo: '컴퓨터 요약 · WolfCore Dev {v}',
+        resumenTituloSinVersion: '컴퓨터 요약 · WolfCore Dev',
+      },
+    },
+    chmod: {
+      permisos: '권한',
+      propietario: '소유자',
+      grupo: '그룹',
+      otros: '기타 사용자',
+      leer: '읽기 (r)',
+      escribir: '쓰기 (w)',
+      ejecutar: '실행 (x)',
+      especiales: '특수 비트',
+      setuid: 'setuid: 소유자의 권한으로 실행됩니다',
+      setgid: 'setgid: 그룹의 권한으로 실행됩니다',
+      sticky: 'sticky: 폴더 안에서는 소유자만 삭제할 수 있습니다',
+      habituales: '자주 쓰는 값',
+      octal: '8진수',
+      simbolico: '기호 표기',
+      octalInvalido: '0에서 7 사이의 숫자 3자리 또는 4자리를 입력하십시오(예: 755).',
+      simbolicoInvalido: 'rwxr-xr-x와 같은 9자를 입력하십시오.',
+      ejemplo: '예시',
+      archivo: '파일 이름',
+      nota: 'Windows에서는 적용되지 않으며, Linux 및 macOS 서버용입니다.',
+      avisoOtros:
+        '서버의 모든 사용자가 수정할 수 있습니다. 「기타 사용자」에게 쓰기 권한을 주지 마십시오.',
+    },
     lista: {
+      chmod: {
+        nombre: 'chmod 권한',
+        descripcion: '체크박스, 8진수, 기호 표기. Linux 및 macOS 서버용.',
+      },
       clienteHttp: {
         nombre: 'HTTP 클라이언트',
         descripcion: 'API를 시험해 보십시오. 요청, 환경, 컬렉션 및 기록.',

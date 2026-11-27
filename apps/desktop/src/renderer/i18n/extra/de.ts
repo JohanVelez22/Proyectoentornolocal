@@ -339,6 +339,40 @@ export const deExtra: TextosParciales = {
     },
   },
   iaLocal: {
+    compat: {
+      sugerenciaVram:
+        'Für Ihren Computer: Modelle bis ≈{b}B, die in den Speicher der Grafikkarte passen.',
+      sugerenciaRam: 'Für Ihren Computer: Modelle bis ≈{b}B, die im Arbeitsspeicher laufen.',
+      sugerenciaPequena: 'Für Ihren Computer: nur sehr kleine Modelle (unter 1B).',
+      sugerenciaDesconocida:
+        'Die Hardware Ihres Computers konnte nicht gelesen werden, daher gibt es keine Empfehlung.',
+      aviso: 'Dies ist nur eine Orientierung: Sie können jedes Modell herunterladen.',
+      comprobando: 'Ihr Computer wird geprüft…',
+      niveles: {
+        recomendado: 'Empfohlen',
+        lento: 'Kann langsam sein',
+        'no-cabe': 'Passt nicht',
+        desconocido: 'Keine Daten',
+      } as Record<string, string>,
+      motivos: {
+        'cabe-vram':
+          'Passt bequem in den Grafikkartenspeicher (benötigt ≈{necesario} von {disponible}).',
+        'justo-vram':
+          'Passt in die Grafikkarte, aber nur knapp (benötigt ≈{necesario} von {disponible}).',
+        'solo-ram':
+          'Passt nicht in die Grafikkarte und läuft im Arbeitsspeicher (benötigt ≈{necesario} von {disponible} nutzbar): langsamer.',
+        'cabe-ram':
+          'Passt bequem in den Arbeitsspeicher (benötigt ≈{necesario} von {disponible} nutzbar).',
+        'ram-justo':
+          'Passt in den Arbeitsspeicher, aber nur knapp (benötigt ≈{necesario} von {disponible} nutzbar): kann langsam sein.',
+        'sin-memoria': 'Benötigt ≈{necesario} Speicher, Ihr Computer verfügt über ≈{disponible}.',
+        'sin-disco':
+          'Es ist nicht genug freier Speicherplatz für den Download vorhanden (noch {disponible}).',
+        'tamano-desconocido':
+          'Die Modellgröße konnte nicht abgefragt werden (keine Verbindung zur Ollama-Registry).',
+        'equipo-desconocido': 'Der Speicher Ihres Computers konnte nicht gelesen werden.',
+      } as Record<string, string>,
+    },
     descargar: {
       confirmarTexto:
         'Sie können den Download jederzeit abbrechen; bereits Heruntergeladenes wird verworfen.',
@@ -468,7 +502,59 @@ export const deExtra: TextosParciales = {
     },
   },
   herramientas: {
+    entorno: {
+      equipo: {
+        titulo: 'Mein Computer',
+        copiarResumen: 'Zusammenfassung kopieren',
+        resumenCopiado: 'Zusammenfassung kopiert',
+        privacidad: 'Die Zusammenfassung enthält keine Seriennummern oder eindeutigen Kennungen.',
+        desconocido: 'unbekannt',
+        sinGpu: 'Keine erkannt',
+        so: 'Betriebssystem',
+        cpu: 'Prozessor',
+        ram: 'Arbeitsspeicher (RAM)',
+        gpu: 'Grafikkarte',
+        placa: 'Hauptplatine',
+        disco: 'Laufwerk {u}',
+        compilacion: 'Build {n}',
+        nucleosHilos: '{n} Kerne, {h} Threads',
+        ramDetalle: '{total} gesamt, {libre} frei',
+        vram: '{v} VRAM',
+        discoDetalle: '{libre} frei von {total}',
+        ssd: 'SSD',
+        hdd: 'HDD',
+        resumenTitulo: 'Computerübersicht · WolfCore Dev {v}',
+        resumenTituloSinVersion: 'Computerübersicht · WolfCore Dev',
+      },
+    },
+    chmod: {
+      permisos: 'Berechtigungen',
+      propietario: 'Besitzer',
+      grupo: 'Gruppe',
+      otros: 'Andere',
+      leer: 'Lesen (r)',
+      escribir: 'Schreiben (w)',
+      ejecutar: 'Ausführen (x)',
+      especiales: 'Spezialbits',
+      setuid: 'setuid: läuft mit den Rechten des Besitzers',
+      setgid: 'setgid: läuft mit den Rechten der Gruppe',
+      sticky: 'sticky: nur der Besitzer darf im Ordner löschen',
+      habituales: 'Gängige Werte',
+      octal: 'Oktal',
+      simbolico: 'Symbolisch',
+      octalInvalido: 'Geben Sie 3 oder 4 Ziffern von 0 bis 7 ein (zum Beispiel 755).',
+      simbolicoInvalido: 'Geben Sie 9 Zeichen wie rwxr-xr-x ein.',
+      ejemplo: 'Beispiel',
+      archivo: 'Dateiname',
+      nota: 'Unter Windows ohne Bedeutung; gedacht für Linux- und macOS-Server.',
+      avisoOtros:
+        'Jeder Benutzer des Servers könnte die Datei ändern: Vermeiden Sie Schreibrechte für „Andere“.',
+    },
     lista: {
+      chmod: {
+        nombre: 'chmod-Berechtigungen',
+        descripcion: 'Kontrollkästchen, oktal und symbolisch, für Linux- und macOS-Server.',
+      },
       clienteHttp: {
         nombre: 'HTTP-Client',
         descripcion: 'APIs ausprobieren: Anfragen, Umgebungen, Sammlungen und Verlauf.',

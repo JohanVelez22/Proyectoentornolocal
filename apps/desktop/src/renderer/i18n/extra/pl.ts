@@ -324,6 +324,39 @@ export const plExtra: TextosParciales = {
     },
   },
   iaLocal: {
+    compat: {
+      sugerenciaVram:
+        'Dla tego komputera: modele do ≈{b}B, mieszczące się w pamięci karty graficznej.',
+      sugerenciaRam: 'Dla tego komputera: modele do ≈{b}B, działające w pamięci RAM.',
+      sugerenciaPequena: 'Dla tego komputera: tylko bardzo małe modele (poniżej 1B).',
+      sugerenciaDesconocida: 'Nie udało się odczytać sprzętu tego komputera, więc nie ma zaleceń.',
+      aviso: 'To tylko wskazówka: można pobrać dowolny model.',
+      comprobando: 'Sprawdzanie komputera…',
+      niveles: {
+        recomendado: 'Zalecany',
+        lento: 'Może działać wolno',
+        'no-cabe': 'Nie mieści się',
+        desconocido: 'Brak danych',
+      } as Record<string, string>,
+      motivos: {
+        'cabe-vram':
+          'Mieści się swobodnie w pamięci karty graficznej (potrzeba ≈{necesario} z {disponible}).',
+        'justo-vram':
+          'Mieści się w karcie graficznej, ale na styk (potrzeba ≈{necesario} z {disponible}).',
+        'solo-ram':
+          'Nie mieści się w karcie graficznej i będzie działać w pamięci RAM (potrzeba ≈{necesario} z {disponible} dostępnych): wolniej.',
+        'cabe-ram':
+          'Mieści się swobodnie w pamięci RAM (potrzeba ≈{necesario} z {disponible} dostępnych).',
+        'ram-justo':
+          'Mieści się w pamięci RAM, ale na styk (potrzeba ≈{necesario} z {disponible} dostępnych): może działać wolno.',
+        'sin-memoria': 'Potrzeba ≈{necesario} pamięci, a komputer dysponuje ≈{disponible}.',
+        'sin-disco':
+          'Brak wystarczającej ilości wolnego miejsca na dysku, aby pobrać model (zostało {disponible}).',
+        'tamano-desconocido':
+          'Nie udało się sprawdzić rozmiaru modelu (brak połączenia z rejestrem Ollama).',
+        'equipo-desconocido': 'Nie udało się odczytać pamięci komputera.',
+      } as Record<string, string>,
+    },
     descargar: {
       confirmarTexto:
         'Pobieranie można anulować w dowolnej chwili; to, co już pobrano, zostanie odrzucone.',
@@ -454,7 +487,59 @@ export const plExtra: TextosParciales = {
     },
   },
   herramientas: {
+    entorno: {
+      equipo: {
+        titulo: 'Ten komputer',
+        copiarResumen: 'Kopiuj podsumowanie',
+        resumenCopiado: 'Skopiowano podsumowanie',
+        privacidad: 'Podsumowanie nie zawiera numerów seryjnych ani unikalnych identyfikatorów.',
+        desconocido: 'nieznane',
+        sinGpu: 'Nie wykryto',
+        so: 'System operacyjny',
+        cpu: 'Procesor',
+        ram: 'Pamięć RAM',
+        gpu: 'Karta graficzna',
+        placa: 'Płyta główna',
+        disco: 'Dysk {u}',
+        compilacion: 'kompilacja {n}',
+        nucleosHilos: 'rdzenie: {n}, wątki: {h}',
+        ramDetalle: 'razem {total}, wolne {libre}',
+        vram: '{v} VRAM',
+        discoDetalle: 'wolne {libre} z {total}',
+        ssd: 'SSD',
+        hdd: 'HDD',
+        resumenTitulo: 'Podsumowanie komputera · WolfCore Dev {v}',
+        resumenTituloSinVersion: 'Podsumowanie komputera · WolfCore Dev',
+      },
+    },
+    chmod: {
+      permisos: 'Uprawnienia',
+      propietario: 'Właściciel',
+      grupo: 'Grupa',
+      otros: 'Inni',
+      leer: 'Odczyt (r)',
+      escribir: 'Zapis (w)',
+      ejecutar: 'Wykonanie (x)',
+      especiales: 'Bity specjalne',
+      setuid: 'setuid: uruchamia się z uprawnieniami właściciela',
+      setgid: 'setgid: uruchamia się z uprawnieniami grupy',
+      sticky: 'sticky: w katalogu usuwać może tylko właściciel',
+      habituales: 'Typowe wartości',
+      octal: 'Ósemkowo',
+      simbolico: 'Symbolicznie',
+      octalInvalido: 'Należy wpisać 3 lub 4 cyfry od 0 do 7 (na przykład 755).',
+      simbolicoInvalido: 'Należy wpisać 9 znaków, na przykład rwxr-xr-x.',
+      ejemplo: 'Przykład',
+      archivo: 'Nazwa pliku',
+      nota: 'W systemie Windows nie ma zastosowania; służy do serwerów Linux i macOS.',
+      avisoOtros:
+        'Dowolny użytkownik serwera mógłby go zmienić: lepiej nie nadawać zapisu grupie „inni”.',
+    },
     lista: {
+      chmod: {
+        nombre: 'Uprawnienia chmod',
+        descripcion: 'Pola wyboru, zapis ósemkowy i symboliczny, dla serwerów Linux i macOS.',
+      },
       clienteHttp: {
         nombre: 'Klient HTTP',
         descripcion: 'Wypróbowywanie API: żądania, środowiska, kolekcje i historia.',

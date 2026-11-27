@@ -2855,6 +2855,38 @@ export const es = {
     borrarTexto: (tamano: string) =>
       `Se libera ${tamano} de disco. Para volver a usarlo tendrá que descargarlo otra vez.`,
     borrado: (modelo: string) => `Modelo ${modelo} borrado`,
+    compat: {
+      sugerenciaVram:
+        'Para su equipo: modelos de hasta ≈{b}B, que caben en la memoria de la tarjeta gráfica.',
+      sugerenciaRam: 'Para su equipo: modelos de hasta ≈{b}B, que se ejecutan en la memoria RAM.',
+      sugerenciaPequena: 'Para su equipo: solo modelos muy pequeños (menos de 1B).',
+      sugerenciaDesconocida:
+        'No se pudo leer el hardware de su equipo, así que no hay recomendación.',
+      aviso: 'Es solo una orientación: puede descargar cualquier modelo.',
+      comprobando: 'Comprobando su equipo…',
+      niveles: {
+        recomendado: 'Recomendado',
+        lento: 'Puede ir lento',
+        'no-cabe': 'No cabe',
+        desconocido: 'Sin datos',
+      } as Record<string, string>,
+      motivos: {
+        'cabe-vram':
+          'Cabe con holgura en la memoria de la tarjeta gráfica (necesita ≈{necesario} de {disponible}).',
+        'justo-vram':
+          'Cabe en la tarjeta gráfica, pero justo (necesita ≈{necesario} de {disponible}).',
+        'solo-ram':
+          'No cabe en la tarjeta gráfica e irá en la RAM (necesita ≈{necesario} de {disponible} útiles): más despacio.',
+        'cabe-ram': 'Cabe con holgura en la RAM (necesita ≈{necesario} de {disponible} útiles).',
+        'ram-justo':
+          'Cabe en la RAM, pero justo (necesita ≈{necesario} de {disponible} útiles): puede ir lento.',
+        'sin-memoria': 'Necesita ≈{necesario} de memoria y su equipo dispone de ≈{disponible}.',
+        'sin-disco': 'No hay espacio libre en el disco para descargarlo (quedan {disponible}).',
+        'tamano-desconocido':
+          'No se pudo consultar el tamaño del modelo (sin conexión al registro de Ollama).',
+        'equipo-desconocido': 'No se pudo leer la memoria de su equipo.',
+      } as Record<string, string>,
+    },
     descargar: {
       titulo: 'Descargar un modelo',
       campo: 'Nombre del modelo',
@@ -3598,7 +3630,34 @@ export const es = {
     copiado: 'Copiado al portapapeles',
     limpiar: 'Limpiar',
     pendienteApi: 'Pendiente: el núcleo todavía no expone esta información a la interfaz.',
+    chmod: {
+      permisos: 'Permisos',
+      propietario: 'Propietario',
+      grupo: 'Grupo',
+      otros: 'Otros',
+      leer: 'Leer (r)',
+      escribir: 'Escribir (w)',
+      ejecutar: 'Ejecutar (x)',
+      especiales: 'Bits especiales',
+      setuid: 'setuid: se ejecuta con los permisos del propietario',
+      setgid: 'setgid: se ejecuta con los permisos del grupo',
+      sticky: 'sticky: solo el dueño puede borrar dentro de la carpeta',
+      habituales: 'Valores habituales',
+      octal: 'Octal',
+      simbolico: 'Simbólico',
+      octalInvalido: 'Escriba 3 o 4 dígitos del 0 al 7 (por ejemplo 755).',
+      simbolicoInvalido: 'Escriba 9 caracteres como rwxr-xr-x.',
+      ejemplo: 'Ejemplo',
+      archivo: 'Nombre del archivo',
+      nota: 'En Windows no aplica; sirve para servidores Linux y macOS.',
+      avisoOtros:
+        'Cualquier usuario del servidor podría modificarlo: evite dar escritura a «otros».',
+    },
     lista: {
+      chmod: {
+        nombre: 'Permisos chmod',
+        descripcion: 'Casillas, octal y simbólico, para servidores Linux y macOS.',
+      },
       qr: { nombre: 'Generador de QR', descripcion: 'De un texto o del enlace de un túnel; PNG.' },
       json: { nombre: 'JSON', descripcion: 'Formatear, validar y minificar, con árbol.' },
       regex: {
@@ -3970,6 +4029,29 @@ export const es = {
       imagenOmitida: (alt: string) => `[imagen${alt ? `: ${alt}` : ''}]`,
     },
     entorno: {
+      equipo: {
+        titulo: 'Mi equipo',
+        copiarResumen: 'Copiar resumen',
+        resumenCopiado: 'Resumen copiado',
+        privacidad: 'El resumen no incluye números de serie ni identificadores únicos.',
+        desconocido: 'desconocido',
+        sinGpu: 'No se detectó ninguna',
+        so: 'Sistema operativo',
+        cpu: 'Procesador',
+        ram: 'Memoria RAM',
+        gpu: 'Tarjeta gráfica',
+        placa: 'Placa base',
+        disco: 'Disco {u}',
+        compilacion: 'compilación {n}',
+        nucleosHilos: '{n} núcleos, {h} hilos',
+        ramDetalle: '{total} en total, {libre} libres',
+        vram: '{v} de VRAM',
+        discoDetalle: '{libre} libres de {total}',
+        ssd: 'SSD',
+        hdd: 'HDD',
+        resumenTitulo: 'Resumen del equipo · WolfCore Dev {v}',
+        resumenTituloSinVersion: 'Resumen del equipo · WolfCore Dev',
+      },
       aplicacion: 'Versión de WolfCore Dev',
       navegador: 'Motor de la interfaz',
       plataforma: 'Plataforma',

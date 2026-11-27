@@ -318,6 +318,40 @@ export const ukExtra: TextosParciales = {
     },
   },
   iaLocal: {
+    compat: {
+      sugerenciaVram: 'Для вашого комп’ютера: моделі до ≈{b}B, що вміщуються в пам’ять відеокарти.',
+      sugerenciaRam: 'Для вашого комп’ютера: моделі до ≈{b}B, що працюють в оперативній пам’яті.',
+      sugerenciaPequena: 'Для вашого комп’ютера: лише дуже малі моделі (менше 1B).',
+      sugerenciaDesconocida:
+        'Не вдалося прочитати обладнання вашого комп’ютера, тому рекомендації немає.',
+      aviso: 'Це лише орієнтир: ви можете завантажити будь-яку модель.',
+      comprobando: 'Перевіряємо ваш комп’ютер…',
+      niveles: {
+        recomendado: 'Рекомендовано',
+        lento: 'Може працювати повільно',
+        'no-cabe': 'Не вміщується',
+        desconocido: 'Немає даних',
+      } as Record<string, string>,
+      motivos: {
+        'cabe-vram':
+          'Вільно вміщується в пам’ять відеокарти (потрібно ≈{necesario} із {disponible}).',
+        'justo-vram':
+          'Вміщується у відеокарту, але впритул (потрібно ≈{necesario} із {disponible}).',
+        'solo-ram':
+          'Не вміщується у відеокарту й працюватиме в оперативній пам’яті (потрібно ≈{necesario} із {disponible} доступних): повільніше.',
+        'cabe-ram':
+          'Вільно вміщується в оперативну пам’ять (потрібно ≈{necesario} із {disponible} доступних).',
+        'ram-justo':
+          'Вміщується в оперативну пам’ять, але впритул (потрібно ≈{necesario} із {disponible} доступних): може працювати повільно.',
+        'sin-memoria':
+          'Потрібно ≈{necesario} пам’яті, а на вашому комп’ютері доступно ≈{disponible}.',
+        'sin-disco':
+          'На диску недостатньо вільного місця для завантаження (залишилось {disponible}).',
+        'tamano-desconocido':
+          'Не вдалося дізнатися розмір моделі (немає з’єднання з реєстром Ollama).',
+        'equipo-desconocido': 'Не вдалося прочитати обсяг пам’яті вашого комп’ютера.',
+      } as Record<string, string>,
+    },
     descargar: {
       confirmarTexto:
         'Завантаження можна скасувати будь-коли; те, що вже завантажено, буде видалено.',
@@ -448,7 +482,59 @@ export const ukExtra: TextosParciales = {
     },
   },
   herramientas: {
+    entorno: {
+      equipo: {
+        titulo: 'Мій комп’ютер',
+        copiarResumen: 'Копіювати зведення',
+        resumenCopiado: 'Зведення скопійовано',
+        privacidad: 'У зведенні немає серійних номерів і унікальних ідентифікаторів.',
+        desconocido: 'невідомо',
+        sinGpu: 'Не виявлено',
+        so: 'Операційна система',
+        cpu: 'Процесор',
+        ram: 'Оперативна пам’ять',
+        gpu: 'Відеокарта',
+        placa: 'Материнська плата',
+        disco: 'Диск {u}',
+        compilacion: 'збірка {n}',
+        nucleosHilos: 'ядер: {n}, потоків: {h}',
+        ramDetalle: 'усього {total}, вільно {libre}',
+        vram: '{v} відеопам’яті',
+        discoDetalle: 'вільно {libre} із {total}',
+        ssd: 'SSD',
+        hdd: 'HDD',
+        resumenTitulo: 'Зведення про комп’ютер · WolfCore Dev {v}',
+        resumenTituloSinVersion: 'Зведення про комп’ютер · WolfCore Dev',
+      },
+    },
+    chmod: {
+      permisos: 'Права доступу',
+      propietario: 'Власник',
+      grupo: 'Група',
+      otros: 'Інші',
+      leer: 'Читання (r)',
+      escribir: 'Запис (w)',
+      ejecutar: 'Виконання (x)',
+      especiales: 'Спеціальні біти',
+      setuid: 'setuid: запускається з правами власника',
+      setgid: 'setgid: запускається з правами групи',
+      sticky: 'sticky: у теці видаляти може лише власник',
+      habituales: 'Поширені значення',
+      octal: 'Вісімковий',
+      simbolico: 'Символьний',
+      octalInvalido: 'Введіть 3 або 4 цифри від 0 до 7 (наприклад, 755).',
+      simbolicoInvalido: 'Введіть 9 символів, наприклад rwxr-xr-x.',
+      ejemplo: 'Приклад',
+      archivo: 'Назва файлу',
+      nota: 'У Windows не застосовується; потрібне для серверів Linux і macOS.',
+      avisoOtros:
+        'Будь-який користувач сервера зможе його змінити: не надавайте право запису групі «інші».',
+    },
     lista: {
+      chmod: {
+        nombre: 'Права chmod',
+        descripcion: 'Прапорці, вісімковий і символьний запис, для серверів Linux і macOS.',
+      },
       clienteHttp: {
         nombre: 'HTTP-клієнт',
         descripcion: 'Пробуйте API: запити, середовища, колекції та історія.',
