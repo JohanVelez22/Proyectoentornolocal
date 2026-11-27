@@ -13,6 +13,8 @@ import {
 import { NOMBRE_CABECERA } from './validar';
 
 const MAX_TOKENS = 2000;
+/** Avisos que llegan a la interfaz (sin repetidos). */
+export const MAX_AVISOS_CURL = 50;
 
 export interface Tokens {
   tokens: string[];
@@ -232,6 +234,22 @@ const SIN_VALOR_SILENCIADAS = new Set([
 ]);
 
 const corto = (s: string): string => s.slice(0, 40);
+
+/**
+ * Un dato de `-G` para la consulta: se codifica lo que se perdería o rompería la URL (`#`, espacios,
+ * comillas, no ASCII) y se respeta lo que ya viene codificado (`%20`).
+ */
+function codificarDato(dato: string): string {
+  return dato
+    .replace(/%(?![0-9a-fA-F]{2})/g, '%25')
+    .replace(/[^\x21-\x7e]+|[#"<>\\^`{|}]/g, (m) => {
+      try {
+        return encodeURIComponent(m);
+      } catch {
+        return '';
+      }
+    });
+}
 
 /** Opciones cortas que llevan valor: en un grupo (`-sX POST`), lo que sigue es su valor. */
 const CORTAS_CON_VALOR = 'XHduFbAemTExoKcDPwrCyYzU';
@@ -475,7 +493,10 @@ export function importarCurl(texto: string): ImportacionCurl {
 
   // -G: los datos van a la consulta y la petición es un GET.
   if (get && datos.length > 0) {
-    url += `${url.includes('?') ? '&' : '?'}${datos.join('&')}`;
+    const consulta = datos.map(codificarDato).join('&');
+    const h = url.indexOf('#');
+    const [antes, frag] = h < 0 ? [url, ''] : [url.slice(0, h), url.slice(h)];
+    url = `${antes}${antes.includes('?') ? '&' : '?'}${consulta}${frag}`;
     datos.length = 0;
   }
 
@@ -523,6 +544,14 @@ export function importarCurl(texto: string): ImportacionCurl {
     avisos.push({ codigo: 'opcion_ignorada', dato: corto(`-X ${m}`) });
     m = datos.length > 0 || campos.length > 0 ? 'POST' : 'GET';
   }
+  // Sin repetidos y con tope: un `-qqqq…` de 60 KB no inunda la interfaz.
+  const vistos = new Set<string>();
+  const unicos = avisos.filter((a) => {
+    const k = `${a.codigo}:${a.dato ?? ''}`;
+    if (vistos.has(k)) return false;
+    vistos.add(k);
+    return true;
+  });
   return {
     peticion: {
       id: '',
@@ -536,7 +565,7 @@ export function importarCurl(texto: string): ImportacionCurl {
       plazoSeg,
       ignorarCertificado: false,
     },
-    avisos,
+    avisos: unicos.slice(0, MAX_AVISOS_CURL),
   };
 }
 

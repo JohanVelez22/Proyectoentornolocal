@@ -16,7 +16,6 @@ const PALABRAS_SECRETAS = new Set([
   'sid',
   'auth',
   'jwt',
-  'code',
   'sig',
   'signature',
   'csrf',
@@ -29,11 +28,15 @@ export function esNombreSecreto(nombre: string): boolean {
   const minuscula = n.toLowerCase();
   if (SIEMPRE.has(minuscula) || NOMBRE_VARIABLE_SECRETA.test(n)) return true;
   if (/session|csrf|xsrf|signature|jwt/.test(minuscula)) return true;
-  return n
+  const palabras = n
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
     .toLowerCase()
     .split(/[^a-z0-9]+/)
-    .some((w) => PALABRAS_SECRETAS.has(w));
+    .filter((w) => w !== '');
+  // `code` solo cuenta suelto o como `auth_code`/`oauth_code`: `country_code` o `status_code` no.
+  const junto = palabras.join('');
+  if (junto === 'code' || junto === 'authcode' || junto === 'oauthcode') return true;
+  return palabras.some((w) => PALABRAS_SECRETAS.has(w));
 }
 
 /**

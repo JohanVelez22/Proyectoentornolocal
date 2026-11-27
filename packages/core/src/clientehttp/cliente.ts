@@ -1,11 +1,12 @@
 import { randomBytes } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { mkdir, readFile, rename, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { ErrorWolf } from '../errores';
 import { enmascararSecretos } from '../patronesSecretos';
 import { escribirAtomico } from '../sitios/urlbase';
 import { componer, normalizar } from './componer';
-import { aCurl, importarCurl, type ImportacionCurl } from './curl';
+import { MAX_AVISOS_CURL, aCurl, importarCurl, type ImportacionCurl } from './curl';
 import { ejecutar, hostConCaWolf, raicesConCa } from './red';
 import {
   MARCA_SECRETO,
@@ -50,6 +51,8 @@ export interface DepsClienteHttp {
   escribir?: (destino: string, datos: Buffer) => Promise<void>;
   /** Aviso de un archivo ignorado (p. ej. por tamaño); por defecto, la consola del proceso. */
   avisar?: (mensaje: string) => void;
+  /** Renombrado de archivos (inyectable en pruebas). */
+  renombrar?: (de: string, a: string) => Promise<void>;
 }
 
 /** Lo que el historial guarda de un cuerpo y de cada valor: poco, y nunca más de esto. */
@@ -112,11 +115,13 @@ const refsDeEntorno = (e: EntornoHttp): string[] =>
  * marcada como `faltante`: el envío se bloquea hasta que se escriba. Nunca se guarda `***`.
  */
 export function sanearRefs(p: PeticionHttp, propias: ReadonlySet<string>): PeticionHttp {
+  // Una ref sirve a una sola fila: si se repite, solo la primera (en el orden de abajo) la conserva.
+  const vistas = new Set<string>();
   const par = (x: ParHttp): ParHttp => {
     let ref = x.ref;
     let valor = x.valor;
     let faltante = x.faltante === true;
-    if (ref !== undefined && !propias.has(ref)) {
+    if (ref !== undefined && (!propias.has(ref) || vistas.has(ref))) {
       ref = undefined;
       if (valor === '') faltante = true;
     }
@@ -124,6 +129,7 @@ export function sanearRefs(p: PeticionHttp, propias: ReadonlySet<string>): Petic
       valor = '';
       faltante = true;
     }
+    if (ref !== undefined) vistas.add(ref);
     return {
       clave: x.clave,
       valor,
@@ -133,19 +139,21 @@ export function sanearRefs(p: PeticionHttp, propias: ReadonlySet<string>): Petic
     };
   };
   const c = p.cuerpo;
+  const params = p.params.map(par);
+  const cabeceras = p.cabeceras.map(par);
+  const cuerpo =
+    c.tipo === 'form' || c.tipo === 'multipart' ? { ...c, campos: c.campos.map(par) } : c;
   let auth = p.auth;
-  if (auth.tipo !== 'ninguna' && auth.ref !== undefined && !propias.has(auth.ref)) {
+  if (
+    auth.tipo !== 'ninguna' &&
+    auth.ref !== undefined &&
+    (!propias.has(auth.ref) || vistas.has(auth.ref))
+  ) {
     const copia: Record<string, unknown> = { ...auth };
     delete copia['ref'];
     auth = copia as unknown as AuthHttp;
   }
-  return {
-    ...p,
-    params: p.params.map(par),
-    cabeceras: p.cabeceras.map(par),
-    cuerpo: c.tipo === 'form' || c.tipo === 'multipart' ? { ...c, campos: c.campos.map(par) } : c,
-    auth,
-  };
+  return { ...p, params, cabeceras, cuerpo, auth };
 }
 
 /** Cliente HTTP: colecciones, entornos, historial y envío. Solo vive en el proceso principal. */
@@ -172,16 +180,33 @@ export class ClienteHttp {
     try {
       const { size } = await stat(this.ruta(nombre));
       if (size > MAX_ARCHIVO_DATOS) {
-        // No se lee: se aparta (para no pisarlo al guardar) y se avisa.
-        (this.d.avisar ?? ((m: string) => console.warn(m)))(
-          `Cliente HTTP: ${nombre} pesa más de 20 MB y se ignora (se movió a ${nombre}.excedido).`,
-        );
-        await rename(this.ruta(nombre), `${this.ruta(nombre)}.excedido`).catch(() => undefined);
+        await this.apartar(nombre);
         return null;
       }
       return JSON.parse(await readFile(this.ruta(nombre), 'utf8')) as unknown;
     } catch {
       return null;
+    }
+  }
+
+  /**
+   * Aparta un archivo de más de 20 MB sin leerlo, con un nombre único (nunca pisa un respaldo).
+   * Si no se puede apartar, el aviso lo dice; en ambos casos el archivo no se lee.
+   */
+  private async apartar(nombre: string): Promise<void> {
+    const avisar = this.d.avisar ?? ((m: string) => console.warn(m));
+    const renombrar = this.d.renombrar ?? rename;
+    const marca = (this.d.ahora?.() ?? new Date()).getTime();
+    const base = `${this.ruta(nombre)}.excedido-${marca}`;
+    try {
+      let destino = base;
+      for (let i = 1; existsSync(destino); i++) destino = `${base}-${i}`;
+      await renombrar(this.ruta(nombre), destino);
+      avisar(
+        `Cliente HTTP: ${nombre} pesa más de 20 MB y se ignora (se movió a ${path.basename(destino)}).`,
+      );
+    } catch {
+      avisar(`Cliente HTTP: ${nombre} pesa más de 20 MB y se ignora; no se pudo apartar.`);
     }
   }
 
@@ -634,7 +659,7 @@ export class ClienteHttp {
     const peticion = await this.guardarPeticion(r.peticion);
     const avisos =
       refsDe(peticion).length > 0
-        ? [...r.avisos, { codigo: 'secretos_guardados' } as AvisoCurl]
+        ? [...r.avisos.slice(0, MAX_AVISOS_CURL - 1), { codigo: 'secretos_guardados' } as AvisoCurl]
         : r.avisos;
     return { peticion, avisos };
   }

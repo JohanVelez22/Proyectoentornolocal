@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
 import https from 'node:https';
 import type { AddressInfo } from 'node:net';
@@ -397,6 +397,9 @@ describe('M5: más nombres sensibles, también en el cuerpo JSON', () => {
       'jwt',
       'code',
       'authCode',
+      'auth_code',
+      'oauth_code',
+      'oauthCode',
       'sig',
       'Signature',
       'X-CSRF-Token',
@@ -404,7 +407,18 @@ describe('M5: más nombres sensibles, también en el cuerpo JSON', () => {
     ]) {
       expect(esNombreSecreto(n), n).toBe(true);
     }
-    for (const n of ['Accept', 'codec', 'author', 'page', 'X-Request-Id', 'sidebar']) {
+    for (const n of [
+      'Accept',
+      'codec',
+      'author',
+      'page',
+      'X-Request-Id',
+      'sidebar',
+      'country_code',
+      'zip_code',
+      'status_code',
+      'errorCode',
+    ]) {
       expect(esNombreSecreto(n), n).toBe(false);
     }
   });
@@ -540,5 +554,96 @@ describe('M7: importador de curl', () => {
     const r = importarCurl("curl -H $'X: a\r\nY: b' https://h.test/");
     expect(r.peticion.cabeceras).toEqual([]);
     expect(r.avisos.map((a) => a.codigo)).toContain('cabecera_invalida');
+  });
+});
+
+describe('segunda revisión: menores', () => {
+  it('1: dos filas con la misma ref no la comparten: la primera la conserva y la otra queda sin secreto', async () => {
+    const A = await cliente.guardarPeticion(
+      peticion('http://h.test/', { cabeceras: [auth('Bearer UNO')] }),
+    );
+    const ref = refDe(A)!;
+    const B = await cliente.guardarPeticion({
+      ...A,
+      params: [{ clave: 'token', valor: '', activo: true, ref }],
+      cabeceras: [{ clave: 'Authorization', valor: '', activo: true, ref }],
+    });
+    // Las refs se reparten por orden: parámetros, cabeceras, campos y autenticación.
+    expect(B.params[0]!.ref).toBe(ref);
+    expect(B.cabeceras[0]!.ref).toBeUndefined();
+    expect(B.cabeceras[0]).toMatchObject({ faltante: true });
+    // Con valores nuevos en ambas, cada una acaba con su propio secreto.
+    const C = await cliente.guardarPeticion({
+      ...B,
+      params: [{ clave: 'token', valor: 'DOS', activo: true, ref }],
+      cabeceras: [{ clave: 'Authorization', valor: 'Bearer UNO', activo: true, ref }],
+    });
+    expect(C.params[0]!.ref).toBe(ref);
+    expect(C.cabeceras[0]!.ref).toBeDefined();
+    expect(C.cabeceras[0]!.ref).not.toBe(ref);
+    expect(almacen.get(ref)).toBe('DOS');
+    expect(almacen.get(C.cabeceras[0]!.ref!)).toBe('Bearer UNO');
+  });
+
+  it('2: el archivo grande se aparta con un nombre único y nunca pisa un respaldo', async () => {
+    const avisos: string[] = [];
+    const nuevo = (extra: object = {}): ClienteHttp =>
+      new ClienteHttp({
+        carpeta,
+        secretos,
+        caWolf: async () => null,
+        dominiosWolf: async () => [],
+        ahora: () => new Date(1000),
+        avisar: (m) => avisos.push(m),
+        ...extra,
+      });
+    const c = nuevo();
+    await c.guardarPeticion(peticion('http://h.test/', { nombre: 'uno' }));
+    const previo = path.join(carpeta, 'coleccion.json.excedido-1000');
+    writeFileSync(previo, 'RESPALDO-VIEJO');
+    writeFileSync(path.join(carpeta, 'coleccion.json'), Buffer.alloc(21 * 1024 * 1024, 32));
+    expect((await c.estado()).coleccion).toEqual([]);
+    expect(readFileSync(previo, 'utf8')).toBe('RESPALDO-VIEJO');
+    expect(
+      readdirSync(carpeta).filter((f) => f.startsWith('coleccion.json.excedido')),
+    ).toHaveLength(2);
+    expect(avisos.some((m) => m.includes('movió'))).toBe(true);
+  });
+
+  it('2: si no se puede apartar, el aviso lo dice y el archivo no se lee', async () => {
+    const avisos: string[] = [];
+    const c = new ClienteHttp({
+      carpeta,
+      secretos,
+      caWolf: async () => null,
+      dominiosWolf: async () => [],
+      avisar: (m) => avisos.push(m),
+      renombrar: async () => {
+        throw new Error('bloqueado');
+      },
+    });
+    writeFileSync(path.join(carpeta, 'coleccion.json'), Buffer.alloc(21 * 1024 * 1024, 32));
+    expect((await c.estado()).coleccion).toEqual([]);
+    expect(avisos.some((m) => m.includes('no se pudo apartar'))).toBe(true);
+    expect(avisos.some((m) => m.includes('movió'))).toBe(false);
+  });
+
+  it('3: los avisos de curl no se repiten y llegan como mucho 50', () => {
+    const r = importarCurl('curl https://h.test/ -' + 'q'.repeat(60_000));
+    expect(r.avisos).toHaveLength(1);
+    const muchas = importarCurl(
+      'curl https://h.test/ ' + Array.from({ length: 120 }, (_, i) => `--opcion${i}`).join(' '),
+    );
+    expect(muchas.avisos).toHaveLength(50);
+  });
+
+  it('4: -G codifica los datos para que # no se pierda como fragmento', async () => {
+    const r = importarCurl('curl -G -d "b=#x" -d "c=a b%20c" "https://h.test/p#frag"');
+    expect(r.peticion.url).toBe('https://h.test/p?b=%23x&c=a%20b%20c#frag');
+    const g = await cliente.guardarPeticion(r.peticion);
+    expect(g.params.map((x) => [x.clave, x.valor])).toEqual([
+      ['b', '#x'],
+      ['c', 'a b c'],
+    ]);
   });
 });
