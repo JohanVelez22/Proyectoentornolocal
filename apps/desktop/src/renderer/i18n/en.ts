@@ -314,6 +314,14 @@ export const en: Textos = {
       'diff.caducado': 'That comparison is no longer available: compare again.',
       'diff.archivo_invalido': 'That file can no longer be compared: it changed or disappeared.',
       'diff.fallo': 'The comparison failed.',
+      'disco.raiz_invalida': 'Choose a folder or drive that exists and can be read.',
+      'disco.cancelado': 'Analysis cancelled.',
+      'disco.plazo': 'The analysis took more than {minutos} min and was cancelled.',
+      'disco.memoria': 'The analysis needs too much memory (over {maximo}).',
+      'disco.ocupado': 'An analysis is already running: cancel it or wait.',
+      'disco.caducado': 'That analysis is no longer available: analyze again.',
+      'disco.entrada_invalida': 'That folder no longer exists or has changed: analyze again.',
+      'disco.fallo': 'The analysis failed.',
       'terminal.no_abrio': 'The terminal could not be opened.',
       'terminal.no_instalada': '{nombre} is not installed. Choose another terminal in Settings.',
       'terminal.invalida': 'That terminal is not valid.',
@@ -3563,6 +3571,11 @@ export const en: Textos = {
         nombre: 'Code editor',
         descripcion: 'Edit text files with highlighting, a backup copy and confirmed saving.',
       },
+      usoDisco: {
+        nombre: 'Disk usage',
+        descripcion:
+          'What takes up space on a drive or folder: tree, largest files and folders, by extension.',
+      },
       diffCarpetas: {
         nombre: 'Folder diff',
         descripcion:
@@ -3882,6 +3895,82 @@ export const en: Textos = {
       coincidencias: (n: number) => `${n} ${n === 1 ? 'match' : 'matches'}`,
       resumen: (archivos: number, examinados: number) =>
         `in ${archivos} ${archivos === 1 ? 'file' : 'files'} (${examinados} checked)`,
+    },
+    usoDisco: {
+      explicacion:
+        'Shows what takes up space on a drive or in a folder. It only reads names and sizes (never contents), does not follow links or junctions and works in a separate process. It does not delete, move or change anything.',
+      unidades: 'Drives',
+      unidad: (ruta: string, etiqueta: string) => (etiqueta ? `${ruta} ${etiqueta}` : ruta),
+      espacioUnidad: (libre: string, total: string) => `${libre} free of ${total}`,
+      sinUnidades: 'The list of drives could not be read. You can choose a folder.',
+      elegirCarpeta: 'Choose folder…',
+      analizando: 'Analyzing…',
+      leyendo: 'Reading',
+      progreso: (archivos: string, carpetas: string, bytes: string) =>
+        `${archivos} files · ${carpetas} folders · ${bytes}`,
+      cancelar: 'Cancel',
+      cancelado: 'Analysis cancelled.',
+      resumen: (total: string, archivos: string, carpetas: string) =>
+        `${total} in ${archivos} files and ${carpetas} folders`,
+      duracion: (segundos: string) => `It took ${segundos} s.`,
+      vistas: {
+        arbol: 'Tree',
+        carpetas: 'Folders',
+        archivos: 'Files',
+        extensiones: 'Extensions',
+      },
+      arbolAyuda:
+        'Sorted by size. Only folders and files that weigh at least 0.5% of the total are shown; the rest is summed up in “Others”.',
+      carpetasAyuda:
+        'The 50 folders with the most weight of their own: what the files they hold directly weigh, not counting their subfolders.',
+      archivosAyuda: 'The 50 largest files.',
+      extensionesAyuda:
+        'The 20 extensions that take up the most; the rest go to “Other extensions”.',
+      col: {
+        nombre: 'Name',
+        tamano: 'Size',
+        porcentaje: 'Of total',
+        archivos: 'Files',
+        ruta: 'Path',
+        extension: 'Extension',
+      },
+      otros: (n: string) => `Others (${n} small files)`,
+      sinExtension: '(no extension)',
+      otrasExtensiones: 'Other extensions',
+      expandir: (nombre: string) => `Expand ${nombre}`,
+      contraer: (nombre: string) => `Collapse ${nombre}`,
+      abrir: 'Open in Explorer',
+      copiar: 'Copy path',
+      denegada: 'Could not be read',
+      avisos: {
+        enlaces: (n: number) =>
+          `${n} ${n === 1 ? 'link or junction was' : 'links or junctions were'} not followed and ${n === 1 ? 'counts' : 'count'} as 0.`,
+        denegados: (n: number) =>
+          `${n} ${n === 1 ? 'item' : 'items'} could not be read (no permission, or changed during the analysis). Without administrator rights some system folders cannot be read: this tool does not ask for them.`,
+        enlacesDuros: (n: number) =>
+          `${n} ${n === 1 ? 'extra name' : 'extra names'} of hard-linked files were not counted twice.`,
+        enlacesDurosIncompleto:
+          'There were so many hard links that the registry filled up: the total may count some file twice.',
+        truncado: 'The maximum depth was reached: some folders were not counted.',
+        tamanoLogico:
+          'Sizes are logical (what each file reports), not the space used on disk: online-only OneDrive files, compressed files and sparse files may differ.',
+        verEnlaces: 'Show the links that were not followed',
+      },
+      limpieza: {
+        titulo: 'Free up space',
+        texto:
+          'This tool only measures. To delete temporary files and regenerable caches, or unused service versions, use what already exists:',
+        temporales: 'Disk cleanup',
+        versiones: 'Unused versions (Services)',
+      },
+      vacio: {
+        titulo: 'No analysis yet',
+        texto: 'Choose a drive or a folder to see what takes up space. Nothing is changed.',
+      },
+      sinContenido: {
+        titulo: 'Nothing to count',
+        texto: 'That folder has no files that can be read.',
+      },
     },
     diffCarpetas: {
       explicacion:

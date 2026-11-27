@@ -321,6 +321,14 @@ export const pt: Textos = {
       'diff.caducado': 'Essa comparação não está mais disponível: compare de novo.',
       'diff.archivo_invalido': 'Esse arquivo não pode mais ser comparado: mudou ou desapareceu.',
       'diff.fallo': 'A comparação falhou.',
+      'disco.raiz_invalida': 'Escolha uma pasta ou unidade que exista e possa ser lida.',
+      'disco.cancelado': 'Análise cancelada.',
+      'disco.plazo': 'A análise demorou mais de {minutos} min e foi cancelada.',
+      'disco.memoria': 'A análise precisa de memória demais (mais de {maximo}).',
+      'disco.ocupado': 'Já há uma análise em andamento: cancele-a ou aguarde.',
+      'disco.caducado': 'Essa análise não está mais disponível: analise novamente.',
+      'disco.entrada_invalida': 'Essa pasta não existe mais ou mudou: analise novamente.',
+      'disco.fallo': 'A análise falhou.',
       'terminal.no_abrio': 'Não foi possível abrir o terminal.',
       'terminal.no_instalada':
         '{nombre} não está instalado. Escolha outro terminal em Configurações.',
@@ -3599,6 +3607,11 @@ export const pt: Textos = {
         nombre: 'Editor de código',
         descripcion: 'Edite arquivos de texto com realce, cópia prévia e salvamento confirmado.',
       },
+      usoDisco: {
+        nombre: 'Uso do disco',
+        descripcion:
+          'O que ocupa espaço em uma unidade ou pasta: árvore, maiores arquivos e pastas, por extensão.',
+      },
       diffCarpetas: {
         nombre: 'Diff de pastas',
         descripcion:
@@ -3919,6 +3932,81 @@ export const pt: Textos = {
       coincidencias: (n: number) => `${n} ${n === 1 ? 'correspondência' : 'correspondências'}`,
       resumen: (archivos: number, examinados: number) =>
         `em ${archivos} ${archivos === 1 ? 'arquivo' : 'arquivos'} (${examinados} verificados)`,
+    },
+    usoDisco: {
+      explicacion:
+        'Mostra o que ocupa espaço em uma unidade ou em uma pasta. Lê apenas nomes e tamanhos (nunca o conteúdo), não segue links nem junções e trabalha em um processo separado. Não apaga, move nem altera nada.',
+      unidades: 'Unidades',
+      unidad: (ruta: string, etiqueta: string) => (etiqueta ? `${ruta} ${etiqueta}` : ruta),
+      espacioUnidad: (libre: string, total: string) => `${libre} livres de ${total}`,
+      sinUnidades: 'Não foi possível ler a lista de unidades. Você pode escolher uma pasta.',
+      elegirCarpeta: 'Escolher pasta…',
+      analizando: 'Analisando…',
+      leyendo: 'Lendo',
+      progreso: (archivos: string, carpetas: string, bytes: string) =>
+        `${archivos} arquivos · ${carpetas} pastas · ${bytes}`,
+      cancelar: 'Cancelar',
+      cancelado: 'Análise cancelada.',
+      resumen: (total: string, archivos: string, carpetas: string) =>
+        `${total} em ${archivos} arquivos e ${carpetas} pastas`,
+      duracion: (segundos: string) => `Levou ${segundos} s.`,
+      vistas: {
+        arbol: 'Árvore',
+        carpetas: 'Pastas',
+        archivos: 'Arquivos',
+        extensiones: 'Extensões',
+      },
+      arbolAyuda:
+        'Ordenado por tamanho. Só aparecem as pastas e os arquivos que pesam pelo menos 0,5 % do total; o resto é resumido em “Outros”.',
+      carpetasAyuda:
+        'As 50 pastas com mais peso próprio: o que pesam os arquivos que elas têm diretamente, sem contar as subpastas.',
+      archivosAyuda: 'Os 50 maiores arquivos.',
+      extensionesAyuda: 'As 20 extensões que mais ocupam; o resto vai para “Outras extensões”.',
+      col: {
+        nombre: 'Nome',
+        tamano: 'Tamanho',
+        porcentaje: 'Do total',
+        archivos: 'Arquivos',
+        ruta: 'Caminho',
+        extension: 'Extensão',
+      },
+      otros: (n: string) => `Outros (${n} arquivos pequenos)`,
+      sinExtension: '(sem extensão)',
+      otrasExtensiones: 'Outras extensões',
+      expandir: (nombre: string) => `Expandir ${nombre}`,
+      contraer: (nombre: string) => `Recolher ${nombre}`,
+      abrir: 'Abrir no Explorador',
+      copiar: 'Copiar caminho',
+      denegada: 'Não foi possível ler',
+      avisos: {
+        enlaces: (n: number) =>
+          `${n} ${n === 1 ? 'link ou junção não foi seguido' : 'links ou junções não foram seguidos'} e ${n === 1 ? 'conta' : 'contam'} 0.`,
+        denegados: (n: number) =>
+          `${n} ${n === 1 ? 'item não pôde ser lido' : 'itens não puderam ser lidos'} (sem permissão ou mudaram durante a análise). Sem permissões de administrador algumas pastas do sistema não são lidas: esta ferramenta não as pede.`,
+        enlacesDuros: (n: number) =>
+          `${n} ${n === 1 ? 'nome extra' : 'nomes extras'} de arquivos com links físicos não foram contados duas vezes.`,
+        enlacesDurosIncompleto:
+          'Havia tantos links físicos que o registro encheu: o total pode contar algum arquivo duas vezes.',
+        truncado: 'A profundidade máxima foi atingida: há pastas sem contar.',
+        tamanoLogico:
+          'Os tamanhos são lógicos (o que cada arquivo informa), não o espaço ocupado no disco: arquivos do OneDrive somente online, compactados ou esparsos podem diferir.',
+        verEnlaces: 'Ver os links que não foram seguidos',
+      },
+      limpieza: {
+        titulo: 'Liberar espaço',
+        texto:
+          'Esta ferramenta apenas mede. Para apagar temporários e caches regeneráveis, ou versões de serviços sem uso, use o que já existe:',
+        temporales: 'Limpeza de disco',
+        versiones: 'Versões sem uso (Serviços)',
+      },
+      vacio: {
+        titulo: 'Nenhuma análise ainda',
+        texto: 'Escolha uma unidade ou uma pasta para ver o que ocupa espaço. Nada é alterado.',
+      },
+      sinContenido: {
+        titulo: 'Nada a contar',
+        texto: 'Essa pasta não tem arquivos que possam ser lidos.',
+      },
     },
     diffCarpetas: {
       explicacion:

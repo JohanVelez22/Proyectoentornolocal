@@ -29,6 +29,7 @@ describe('Herramientas por secciones (D38a)', () => {
         'comprimir',
         'conversor',
         'infoArchivo',
+        'usoDisco',
         'bom',
         'qr',
         'captura',

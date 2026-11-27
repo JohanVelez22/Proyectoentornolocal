@@ -317,6 +317,14 @@ export const es = {
       'diff.caducado': 'Esa comparación ya no está disponible: vuelva a comparar.',
       'diff.archivo_invalido': 'Ese archivo ya no se puede comparar: cambió o desapareció.',
       'diff.fallo': 'La comparación falló.',
+      'disco.raiz_invalida': 'Elija una carpeta o unidad que exista y se pueda leer.',
+      'disco.cancelado': 'Análisis cancelado.',
+      'disco.plazo': 'El análisis tardó más de {minutos} min y se canceló.',
+      'disco.memoria': 'El análisis necesita demasiada memoria (más de {maximo}).',
+      'disco.ocupado': 'Ya hay un análisis en curso: cancélelo o espere.',
+      'disco.caducado': 'Ese análisis ya no está disponible: vuelva a analizar.',
+      'disco.entrada_invalida': 'Esa carpeta ya no existe o cambió: vuelva a analizar.',
+      'disco.fallo': 'El análisis falló.',
       'terminal.no_abrio': 'No se pudo abrir la terminal.',
       'terminal.no_instalada': '{nombre} no está instalada. Elija otra terminal en Ajustes.',
       'terminal.invalida': 'Esa terminal no es válida.',
@@ -3590,6 +3598,11 @@ export const es = {
         nombre: 'Editor de código',
         descripcion: 'Edita archivos de texto con resaltado, copia previa y guardado confirmado.',
       },
+      usoDisco: {
+        nombre: 'Uso del disco',
+        descripcion:
+          'Qué ocupa espacio en una unidad o carpeta: árbol, mayores archivos y carpetas, por extensión.',
+      },
       diffCarpetas: {
         nombre: 'Diff de carpetas',
         descripcion:
@@ -3911,6 +3924,81 @@ export const es = {
       coincidencias: (n: number) => `${n} ${n === 1 ? 'coincidencia' : 'coincidencias'}`,
       resumen: (archivos: number, examinados: number) =>
         `en ${archivos} ${archivos === 1 ? 'archivo' : 'archivos'} (${examinados} revisados)`,
+    },
+    usoDisco: {
+      explicacion:
+        'Muestra qué ocupa espacio en una unidad o en una carpeta. Solo lee nombres y tamaños (nunca el contenido), no sigue enlaces ni uniones y trabaja en un proceso aparte. No borra, mueve ni cambia nada.',
+      unidades: 'Unidades',
+      unidad: (ruta: string, etiqueta: string) => (etiqueta ? `${ruta} ${etiqueta}` : ruta),
+      espacioUnidad: (libre: string, total: string) => `${libre} libres de ${total}`,
+      sinUnidades: 'No se pudo leer la lista de unidades. Puede elegir una carpeta.',
+      elegirCarpeta: 'Elegir carpeta…',
+      analizando: 'Analizando…',
+      leyendo: 'Leyendo',
+      progreso: (archivos: string, carpetas: string, bytes: string) =>
+        `${archivos} archivos · ${carpetas} carpetas · ${bytes}`,
+      cancelar: 'Cancelar',
+      cancelado: 'Análisis cancelado.',
+      resumen: (total: string, archivos: string, carpetas: string) =>
+        `${total} en ${archivos} archivos y ${carpetas} carpetas`,
+      duracion: (segundos: string) => `Tardó ${segundos} s.`,
+      vistas: {
+        arbol: 'Árbol',
+        carpetas: 'Carpetas',
+        archivos: 'Archivos',
+        extensiones: 'Extensiones',
+      },
+      arbolAyuda:
+        'Ordenado por tamaño. Solo se ven las carpetas y los archivos que pesan al menos el 0,5 % del total; el resto se resume en «Otros».',
+      carpetasAyuda:
+        'Las 50 carpetas con más peso propio: lo que pesan los archivos que tienen directamente, sin contar sus subcarpetas.',
+      archivosAyuda: 'Los 50 archivos más grandes.',
+      extensionesAyuda: 'Las 20 extensiones que más ocupan; el resto va a «Otras extensiones».',
+      col: {
+        nombre: 'Nombre',
+        tamano: 'Tamaño',
+        porcentaje: 'Del total',
+        archivos: 'Archivos',
+        ruta: 'Ruta',
+        extension: 'Extensión',
+      },
+      otros: (n: string) => `Otros (${n} archivos pequeños)`,
+      sinExtension: '(sin extensión)',
+      otrasExtensiones: 'Otras extensiones',
+      expandir: (nombre: string) => `Expandir ${nombre}`,
+      contraer: (nombre: string) => `Contraer ${nombre}`,
+      abrir: 'Abrir en el Explorador',
+      copiar: 'Copiar ruta',
+      denegada: 'No se pudo leer',
+      avisos: {
+        enlaces: (n: number) =>
+          `${n} ${n === 1 ? 'enlace o unión no se siguió' : 'enlaces o uniones no se siguieron'} y ${n === 1 ? 'cuenta' : 'cuentan'} 0.`,
+        denegados: (n: number) =>
+          `${n} ${n === 1 ? 'elemento no se pudo leer' : 'elementos no se pudieron leer'} (sin permiso o cambiaron durante el análisis). Sin permisos de administrador no se leen algunas carpetas del sistema: esta herramienta no los pide.`,
+        enlacesDuros: (n: number) =>
+          `${n} ${n === 1 ? 'nombre extra' : 'nombres extra'} de archivos con enlaces duros no se contaron dos veces.`,
+        enlacesDurosIncompleto:
+          'Había tantos enlaces duros que el registro se llenó: el total puede contar algún archivo dos veces.',
+        truncado: 'Se alcanzó la profundidad máxima: hay carpetas sin contar.',
+        tamanoLogico:
+          'Los tamaños son lógicos (lo que dice cada archivo), no el espacio ocupado en el disco: los archivos de OneDrive solo en línea, los comprimidos o los dispersos pueden diferir.',
+        verEnlaces: 'Ver los enlaces que no se siguieron',
+      },
+      limpieza: {
+        titulo: 'Liberar espacio',
+        texto:
+          'Esta herramienta solo mide. Para borrar temporales y cachés que se regeneran, o versiones de servicios sin uso, use lo que ya existe:',
+        temporales: 'Limpieza de disco',
+        versiones: 'Versiones sin uso (Servicios)',
+      },
+      vacio: {
+        titulo: 'Sin análisis todavía',
+        texto: 'Elija una unidad o una carpeta para ver qué ocupa espacio. No se cambia nada.',
+      },
+      sinContenido: {
+        titulo: 'Nada que contar',
+        texto: 'Esa carpeta no tiene archivos que se puedan leer.',
+      },
     },
     diffCarpetas: {
       explicacion:

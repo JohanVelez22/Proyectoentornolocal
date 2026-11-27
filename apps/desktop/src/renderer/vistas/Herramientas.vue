@@ -21,6 +21,7 @@ import {
   SwapVertical,
   Time,
   Pulse,
+  PieChart,
   Text,
   TrashBin,
   Videocam,
@@ -68,6 +69,7 @@ const componentes: Record<Clave, Component> = {
   grabarPantalla: defineAsyncComponent(
     () => import('../componentes/herramientas/GrabarPantalla.vue'),
   ),
+  usoDisco: defineAsyncComponent(() => import('../componentes/herramientas/UsoDisco.vue')),
   limpiezaDisco: defineAsyncComponent(
     () => import('../componentes/herramientas/LimpiezaDisco.vue'),
   ),
@@ -101,6 +103,7 @@ const iconos: Record<string, Component> = {
   conversor: DocumentAttach,
   captura: Camera,
   grabarPantalla: Videocam,
+  usoDisco: PieChart,
   limpiezaDisco: TrashBin,
   guias: Book,
   editor: Create,

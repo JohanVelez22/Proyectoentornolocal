@@ -330,6 +330,14 @@ export const fr: Textos = {
       'diff.caducado': 'Cette comparaison n’est plus disponible : relancez-la.',
       'diff.archivo_invalido': 'Ce fichier ne peut plus être comparé : il a changé ou a disparu.',
       'diff.fallo': 'La comparaison a échoué.',
+      'disco.raiz_invalida': 'Choisissez un dossier ou un lecteur existant et lisible.',
+      'disco.cancelado': 'Analyse annulée.',
+      'disco.plazo': 'L’analyse a duré plus de {minutos} min et a été annulée.',
+      'disco.memoria': 'L’analyse demande trop de mémoire (plus de {maximo}).',
+      'disco.ocupado': 'Une analyse est déjà en cours : annulez-la ou patientez.',
+      'disco.caducado': 'Cette analyse n’est plus disponible : analysez à nouveau.',
+      'disco.entrada_invalida': 'Ce dossier n’existe plus ou a changé : analysez à nouveau.',
+      'disco.fallo': 'L’analyse a échoué.',
       'terminal.no_abrio': 'Impossible d’ouvrir le terminal.',
       'terminal.no_instalada':
         '{nombre} n’est pas installé. Choisissez un autre terminal dans Réglages.',
@@ -3695,6 +3703,11 @@ export const fr: Textos = {
         descripcion:
           'Modifiez des fichiers texte avec coloration, copie préalable et enregistrement confirmé.',
       },
+      usoDisco: {
+        nombre: 'Utilisation du disque',
+        descripcion:
+          'Ce qui occupe de la place sur un lecteur ou un dossier : arborescence, plus gros fichiers et dossiers, par extension.',
+      },
       diffCarpetas: {
         nombre: 'Différences de dossiers',
         descripcion:
@@ -4021,6 +4034,83 @@ export const fr: Textos = {
       coincidencias: (n: number) => `${n} ${n === 1 ? 'correspondance' : 'correspondances'}`,
       resumen: (archivos: number, examinados: number) =>
         `dans ${archivos} ${archivos === 1 ? 'fichier' : 'fichiers'} (${examinados} examinés)`,
+    },
+    usoDisco: {
+      explicacion:
+        'Montre ce qui occupe de la place sur un lecteur ou dans un dossier. Il ne lit que les noms et les tailles (jamais le contenu), ne suit ni les liens ni les jonctions et travaille dans un processus séparé. Il ne supprime, ne déplace et ne modifie rien.',
+      unidades: 'Lecteurs',
+      unidad: (ruta: string, etiqueta: string) => (etiqueta ? `${ruta} ${etiqueta}` : ruta),
+      espacioUnidad: (libre: string, total: string) => `${libre} libres sur ${total}`,
+      sinUnidades: 'La liste des lecteurs n’a pas pu être lue. Vous pouvez choisir un dossier.',
+      elegirCarpeta: 'Choisir un dossier…',
+      analizando: 'Analyse en cours…',
+      leyendo: 'Lecture',
+      progreso: (archivos: string, carpetas: string, bytes: string) =>
+        `${archivos} fichiers · ${carpetas} dossiers · ${bytes}`,
+      cancelar: 'Annuler',
+      cancelado: 'Analyse annulée.',
+      resumen: (total: string, archivos: string, carpetas: string) =>
+        `${total} dans ${archivos} fichiers et ${carpetas} dossiers`,
+      duracion: (segundos: string) => `Durée : ${segundos} s.`,
+      vistas: {
+        arbol: 'Arborescence',
+        carpetas: 'Dossiers',
+        archivos: 'Fichiers',
+        extensiones: 'Extensions',
+      },
+      arbolAyuda:
+        'Trié par taille. Seuls les dossiers et fichiers qui pèsent au moins 0,5 % du total sont affichés ; le reste est résumé dans « Autres ».',
+      carpetasAyuda:
+        'Les 50 dossiers au plus gros poids propre : ce que pèsent les fichiers qu’ils contiennent directement, sans compter leurs sous-dossiers.',
+      archivosAyuda: 'Les 50 plus gros fichiers.',
+      extensionesAyuda:
+        'Les 20 extensions qui occupent le plus ; le reste va dans « Autres extensions ».',
+      col: {
+        nombre: 'Nom',
+        tamano: 'Taille',
+        porcentaje: 'Du total',
+        archivos: 'Fichiers',
+        ruta: 'Chemin',
+        extension: 'Extension',
+      },
+      otros: (n: string) => `Autres (${n} petits fichiers)`,
+      sinExtension: '(sans extension)',
+      otrasExtensiones: 'Autres extensions',
+      expandir: (nombre: string) => `Développer ${nombre}`,
+      contraer: (nombre: string) => `Réduire ${nombre}`,
+      abrir: 'Ouvrir dans l’Explorateur',
+      copiar: 'Copier le chemin',
+      denegada: 'Lecture impossible',
+      avisos: {
+        enlaces: (n: number) =>
+          `${n} ${n === 1 ? 'lien ou jonction n’a pas été suivi' : 'liens ou jonctions n’ont pas été suivis'} et ${n === 1 ? 'compte' : 'comptent'} pour 0.`,
+        denegados: (n: number) =>
+          `${n} ${n === 1 ? 'élément n’a pas pu être lu' : 'éléments n’ont pas pu être lus'} (sans autorisation, ou modifiés pendant l’analyse). Sans droits d’administrateur, certains dossiers système ne sont pas lus : cet outil ne les demande pas.`,
+        enlacesDuros: (n: number) =>
+          `${n} ${n === 1 ? 'nom supplémentaire' : 'noms supplémentaires'} de fichiers à liens physiques n’ont pas été comptés deux fois.`,
+        enlacesDurosIncompleto:
+          'Il y avait tant de liens physiques que le registre est plein : le total peut compter un fichier deux fois.',
+        truncado: 'La profondeur maximale a été atteinte : certains dossiers ne sont pas comptés.',
+        tamanoLogico:
+          'Les tailles sont logiques (ce que déclare chaque fichier), pas l’espace occupé sur le disque : les fichiers OneDrive en ligne seulement, compressés ou fragmentés peuvent différer.',
+        verEnlaces: 'Voir les liens qui n’ont pas été suivis',
+      },
+      limpieza: {
+        titulo: 'Libérer de l’espace',
+        texto:
+          'Cet outil ne fait que mesurer. Pour supprimer les fichiers temporaires et les caches régénérables, ou les versions de services inutilisées, utilisez ce qui existe déjà :',
+        temporales: 'Nettoyage du disque',
+        versiones: 'Versions inutilisées (Services)',
+      },
+      vacio: {
+        titulo: 'Aucune analyse pour l’instant',
+        texto:
+          'Choisissez un lecteur ou un dossier pour voir ce qui occupe de la place. Rien n’est modifié.',
+      },
+      sinContenido: {
+        titulo: 'Rien à compter',
+        texto: 'Ce dossier ne contient aucun fichier lisible.',
+      },
     },
     diffCarpetas: {
       explicacion:
