@@ -212,7 +212,7 @@ PostgreSQL usa pgvector compilado una vez en su equipo:
 ### Iniciar todo y línea de órdenes
 
 - **Iniciar todo** (botón de Servicios, bandeja y paleta) enciende, en orden: el PHP de las ramas en uso y Nginx; luego la **instancia predeterminada de cada base instalada**, las que tienen _Iniciar con WolfCore Dev_ y las que usan los proyectos según su `.env` (motor y puerto), y espera a que respondan; por último los procesos de proyecto con _autoiniciar_, solo si responde la base que usan. Ojo: una base instalada que nunca se usó también se enciende, y la primera vez se inicializa (crea su carpeta en `data\` y sus credenciales); si no la quiere, desinstálela. Si algo falla, el error y un aviso dicen qué no arrancó. **Nunca abre túneles**: un túnel solo se abre con el interruptor de su sitio, y siempre pide confirmar que el sitio queda público.
-- Desde la línea de órdenes (base del futuro CLI `wolf`):
+- Desde la línea de órdenes de la aplicación (el comando `wolf` completo se describe más abajo):
 
   ```powershell
   & "$env:LOCALAPPDATA\Programs\WolfCore Dev\WolfCore Dev.exe" --iniciar-todo
@@ -225,9 +225,97 @@ PostgreSQL usa pgvector compilado una vez en su equipo:
 
 ### Interfaz (Etapa B)
 
-- Tema **claro, oscuro o del sistema** (también la barra de título), color de acento e idioma **español o inglés**, en caliente.
+- Tema **claro, oscuro o del sistema** (también la barra de título), color de acento e idioma (**español, inglés, francés o portugués**), en caliente.
 - **Ctrl+K** abre la paleta de comandos: ir a cualquier pantalla, encender o apagar todo, agregar o clonar proyectos y cambiar tema o idioma.
-- **Asistente de primer uso:** carpeta de proyectos, lo básico (Nginx, PHP 8.4, Composer y Node LTS), la CA de HTTPS, GitHub y la carpeta vigilada. Se puede repetir desde **Ajustes**.
+- **Recorrido de bienvenida** de 7 pasos (servicios, proyectos, bases de datos, herramientas y Ctrl+K, Doctor): no cambia nada en el equipo, se cierra con Esc y se puede volver a ver desde **Ajustes › Apariencia**.
+
+## Etapa D: proyectos, datos, herramientas y compartir
+
+### Proyectos nuevos, plantillas e importación
+
+- **Nuevo proyecto** crea desde cero la carpeta, el sitio con HTTPS, la base y su conexión: Laravel, CodeIgniter 3 y 4, Symfony, FastAPI, WordPress y sitio estático. También hay recetas para Rails, Spring Boot, ASP.NET y Node: los servidores arrancan con `HOST=127.0.0.1`, y WolfCore Dev comprueba tras el arranque que el proceso no escuche en toda la red (si lo hace, lo detiene y avisa).
+- **Guardar como plantilla:** un proyecto se guarda con su receta, los ajustes de PHP y Nginx, las extensiones y el **esquema** de su base (solo la estructura, ninguna fila). Nunca guarda `.env`, `vendor`, `node_modules`, `.git`, volcados, claves ni certificados, y un archivo que parezca contener una clave también se deja fuera. Desde la plantilla se crean proyectos nuevos.
+- **Importar desde Laragon, XAMPP o Herd:** los sitios se vinculan donde están (no se mueve ni se modifica ninguna carpeta) y, si usted quiere, se copian sus bases. Solo lee las instalaciones de los otros programas y ningún sitio importado ejecuta recetas hasta que se marque «Confío en este repositorio».
+- **Variables `.env`:** tabla con los valores secretos enmascarados; un valor solo se ve al pulsar «Mostrar» (y se oculta a los 30 s). Antes de guardar se hace una copia con fecha. Los bloques de conexión (base, correo, IA, Meilisearch) se agregan con vista previa y confirmación.
+- **Workspaces y tareas:** un workspace es un conjunto con nombre de bases, servicios y procesos que se enciende y se apaga junto. Las **tareas programadas** de un proyecto (por ejemplo `php artisan schedule:run` cada minuto) corren solo mientras WolfCore Dev está abierto; no usan el Programador de tareas de Windows.
+- **Reverb y Meilisearch:** Reverb (WebSockets de Laravel) se enciende por proyecto, solo en `127.0.0.1` y en un puerto libre, y propone las variables `REVERB_*`. Meilisearch se instala desde **Servicios**; cada versión menor tiene sus propios datos (cambiar de menor obliga a reindexar y a actualizar la clave).
+
+### Versiones de lenguajes y herramientas
+
+- **Servicios → Versiones** instala, sin tocar el PATH del sistema, varias versiones de Node, Python, Java (Temurin), .NET, Go, Rust, Bun, Deno, Zig, Kotlin, Dart, **Ruby** (por `.7z`, sin Devkit: las gemas con extensiones nativas necesitan «ridk install», un paso manual), **Maven** y **Gradle** (se ejecutan con un JDK de WolfCore Dev). Cada descarga se verifica con su huella; solo las firmadas con PGP (Node, Nginx, phpMyAdmin y Composer) llevan el escudo verde.
+- Maven se lanza directamente con el JDK y, por seguridad, no lee `.mvn/jvm.config` ni `MAVEN_OPTS`.
+
+### Bases de datos
+
+- **Instantáneas:** guardan una base tal como está y se pueden restaurar (antes de volver se guarda sola una del estado actual); las borradas se recuperan durante 7 días desde la papelera.
+- **Auditoría de contraseñas** (Herramientas → Contraseñas → Auditar una base): compara los hashes de una tabla con una lista corta de unas 200 contraseñas muy comunes. **Su límite:** solo detecta contraseñas comunes; no es un ataque de fuerza bruta, y que una cuenta no salga marcada no significa que su contraseña sea buena. Nunca muestra cuál contraseña coincidió y lee con un usuario temporal de solo lectura.
+- **phpMyAdmin y Adminer:** el botón de base de cada proyecto abre el cliente con el usuario del proyecto.
+- **Consultas lentas** (MySQL, MariaDB y PostgreSQL): activa el registro en todo el servidor con confirmación y lista las consultas más lentas, ocultando los valores literales para no exponer datos.
+- **Visor de esquema:** tablas, columnas, índices y relaciones, solo lectura; no lee ningún dato de las tablas.
+- **Perfiles:** **Respaldo y perfiles** exporta un archivo `.wolfperfil` con sitios, versiones, instancias, plantillas y ajustes, y lo importa en otro equipo mostrando antes todo lo que se reemplaza. Las bases y la CA viajan solo cifradas con una frase que elige el usuario; nunca viajan claves, tokens ni contraseñas.
+
+### Herramientas
+
+La pantalla **Herramientas** se agrupa en cinco secciones (Código, Red, Seguridad, Archivos y medios, Sistema) y tiene buscador. Además de las de la Etapa B:
+
+- **Editor de código:** archivos de texto con resaltado, copia previa y guardado confirmado; los archivos sensibles (`.env`, claves) piden una confirmación reforzada.
+- **Buscar:** texto en nombres y contenido de un proyecto, una carpeta o un archivo.
+- **Comparar:** diff de textos y **Diff de carpetas** (solo en A, solo en B y distintos), sin cambiar nada y sin mostrar el contenido de archivos sensibles.
+- **Cliente HTTP:** peticiones con entornos, colección e historial. Se envía desde el proceso principal (con plazo, tope de 10 MB y redirecciones manuales); los valores secretos (cabeceras de autorización, claves de API) se guardan en el almacén cifrado, no en la colección ni en el historial. La CA de WolfCore Dev solo se acepta para dominios `.test` y de sus sitios.
+- **Guías:** HTTP (códigos y métodos con buscador), túneles (Cloudflare y ngrok) y Git/GitHub. En la guía HTTP, el botón **Probar** arranca un servidor de ejemplo en `127.0.0.1` (puerto aleatorio, se apaga a los 10 minutos) y abre el cliente con la petición rellena; no la envía solo. El **laboratorio de Git** es un repositorio de práctica con un remoto local en una carpeta propia de WolfCore Dev: no usa internet ni GitHub y no toca sus proyectos ni su configuración de git.
+- **Uso del disco:** qué ocupa espacio en una unidad o carpeta (árbol, 50 carpetas y archivos mayores, por extensión). Solo lee nombres y tamaños, no sigue enlaces ni uniones, no pide administrador y no borra nada; para liberar espacio enlaza con la limpieza de disco y de versiones.
+- **Compartir carpeta o archivo:** ver la sección siguiente.
+- **Grabar pantalla** abre la grabadora que ya trae Windows.
+
+### Compartir carpeta o archivo por un túnel
+
+Herramientas → **Compartir carpeta o archivo** publica en internet, con un enlace temporal, una carpeta o un archivo suelto, de solo lectura:
+
+1. Se elige la carpeta o el archivo en el diálogo de Windows, la duración (15 minutos, 1 hora o 4 horas) y el túnel (Cloudflare rápido, sin cuenta, o ngrok con su token).
+2. Una confirmación muestra la **ruta exacta** (y la real, si hay enlaces) y avisa de que quedará público.
+3. El enlace lleva un código secreto de 128 bits; sin él, la respuesta es un 404 vacío. Se muestra con su QR y un **registro de accesos** (los últimos 200, en memoria, sin el código).
+4. Se cierran el servidor y el túnel al vencer el plazo, al pulsar **Dejar de compartir**, si el túnel cae y al salir de WolfCore Dev. Solo hay una compartición a la vez.
+
+El FTP no se comparte por túnel: va sin cifrar y el túnel solo deja pasar HTTP; el FTP es solo para la red local.
+
+### Línea de órdenes `wolf`
+
+**Ajustes → Terminal: comando wolf** agrega `wolf` al PATH del usuario (con copia del PATH original) y enciende un servidor local en `127.0.0.1` que solo atiende a `wolf`, con una clave que cambia en cada arranque. Solo funciona con la aplicación abierta (`--abrir` la abre).
+
+```text
+wolf status                  Estado de sitios, servicios y túneles
+wolf link [carpeta]          Vincula una carpeta como sitio
+wolf park [carpeta]          Carpeta vigilada de proyectos
+wolf use php@8.4 [--global]  PHP del sitio (o de las terminales)
+wolf use node@22             También python, java, dotnet, go y rust
+wolf secure <sitio>          Activa HTTPS
+wolf share <sitio>           Publica el sitio en internet (pide confirmar)
+wolf open <sitio>            Abre el sitio
+wolf logs <sitio> [-f]       Registros
+wolf doctor                  Revisa el entorno (solo informa)
+wolf start|stop [workspace|servicio]
+```
+
+Todas aceptan `--json`. Publicar un sitio o cambiar el PHP de todas las terminales se confirma además en la ventana de la aplicación. Con una carpeta de datos de prueba (`WOLFCORE_DATOS`) el PATH no se toca.
+
+### Red local y cortafuegos
+
+- **Compartir un sitio en la red local** (interruptor por sitio, con confirmación): lo hace visible a los demás dispositivos de la misma red, sin contraseña, con QR y con la opción de instalar la CA en el móvil. No se comparten sitios con datos reales, ni con confirmación.
+- WolfCore Dev **no cambia el cortafuegos de Windows**: muestra un comando (solo subred local y solo redes privadas) para pegar en PowerShell como administrador. El **Doctor** revisa las reglas de entrada: las de programas de WolfCore Dev abiertas a toda la red se pueden quitar con confirmación (guardando una copia); las de otros programas (FlyEnv, Laragon, XAMPP…) solo se muestran.
+
+### Seguridad: qué se publica y qué no
+
+| Función                   | Qué queda accesible y para quién                                                                                     | Qué nunca se publica                                                                                                                                                                                                                        |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sitios `.test`            | Solo este equipo (Nginx en `127.0.0.1`, por nombre de sitio).                                                        | `.env`, archivos ocultos y carpetas internas de los frameworks (reglas del vhost).                                                                                                                                                          |
+| Túnel de un sitio         | Internet, mientras el interruptor esté encendido y tras confirmar. Quien tenga la URL ve el sitio.                   | Un sitio con datos reales pide una confirmación aparte; un sitio importado de un perfil sin confiar en él no abre túnel.                                                                                                                    |
+| Compartir carpeta/archivo | Internet, solo lectura, con un enlace con código secreto que vence a los 15 min, 1 h o 4 h.                          | `.env*`, claves, `.git`, `.ssh`, `.aws`…, datos de programas (`AppData`, perfiles de navegador), archivos con secretos, sitios con datos reales, la carpeta de datos de WolfCore Dev, la raíz de una unidad y la carpeta de usuario entera. |
+| Red local                 | Los dispositivos de su misma red, sin contraseña, mientras el interruptor esté encendido.                            | Sitios con datos reales. Nunca se abre el cortafuegos por su cuenta.                                                                                                                                                                        |
+| FTP                       | Solo la red local, si se activa; sin cifrar.                                                                         | Nada fuera de la carpeta del sitio.                                                                                                                                                                                                         |
+| `wolf` y MCP              | Solo `127.0.0.1`, con una clave (la de `wolf` cambia en cada arranque; la del MCP se regenera cuando usted lo pide). | Los secretos salen enmascarados; publicar o cambiar el PHP global se confirma en la ventana.                                                                                                                                                |
+| Perfiles `.wolfperfil`    | Un archivo que usted guarda y mueve.                                                                                 | Claves, tokens y contraseñas. Las bases y la CA van solo cifradas con su frase.                                                                                                                                                             |
+
+**Aviso:** un archivo comprimido (`.zip`, `.7z`, `.gz`) se comparte tal cual, sin mirar lo que lleva dentro: si dentro hay un `.env` o claves, se publican. Los archivos de texto o de tipo desconocido de más de 8 MB tampoco se comparten, porque no se pueden revisar por completo.
 
 ## Carpeta de datos
 
@@ -266,7 +354,7 @@ npm run typecheck   # TypeScript estricto
 
 ```bash
 npm test                    # pruebas unitarias (sin red ni procesos reales)
-npm run test:win            # integración real en Windows (MVP y Etapas A, B y C)
+npm run test:win            # integración real en Windows (MVP y Etapas A, B, C y D)
 npm run test:win:pgvector   # pgvector real: instala Build Tools (UAC, ~6 GB)
 ```
 
@@ -292,6 +380,8 @@ npm run test:win:pgvector   # pgvector real: instala Build Tools (UAC, ~6 GB)
   - Desinstalar la versión de una instancia apagada sin tocar su carpeta de datos.
   - Al final, sin ventanas ni procesos.
 
+- Etapa D (`etapa-d.int.test.ts`, en una carpeta de datos temporal fuera de `AppData` y con puertos altos): flujos de proyectos, plantillas, importación desde un Laragon de prueba, instantáneas, auditoría, perfiles, órdenes `wolf`, red local y limpieza, más el servidor de ejemplo de la guía HTTP, el laboratorio de Git, Uso del disco, Compartir con un túnel simulado (sirve un archivo y da 404 sin el código) y el cliente HTTP contra un servidor local. Los escenarios que necesitan red se omiten sin ella. Nunca se abre un túnel real.
+
 Nunca instala la CA en el almacén real, no toca el archivo hosts, el PATH, las variables ni la carpeta de inicio del usuario (las configuraciones de agentes son de prueba) y al final borra la carpeta temporal. Ninguna prueba gasta tokens: los proveedores de IA son servidores locales falsos. Los paquetes descargados quedan en `%TEMP%\pel-etapa-a-cache` para no volver a bajarlos (otra carpeta con `PEL_INT_CACHE`; `PEL_INT_CONSERVAR=1` conserva la carpeta temporal para revisarla). La primera vez descarga unos 3,5 GB.
 
 `npm run test:win:pgvector` instala las Build Tools con winget si faltan (acepte el aviso de Windows), compila pgvector contra un PostgreSQL 17 temporal y prueba `CREATE EXTENSION vector` y una distancia. Córrala solo cuando quiera instalar las Build Tools en el equipo.
@@ -302,7 +392,9 @@ Nunca instala la CA en el almacén real, no toca el archivo hosts, el PATH, las 
 npm run dist:win -w @pel/desktop
 ```
 
-Genera el instalador NSIS en `apps/desktop/release/` (`WolfCore Dev Setup <versión>.exe`), con el icono del lobo. Es por usuario y permite elegir la carpeta. No está firmado, así que Windows SmartScreen puede pedir confirmación la primera vez.
+Genera el instalador NSIS en `apps/desktop/release/` (`WolfCore Dev Setup <versión>.exe`), con el icono del lobo, y la app sin instalar en `release/win-unpacked`. Es por usuario y permite elegir la carpeta. No está firmado, así que Windows SmartScreen puede pedir confirmación la primera vez.
+
+La **prueba de humo** (`npm run humo -w @pel/desktop`) arranca el ejecutable empaquetado de `win-unpacked`, sin instalarlo, con una carpeta de datos temporal propia, y recorre las vistas principales comprobando que ninguna queda vacía ni deja errores en la consola.
 
 ## Transición desde FlyEnv
 
@@ -319,31 +411,39 @@ Genera el instalador NSIS en `apps/desktop/release/` (`WolfCore Dev Setup <versi
 
 Las pruebas automáticas nunca usan claves reales ni gastan tokens (los proveedores y los agentes son falsos). Lo que sigue lo prueba **el usuario** con sus propias cuentas; la columna se completa al hacerlo.
 
-| Qué                                       | Cómo se prueba                                                | Resultado           |
-| ----------------------------------------- | ------------------------------------------------------------- | ------------------- |
-| OpenAI                                    | IA → proveedor OpenAI → Probar conexión y Probar un mensaje   | Pendiente (usuario) |
-| Anthropic                                 | Igual, con un proveedor Anthropic                             | Pendiente (usuario) |
-| Gemini                                    | Igual (la clave va en `x-goog-api-key`)                       | Pendiente (usuario) |
-| Hermes (Nous Research)                    | Igual, con la URL base por defecto                            | Pendiente (usuario) |
-| Compatible (OpenRouter, Groq, LM Studio…) | Igual, con su URL base                                        | Pendiente (usuario) |
-| Bloque `.env` de IA en un proyecto real   | IA → Usar en un proyecto (revisar el `.gitignore` y la copia) | Pendiente (usuario) |
-| Claude Code                               | Agentes → Registrar MCP y Abrir en un proyecto                | Pendiente (usuario) |
-| Codex CLI (`--bearer-token-env-var`)      | Agentes → Registrar MCP y Abrir en un proyecto                | Pendiente (usuario) |
-| Hermes Agent                              | Agentes → detección y guía oficial                            | Pendiente (usuario) |
-| Mensaje de commit sugerido                | Panel Git de un proyecto con cambios preparados               | Pendiente (usuario) |
-| GitHub con token (repositorio privado)    | Proyectos → Nuevo → GitHub                                    | Pendiente (usuario) |
+| Qué                                         | Cómo se prueba                                                | Resultado           |
+| ------------------------------------------- | ------------------------------------------------------------- | ------------------- |
+| OpenAI                                      | IA → proveedor OpenAI → Probar conexión y Probar un mensaje   | Pendiente (usuario) |
+| Anthropic                                   | Igual, con un proveedor Anthropic                             | Pendiente (usuario) |
+| Gemini                                      | Igual (la clave va en `x-goog-api-key`)                       | Pendiente (usuario) |
+| Hermes (Nous Research)                      | Igual, con la URL base por defecto                            | Pendiente (usuario) |
+| Compatible (OpenRouter, Groq, LM Studio…)   | Igual, con su URL base                                        | Pendiente (usuario) |
+| Bloque `.env` de IA en un proyecto real     | IA → Usar en un proyecto (revisar el `.gitignore` y la copia) | Pendiente (usuario) |
+| Claude Code                                 | Agentes → Registrar MCP y Abrir en un proyecto                | Pendiente (usuario) |
+| Codex CLI (`--bearer-token-env-var`)        | Agentes → Registrar MCP y Abrir en un proyecto                | Pendiente (usuario) |
+| Hermes Agent                                | Agentes → detección y guía oficial                            | Pendiente (usuario) |
+| Mensaje de commit sugerido                  | Panel Git de un proyecto con cambios preparados               | Pendiente (usuario) |
+| GitHub con token (repositorio privado)      | Proyectos → Nuevo → GitHub                                    | Pendiente (usuario) |
+| Compartir por túnel de Cloudflare           | Herramientas → Compartir, con una carpeta vacía de prueba     | [ ]                 |
+| Compartir por túnel de ngrok                | Igual, con el token de ngrok                                  | [ ]                 |
+| Túnel de un sitio (Cloudflare)              | Interruptor de túnel de un sitio de prueba                    | [ ]                 |
+| Red local desde un móvil                    | Compartir un sitio en la red y abrir el QR                    | [ ]                 |
+| Importar desde Laragon, XAMPP o Herd reales | Proyectos → Importar…                                         | [ ]                 |
+| Perfil exportado e importado                | Respaldo y perfiles, en otra carpeta de datos                 | [ ]                 |
+| Modelo de Ollama (qwen2.5:0.5b)             | IA → Modelos locales: aviso de tamaño, descarga y chat        | [ ]                 |
+| Instalador en un equipo limpio              | Instalar `WolfCore Dev Setup`, abrir y crear un sitio         | [ ]                 |
 
 ## Hoja de ruta
 
-| Etapa | Contenido                                                                                                                        | Estado                                                                         |
-| ----- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| MVP   | Windows: Nginx, PHP, sitios, hosts, túneles rápidos e interfaz                                                                   | Hecha                                                                          |
-| A     | HTTPS, MySQL, MariaDB, PostgreSQL + pgvector, Redis, MongoDB, módulo de bases de datos, Adminer, Composer, Mailpit, FTP, Ollama  | Hecha                                                                          |
-| B     | Proyectos desde GitHub, recetas y `wolfcore.yml`, Node y Python, procesos, panel, registros, herramientas, MCP, temas e idiomas  | Terminada (el montaje de los 6 proyectos reales lo hace el usuario)            |
-| C     | IA en la nube y Hermes, agentes, depuración de PHP, Doctor, avisos, catálogo en vivo, instancias paralelas; Podman/Docker mínimo | En cierre (falta instalarla sobre los datos reales y probar las claves reales) |
-| D     | Proyectos, compartir y respaldo del entorno                                                                                      | Pendiente                                                                      |
-| E     | Multiplataforma (macOS y Linux), instaladores y CI                                                                               | Pendiente                                                                      |
-| F     | Resto de paridad con los referentes y mejoras propias                                                                            | Pendiente                                                                      |
+| Etapa | Contenido                                                                                                                        | Estado                                                                                              |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| MVP   | Windows: Nginx, PHP, sitios, hosts, túneles rápidos e interfaz                                                                   | Hecha                                                                                               |
+| A     | HTTPS, MySQL, MariaDB, PostgreSQL + pgvector, Redis, MongoDB, módulo de bases de datos, Adminer, Composer, Mailpit, FTP, Ollama  | Hecha                                                                                               |
+| B     | Proyectos desde GitHub, recetas y `wolfcore.yml`, Node y Python, procesos, panel, registros, herramientas, MCP, temas e idiomas  | Terminada (el montaje de los 6 proyectos reales lo hace el usuario)                                 |
+| C     | IA en la nube y Hermes, agentes, depuración de PHP, Doctor, avisos, catálogo en vivo, instancias paralelas; Podman/Docker mínimo | En cierre (falta instalarla sobre los datos reales y probar las claves reales)                      |
+| D     | Proyectos, compartir y respaldo del entorno                                                                                      | Implementada (falta la aceptación con los datos reales: `docs/superpowers/aceptacion-d40-lista.md`) |
+| E     | Multiplataforma (macOS y Linux), instaladores y CI                                                                               | Pendiente                                                                                           |
+| F     | Resto de paridad con los referentes y mejoras propias                                                                            | Pendiente                                                                                           |
 
 Plan aprobado de las etapas C a F: `docs/superpowers/roadmap/2026-11-19-plan-etapas.md`.
 
