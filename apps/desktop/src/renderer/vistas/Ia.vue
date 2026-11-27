@@ -243,9 +243,8 @@ async function cargarCompat(): Promise<void> {
 
 watch(
   [encendido, () => ia.sugeridos.join('|'), () => modelos.value.map((m) => m.nombre).join('|')],
-  () => {
-    if (encendido.value) void cargarCompat();
-  },
+  // También sin Ollama instalado o apagado: solo hace falta la información del equipo.
+  () => void cargarCompat(),
   { immediate: true },
 );
 
@@ -547,17 +546,25 @@ const filasConexion = computed(() => [
       </div>
 
       <!-- Qué cabe en su equipo -->
-      <NAlert
-        v-if="encendido && compat"
-        type="info"
-        :show-icon="false"
-        data-testid="ia-compat-sugerencia"
-      >
+      <NAlert v-if="compat" type="info" :show-icon="false" data-testid="ia-compat-sugerencia">
         <strong>{{ textoSugerencia(compat.sugerencia, tc) }}</strong>
         <br />
         <small>{{ tc.aviso }}</small>
+        <ul v-if="!encendido && ia.sugeridos.length" class="sugeridos-lista">
+          <li v-for="s in ia.sugeridos" :key="s">
+            <span class="mono">{{ s }}</span>
+            <span
+              v-if="marcas[s]"
+              class="marca marca-chip"
+              :class="`marca-${marcas[s]!.nivel}`"
+              :title="marcas[s]!.explicacion"
+              :data-testid="`ia-marca-${s}`"
+              >{{ marcas[s]!.etiqueta }}</span
+            >
+          </li>
+        </ul>
       </NAlert>
-      <p v-else-if="encendido && comprobandoCompat" class="tenue" role="status">
+      <p v-else-if="comprobandoCompat" class="tenue" role="status">
         {{ tc.comprobando }}
       </p>
 
@@ -1078,6 +1085,14 @@ const filasConexion = computed(() => [
 }
 .marca-desconocido {
   opacity: 0.7;
+}
+.sugeridos-lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
 }
 .sugerencias {
   display: flex;

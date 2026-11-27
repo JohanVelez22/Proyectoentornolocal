@@ -111,6 +111,7 @@ import { DetectorEquipo } from './equipo/detector';
 import {
   clasificarModelo,
   sugerirParaEquipo,
+  tamanoConocido,
   type CompatibilidadModelo,
   type SugerenciaEquipo,
 } from './equipo/modelosIa';
@@ -2762,7 +2763,12 @@ export class Nucleo {
           .infoDescarga(nombre)
           .catch((): InfoDescargaOllama => ({ tamanoBytes: null, libreBytes: null }));
         return clasificarModelo(
-          { nombre, tamanoBytes: info.tamanoBytes, libreDiscoBytes: info.libreBytes },
+          {
+            nombre,
+            // Sin respuesta del registro, el peso conocido de los modelos que se sugieren.
+            tamanoBytes: info.tamanoBytes ?? tamanoConocido(nombre),
+            libreDiscoBytes: info.libreBytes,
+          },
           equipo,
         );
       }),

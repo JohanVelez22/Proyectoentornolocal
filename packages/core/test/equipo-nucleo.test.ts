@@ -81,6 +81,18 @@ describe('Nucleo: equipo y compatibilidad de modelos (D55)', () => {
     });
   });
 
+  it('sin red ni Ollama, un modelo sugerido usa su tamaño conocido (y el resto sigue «desconocido»)', async () => {
+    const p = new PlataformaFalsa();
+    p.equipo = { ...equipoDesconocido(), ram: { totalBytes: 16 * GIB, libreBytes: 8 * GIB } };
+    const n = await crear(p, async () => {
+      throw new Error('sin red');
+    });
+    const r = await n.compatibilidadModelos(['llama3.2', 'otro']);
+    expect(r.modelos[0]).toMatchObject({ nivel: 'recomendado', motivo: 'cabe-ram' });
+    expect(r.modelos[1]).toMatchObject({ nivel: 'desconocido', motivo: 'tamano-desconocido' });
+    expect(r.sugerencia.parametrosMaxB).toBe(7);
+  });
+
   it('con Ollama apagado y sin red no falla: todo «desconocido»', async () => {
     const p = new PlataformaFalsa();
     const n = await crear(p, async () => {

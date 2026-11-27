@@ -45,6 +45,23 @@ export const BYTES_POR_MIL_MILLONES = 0.65e9;
 /** Tamaños «redondos» de modelo con los que se expresa la sugerencia. */
 export const TAMANOS_SUGERIDOS_B = [1, 3, 7, 14, 32, 70] as const;
 
+/**
+ * Peso aproximado (bytes) de los modelos que la aplicación sugiere, para clasificarlos cuando el
+ * registro de Ollama no responde (sin conexión o Ollama sin instalar). Solo orienta.
+ */
+export const TAMANOS_CONOCIDOS_BYTES: Readonly<Record<string, number>> = {
+  'llama3.2': 2_019_377_376,
+  'qwen2.5-coder': 4_683_073_056,
+  mistral: 4_372_824_384,
+  'nomic-embed-text': 274_302_450,
+};
+
+/** Tamaño conocido de un modelo sugerido («llama3.2» y «llama3.2:latest» son el mismo); null si no. */
+export function tamanoConocido(nombre: string): number | null {
+  const k = nombre.toLowerCase().replace(/:latest$/, '');
+  return Object.hasOwn(TAMANOS_CONOCIDOS_BYTES, k) ? TAMANOS_CONOCIDOS_BYTES[k]! : null;
+}
+
 export type NivelCompat = 'recomendado' | 'lento' | 'no-cabe' | 'desconocido';
 export type MotivoCompat =
   | 'cabe-vram'
