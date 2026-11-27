@@ -13,6 +13,7 @@ import { useAccion } from '../composables/useAccion';
 import { textos as tx } from '../i18n';
 import { useServicios } from '../stores/servicios';
 import { textoPma } from '../utilidades/phpmyadmin';
+import { esNumeroVersion } from '../utilidades/version';
 import EstadoPunto from './EstadoPunto.vue';
 
 /** Composer, Adminer y phpMyAdmin: no son procesos, pero se instalan y se usan desde aquí. */
@@ -148,7 +149,9 @@ watch(
       ></span>
       <div class="titulo">
         <h3>{{ textos.nombre }}</h3>
-        <span class="version">{{ version ?? t.composer.sinVersion }}</span>
+        <span class="version" :class="{ numero: esNumeroVersion(version) }">{{
+          version ?? t.composer.sinVersion
+        }}</span>
       </div>
       <NSkeleton v-if="!cargada" text :width="70" />
       <EstadoPunto v-else :estado="estado.punto" :etiqueta="estado.etiqueta" />
@@ -271,9 +274,11 @@ watch(
   font-weight: 600;
 }
 .version {
-  font-family: var(--fuente-mono);
   font-size: 12px;
   opacity: 0.72;
+}
+.version.numero {
+  font-family: var(--fuente-mono);
 }
 .datos {
   display: grid;

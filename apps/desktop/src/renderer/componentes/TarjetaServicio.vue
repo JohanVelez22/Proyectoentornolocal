@@ -41,6 +41,7 @@ import { categoriaDe, esServicioDatos, puertoAlternativo, useServicios } from '.
 import EstadoPunto from './EstadoPunto.vue';
 import { formatearTamano } from '../utilidades/bd';
 import { destinoVersion } from '../utilidades/foco';
+import { esNumeroVersion } from '../utilidades/version';
 import { useRouter } from 'vue-router';
 import { esServicioConVersiones } from '../stores/versiones';
 
@@ -285,7 +286,9 @@ function cambiarRedLocal(valor: boolean): void {
       ></span>
       <div class="titulo">
         <h3>{{ nombreServicio(servicio.nombre) }}</h3>
-        <span class="version">{{ servicio.version ?? t.sinVersion }}</span>
+        <span class="version" :class="{ numero: esNumeroVersion(servicio.version) }">{{
+          servicio.version ?? t.sinVersion
+        }}</span>
       </div>
       <EstadoPunto :estado="servicio.estado" />
       <NButton
@@ -587,9 +590,11 @@ function cambiarRedLocal(valor: boolean): void {
   font-weight: 600;
 }
 .version {
-  font-family: var(--fuente-mono);
   font-size: 12px;
   opacity: 0.72;
+}
+.version.numero {
+  font-family: var(--fuente-mono);
 }
 .datos {
   display: grid;
