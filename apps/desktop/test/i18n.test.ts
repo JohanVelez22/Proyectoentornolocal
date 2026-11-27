@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { AVISOS_PERFIL, CODIGOS_ERROR, IDIOMAS_UI, MOTIVOS_PERFIL } from '@pel/core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { textosMain } from '../src/main/textos';
 import { IDIOMAS, diccionarios } from '../src/renderer/i18n';
 import { en } from '../src/renderer/i18n/en';
@@ -9,6 +9,9 @@ import { es } from '../src/renderer/i18n/es';
 import { fr } from '../src/renderer/i18n/fr';
 import { pt } from '../src/renderer/i18n/pt';
 import { CODIGOS_AVISO, CODIGOS_AVISO_POR_IDIOMA, textoAviso } from '../src/shared/textosAvisos';
+
+// Recorren todo el código fuente: con la máquina cargada (CI, pruebas reales en paralelo) pasan de 5 s.
+vi.setConfig({ testTimeout: 60_000 });
 
 const RAIZ = join(__dirname, '../src/renderer');
 

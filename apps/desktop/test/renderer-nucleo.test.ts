@@ -1,7 +1,10 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as cliente from '../../../packages/core/src/cliente';
+
+// Recorren todo el código fuente: con la máquina cargada (CI, pruebas reales en paralelo) pasan de 5 s.
+vi.setConfig({ testTimeout: 60_000 });
 
 const SRC = path.join(__dirname, '..', 'src');
 
