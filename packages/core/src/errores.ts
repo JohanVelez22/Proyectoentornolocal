@@ -30,6 +30,7 @@ export const PARAMETROS_ERROR = {
   'servicios.ftp_no_disponible': [],
   'sistema.sin_cliente_ftp': [],
   'servicios.mailpit_no_responde': [],
+  'servicios.no_encendio': ['nombre'],
   'servicios.respaldo_fallo': ['nombre'],
   'servicios.iniciar_todo_fallos': ['nombres'],
   'servicios.espacio_insuficiente': ['necesarios', 'libres'],

@@ -41,6 +41,7 @@ import {
   type MotivoInstantaneaEntorno,
 } from './perfiles/instantaneaEntorno';
 import { Perfiles } from './perfiles/importar';
+import { crearPreparadorInstancias } from './perfiles/prepararInstancia';
 import { crearPuertoWorkspaces } from './workspaces/puerto';
 import { Workspaces } from './workspaces/workspaces';
 import { GestorTareas } from './tareas/gestor';
@@ -4578,26 +4579,15 @@ export class Nucleo {
       },
       volcarBase: (instancia, base, carpeta) =>
         this.respaldos.volcarParaPerfil(instancia as IdInstancia, base, carpeta),
-      prepararInstancia: async (instancia) => {
-        const lista = await this.servicios.datos.listaInstancias(servicioDe(instancia));
-        const i = lista.find((x) => x.id === instancia);
-        if (!i) throw new Error('La instancia no existe.');
-        if (i.estado === 'encendido') return;
-        await this.servicios.iniciar(instancia as IdInstancia);
-        // `iniciar` vuelve con el proceso lanzado, antes de que la sonda lo dé por encendido: sin
-        // esperar, la primera consulta de bases decía «encienda la instancia» (D39).
-        const limite = Date.now() + 90_000;
-        for (;;) {
-          const ahora = (await this.servicios.datos.listaInstancias(servicioDe(instancia))).find(
+      prepararInstancia: crearPreparadorInstancias({
+        estadoDe: async (instancia) =>
+          (await this.servicios.datos.listaInstancias(servicioDe(instancia))).find(
             (x) => x.id === instancia,
-          );
-          if (ahora?.estado === 'encendido') return;
-          if (ahora?.estado === 'error' || Date.now() > limite) {
-            throw new Error('La instancia no llegó a encenderse.');
-          }
-          await new Promise((r) => setTimeout(r, 500));
-        }
-      },
+          ),
+        iniciar: (instancia) => this.servicios.iniciar(instancia as IdInstancia),
+        // Mientras se espera a que una instancia encienda, la barra sigue en la fase de bases.
+        progreso: () => this.eventos.emit('perfil:progreso', { fase: 'bases', paso: 6, de: 7 }),
+      }),
       basesDe: async (instancia) =>
         (await this.bd.listar(instancia as IdInstancia)).map((b) => b.nombre),
       instantaneaEntorno: () => this.instantaneaEntorno('importar-perfil'),

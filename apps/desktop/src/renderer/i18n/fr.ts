@@ -115,6 +115,7 @@ export const fr: Textos = {
       'sistema.sin_cliente_ftp':
         'Aucun client FTP n’est associé sur cet ordinateur. Installez-en un (par exemple FileZilla) ou copiez l’adresse.',
       'servicios.mailpit_no_responde': 'Mailpit ne répond pas. Démarrez-le depuis Services.',
+      'servicios.no_encendio': '{nombre} n’a pas pu démarrer. Consultez Services et ses journaux.',
       'servicios.iniciar_todo_fallos':
         'Tout démarrer n’a pas pu allumer : {nombres}. Consultez Services et leurs journaux.',
       'servicios.respaldo_fallo':

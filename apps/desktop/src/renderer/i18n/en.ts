@@ -110,6 +110,7 @@ export const en: Textos = {
       'sistema.sin_cliente_ftp':
         'No FTP client is associated on this computer. Install one (for example FileZilla) or copy the address.',
       'servicios.mailpit_no_responde': 'Mailpit is not responding. Start it from Services.',
+      'servicios.no_encendio': '{nombre} did not manage to start. Check Services and its logs.',
       'servicios.iniciar_todo_fallos':
         'Start all could not start: {nombres}. Check Services and their logs.',
       'servicios.respaldo_fallo':

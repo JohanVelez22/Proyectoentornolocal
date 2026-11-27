@@ -109,6 +109,7 @@ export const es = {
       'sistema.sin_cliente_ftp':
         'No hay un cliente FTP asociado en este equipo. Instale uno (por ejemplo FileZilla) o copie la dirección.',
       'servicios.mailpit_no_responde': 'Mailpit no responde. Inícielo desde Servicios.',
+      'servicios.no_encendio': '{nombre} no llegó a encenderse. Revise Servicios y sus registros.',
       'servicios.iniciar_todo_fallos':
         'Iniciar todo no pudo encender: {nombres}. Revise Servicios y sus registros.',
       'servicios.respaldo_fallo':
