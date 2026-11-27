@@ -131,7 +131,7 @@ async function aplicarPuerto(puerto: number): Promise<boolean> {
   if (!esServicioDatos(id)) return false;
   const anterior = puertoPrincipal.value;
   const r = await ejecutar('puerto', () => api().servicios.cambiarPuerto(id, puerto), {
-    exito: t.puertoCambiado(props.servicio.nombre, puerto),
+    exito: t.puertoCambiado(nombreServicio(props.servicio.nombre), puerto),
   });
   // Proyectos cuyo .env todavía usa el puerto anterior (no se cambian solos).
   if (r?.proyectos.length) {
@@ -168,7 +168,7 @@ async function borrarDatos(): Promise<void> {
       await api().servicios.borrarDatos(id, confirmacion.value);
       return true;
     },
-    { exito: t.borrarDatos.hecho(props.servicio.nombre) },
+    { exito: t.borrarDatos.hecho(nombreServicio(props.servicio.nombre)) },
   );
   if (ok) dialogoBorrar.value = false;
 }
@@ -200,7 +200,7 @@ const opciones = computed<DropdownOption[]>(() => [
 
 const textoBorrar = computed(() =>
   t.borrarDatos.texto(
-    t.borrarDatos.que[props.servicio.id] ?? t.borrarDatos.generico(props.servicio.nombre),
+    t.borrarDatos.que[props.servicio.id] ?? t.borrarDatos.generico(nombreServicio(props.servicio.nombre)),
   ),
 );
 
@@ -239,8 +239,8 @@ function cambiarAutoIniciar(valor: boolean): void {
   if (!esServicioDatos(id)) return;
   void ejecutar('auto', () => servicios.cambiarAutoIniciar(id, valor), {
     exito: valor
-      ? t.autoIniciarActivado(props.servicio.nombre)
-      : t.autoIniciarDesactivado(props.servicio.nombre),
+      ? t.autoIniciarActivado(nombreServicio(props.servicio.nombre))
+      : t.autoIniciarDesactivado(nombreServicio(props.servicio.nombre)),
   });
 }
 
@@ -292,7 +292,7 @@ function cambiarRedLocal(valor: boolean): void {
         text
         size="tiny"
         type="primary"
-        :aria-label="t.versionesDe(servicio.nombre)"
+        :aria-label="t.versionesDe(nombreServicio(servicio.nombre))"
         @click="abrirVersiones"
       >
         {{ textos.versiones.pestana }}
@@ -308,7 +308,7 @@ function cambiarRedLocal(valor: boolean): void {
           size="tiny"
           quaternary
           circle
-          :aria-label="`${textos.acciones.masAcciones}: ${servicio.nombre}`"
+          :aria-label="`${textos.acciones.masAcciones}: ${nombreServicio(servicio.nombre)}`"
           :title="textos.acciones.masAcciones"
           :disabled="tarjetaOcupada"
         >
@@ -331,7 +331,7 @@ function cambiarRedLocal(valor: boolean): void {
             size="tiny"
             type="primary"
             class="enlace"
-            :aria-label="t.cambiarPuertoDe(servicio.nombre)"
+            :aria-label="t.cambiarPuertoDe(nombreServicio(servicio.nombre))"
             :disabled="tarjetaOcupada"
             @click="abrirDialogoPuerto"
           >
@@ -378,7 +378,7 @@ function cambiarRedLocal(valor: boolean): void {
         :value="autoIniciar"
         :loading="ocupado('auto')"
         :disabled="servicios.autoIniciar === null"
-        :aria-label="`${t.autoIniciar}: ${servicio.nombre}`"
+        :aria-label="`${t.autoIniciar}: ${nombreServicio(servicio.nombre)}`"
         @update:value="cambiarAutoIniciar"
       />
       <span>{{ t.autoIniciar }}</span>
@@ -439,7 +439,7 @@ function cambiarRedLocal(valor: boolean): void {
     <NModal
       v-model:show="dialogoPuerto"
       preset="card"
-      :title="t.dialogoPuerto.titulo(servicio.nombre)"
+      :title="t.dialogoPuerto.titulo(nombreServicio(servicio.nombre))"
       size="small"
       :bordered="false"
       :style="estiloDialogo"
@@ -485,7 +485,7 @@ function cambiarRedLocal(valor: boolean): void {
     <NModal
       v-model:show="dialogoBorrar"
       preset="card"
-      :title="t.borrarDatos.titulo(servicio.nombre)"
+      :title="t.borrarDatos.titulo(nombreServicio(servicio.nombre))"
       size="small"
       :bordered="false"
       :style="estiloDialogo"

@@ -20,7 +20,12 @@ const objetivosDeClic = {
   Drawer: { closeSize: '32px', closeIconSize: '18px' },
   Dialog: { closeSize: '32px', closeIconSize: '18px' },
   Card: { closeSize: '32px', closeIconSize: '18px' },
-  Switch: { railHeightMedium: '24px', railWidthMedium: '44px' },
+  Switch: {
+    railHeightSmall: '24px',
+    railWidthSmall: '40px',
+    railHeightMedium: '24px',
+    railWidthMedium: '44px',
+  },
 } as const;
 
 /**

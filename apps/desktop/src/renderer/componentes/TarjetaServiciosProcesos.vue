@@ -42,7 +42,7 @@ const resto = computed(() => servicios.visibles.filter((s) => !enTabla.value.has
           <button
             type="button"
             class="enlace"
-            :title="ti.irA(s.nombre)"
+            :title="ti.irA(nombreServicio(s.nombre))"
             @click="router.push(destinoServicio(s.id))"
           >
             {{ nombreServicio(s.nombre) }}
