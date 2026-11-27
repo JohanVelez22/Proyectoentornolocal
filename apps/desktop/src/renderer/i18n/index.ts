@@ -21,12 +21,14 @@ import { ru } from './ru';
 
 import { zh } from './zh';
 
+import { ja } from './ja';
+
 export type { Textos } from './es';
 
 export { IDIOMAS, idiomaDeLocale, type InfoIdioma } from '../../shared/idiomas';
 export type Idioma = IdiomaUi;
 
-export const diccionarios: Record<IdiomaUi, Textos> = { es, en, pt, fr, de, it, ru, zh };
+export const diccionarios: Record<IdiomaUi, Textos> = { es, en, pt, fr, de, it, ru, zh, ja };
 
 /** Idioma activo (lo fija la tienda de preferencias). */
 export const idioma = ref<Idioma>('es');

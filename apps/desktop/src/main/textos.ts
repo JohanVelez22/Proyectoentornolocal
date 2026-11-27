@@ -271,6 +271,34 @@ const TEXTOS = {
     carpetaDatosInvalida:
       'WOLFCORE_DATOS 不是有效的数据文件夹：必须为绝对路径、非系统目录且不同于真实（及先前的）文件夹。应用将关闭且不做任何更改。',
   },
+  ja: {
+    abrir: '開く',
+    iniciarTodo: 'すべて起動',
+    detenerTodo: 'すべて停止',
+    salir: '終了',
+    workspaces: 'ワークスペース',
+    workspaceParcial: '一部起動',
+    preguntaApagar: 'サービスを停止しますか？',
+    siApagar: 'はい、停止する',
+    noApagar: 'いいえ、起動したままにする',
+    cancelar: 'キャンセル',
+    cliTitulo: 'ターミナルコマンド (wolf)',
+    cliTunelInternet:
+      'ターミナルコマンドが {proveedor} を使って {dominio} をインターネットに公開しようとしています。リンクを知る誰でも閲覧できます。',
+    cliTunelTailnet:
+      'ターミナルコマンドが {dominio} を tailnet 上の端末（{proveedor}）と共有しようとしています。',
+    cliPublicoEn: '公開アドレス: https://{publico}',
+    cliDatosReales:
+      '警告: {dominio} には実データが含まれています。続行するには下で正確なドメインを選択してください。心当たりがない場合はキャンセルしてください。',
+    cliPublicar: '公開する',
+    cliPhpGlobal:
+      'ターミナルコマンドがすべてのターミナルの PHP をバージョン {version} に変更しようとしています。',
+    cliCambiar: '変更する',
+    carpetaDatosAislada:
+      'テスト用データフォルダ（システムの hosts・PATH・証明書は変更されません）',
+    carpetaDatosInvalida:
+      'WOLFCORE_DATOS は有効なデータフォルダではありません。絶対パスであり、システムフォルダでなく、本来の（および以前の）フォルダと異なる必要があります。何も変更せず終了します。',
+  },
 } satisfies Record<IdiomaUi, Record<string, string>>;
 
 export type TextosMain = (typeof TEXTOS)['es'];

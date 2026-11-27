@@ -1492,7 +1492,186 @@ const ZH: Diccionario = {
   },
 };
 
-const DICCIONARIOS = { es: ES, en: EN, pt: PT, fr: FR, de: DE, it: IT, ru: RU, zh: ZH } satisfies Record<IdiomaUi, Diccionario>;
+const JA: Diccionario = {
+  porCodigo: {
+    'avisos.servicio_caido': (d) => ({
+      titulo: 'サービスがエラーで停止しました',
+      cuerpo: `${limpio(d['nombre'], 'サービス')} が停止しました。詳細は WolfCore Dev を開いて確認してください。`,
+    }),
+    'avisos.iniciar_todo_fallos': (d) => ({
+      titulo: '「すべて起動」で一部起動できませんでした',
+      cuerpo: `起動できなかった項目: ${limpio(d['nombres'], '一部のサービス')}。詳細は「サービス」を確認してください。`,
+    }),
+    'avisos.workspace_fallos': (d) => ({
+      titulo: 'ワークスペースの一部を起動できませんでした',
+      cuerpo: `${limpio(d['nombre'], 'ワークスペース')}: ${limpio(d['nombres'], '一部の項目')} を起動できませんでした。「ホーム」で状態を確認してください。`,
+    }),
+    'avisos.workspace_fallos_detener': (d) => ({
+      titulo: 'ワークスペースの一部を停止できませんでした',
+      cuerpo: `${limpio(d['nombre'], 'ワークスペース')}: ${limpio(d['nombres'], '一部の項目')} を停止できませんでした。「ホーム」で起動中の項目を確認してください。`,
+    }),
+    'avisos.tarea_fallo': (d) => ({
+      titulo:
+        d['motivo'] === 'tiempo'
+          ? 'スケジュールタスクがタイムアウトしました'
+          : 'スケジュールタスクが失敗しました',
+      cuerpo: `${limpio(d['nombre'], 'タスク')}（${limpio(d['sitio'], 'プロジェクト')}）は${d['motivo'] === 'tiempo' ? '最大実行時間を超えたため停止されました' : 'エラーで終了しました'}。プロジェクトを開いてログを確認してください。`,
+    }),
+    'avisos.tarea_bloqueada': (d) => ({
+      titulo: 'スケジュールタスクは実行されませんでした',
+      cuerpo: `${limpio(d['nombre'], 'タスク')}（${limpio(d['sitio'], 'プロジェクト')}）: ${
+        {
+          aislado: 'テスト用データフォルダのためタスク実行が許可されていません',
+          no_confiado: 'プロジェクトが信頼済みとしてマークされていません',
+          receta_cambio: '信頼後にプロジェクトのレシピが変更されました',
+          sin_confirmar: 'コマンドがまだ確認されていません',
+          comando_invalido: '許可されていないコマンドです',
+          cron_invalida: 'スケジュール指定が無効です',
+          carpeta: 'プロジェクトフォルダが存在しません',
+        }[String(d['motivo'])] ?? '実行条件を満たしていません'
+      }。`,
+    }),
+    'avisos.puerto_ocupado': (d) => ({
+      titulo: 'ポートが使用中です',
+      cuerpo: `ポート ${limpio(d['puerto'], '?')} は ${limpio(d['nombre'], '別のプログラム')} が使用しているため、サービスを起動できませんでした。`,
+    }),
+    'avisos.proceso_error': (d) => ({
+      titulo: 'プロジェクトプロセスがエラーで終了しました',
+      cuerpo: `${limpio(d['nombre'], 'プロセス')} が停止しました。ログを確認してください。`,
+    }),
+    'avisos.proceso_terminado': (d) => ({
+      titulo: 'プロセスが終了しました',
+      cuerpo: `${limpio(d['nombre'], 'プロセス')} はエラーなしで終了しました。`,
+    }),
+    'avisos.proceso_fallo': (d) => ({
+      titulo: 'プロセスが失敗しました',
+      cuerpo: `${limpio(d['nombre'], 'プロセス')} がエラーで終了しました${d['codigoSalida'] !== undefined ? `（コード ${limpio(d['codigoSalida'], '?')}）` : ''}。ログを確認してください。`,
+    }),
+    'avisos.receta_terminada': (d) => ({
+      titulo: 'レシピが完了しました',
+      cuerpo: `${limpio(d['sitio'], 'プロジェクト')} のレシピがエラーなしで完了しました。`,
+    }),
+    'avisos.receta_fallo': (d) => ({
+      titulo: 'レシピが失敗しました',
+      cuerpo: `${limpio(d['sitio'], 'プロジェクト')} のレシピがエラーで停止しました。プロジェクトを開いて手順を確認してください。`,
+    }),
+    'avisos.tunel_caido': (d) => ({
+      titulo: 'トンネルが切断されました',
+      cuerpo: `${limpio(d['fuente'], 'プロジェクト')} のトンネルが停止しました。`,
+    }),
+    'avisos.contenedor_detenido': (d) => ({
+      titulo: 'コンテナが停止しました',
+      cuerpo: `${limpio(d['nombre'], 'コンテナ')}（${limpio(d['motor'], 'Docker')}）が予期せず停止しました${d['codigoSalida'] !== undefined ? `（コード ${limpio(d['codigoSalida'], '?')}）` : ''}。`,
+    }),
+    'avisos.ca_por_vencer': (d) => ({
+      titulo: '認証局の有効期限が近づいています',
+      cuerpo: `あと ${limpio(d['dias'], '?')} 日で期限切れになります。再生成して再度信頼してください。`,
+    }),
+    'avisos.certificado_por_vencer': (d) => ({
+      titulo: '証明書の有効期限が近づいています',
+      cuerpo: `${limpio(d['fuente'], 'サイト')} の証明書はあと ${limpio(d['dias'], '?')} 日で期限切れになります。`,
+    }),
+    'avisos.certificado_vencido': (d) => ({
+      titulo: '証明書の有効期限が切れました',
+      cuerpo: `${limpio(d['fuente'], 'サイト')} の証明書は無効になりました。再生成してください。`,
+    }),
+    'avisos.php_sitio_fallo': (d) => ({
+      titulo: 'サイト専用の PHP が起動しませんでした',
+      cuerpo: `${limpio(d['fuente'], 'サイト')} の PHP が起動しませんでした（ポート競合の可能性があります）。カードの PHP セクションを確認してください。`,
+    }),
+    'avisos.php_sitio_sin_puertos': (d) => ({
+      titulo: 'サイト専用 PHP 用のポートが不足しています',
+      cuerpo: `${limpio(d['fuente'], 'サイト')} は専用設定なしで共有 PHP を使用しています（専用 PHP 用の空きポートがありません）。`,
+    }),
+    'avisos.php_sitio_descartados': (d) => ({
+      titulo: 'PHP 設定が破棄されました',
+      cuerpo: `${limpio(d['fuente'], 'サイト')} の一部 PHP 設定が無効なため適用されませんでした: ${limpio(d['claves'], 'PHP セクションを確認してください')}。`,
+    }),
+    'avisos.lan_red_cambio': (d) => ({
+      titulo: 'ローカルネットワーク共有を停止しました',
+      cuerpo: `ネットワークが変更されたため、${limpio(d['fuente'], 'サイト')} の共有を停止しました。`,
+    }),
+    'avisos.vhost_reglas_descartadas': (d) => ({
+      titulo: 'Nginx ルールが破棄されました',
+      cuerpo: `${limpio(d['fuente'], 'サイト')} のカスタムルールが検証を通らなくなったため（フォルダ・ドメイン・ポート変更）、vhost から除外されました。Nginx セクションを確認してください。`,
+    }),
+    'avisos.vhost_manual_descartado': (d) => ({
+      titulo: '手動 vhost が使用されていません',
+      cuerpo: `${limpio(d['fuente'], 'サイト')} の手動 vhost が検証を通らないため自動生成版を使用しています。Nginx セクションを確認してください。`,
+    }),
+    'avisos.rustup_entrada_ajena': () => ({
+      titulo: 'Rustup は既に別の場所にインストールされています',
+      cuerpo:
+        'WolfCore Dev 用の Rust は専用フォルダにインストールされました。別環境を指す既存の Windows の rustup アンインストール項目は変更していません。',
+    }),
+    'avisos.version_nueva': (d) => ({
+      titulo: `${limpio(d['servicio'], 'サービス')} の新バージョンがあります`,
+      cuerpo: `${limpio(d['nueva'], '新バージョン')} が公開されました（現在: ${limpio(d['actual'], '別バージョン')}）。「サービス → バージョン」から更新できます（自動インストールはされません）。`,
+      accion: '更新',
+    }),
+    'avisos.version_nueva_sin_huella': (d) => ({
+      titulo: `${limpio(d['servicio'], 'サービス')} の新バージョンがあります`,
+      cuerpo: `${limpio(d['nueva'], '新バージョン')} が公開されました（現在: ${limpio(d['actual'], '別バージョン')}）が、公開チェックサムがなく検証できません。「サービス → バージョン」で確認してください。`,
+    }),
+    'avisos.rama_nueva_sin_huella': (d) => ({
+      titulo: `${limpio(d['servicio'], 'サービス')} の新しいメジャーバージョン`,
+      cuerpo: `${limpio(d['nueva'], '新バージョン')} は使用中（${limpio(d['actual'], '?')}）より新しいバージョンですが、公開チェックサムがなく検証できません。「サービス → バージョン」で確認してください。`,
+    }),
+    'avisos.rama_nueva': (d) => ({
+      titulo: `${limpio(d['servicio'], 'サービス')} の新しいメジャーバージョン`,
+      cuerpo: `${limpio(d['nueva'], '新バージョン')} は使用中（${limpio(d['actual'], '?')}）より新しいバージョンです。既存データに触れず別枠でインストールされます。`,
+      accion: '更新',
+    }),
+    'doctor.hallazgos': (d) => ({
+      titulo: 'Doctor が環境のエラーを検出しました',
+      cuerpo: `環境の動作を妨げる問題が ${limpio(d['errores'], '複数')} 件あります。Doctor を開いて修復方法を確認してください。`,
+    }),
+  },
+  porTipo: {
+    'servicio-caido': {
+      titulo: 'サービスが停止しました',
+      cuerpo: '詳細は WolfCore Dev を開いて確認してください。',
+    },
+    'puerto-ocupado': {
+      titulo: 'ポートが使用中です',
+      cuerpo: '詳細は WolfCore Dev を開いて確認してください。',
+    },
+    'certificado-por-vencer': {
+      titulo: '証明書の有効期限が近づいています',
+      cuerpo: '詳細は WolfCore Dev を開いて確認してください。',
+    },
+    'tunel-caido': {
+      titulo: 'トンネルが切断されました',
+      cuerpo: '詳細は WolfCore Dev を開いて確認してください。',
+    },
+    'proceso-error': {
+      titulo: 'プロセスがエラーで終了しました',
+      cuerpo: '詳細は WolfCore Dev を開いて確認してください。',
+    },
+    'proceso-terminado': {
+      titulo: 'プロセスが終了しました',
+      cuerpo: '詳細は WolfCore Dev を開いて確認してください。',
+    },
+    'receta-terminada': {
+      titulo: 'レシピが完了しました',
+      cuerpo: '詳細は WolfCore Dev を開いて確認してください。',
+    },
+    doctor: {
+      titulo: 'Doctor が問題を検出しました',
+      cuerpo: 'WolfCore Dev を開いて確認してください。',
+    },
+    'contenedor-detenido': {
+      titulo: 'コンテナが停止しました',
+      cuerpo: '詳細は WolfCore Dev を開いて確認してください。',
+    },
+    'version-nueva': {
+      titulo: '新しいバージョンがあります',
+      cuerpo: 'WolfCore Dev を開いて更新してください。',
+    },
+  },
+};
+
+const DICCIONARIOS = { es: ES, en: EN, pt: PT, fr: FR, de: DE, it: IT, ru: RU, zh: ZH, ja: JA } satisfies Record<IdiomaUi, Diccionario>;
 
 export const CODIGOS_AVISO = Object.keys(ES.porCodigo);
 
@@ -1506,6 +1685,7 @@ export const CODIGOS_AVISO_POR_IDIOMA: Record<IdiomaUi, string[]> = {
   it: Object.keys(IT.porCodigo),
   ru: Object.keys(RU.porCodigo),
   zh: Object.keys(ZH.porCodigo),
+  ja: Object.keys(JA.porCodigo),
 };
 
 export function textoAviso(
