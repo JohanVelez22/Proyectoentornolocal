@@ -564,16 +564,16 @@ export const es = {
       'captura.sin_imagen': 'No hay ninguna imagen para capturar.',
       'captura.imagen_invalida': 'La imagen de la captura no es válida.',
       'conversor.formato': 'Esa conversión no está disponible.',
-      'disco.sin_confirmar': 'Confirma la limpieza en el diálogo antes de continuar.',
+      'disco.sin_confirmar': 'Confirme la limpieza en el diálogo antes de continuar.',
       'disco.categoria_invalida': 'Esa categoría de limpieza no existe.',
       'disco.ruta_vetada':
         'La categoría toca una ruta protegida (datos, respaldos, proyectos o FlyEnv); no se limpió nada.',
       'disco.sin_analisis': 'Analice de nuevo antes de limpiar: el análisis caducó o falta.',
       'disco.ocupada': 'Ya hay un análisis o una limpieza en curso.',
       'disco.sin_registro': 'No se pudo crear el registro de la limpieza; no se borró nada.',
-      'editor.sin_confirmar': 'Confirma el guardado antes de continuar.',
+      'editor.sin_confirmar': 'Confirme el guardado antes de continuar.',
       'editor.confirmacion_reforzada':
-        'Este archivo parece guardar secretos o es de un sitio con datos reales: confirma con refuerzo para guardarlo.',
+        'Este archivo parece guardar secretos o es de un sitio con datos reales: confirme con refuerzo para guardarlo.',
       'editor.ruta_invalida': 'La ruta del archivo no es válida.',
       'editor.no_existe': 'El archivo no existe.',
       'editor.no_regular': 'Solo se editan archivos normales.',
@@ -586,7 +586,7 @@ export const es = {
       'editor.codificacion': 'El archivo no está en UTF-8: el editor no lo abre para no dañarlo.',
       'editor.no_abierto':
         'Ese archivo no se abrió en el editor (o su versión cambió): ábrelo de nuevo.',
-      'editor.eol_mixto': 'El archivo mezcla saltos de línea: confirma normalizarlos para guardar.',
+      'editor.eol_mixto': 'El archivo mezcla saltos de línea: confirme normalizarlos para guardar.',
       'editor.contenido_invalido': 'El contenido no es texto válido.',
       'editor.huella_invalida': 'Falta la huella del archivo abierto: ábralo de nuevo.',
       'editor.archivo_cambiado':
@@ -594,7 +594,7 @@ export const es = {
       'editor.copia_fallo': 'No se pudo hacer la copia previa ({codigo}); no se guardó nada.',
       'editor.lectura_fallo': 'No se pudo leer el archivo ({codigo}).',
       'editor.escritura_fallo': 'No se pudo guardar el archivo ({codigo}). El original no se tocó.',
-      'memoria.sin_confirmar': 'Confirma la acción en el diálogo antes de continuar.',
+      'memoria.sin_confirmar': 'Confirme la acción en el diálogo antes de continuar.',
       'memoria.modo_invalido': 'Ese modo de optimización no existe.',
       'memoria.plan_caducado':
         'La lista caducó o ya no es la actual. Vea la lista de nuevo antes de aplicar.',

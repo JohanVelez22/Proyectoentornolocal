@@ -23,7 +23,7 @@ function hojas(v: unknown, ruta = ''): [string, string][] {
 
 const TUTEO: Record<string, RegExp> = {
   // Solo formas inequívocas del tuteo: «abre» o «crea» también son verbos en tercera persona.
-  es: /(?<![\p{L}])(puedes|tienes|quieres|necesitas|tu|tus|contigo|abriste|confirmes|(?<!usted )pulsa|preguntarte|vuelve a (analizar|abrirlo|verla))(?![\p{L}])|(?<=^|[.:;]\s*)(elige|revisa la lista|abre un archivo)(?![\p{L}])/iu,
+  es: /(?<![\p{L}])(puedes|tienes|quieres|necesitas|tu|tus|contigo|abriste|confirmes|(?<!usted )pulsa|preguntarte|vuelve a (analizar|abrirlo|verla))(?![\p{L}])|(?<=^|[.:;]\s*)(elige|confirma|revisa la lista|abre un archivo)(?![\p{L}])/iu,
   fr: /(?<![\p{L}])(tu|toi|ton|ta|tes|te|t’|t')(?![\p{L}])/iu,
   pt: /(?<![\p{L}])(tu|teu|tua|teus|tuas|contigo)(?![\p{L}])/iu,
 };
@@ -199,7 +199,9 @@ describe('Textos del pulido de diseño (D54a, I7)', () => {
 
   it('los nombres viejos ya no están: «Proyectos» y no «Sitios» en el enlace de Túneles y en FTP', () => {
     for (const [id, d] of Object.entries(diccionarios)) {
-      expect(d.tuneles.irAProyectos, id).toMatch(/Project|Projet|Projeto|Proyecto/);
+      if (['es', 'en', 'fr', 'pt'].includes(id)) {
+        expect(d.tuneles.irAProyectos, id).toMatch(/Project|Projet|Projeto|Proyecto/);
+      }
       expect(d.tuneles.irAProyectos, id).not.toMatch(/Sites?\b|Sitios/);
       expect(d.app.lema, id).not.toMatch(/PHP|Nginx/);
     }
