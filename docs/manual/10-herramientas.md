@@ -31,8 +31,9 @@ La pantalla **Herramientas** reúne utilidades diarias pensadas para desarrollad
 - **Puertos y procesos:** lista qué proceso escucha en cada puerto con su PID y direcciones, permite filtrar y finalizar procesos (con confirmación; bloquea procesos del sistema y a WolfCore Dev).
 - **Cliente WebSocket:** conecta a un servidor WebSocket, envía mensajes y muestra el historial recibido.
 - **Certificados:** emite certificados locales firmados con la CA de WolfCore Dev para cualquier dominio o IP que necesite en pruebas.
+- **Compartir carpeta o archivo:** publica una carpeta o un archivo con un enlace temporal en internet, de solo lectura (el enlace vence a los 15 minutos, 1 hora o 4 horas). Se rechazan `.env*`, claves, `.git`, `.ssh`, datos de programas, archivos con secretos, la carpeta de datos de WolfCore Dev, la raíz de una unidad y la carpeta de usuario entera; un archivo comprimido se comparte tal cual, sin revisar su interior.
 - **Guías** (3 pestañas):
-  - **HTTP:** referencia buscable de métodos y códigos de estado HTTP con ejemplos.
+  - **HTTP:** referencia buscable de métodos y códigos de estado HTTP con ejemplos; cada ejemplo se abre en el **Cliente HTTP** con el botón **Probar** (no se envía nada hasta que usted pulse **Enviar**).
   - **Túneles:** guía paso a paso de Cloudflare y ngrok con comandos listos para copiar.
   - **Git:** guía de Git y GitHub más un **Laboratorio Git** aislado en una carpeta propia de WolfCore Dev (con ejercicio guiado de resolución de conflictos) que nunca toca sus proyectos ni usa internet.
 
@@ -48,6 +49,7 @@ La pantalla **Herramientas** reúne utilidades diarias pensadas para desarrollad
 - **ZIP y PDF:** comprime archivos o carpetas a `.zip` y optimiza archivos `.pdf` sin tocar el original.
 - **Conversor de documentos:** convierte localmente Word (`.docx` → HTML/Markdown), Excel/CSV (`.xlsx` ↔ `.csv`), Markdown → HTML/PDF, PDF → texto y HTML → PDF en un proceso separado (los formatos `odt`, `pptx` o `doc` aparecen solo si tiene LibreOffice instalado).
 - **Información de archivo:** muestra tamaño, tipo y hashes criptográficos de cualquier archivo.
+- **Uso del disco:** muestra qué ocupa espacio en una unidad o carpeta con un árbol, los archivos y carpetas mayores y el desglose por extensión (solo lectura).
 - **Limpieza BOM UTF-8:** detecta y quita la marca de orden de bytes (BOM) de archivos o carpetas.
 - **QR** (2 pestañas):
   - **QR:** genera códigos QR descargables en PNG desde cualquier texto o enlace de túnel.
