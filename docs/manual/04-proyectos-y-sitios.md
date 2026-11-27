@@ -55,7 +55,7 @@ Notas sobre estas recetas:
 - Los comandos de arranque son plantillas fijas de WolfCore Dev: nada del repositorio se copia en ellos.
 - **Ruby, Java y .NET se instalan desde Servicios → Versiones:** el proyecto usa la versión que pide su archivo (`.ruby-version` o `Gemfile` para Ruby, `pom.xml` o `build.gradle` para Java, Maven y Gradle, `*.csproj` o `global.json` para .NET, `go.mod` para Go) o la que elija en la tarjeta. Maven y Gradle necesitan además un JDK de WolfCore Dev. Los avisos de versión faltante aparecen en la tarjeta (**Avisos de versiones**).
 - Las gemas de Ruby con extensiones nativas pueden pedir el Devkit (MSYS2), un paso manual explicado en [03 · Versiones e instancias](03-versiones.md).
-- **Go, Rust, Bun, Deno, Zig, Kotlin y Dart** no tienen receta propia: WolfCore Dev solo detecta la versión que pide el proyecto y la deja disponible en su terminal y sus procesos; el comando de arranque lo define usted en **Procesos** (pendiente de confirmar si alguna versión posterior les añade receta).
+- **Go, Rust, Bun, Deno, Zig, Kotlin y Dart** no tienen receta propia: WolfCore Dev solo detecta la versión que pide el proyecto y la deja disponible en su terminal y sus procesos; el comando de arranque lo define usted en **Procesos**. En esta versión no hay receta para ellos.
 
 Además:
 
