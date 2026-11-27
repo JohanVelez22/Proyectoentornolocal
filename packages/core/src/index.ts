@@ -206,5 +206,15 @@ export * from './tareas/programador';
 export * from './proyectos/reverb';
 export * from './clientehttp/tipos';
 export { ClienteHttp, type DepsClienteHttp, type SecretosHttp } from './clientehttp/cliente';
+export {
+  LaboratorioGit,
+  ARCHIVOS_LABORATORIO,
+  NOMBRE_LABORATORIO,
+  validarOrden as validarOrdenLaboratorio,
+  type EstadoLaboratorio,
+  type IdArchivoLaboratorio,
+  type Orden as OrdenLaboratorio,
+  type ResultadoOrden as ResultadoOrdenLaboratorio,
+} from './git/laboratorio';
 export { ServidorEjemplo, type EstadoServidorEjemplo } from './clientehttp/ejemplo';
 export { esNombreSecreto } from './clientehttp/sensibles';

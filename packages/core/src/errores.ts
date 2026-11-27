@@ -142,6 +142,14 @@ export const PARAMETROS_ERROR = {
   'clientehttp.limite': [],
   // servidor de ejemplo de la guía HTTP (D49)
   'ejemplohttp.no_arranca': ['motivo'],
+  // laboratorio de práctica de Git (D50)
+  'laboratoriogit.sin_git': [],
+  'laboratoriogit.orden_invalida': [],
+  'laboratoriogit.nombre_invalido': [],
+  'laboratoriogit.mensaje_invalido': [],
+  'laboratoriogit.archivo_invalido': [],
+  'laboratoriogit.contenido_invalido': [],
+  'laboratoriogit.ruta_insegura': [],
   // herramientas
   'herramientas.pid_invalido': [],
   'herramientas.pid_sistema': ['pid'],
