@@ -20,6 +20,7 @@ export {
 export * from './avisos/avisos';
 export * from './errores';
 export * from './rutas';
+export * from './rutas/nombreDeRuta';
 export * from './almacen';
 export * from './eventos';
 export * from './sitios/confianza';

@@ -26,3 +26,4 @@ export {
   PLAZO_HTTP_MAX_SEG,
 } from './clientehttp/tipos';
 export { esNombreSecreto, esSoloVariables } from './clientehttp/sensibles';
+export { nombreDeRuta, segmentosDeRuta } from './rutas/nombreDeRuta';
