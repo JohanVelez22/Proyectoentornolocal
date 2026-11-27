@@ -409,7 +409,13 @@ describe('stores de la interfaz', () => {
     servicios.aplicar({ ...nginx, id: 'redis', nombre: 'Redis', categoria: 'bd', estado: 'error' });
     expect(servicios.resumen).toMatchObject({ total: 4, propios: 2, encendidos: 1, conError: 1 });
     // Con el FTP encendido sí cuenta, para que «encendidos de N» nunca pase de N.
-    servicios.aplicar({ ...nginx, id: 'ftp', nombre: 'FTP', categoria: 'herramienta', estado: 'encendido' });
+    servicios.aplicar({
+      ...nginx,
+      id: 'ftp',
+      nombre: 'FTP',
+      categoria: 'herramienta',
+      estado: 'encendido',
+    });
     expect(servicios.resumen).toMatchObject({ propios: 3, encendidos: 2 });
     expect(servicios.porArrancar.map((s) => s.id)).toEqual(['redis']);
   });
@@ -419,7 +425,14 @@ describe('stores de la interfaz', () => {
     servicios.instalados['nginx'] = [];
     servicios.hidratar([
       nginx,
-      { ...nginx, id: 'proy-a-web', nombre: 'web', categoria: 'proyecto', estado: 'error', puertos: [5173] },
+      {
+        ...nginx,
+        id: 'proy-a-web',
+        nombre: 'web',
+        categoria: 'proyecto',
+        estado: 'error',
+        puertos: [5173],
+      },
     ]);
     // Servicios no lista el proceso de proyecto, pero la pastilla sí lo cuenta como error.
     expect(servicios.visibles).toEqual([]);

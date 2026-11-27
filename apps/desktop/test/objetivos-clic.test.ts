@@ -34,7 +34,7 @@ describe('objetivos de clic del tema (D54a, I9; WCAG 2.5.8)', () => {
     expect(src('TarjetaServiciosProcesos.vue')).toContain('ti.irA(nombreServicio(s.nombre))');
     // En TarjetaServicio ningún texto o etiqueta usa el nombre crudo del núcleo.
     expect(src('TarjetaServicio.vue')).not.toMatch(/[^(.\w]servicio\.nombre/);
-    expect(src('TarjetaServicio.vue')).not.toMatch(/props\.servicio\.nombre(?!\))/);
+    expect(src('TarjetaServicio.vue')).not.toMatch(/props\.servicio\.nombre(?!\))/);
   });
 
   it('el CSS global da 28 px a los botones de solo icono y a la zona de las casillas', () => {

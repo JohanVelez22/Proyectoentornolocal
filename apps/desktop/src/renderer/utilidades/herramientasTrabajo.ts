@@ -74,7 +74,8 @@ export function textoErrorRegex(
   },
 ): string | null {
   if (r.error === 'banderas') return errores.banderas;
-  if (r.error === 'regex') return errores.regex(detalleRegex(r.errorMotor ?? '', errores.regexDetalle));
+  if (r.error === 'regex')
+    return errores.regex(detalleRegex(r.errorMotor ?? '', errores.regexDetalle));
   return null;
 }
 

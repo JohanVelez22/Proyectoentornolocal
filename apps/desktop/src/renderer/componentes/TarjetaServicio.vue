@@ -200,7 +200,8 @@ const opciones = computed<DropdownOption[]>(() => [
 
 const textoBorrar = computed(() =>
   t.borrarDatos.texto(
-    t.borrarDatos.que[props.servicio.id] ?? t.borrarDatos.generico(nombreServicio(props.servicio.nombre)),
+    t.borrarDatos.que[props.servicio.id] ??
+      t.borrarDatos.generico(nombreServicio(props.servicio.nombre)),
   ),
 );
 
