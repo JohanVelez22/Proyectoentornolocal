@@ -167,3 +167,47 @@ describe('respeta reducir movimiento', () => {
     expect(fuente('composables', 'useFoco.ts')).toContain('(prefers-reduced-motion: reduce)');
   });
 });
+
+describe('anillo de foco visible con teclado (D54a, C2)', () => {
+  const css = readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'estilos.css'), 'utf8');
+  const regla = (selector: RegExp): string => {
+    const m = new RegExp(`${selector.source}[^{]*\{([^}]*)\}`, 's').exec(css);
+    return m?.[1] ?? '';
+  };
+
+  it('una regla global :focus-visible cubre botones, pestañas, menú, interruptores, casillas y tarjetas', () => {
+    const selectores = css
+      .split('}')
+      .filter((b) => b.includes(':focus-visible') && b.includes('outline'))
+      .join(' ');
+    for (const s of [
+      '.n-button',
+      '.n-tabs-tab',
+      '.n-menu-item-content',
+      '.n-switch',
+      '.n-checkbox',
+      '.tarjeta',
+      "[role='button']",
+      'button',
+    ]) {
+      expect(selectores, s).toContain(s);
+    }
+  });
+
+  it('el anillo es de 2 px con el acento del tema y no se pinta con el ratón', () => {
+    const cuerpo = regla(/:focus-visible/);
+    expect(cuerpo).toMatch(/outline:\s*2px solid var\(--acento\)/);
+    expect(cuerpo).toMatch(/outline-offset/);
+    expect(css).not.toMatch(/\.n-button:focus\s*\{/);
+  });
+
+  it('el acento da al menos 3:1 (WCAG 1.4.11) sobre el fondo en claro y en oscuro', async () => {
+    const { contraste, primarioDe } = await import('../src/renderer/tema');
+    for (const fondo of ['#f5f6f8', '#ffffff', '#fbfbfc']) {
+      expect(contraste(primarioDe(null, false), fondo), fondo).toBeGreaterThanOrEqual(3);
+    }
+    for (const fondo of ['#121317', '#1a1b21', '#17181d']) {
+      expect(contraste(primarioDe(null, true), fondo), fondo).toBeGreaterThanOrEqual(3);
+    }
+  });
+});

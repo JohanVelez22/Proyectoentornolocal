@@ -141,3 +141,45 @@ body {
     outline-offset: 2px;
   }
 }
+
+/*
+ * Foco visible con teclado (D54a, C2; WCAG 2.4.7). Un único anillo para botones (también los de
+ * Naive UI y los de la cabecera), pestañas, menú lateral, interruptores, casillas y tarjetas
+ * clicables. `:focus-visible` solo se activa con el teclado, no al hacer clic con el ratón. El
+ * acento del tema ya es el tono claro en el tema oscuro, así que da más de 3:1 en ambos.
+ */
+:is(
+  button,
+  a[href],
+  summary,
+  [role='button'],
+  [role='tab'],
+  [role='menuitem'],
+  [role='switch'],
+  [role='checkbox'],
+  [role='radio'],
+  .n-button,
+  .n-tabs-tab,
+  .n-menu-item-content,
+  .n-switch,
+  .n-checkbox,
+  .n-radio,
+  .tarjeta
+):focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+
+/*
+ * Objetivos de clic (D54a, I9; WCAG 2.5.8): los botones de solo icono (sin etiqueta dentro) llegan
+ * a 28 px y la zona de clic de una casilla también. Cerrar de cajones y diálogos y los
+ * interruptores se dimensionan en el tema de Naive UI (tema.ts).
+ */
+.n-button:not(:has(.n-button__content)) {
+  min-width: 28px;
+  min-height: 28px;
+}
+.n-checkbox {
+  min-height: 28px;
+  align-items: center;
+}
