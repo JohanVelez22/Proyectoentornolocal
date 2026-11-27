@@ -45,7 +45,7 @@ export const TARJETAS_POR_SECCION: Record<SeccionHerramientas, readonly string[]
     'captura',
     'grabarPantalla',
   ],
-  sistema: ['limpiezaDisco', 'tiempo'],
+  sistema: ['limpiezaDisco', 'tiempo', 'chmod'],
 };
 
 /** Todas las tarjetas en el orden en que se ven. */

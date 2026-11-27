@@ -37,7 +37,7 @@ describe('Herramientas por secciones (D38a)', () => {
         'captura',
         'grabarPantalla',
       ],
-      sistema: ['limpiezaDisco', 'tiempo'],
+      sistema: ['limpiezaDisco', 'tiempo', 'chmod'],
     });
   });
 
