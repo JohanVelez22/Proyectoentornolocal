@@ -44,10 +44,10 @@ async function elegirAcento(claro: string): Promise<void> {
         <NFormItem :label="t.tema">
           <SelectorTema />
         </NFormItem>
-        <NFormItem :label="t.idioma">
-          <SelectorIdioma />
-        </NFormItem>
       </div>
+      <NFormItem :label="t.idioma" class="separado">
+        <SelectorIdioma />
+      </NFormItem>
       <NFormItem :label="t.acento" class="separado">
         <div class="acentos" role="radiogroup" :aria-label="t.acento">
           <button
@@ -105,8 +105,9 @@ async function elegirAcento(claro: string): Promise<void> {
 }
 .dos {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 18px;
+  align-items: start;
 }
 .separado {
   margin-top: 16px;
