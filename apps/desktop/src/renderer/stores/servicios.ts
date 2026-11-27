@@ -158,8 +158,18 @@ export const useServicios = defineStore('servicios', () => {
    * todos cuentan sobre `visibles`, nunca sobre `lista` (que trae Nginx sin instalar y los procesos
    * de proyecto).
    */
+  /**
+   * Los que WolfCore puede encender: no cuentan los externos ni el FTP integrado (que arranca con
+   * sus proyectos), salvo que ya esté encendido, para que «encendidos de N» nunca pase de N.
+   */
+  const propios = computed(() =>
+    visibles.value.filter(
+      (s) => s.estado !== 'externo' && (s.id !== 'ftp' || s.estado === 'encendido'),
+    ),
+  );
   const resumen = computed(() => ({
     total: visibles.value.length,
+    propios: propios.value.length,
     encendidos: visibles.value.filter((s) => s.estado === 'encendido').length,
     conError: visibles.value.filter((s) => s.estado === 'error').length,
     externos: externos.value.length,

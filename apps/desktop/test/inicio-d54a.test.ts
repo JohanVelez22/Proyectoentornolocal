@@ -14,7 +14,8 @@ describe('Servicios, Inicio y la pastilla comparten una sola fuente (D54a)', () 
 
     const inicio = fuente('vistas', 'Inicio.vue');
     expect(inicio).toContain('servicios.resumen.encendidos');
-    expect(inicio).toContain('servicios.resumen.total');
+    expect(inicio).toContain('servicios.resumen.propios');
+    expect(inicio).not.toContain('servicios.resumen.total');
     expect(inicio).not.toContain('servicios.lista.length');
 
     const tarjeta = fuente('componentes', 'TarjetaServiciosProcesos.vue');
@@ -23,6 +24,20 @@ describe('Servicios, Inicio y la pastilla comparten una sola fuente (D54a)', () 
     const vista = fuente('vistas', 'Servicios.vue');
     expect(vista).toContain('servicios.resumen.porArrancar');
     expect(vista).toContain('servicios.instaladosListos');
+  });
+
+  it('donde se ofrecen servicios para elegir o encender se usa la fuente única (visibles)', () => {
+    for (const f of [
+      'DialogoWorkspace.vue',
+      'PaletaComandos.vue',
+      'AsistenteNuevoProyecto.vue',
+      'AsistenteImportar.vue',
+      'DialogoImportar.vue',
+    ]) {
+      const t = fuente('componentes', f);
+      expect(t, f).toContain('servicios.visibles');
+      expect(t, f).not.toContain('servicios.lista');
+    }
   });
 
   it('la pastilla es un botón que lleva a Servicios y su texto corto no se oculta por ancho', () => {

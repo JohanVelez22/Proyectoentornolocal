@@ -394,6 +394,9 @@ describe('stores de la interfaz', () => {
     expect(servicios.resumen.encendidos).toBe(0);
     expect(servicios.encendidos).toBe(servicios.resumen.encendidos);
     expect(servicios.resumen.externos).toBe(1);
+    // «Propios» es lo que WolfCore puede encender: sin externos ni el FTP integrado apagado.
+    expect(servicios.resumen.total).toBe(2);
+    expect(servicios.resumen.propios).toBe(0);
     // Los externos van en su franja y no en los grupos de tarjetas.
     expect(servicios.externos.map((s) => s.id)).toEqual(['mysql']);
     expect(servicios.grupos.flatMap((g) => g.servicios.map((s) => s.id))).toEqual(['ftp']);
@@ -403,7 +406,10 @@ describe('stores de la interfaz', () => {
     // Un servicio con error y otro encendido se cuentan igual en todas partes.
     servicios.aplicar({ ...nginx, estado: 'encendido' });
     servicios.aplicar({ ...nginx, id: 'redis', nombre: 'Redis', categoria: 'bd', estado: 'error' });
-    expect(servicios.resumen).toMatchObject({ total: 4, encendidos: 1, conError: 1 });
+    expect(servicios.resumen).toMatchObject({ total: 4, propios: 2, encendidos: 1, conError: 1 });
+    // Con el FTP encendido sí cuenta, para que «encendidos de N» nunca pase de N.
+    servicios.aplicar({ ...nginx, id: 'ftp', nombre: 'FTP', categoria: 'herramienta', estado: 'encendido' });
+    expect(servicios.resumen).toMatchObject({ propios: 3, encendidos: 2 });
     expect(servicios.porArrancar.map((s) => s.id)).toEqual(['redis']);
   });
 });

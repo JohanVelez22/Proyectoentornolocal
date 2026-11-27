@@ -122,7 +122,7 @@ const tiles = computed<Tile[]>(() => [
     etiqueta: t.tiles.servicios,
     // La misma cuenta que Servicios y la pastilla de la cabecera.
     valor: servicios.resumen.encendidos,
-    detalle: t.tiles.serviciosDe(servicios.resumen.total),
+    detalle: t.tiles.serviciosDe(servicios.resumen.propios),
     icono: Server,
     tono: servicios.resumen.encendidos > 0 ? 'ok' : 'neutro',
     destino: 'servicios',
