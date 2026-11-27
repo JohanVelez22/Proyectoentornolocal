@@ -445,13 +445,27 @@ describe('salida de la captura', () => {
   });
 
   it('no escribe ningún archivo por su cuenta: ni al capturar ni al enviar al conversor', async () => {
-    const antes = new Set(readdirSync(tmpdir()));
-    const p = armar();
-    await p.servicio.iniciar('region');
-    p.servicio.alConversor(PNG_1X1);
-    p.servicio.tomarPendiente();
-    const nuevos = readdirSync(tmpdir()).filter((n) => !antes.has(n) && /captura|wolf/i.test(n));
-    expect(nuevos).toEqual([]);
+    // Carpeta temporal propia: mirar la del sistema daba falsos fallos cuando otras pruebas en
+    // paralelo creaban allí sus carpetas `wolfcore-*`.
+    const propia = mkdtempSync(join(tmpdir(), 'captura-sin-escritura-'));
+    const previas = { TMP: process.env.TMP, TEMP: process.env.TEMP, TMPDIR: process.env.TMPDIR };
+    process.env.TMP = propia;
+    process.env.TEMP = propia;
+    process.env.TMPDIR = propia;
+    try {
+      expect(tmpdir()).toBe(propia);
+      const p = armar();
+      await p.servicio.iniciar('region');
+      p.servicio.alConversor(PNG_1X1);
+      p.servicio.tomarPendiente();
+      expect(readdirSync(propia)).toEqual([]);
+    } finally {
+      for (const [k, v] of Object.entries(previas)) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+      rmSync(propia, { recursive: true, force: true });
+    }
   });
 });
 
