@@ -51,7 +51,7 @@ Al abrir WolfCore Dev por primera vez sin proyectos creados, se abre el **Recorr
 La barra lateral izquierda agrupa las pantallas en tres bloques y un acceso fijo al final:
 
 - **Trabajo:** **Inicio**, **Proyectos**.
-- **Entorno:** **Servicios** (con pestañas **Servicios**, **Versiones** y **PHP**), **Bases de datos**, **Correo**, **IA** (con pestañas **Agentes**, **IA en la nube** e **IA local**), **Túneles** y, si activa **Mostrar secciones avanzadas** en **Ajustes**, **Contenedores**.
+- **Entorno:** **Servicios** (con pestañas **Servicios**, **Versiones** y **PHP**), **Bases de datos**, **Correo**, **IA** (con pestañas **Agentes**, **Nube** y **Modelos locales**), **Túneles** y, si activa **Mostrar secciones avanzadas** en **Ajustes**, **Contenedores**.
 - **Utilidades:** **Herramientas**, **Depuración**, **Doctor**, **Registros**.
 - **Ajustes:** al pie de la barra lateral.
 
@@ -61,8 +61,14 @@ En la barra superior encontrará, de izquierda a derecha:
 2. El buscador central (**Buscar o ejecutar un comando**, atajo `Ctrl+K`).
 3. El botón **Memoria** (abre el **Optimizador de memoria**).
 4. La campana de **Avisos** (abre el **Centro de avisos**).
-5. Los selectores rápidos de **Cambiar idioma** y **Cambiar tema** (Claro, Oscuro o Sistema).
-6. La pastilla de estado global (cantidad de servicios encendidos, túneles activos o alerta si hay un error).
+5. Los selectores rápidos de **Cambiar idioma** (muestra el código del idioma activo, por ejemplo `ES`; la interfaz está disponible en 16 idiomas, ver [13 · Perfiles y ajustes](13-perfiles-y-ajustes.md)) y **Cambiar tema** (Claro, Oscuro o Sistema).
+6. La **pastilla de estado** global, siempre visible con un texto corto:
+   - **Conectando…** mientras carga y **Sin conexión** si no hay conexión con el núcleo.
+   - **Todo apagado** si no hay ningún servicio encendido.
+   - **N encendidos** (por ejemplo, `3 encendidos`) cuando hay servicios en marcha.
+   - **N con error** (por ejemplo, `1 con error`) si algún servicio falló; el error manda sobre lo demás y la pastilla se tiñe de alerta.
+
+   Al pasar el cursor por encima verá el detalle completo (servicios encendidos y túneles activos) y, al pulsarla, abre **Servicios**.
 
 ### 5. Usar la Paleta de comandos (`Ctrl+K`)
 
@@ -74,10 +80,10 @@ En la barra superior encontrará, de izquierda a derecha:
 
 ### 6. Cerrar la aplicación y el icono de la bandeja
 
-Al cerrar la ventana con la `X`, WolfCore Dev puede quedar en la bandeja del sistema [VERIFICAR: comportamiento exacto de minimizar a bandeja vs cerrar ventana en `apps/desktop/src/main/`]. Para salir por completo:
+Al cerrar la ventana con la `X`, WolfCore Dev no se cierra: solo oculta la ventana y sigue en la bandeja del sistema, con sus servicios como estaban. Para abrirla de nuevo use el icono de la bandeja (**Abrir**). Para salir por completo:
 
 1. Haga clic derecho en el icono de **WolfCore Dev** en la bandeja del sistema y elija **Salir**.
-2. En el diálogo de confirmación, elija si desea **apagar los servicios** al salir o dejarlos encendidos en segundo plano (los servicios arrancan sin ventanas de consola).
+2. En el diálogo **¿Apagar los servicios?**, elija **Sí, apagar** para detener todo al salir o **No, dejarlos encendidos** para que sigan en segundo plano (los servicios arrancan sin ventanas de consola).
 
 ## Ejemplo
 
