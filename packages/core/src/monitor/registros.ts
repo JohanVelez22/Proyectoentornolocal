@@ -116,7 +116,12 @@ class Cola {
     private readonly emitir: (lineas: string[]) => void,
     private readonly intervaloMs: number,
     private readonly abrir: Abrir,
+    /** Filtra cada línea al cortarla, con el estado de todo lo leído (no por lotes ya recortados). */
+    private readonly filtro: FiltroLentasPg | null = null,
   ) {}
+
+  /** El último trozo emitido por tamaño dejó una línea a medias: lo que siga es su continuación. */
+  private partida = false;
 
   /** Se sitúa al final del archivo (solo emite lo que llegue después) y empieza a vigilar. */
   async arrancar(): Promise<void> {
@@ -199,6 +204,17 @@ class Cola {
     this.offset = 0;
     this.resto = Buffer.alloc(0);
     this.descartarPrimera = false;
+    this.partida = false;
+  }
+
+  /** Añade una línea (o un trozo de una larga) a `lineas`, pasándola por el filtro si lo hay. */
+  private empujar(lineas: string[], texto: string, continuacion: boolean): void {
+    if (!this.filtro) {
+      lineas.push(texto);
+      return;
+    }
+    const r = this.filtro.linea(texto, continuacion);
+    if (r !== null) lineas.push(r);
   }
 
   private async revisar(): Promise<void> {
@@ -227,6 +243,9 @@ class Cola {
         desde = tam - MAX_BYTES_REVISION;
         this.resto = Buffer.alloc(0);
         this.descartarPrimera = true;
+        // Se saltó parte del archivo: puede haber caído dentro de una sentencia.
+        this.filtro?.reiniciarDuda();
+        this.partida = false;
       }
       const lineas: string[] = [];
       const buf = Buffer.alloc(Math.min(BLOQUE, tam - desde));
@@ -254,7 +273,8 @@ class Cola {
     let inicio = 0;
     for (let i = datos.indexOf(SALTO); i >= 0; i = datos.indexOf(SALTO, inicio)) {
       if (this.descartarPrimera) this.descartarPrimera = false;
-      else lineas.push(lineaDe(datos.subarray(inicio, i)));
+      else this.empujar(lineas, lineaDe(datos.subarray(inicio, i)), this.partida);
+      this.partida = false;
       inicio = i + 1;
     }
     // Copia: `trozo` es el búfer de lectura, que se reutiliza.
@@ -263,7 +283,9 @@ class Cola {
       // Se emite hasta el último carácter completo; sus bytes sueltos esperan a la próxima lectura.
       const corte = finCaracterCompleto(this.resto);
       if (this.descartarPrimera) this.descartarPrimera = false;
-      else lineas.push(lineaDe(this.resto.subarray(0, corte)));
+      else this.empujar(lineas, lineaDe(this.resto.subarray(0, corte)), this.partida);
+      // Lo que falte de esta línea llega después: es una continuación, no una cabecera.
+      this.partida = true;
       this.resto = Buffer.from(this.resto.subarray(corte));
     }
   }
@@ -417,12 +439,10 @@ export class Registros {
         const filtro = esFuentePostgres(id) ? new FiltroLentasPg() : null;
         const cola = new Cola(
           fuente.ruta,
-          (lineas) => {
-            const salen = filtro ? filtro.procesar(lineas) : lineas;
-            if (salen.length > 0) this.d.eventos.emit('registro:lineas', { id, lineas: salen });
-          },
+          (lineas) => this.d.eventos.emit('registro:lineas', { id, lineas }),
           this.d.intervaloMs ?? 1000,
           this.d.abrir ?? ((r, f) => open(r, f)),
+          filtro,
         );
         entrada = { cola, cuenta: 1, listo: cola.arrancar() };
         this.colas.set(id, entrada);

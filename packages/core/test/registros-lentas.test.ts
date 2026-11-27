@@ -1,3 +1,4 @@
+import { appendFileSync } from 'node:fs';
 import { appendFile, mkdir, writeFile } from 'node:fs/promises';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -100,6 +101,78 @@ describe('PostgreSQL: seguir oculta las consultas lentas', () => {
     expect(t).not.toContain('Y_REAL');
     expect(t).toContain('consulta lenta oculta');
     dejar();
+  });
+});
+
+describe('PostgreSQL: seguir no filtra distinto cuando la cola parte o salta líneas', () => {
+  const H = '2026-11-26 10:00:01.000 CET [2] db=a LOG:  duration: 2000.1 ms  statement: ';
+  const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  async function seguido() {
+    const ruta = rutas.logs('postgresql.log');
+    await writeFile(ruta, '2026 [1] LOG:  ready\n');
+    const dejar = await registros.seguir('servicio:postgresql');
+    // Una línea normal ya vista: el filtro sale del estado inicial de duda.
+    await appendFile(ruta, '2026 [1] LOG:  checkpoint starting: time' + String.fromCharCode(10));
+    await vi.waitFor(() => expect(recibidas.length).toBeGreaterThan(0), { timeout: 5000 });
+    const todo = (): string => recibidas.flatMap((r) => r.lineas).join('\n');
+    // Cierra con una línea normal y espera a verla: ya llegó todo lo anterior.
+    const cerrar = async (): Promise<string> => {
+      await appendFile(ruta, '2026 [1] LOG:  fin-de-prueba\n');
+      await vi.waitFor(() => expect(todo()).toContain('fin-de-prueba'), { timeout: 5000 });
+      dejar();
+      return todo();
+    };
+    return { ruta, cerrar };
+  }
+
+  it('A: una línea de más de 64 KB escrita en dos tiempos no suelta el resto', async () => {
+    const { ruta, cerrar } = await seguido();
+    await appendFile(ruta, H + "INSERT INTO t VALUES ('" + 'a'.repeat(70000));
+    await espera(150);
+    await appendFile(ruta, "SECRETO_LARGO de Ana')\n");
+    const t = await cerrar();
+    expect(t).not.toContain('SECRETO_LARGO');
+    expect(t).toContain('consulta lenta oculta');
+  });
+
+  it('A: una línea de 200 KB escrita de una vez', async () => {
+    const { ruta, cerrar } = await seguido();
+    await appendFile(
+      ruta,
+      H + "INSERT INTO t VALUES ('" + 'a'.repeat(200000) + " SECRETO_200K')\n",
+    );
+    const t = await cerrar();
+    expect(t).not.toContain('SECRETO_200K');
+  });
+
+  it('B: una ráfaga de más de 5000 continuaciones no deja pasar ninguna', async () => {
+    const { ruta, cerrar } = await seguido();
+    const cont = Array.from({ length: 6000 }, (_v, i) => `\t, ('fila${i}', 'SECRETO_RAFAGA')`);
+    appendFileSync(ruta, H + 'INSERT INTO t VALUES\n' + cont.join('\n') + '\n');
+    const t = await cerrar();
+    expect(t).not.toContain('SECRETO_RAFAGA');
+  });
+
+  it('C: un salto de más de 1 MB entre dos revisiones no deja pasar continuaciones', async () => {
+    const { ruta, cerrar } = await seguido();
+    const cont = Array.from({ length: 40000 }, (_v, i) => `\t, ('f${i}', 'SECRETO_SALTO')`);
+    appendFileSync(ruta, H + 'INSERT INTO t VALUES\n' + cont.join('\n') + '\n');
+    const t = await cerrar();
+    expect(t).not.toContain('SECRETO_SALTO');
+  });
+
+  it('un error con STATEMENT y DETAIL Key tampoco enseña los valores', async () => {
+    const { ruta, cerrar } = await seguido();
+    await appendFile(
+      ruta,
+      '2026 [2] db=a ERROR:  duplicate key value violates unique constraint "u"\n' +
+        '2026 [2] db=a DETAIL:  Key (email)=(SECRETO_DETAIL@x) already exists.\n' +
+        "2026 [2] db=a STATEMENT:  INSERT INTO u VALUES ('SECRETO_ST')\n\t, ('SECRETO_ST2')\n",
+    );
+    const t = await cerrar();
+    expect(t).not.toContain('SECRETO_');
+    expect(t).toContain('duplicate key value');
   });
 });
 
