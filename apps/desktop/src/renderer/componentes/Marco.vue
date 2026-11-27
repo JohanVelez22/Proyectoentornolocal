@@ -358,9 +358,12 @@ onBeforeUnmount(() => {
   display: grid;
   /*
    * Los controles de la derecha nunca se encogen (min-content): su ancho depende del idioma y de
-   * la pastilla de estado. El título y el buscador ceden el sitio, así nada se solapa a ningún ancho.
+   * la pastilla de estado. El título (mínimo 110 px, luego puntos suspensivos) y el buscador
+   * (fracción de 2, topado a 520 px en su botón) se reparten el resto, así nada se solapa a ningún
+   * ancho. Las tres columnas son fracciones: una columna con tope fijo (p. ej. 520 px) se llevaría
+   * el sitio antes que el título.
    */
-  grid-template-columns: minmax(0, 1fr) minmax(34px, 520px) minmax(min-content, 1fr);
+  grid-template-columns: minmax(110px, 1fr) minmax(34px, 2fr) minmax(min-content, 1fr);
   align-items: center;
   column-gap: 16px;
   height: 100%;
@@ -438,6 +441,9 @@ onBeforeUnmount(() => {
 }
 /* Ventana estrecha: el buscador pasa a un icono y deja su sitio al título y a los controles. */
 @container (max-width: 900px) {
+  .fila-cabecera {
+    grid-template-columns: minmax(110px, 1fr) 34px minmax(min-content, 1fr);
+  }
   .buscador {
     width: 34px;
     padding: 0;

@@ -40,6 +40,14 @@ describe('Servicios, Inicio y la pastilla comparten una sola fuente (D54a)', () 
     }
   });
 
+  it('la cabecera no depende de una columna fija: los controles no se encogen y nada se solapa', () => {
+    const marco = fuente('componentes', 'Marco.vue');
+    expect(marco).not.toContain('--lado');
+    expect(marco).toMatch(/grid-template-columns:[^;]*minmax\(min-content, 1fr\)/);
+    // Una columna con tope en píxeles se llevaría el sitio antes que el título.
+    expect(marco).not.toMatch(/grid-template-columns:[^;]*minmax\([^)]*,\s*\d+px\)/);
+  });
+
   it('la pastilla es un botón que lleva a Servicios y su texto corto no se oculta por ancho', () => {
     const marco = fuente('componentes', 'Marco.vue');
     expect(marco).toMatch(/<button[^>]*class="pastilla"/s);
