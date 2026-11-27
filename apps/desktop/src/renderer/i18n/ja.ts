@@ -3,14 +3,13 @@
  * 固定用語集：サービス、インスタンス、サイト、トンネル、バックアップ、通知；Doctor と
  * WolfCore Dev は翻訳しません。です・ます調；Git 以外では「ブランチ」ではなく「バージョン」を使用。
  */
-import type { Textos } from './es';
+import type { TextosParciales } from './es';
 
 const plural = (n: number, texto: string): string => `${n}${texto}`;
 
-export const ja: Textos = {
+export const ja: TextosParciales = {
   app: {
     nombre: 'WolfCore Dev',
-    lema: 'PHP と Nginx をシンプルに',
     version: 'バージョン',
   },
   nav: {
@@ -92,7 +91,8 @@ export const ja: Textos = {
         'ブランチがリモートと分岐しています（ローカルとリモートに異なるコミットがあります）。手動で解決してください。ファイルは変更されていません。',
       'git.sin_upstream':
         '現在のブランチはどのリモートブランチも追跡していないため、変更を取り込めません。',
-      'git.sin_rama': 'リポジトリが detached HEAD 状態（ブランチなし）のため、変更は行われていません。',
+      'git.sin_rama':
+        'リポジトリが detached HEAD 状態（ブランチなし）のため、変更は行われていません。',
       'git.no_repositorio': 'このフォルダーは git リポジトリではありません。',
       'git.destino_no_vacio': '出力先フォルダーが空ではありません。',
       'git.destino_es_archivo': '出力先はフォルダーではなくファイルです。',
@@ -103,12 +103,14 @@ export const ja: Textos = {
       'git.url_con_credenciales':
         'URL にユーザー名やパスワードを含めないでください。トークンを別途使用してください。',
       'servicios.desconocido': '不明なサービスです: {id}。',
-      'servicios.no_instalado': '{nombre} はインストールされていません。「サービス」からインストールしてください。',
+      'servicios.no_instalado':
+        '{nombre} はインストールされていません。「サービス」からインストールしてください。',
       'servicios.puerto_invalido': 'ポートは 1024 から 65535 の間の数値である必要があります。',
       'servicios.puerto_asignado': 'ポート {puerto} はすでに {otro} に割り当てられています。',
       'servicios.puerto_ocupado':
         'ポート {puerto} は {nombre}（PID {pid}）が使用しています。プロセスを終了するか別のポートを選択してください。',
-      'servicios.confirmacion_borrado': '{nombre} のデータを削除するには "{id}" と入力してください。',
+      'servicios.confirmacion_borrado':
+        '{nombre} のデータを削除するには "{id}" と入力してください。',
       'servicios.ftp_no_disponible': 'FTP サーバーは利用できません。',
       'sistema.sin_cliente_ftp':
         'この端末に関連付けられた FTP クライアントがありません。FileZilla などをインストールするか、アドレスをコピーしてください。',
@@ -147,7 +149,8 @@ export const ja: Textos = {
       'instancias.ultima': '{id} は唯一のインスタンスのため取り除けません。',
       'instancias.sin_puerto_libre': 'インスタンス用の空きポートが見つかりませんでした。',
       'instancias.confirmacion': '続行するには "{id}" と入力してください。',
-      'instancias.sin_datos': '{id} のフォルダーにデータがありません。復元するバックアップを選択してください。',
+      'instancias.sin_datos':
+        '{id} のフォルダーにデータがありません。復元するバックアップを選択してください。',
       'instancias.respaldo_no_existe': '{id} の該当バックアップは存在しません。',
       'instancias.respaldo_en_uso':
         'このバックアップはロック中の {id} に必要です。先にロックを解決してください。',
@@ -172,7 +175,8 @@ export const ja: Textos = {
         'bin 内にすでに {servicio} {version} のフォルダーが存在するため上書きしません。復元する前にもう一方を取り除いてください。',
       'bd.encender_servicio': 'データベースを管理するには {nombre} を起動してください。',
       'bd.sin_credenciales': '{nombre} の保存済み認証情報がありません。',
-      'bd.confirmacion_borrado': 'データベース {nombre} を削除するには、正確な名前を入力してください。',
+      'bd.confirmacion_borrado':
+        'データベース {nombre} を削除するには、正確な名前を入力してください。',
       'bd.usuario_privilegiado':
         'ユーザー {usuario} は管理者またはシステムロールです。プロジェクト専用のユーザーを選択してください。',
       'bd.usuario_en_uso':
@@ -181,7 +185,8 @@ export const ja: Textos = {
         'ユーザー {usuario} は存在しますがログインできません（LOGIN 権限のないロール、またはサーバーのアクセス規則）。変更は行われていません。',
       'bd.usuario_clave_distinta':
         'ユーザー {usuario} は別のパスワードで既に存在します。他のプロジェクトの接続を切らないためパスワードは変更しません。現在のパスワードを使用してください。',
-      'bd.mongosh_faltante': 'mongosh が見つかりません。MongoDB を管理するには「サービス」からインストールしてください。',
+      'bd.mongosh_faltante':
+        'mongosh が見つかりません。MongoDB を管理するには「サービス」からインストールしてください。',
       'tuneles.sitio_no_encontrado': 'プロジェクトが見つかりませんでした。',
       'tuneles.confirmacion_requerida':
         '{dominio} をインターネットに公開するには、WolfCore Dev での確認が必要です。',
@@ -203,18 +208,20 @@ export const ja: Textos = {
         'トンネル {nombre} にはアクティブな接続があります（削除には cloudflared で -f が必要です）。開いているすべての端末でトンネルを閉じて再試行するか、「ここでのみ忘れる」を使用してください。',
       'tuneles.nombre_en_uso': 'トンネル {nombre} はすでに別のサイトで使用されています。',
       'tuneles.dominio_en_uso': 'ドメイン {dominio} はすでに別のサイトで使用されています。',
-      'tuneles.confirmacion_olvidar': 'トンネル {nombre} を忘れる、または再作成するには確認が必要です。',
+      'tuneles.confirmacion_olvidar':
+        'トンネル {nombre} を忘れる、または再作成するには確認が必要です。',
       'tuneles.cloudflare_fallo': 'cloudflared が操作を完了できませんでした: {detalle}',
       'tuneles.credencial_no_protegida':
         '認証情報へのアクセスを現在のユーザーに制限できなかったため、使用されませんでした。',
-      'tuneles.sin_cifrado':
-        'システムの暗号化機能が利用できないため、認証情報を保存できません。',
+      'tuneles.sin_cifrado': 'システムの暗号化機能が利用できないため、認証情報を保存できません。',
       'tuneles.token_invalido':
         'トークンが無効です。英数字と _ . - のみ使用できます（8〜200 文字）。トンネルのオプションで再度保存してください。',
       'tuneles.ngrok_no_instalado':
         'この端末に ngrok がインストールされていません。ngrok.com からインストールして再試行してください。',
-      'tuneles.ngrok_sin_token': 'ngrok のトークンがありません。トンネルのオプションで保存してください。',
-      'tuneles.expose_sin_token': 'Expose のトークンがありません。トンネルのオプションで保存してください。',
+      'tuneles.ngrok_sin_token':
+        'ngrok のトークンがありません。トンネルのオプションで保存してください。',
+      'tuneles.expose_sin_token':
+        'Expose のトークンがありません。トンネルのオプションで保存してください。',
       'tuneles.tailscale_no_instalado':
         'この端末に Tailscale がインストールされていません。WolfCore Dev ではインストールしないため、tailscale.com からインストールしてください。',
       'tuneles.tailscale_sin_sesion':
@@ -230,7 +237,8 @@ export const ja: Textos = {
         'ローカルネットワーク（Wi-Fi または Ethernet）に接続されていません。ネットワークに接続して再試行してください。',
       'lan.ip_no_valida':
         'アドレス {ip} は現在のローカルネットワークのものではなくなりました。ダイアログを開き直して再度確認してください。',
-      'lan.requiere_https': '{dominio} は HTTPS にリダイレクトされます。HTTPS オプションで共有してください。',
+      'lan.requiere_https':
+        '{dominio} は HTTPS にリダイレクトされます。HTTPS オプションで共有してください。',
       'lan.sin_puertos':
         'ローカルネットワーク用の 8100〜8199 の範囲に空きポートがありません（共有サイトと CA リンクがこの範囲を使用します）。サイトの共有を停止するか CA ダイアログを閉じて再試行してください。',
       'tuneles.expose_no_instalado':
@@ -253,8 +261,7 @@ export const ja: Textos = {
         'WolfCore Dev の認証局（CA）が存在しません。証明書を発行する前に HTTPS セクションから CA をインストールしてください。',
       'herramientas.pid_invalido': 'PID が無効です。',
       'herramientas.pid_sistema': 'PID {pid} はシステムプロセスのため終了できません。',
-      'herramientas.proceso_propio':
-        'WolfCore Dev やそれを起動したプロセスは終了できません。',
+      'herramientas.proceso_propio': 'WolfCore Dev やそれを起動したプロセスは終了できません。',
       'herramientas.proceso_inexistente': 'プロセス {pid} はすでに存在しません。',
       'herramientas.sin_editor':
         'コードエディターが見つかりません。VS Code、Cursor、PhpStorm、Sublime Text などをインストールしてください。',
@@ -272,14 +279,17 @@ export const ja: Textos = {
       'buscar.regex_invalida': '正規表現が無効です。',
       'buscar.regex_lenta':
         '正規表現の処理に時間がかかりすぎています。簡略化するか通常のテキスト検索を使用してください。',
-      'buscar.demasiadas': 'すでに {maximo} 件の検索が実行中です。いずれかをキャンセルするか完了をお待ちください。',
+      'buscar.demasiadas':
+        'すでに {maximo} 件の検索が実行中です。いずれかをキャンセルするか完了をお待ちください。',
       'terminal.no_abrio': 'ターミナルを開けませんでした。',
-      'terminal.no_instalada': '{nombre} はインストールされていません。「設定」から別のターミナルを選択してください。',
+      'terminal.no_instalada':
+        '{nombre} はインストールされていません。「設定」から別のターミナルを選択してください。',
       'terminal.invalida': 'このターミナルは無効です。',
       'terminal.powershell_restringido':
         'この端末では PowerShell が制限付き言語モードになっています（組織ポリシーまたは AppLocker）。WolfCore Dev からターミナルを開けないため、プロジェクトフォルダーでご自身で開いてください。',
       'proyectos.no_existe': 'プロジェクトが存在しません。',
-      'proyectos.no_confiado': 'レシピを実行するには「このリポジトリを信頼する」にチェックを入れてください。',
+      'proyectos.no_confiado':
+        'レシピを実行するには「このリポジトリを信頼する」にチェックを入れてください。',
       'proyectos.receta_en_curso': 'このプロジェクトではすでにレシピが実行中です。',
       'proyectos.paso_no_omitible': '「サイトを作成」ステップはスキップできません。',
       'workspaces.no_existe': 'このワークスペースは存在しません。',
@@ -314,8 +324,7 @@ export const ja: Textos = {
       'cli.formato_no_admitido': 'リクエストの形式が CLI でサポートされていません。',
       'cli.plazo':
         'コマンドがタイムアウトしましたが、まだ実行中の可能性があります。WolfCore Dev で状態を確認してください。',
-      'cli.ocupado':
-        'WolfCore Dev が多数の CLI コマンドを処理中です。しばらくお待ちください。',
+      'cli.ocupado': 'WolfCore Dev が多数の CLI コマンドを処理中です。しばらくお待ちください。',
       'cli.requiere_confirmacion':
         'このコマンドは公開または変更を行うため、{sitio} での確認（--si）が必要です。',
       'cli.requiere_confirmacion_datos_reales':
@@ -353,7 +362,8 @@ export const ja: Textos = {
       'cli.ruta_invalida': 'WolfCore Dev のパスに wolf.cmd が対応していない文字が含まれています。',
       'cli.path_aislado':
         'テスト用データフォルダー（WOLFCORE_DATOS）を使用している場合、ユーザーの PATH は変更されません。',
-      'cli.sin_cliente': 'このバージョンの WolfCore Dev には wolf クライアントが含まれていません（未ビルド）。',
+      'cli.sin_cliente':
+        'このバージョンの WolfCore Dev には wolf クライアントが含まれていません（未ビルド）。',
       'cli.demasiados_dialogos':
         '直近 1 分間の確認回数が多すぎます。しばらく待ってから再試行してください。',
       'cli.error': 'コマンドを完了できませんでした: {detalle}',
@@ -394,8 +404,7 @@ export const ja: Textos = {
         'プロジェクトのサイズが大きすぎるためテンプレートとして保存できません（最大 {maximo}）。大きなフォルダーを除外してください。',
       'plantillas.exclusion_invalida':
         '除外指定のいずれかが無効です（「..」を含まない名前または相対パスを使用してください）。',
-      'plantillas.nombre_invalido':
-        'テンプレート名が無効です（1〜60 文字で入力してください）。',
+      'plantillas.nombre_invalido': 'テンプレート名が無効です（1〜60 文字で入力してください）。',
       'plantillas.esquema_fallo':
         'プロジェクトのデータベーススキーマを読み取れませんでした。該当サービスが起動しているか確認してください。',
       'plantillas.base_no_resuelta':
@@ -410,7 +419,8 @@ export const ja: Textos = {
         'スキーマに構造定義以外のステートメントが含まれていたため、何も実行されませんでした: {sentencia}',
       'bd.extension_no_permitida':
         'スキーマが許可リストにない拡張機能 {nombre} を要求しているため、何も復元されませんでした。',
-      'bd.esquema_fallo': 'スキーマ全体を復元できなかったため、中途半端な状態を残さず中止しました。',
+      'bd.esquema_fallo':
+        'スキーマ全体を復元できなかったため、中途半端な状態を残さず中止しました。',
       'bd.datos_no_permitidos':
         'データダンプにデータ以外の内容が含まれています（INSERT、LOCK TABLES、SET のみ許可されます）。何もインポートされませんでした。',
       'bd.datos_fallo':
@@ -418,7 +428,8 @@ export const ja: Textos = {
       'perfiles.destino_invalido':
         'プロファイルの保存先を選択してください（.wolfperfil ファイル）。',
       'perfiles.frase_debil': 'CA のパスフレーズは {minimo} 文字以上にしてください。',
-      'perfiles.frase_incorrecta': 'パスフレーズが正しくありません。何もインポートされませんでした。',
+      'perfiles.frase_incorrecta':
+        'パスフレーズが正しくありません。何もインポートされませんでした。',
       'perfiles.certificados_sin_ca':
         'サイトの証明書は暗号化された CA と一緒にのみ移行できます。パスフレーズを設定して CA を含めてください。',
       'perfiles.no_existe': 'プロファイルファイルが存在しません。',
@@ -447,10 +458,10 @@ export const ja: Textos = {
       'herramientas.pdf_grande': 'PDF のサイズが大きすぎます（最大 {maximo}）。',
       'herramientas.pdf_cifrado': 'PDF はパスワードで保護されているため最適化できません。',
       'herramientas.pdf_plazo': 'PDF の処理が {segundos} 秒を超えたためキャンセルされました。',
-      'herramientas.salida_ocupada': '新しいファイルに使用できる空きファイル名が見つかりませんでした。',
+      'herramientas.salida_ocupada':
+        '新しいファイルに使用できる空きファイル名が見つかりませんでした。',
       'conversor.formato': 'その変換は利用できません。',
-      'conversor.archivo_invalido':
-        'ファイルが破損しているか、拡張子が示す形式ではありません。',
+      'conversor.archivo_invalido': 'ファイルが破損しているか、拡張子が示す形式ではありません。',
       'conversor.archivo_grande': 'ファイルのサイズが大きすぎます（最大 {maximo}）。',
       'conversor.archivo_peligroso':
         'ZIP 爆弾または細工されたファイル（過剰なコンテンツ、XML エンティティ、不正な名前など）の可能性があるため、安全のため開きません。',
@@ -490,7 +501,8 @@ export const ja: Textos = {
       'importar.origen_apagado':
         '移行元アプリのデータベースサーバーに接続できませんでした。移行元アプリから起動してもう一度お試しください。サイト自体はインポートされました。',
       'importar.origen_no_local': '移行元サーバーはこの PC 上（127.0.0.1）にある必要があります。',
-      'importar.origen_rechazado': '移行元サーバーによりユーザー名またはパスワードが拒否されました。',
+      'importar.origen_rechazado':
+        '移行元サーバーによりユーザー名またはパスワードが拒否されました。',
       'importar.origen_version':
         '移行元サーバーのバージョンは、WolfCore Dev にインストールされている環境ではインポートできません。',
       'importar.volcado_enorme':
@@ -507,7 +519,8 @@ export const ja: Textos = {
         'サイトまたは設定ファイルが多すぎるため、先頭の一部のみ読み込みました。',
       'importar.candidato_desconocido':
         'そのサイトは移行元アプリに見つからなくなりました。再検索してください。',
-      'importar.ya_vinculado': 'そのフォルダーはすでに WolfCore Dev のサイトとして登録されています。',
+      'importar.ya_vinculado':
+        'そのフォルダーはすでに WolfCore Dev のサイトとして登録されています。',
       'importar.dominio_existe':
         'ドメイン {dominio} のサイトはすでに存在します。インポート前に変更してください。',
       'importar.sin_php':
@@ -534,16 +547,19 @@ export const ja: Textos = {
       'proyectos.nombre_invalido':
         'プロジェクト名には小文字、数字、ハイフンのみ使用できます（最大 40 文字）。',
       'proyectos.argumento_invalido': 'プロジェクトの入力値が無効です（項目: {campo}）。',
-      'proyectos.base_existe': 'データベース {nombre} はすでに存在します。別の名前を選んでください。',
+      'proyectos.base_existe':
+        'データベース {nombre} はすでに存在します。別の名前を選んでください。',
       'proyectos.dominio_existe': 'ドメイン {dominio} のサイトはすでに存在します。',
       'proyectos.carpeta_de_otro_sitio':
         'そのフォルダーはプロジェクト {dominio} のフォルダーであるか、その内部にあります。別のフォルダーを選んでください。',
-      'proyectos.sin_python': 'Python がインストールされていません。サービスからインストールしてください。',
+      'proyectos.sin_python':
+        'Python がインストールされていません。サービスからインストールしてください。',
       'proyectos.venv_ajeno':
         'プロジェクトに独自の .venv が含まれています。WolfCore Dev は外部リポジトリの Python を実行しません。削除してから環境を作り直してください。',
       'proyectos.paso_base_no_omitible':
         '新規プロジェクトの「データベースを作成」ステップは省略できません。',
-      'proyectos.sin_php': 'PHP がインストールされていません。サービスからインストールしてください。',
+      'proyectos.sin_php':
+        'PHP がインストールされていません。サービスからインストールしてください。',
       'proyectos.php_no_instalado':
         'PHP {version} はインストールされていません。サービスからインストールしてください。',
       'proyectos.python_no_instalado':
@@ -596,7 +612,8 @@ export const ja: Textos = {
       'doctor.servicio_en_error': '{servicio} でエラーが発生しています。',
       'doctor.revision_fallida': 'チェック {revision} を完了できませんでした。',
       'doctor.confirmacion_requerida': '修復を適用する前に確認してください。',
-      'doctor.hallazgo_desconocido': 'その検出項目はすでに存在しません。もう一度チェックしてください。',
+      'doctor.hallazgo_desconocido':
+        'その検出項目はすでに存在しません。もう一度チェックしてください。',
       'doctor.solo_informa': 'この検出項目には自動修復がありません。案内に従って対応してください。',
       'doctor.reparacion_fallida': '修復を適用できませんでした。',
       'doctor.reparacion_cancelada': '管理者権限がキャンセルされたため、何も変更していません。',
@@ -622,11 +639,14 @@ export const ja: Textos = {
         'Firefox フォルダー外にプロファイルがあります。「CA の信頼設定」から別途確認のうえ有効にしてください。',
       'confianza.node_variable_cambiada':
         'NODE_EXTRA_CA_CERTS が手動で変更され、WolfCore Dev の認証局を指していないため削除しませんでした。',
-      'ia.clave_invalida': 'プロバイダーにより API キーが拒否されました。確認するか新しく生成してください。',
+      'ia.clave_invalida':
+        'プロバイダーにより API キーが拒否されました。確認するか新しく生成してください。',
       'ia.sin_saldo': 'プロバイダーのアカウントに残高または利用枠がありません。',
-      'ia.limite': 'プロバイダーによりリクエストが制限されました。少し待ってからもう一度お試しください。',
+      'ia.limite':
+        'プロバイダーによりリクエストが制限されました。少し待ってからもう一度お試しください。',
       'ia.region': 'お使いの国または地域ではこのプロバイダーのサービスを利用できません。',
-      'ia.sin_red': 'プロバイダーに接続できませんでした。ネットワークまたはベース URL を確認してください。',
+      'ia.sin_red':
+        'プロバイダーに接続できませんでした。ネットワークまたはベース URL を確認してください。',
       'ia.url_invalida':
         'ベース URL が無効です。https://（または 127.0.0.1 / [::1] のみ http://）を使用し、ユーザー名やパスワードを含めないでください。',
       'ia.plazo': 'プロバイダーから {segundos} 秒以内に応答がありませんでした。',
@@ -682,15 +702,18 @@ export const ja: Textos = {
       'agentes.sin_confirmar': '続行する前にダイアログで操作を確認してください。',
       'agentes.no_instalable':
         'このエージェントは WolfCore Dev からはインストールできません。公式ガイド（{guia}）に従ってください。',
-      'agentes.sin_node': 'エージェントをインストールするには、サービスから Node をインストールしてください。',
+      'agentes.sin_node':
+        'エージェントをインストールするには、サービスから Node をインストールしてください。',
       'agentes.node_antiguo':
         '{agente} には Node {requerida} 以上が必要ですが、現在使用されるのは {actual} です。サービスから新しい Node をインストールしてください。',
       'agentes.node_version_desconocida':
         'Node のバージョンを確認できませんでした。{agente} には Node {requerida} 以上が必要です。サービスで Node を確認してください。',
       'instalador.zip_demasiado_grande':
         'ダウンロードしたパッケージが大きすぎるかファイル数が多すぎるため、インストールしません。',
-      'rust.rustup_init_fallo': 'rustup-init が正常に終了しませんでした（コード {codigo}）: {detalle}',
-      'rust.toolchain_fallo': 'Rust {version} をインストールできませんでした（コード {codigo}）: {detalle}',
+      'rust.rustup_init_fallo':
+        'rustup-init が正常に終了しませんでした（コード {codigo}）: {detalle}',
+      'rust.toolchain_fallo':
+        'Rust {version} をインストールできませんでした（コード {codigo}）: {detalle}',
       'rust.desinstalar_fallo': 'Rust {version} をアンインストールできませんでした: {detalle}',
       'rust.descarga_fallo': 'rustup をダウンロードできませんでした（HTTP {estado}）。',
       'agentes.instalacion_fallo': 'エージェントをインストールできませんでした: {detalle}',
@@ -709,15 +732,16 @@ export const ja: Textos = {
       'php.rama_no_instalada': 'PHP {rama} はインストールされていません。',
       'php.argumento_invalido': '無効な値です（{campo}）。',
       'php.valor_invalido': '{clave} の値が無効です。',
-      'php.ini_invalido': 'この php.ini では PHP を起動できないため保存しませんでした。出力: {salida}',
+      'php.ini_invalido':
+        'この php.ini では PHP を起動できないため保存しませんでした。出力: {salida}',
       'php.no_arranco':
         '変更後に PHP {rama} を再起動できなかったため、以前の設定に戻しました。現在は正常に応答しています。',
       'php.caido_tras_restaurar':
         'PHP {rama} を再起動できず、以前の設定に戻しましたが応答しません。サービスと PHP のログを確認してください。',
       'php.respaldo_no_existe': 'その php.ini のバックアップは存在しません。',
-      'php.extension_no_existe': '拡張機能 {nombre} はこのバージョンの ext フォルダーにありません。',
-      'php.extension_no_catalogo':
-        '拡張機能 {nombre} はこのバージョンのカタログにありません。',
+      'php.extension_no_existe':
+        '拡張機能 {nombre} はこのバージョンの ext フォルダーにありません。',
+      'php.extension_no_catalogo': '拡張機能 {nombre} はこのバージョンのカタログにありません。',
       'php.variante_desconocida': 'この PHP のビルド構成を判別できませんでした。',
       'php.sin_variante': 'カタログにビルド {variante} 向けの {nombre} がありません。',
       'php.huella_distinta':
@@ -784,7 +808,8 @@ export const ja: Textos = {
       'catalogo.huella_debil':
         '{servicio} {version} には脆弱なチェックサム（MD5 または SHA-1）しかありません。ダイアログでインストールを確定してください。',
       'catalogo.huella_no_coincide': 'ダウンロードしたファイルが公開チェックサムと一致しません。',
-      'catalogo.redireccion_ajena': 'ダウンロードが許可されていないサイト（{host}）へリダイレクトしようとしました。',
+      'catalogo.redireccion_ajena':
+        'ダウンロードが許可されていないサイト（{host}）へリダイレクトしようとしました。',
       'catalogo.demasiadas_redirecciones':
         'ダウンロードのリダイレクト回数が多すぎます（{maximo} 回超）。',
       'catalogo.respuesta_grande': 'サーバーの応答サイズが大きすぎます。',
@@ -824,13 +849,15 @@ export const ja: Textos = {
       'auditoria.sin_confirmar': 'このパスワードをリセットすることを確定してください。',
       'auditoria.respaldo_previo_fallo':
         'リセット前にデータベースのバックアップを保存できなかったため、変更は行いませんでした。',
-      'auditoria.copia_fallo': '対象行のバックアップを保存できなかったため、変更は行いませんでした。',
+      'auditoria.copia_fallo':
+        '対象行のバックアップを保存できなかったため、変更は行いませんでした。',
       'auditoria.motor_no_soportado':
         'パスワード監査は MySQL、MariaDB、PostgreSQL に対応しています。',
       'auditoria.cancelada': '監査をキャンセルしました。',
       'auditoria.usuario_invalido': 'ユーザー名は 1〜256 文字で入力してください。',
       'auditoria.en_curso': '別の監査が進行中です。完了を待つかキャンセルしてください。',
-      'auditoria.base_sistema': 'システムデータベースは監査できません。プロジェクトのデータベースを選択してください。',
+      'auditoria.base_sistema':
+        'システムデータベースは監査できません。プロジェクトのデータベースを選択してください。',
       'auditoria.esquema_invalido': 'そのデータベースに該当するスキーマは存在しません。',
       'auditoria.fila_cambio':
         '処理中にアカウントが変更されたため、リセットしませんでした。もう一度お試しください。',
@@ -841,17 +868,21 @@ export const ja: Textos = {
       'auditoria.datos_reales_sin_confirmar':
         'このデータベースには実際の顧客データが含まれています。パスワードのリセットには追加の確認が必要です。',
       'instantaneas.id_invalido': '無効なスナップショットです。',
-      'instantaneas.no_encontrada': 'スナップショットが見つかりません。すでに削除された可能性があります。',
-      'instantaneas.otra_base': 'このスナップショットは別のデータベースのものです。このデータベースには適用できません。',
+      'instantaneas.no_encontrada':
+        'スナップショットが見つかりません。すでに削除された可能性があります。',
+      'instantaneas.otra_base':
+        'このスナップショットは別のデータベースのものです。このデータベースには適用できません。',
       'instantaneas.sin_confirmar': 'このスナップショットに戻すことを確定してください。',
-      'instantaneas.motor_no_soportado': 'スナップショットは MySQL、MariaDB、PostgreSQL に対応しています。',
+      'instantaneas.motor_no_soportado':
+        'スナップショットは MySQL、MariaDB、PostgreSQL に対応しています。',
       'instantaneas.demasiado_grande':
         'データベースのサイズがスナップショットの上限（{maximo} MB）を超えています。',
       'instantaneas.sin_espacio':
         'スナップショット作成に必要な空き容量が不足しています（必要：{necesarios} MB、空き：{libres} MB）。',
       'instantaneas.limite':
         'このデータベースのスナップショットはすでに {maximo} 件あります。新しく作成するにはいずれかを削除してください。',
-      'instantaneas.tomar_fallo': 'スナップショットを作成できませんでした。データベースは変更されていません。',
+      'instantaneas.tomar_fallo':
+        'スナップショットを作成できませんでした。データベースは変更されていません。',
       'instantaneas.huella_no_coincide':
         'スナップショットファイルが変更されているか破損しているため、復元しませんでした。',
       'instantaneas.respaldo_previo_fallo':
@@ -879,13 +910,11 @@ export const ja: Textos = {
     vacio: 'このデータベースのスナップショットはまだありません。',
     automatica: '自動',
     sinNota: 'メモなし',
-    detalle: (tablas: number, tamano: string) =>
-      `${tablas} テーブル · ${tamano}`,
+    detalle: (tablas: number, tamano: string) => `${tablas} テーブル · ${tamano}`,
     volver: 'このスナップショットに戻す',
     borrar: '削除',
     borrada: 'スナップショットをゴミ箱に移動しました',
-    papelera:
-      '削除したスナップショットは 7 日間、WolfCore Dev のゴミ箱から復元できます。',
+    papelera: '削除したスナップショットは 7 日間、WolfCore Dev のゴミ箱から復元できます。',
     cerrar: '閉じる',
     papeleraTitulo: 'ゴミ箱',
     papeleraVacia: 'ゴミ箱にスナップショットはありません。',
@@ -894,8 +923,7 @@ export const ja: Textos = {
     borradaEl: (fecha: string) => `削除日時：${fecha}`,
     borrarPregunta: 'このスナップショットをゴミ箱に移動しますか？',
     borrarSi: 'ゴミ箱に移動',
-    notaAutomatica: (fecha: string) =>
-      `${fecha} のスナップショットへ戻す前に保存された元の状態`,
+    notaAutomatica: (fecha: string) => `${fecha} のスナップショットへ戻す前に保存された元の状態`,
     notaAutomaticaSinOrigen: '別のスナップショットへ戻す前に保存された元の状態',
     extensionesAviso: (lista: string) =>
       `PostgreSQL 拡張機能（${lista}）が含まれており、この PC のチェックサム記録がある場合のみ復元されます。`,
@@ -920,7 +948,8 @@ export const ja: Textos = {
       hecho: (base: string) => `データベース「${base}」をスナップショットに戻しました`,
       respaldoPrevio: '元の状態は次の自動スナップショットに保存されました：',
       advertencias: '復元は通知付きで完了しました：',
-      hechoConAvisos: (base: string) => `データベース「${base}」をスナップショットに戻しました（通知あり）`,
+      hechoConAvisos: (base: string) =>
+        `データベース「${base}」をスナップショットに戻しました（通知あり）`,
       baseVacia: 'データベースが存在しないか空のため、復元前に保存するデータはありません。',
       sinGuardarTitulo: '現在の状態を保存できませんでした',
       sinGuardarTexto:
@@ -978,7 +1007,8 @@ export const ja: Textos = {
       receta_cambio:
         '信頼後にプロジェクトのレシピが変更されました。内容を確認し、「このリポジトリを信頼する」を再度有効にしてください。',
       sin_confirmar: 'コマンドの確認が未完了です。確認して確定するまで実行されません。',
-      comando_invalido: '許可されていないコマンドです（php、node、npm run、python のみ使用できます）。',
+      comando_invalido:
+        '許可されていないコマンドです（php、node、npm run、python のみ使用できます）。',
       cron_invalida: 'スケジュールが有効な cron 式ではありません。',
       carpeta: 'プロジェクトフォルダーが存在しません。',
       solapada: '前回の実行が継続中だったため、今回はスキップされました。',
@@ -1057,8 +1087,7 @@ export const ja: Textos = {
       horaInvalida: '有効な時刻を入力してください（例：03:00）。',
       expresion: 'Cron 式',
       cronEquivale: 'Cron 式：',
-      expresionAyuda:
-        '5 フィールド：分、時、日、月、曜日（* , - /）。最短間隔は 1 分ごとです。',
+      expresionAyuda: '5 フィールド：分、時、日、月、曜日（* , - /）。最短間隔は 1 分ごとです。',
       proximas: '次回の実行予定：',
       comando: 'コマンド',
       comandoPlaceholder: 'php artisan schedule:run',
@@ -1085,8 +1114,7 @@ export const ja: Textos = {
   },
   workspaces: {
     titulo: 'ワークスペース',
-    descripcion:
-      'データベース、サービス、プロセスをまとめて起動・停止できる名前付きグループです。',
+    descripcion: 'データベース、サービス、プロセスをまとめて起動・停止できる名前付きグループです。',
     nuevo: '新しいワークスペース',
     vacio:
       'ワークスペースはまだありません。たとえば PostgreSQL、Redis、Ollama とプロジェクトのプロセスをまとめた「Bot FastAPI」などを作成できます。',
@@ -1121,7 +1149,8 @@ export const ja: Textos = {
         procesos: 'プロジェクトプロセス',
       },
       sinOpciones: '選択できる項目はありません。',
-      captadorUnico: 'メールキャッチャーは同時に 1 つのみ選択できます。別のものを選択すると切り替わります。',
+      captadorUnico:
+        'メールキャッチャーは同時に 1 つのみ選択できます。別のものを選択すると切り替わります。',
       yaNoExisten: (lista: string) => `すでに存在しないため、保存時に除外されます：${lista}`,
       guardar: '保存',
       guardado: (n: string) => `ワークスペース「${n}」を保存しました。`,
@@ -1216,7 +1245,8 @@ export const ja: Textos = {
     versionesDe: (nombre: string) => `${nombre} のバージョン`,
     instancias: (n: number, encendidas: number) => `${n} インスタンス、${encendidas} 起動中`,
     usarPuerto: (p: number) => `ポート ${p} を使用`,
-    puertoCambiado: (nombre: string, p: number) => `${nombre} はポート ${p} を使用するようになりました`,
+    puertoCambiado: (nombre: string, p: number) =>
+      `${nombre} はポート ${p} を使用するようになりました`,
     conflicto: 'ポート競合',
     autoIniciar: 'WolfCore Dev 起動時に自動起動する',
     autoIniciarActivado: (nombre: string) => `${nombre} は WolfCore Dev 起動時に自動起動します`,
@@ -1259,8 +1289,6 @@ export const ja: Textos = {
     ftp: {
       interruptor: 'FTPサーバー',
       redLocal: 'ローカルネットワークからの接続を許可',
-      redLocalAyuda:
-        'オフの場合、このPC（127.0.0.1）からのみ接続できます。各サイトのアクセスは「サイト」で有効化します。',
       avisoTitulo: 'FTPをローカルネットワークに公開',
       avisoTexto:
         'FTPはユーザー名・パスワード・ファイルを暗号化せずに送信します。同じネットワーク上の端末から接続を試行できます。信頼できるネットワークでのみ使用してください。',
@@ -1276,7 +1304,8 @@ export const ja: Textos = {
       sinVersion: '未インストール',
       uso: '使い方',
       usoTexto: 'composer',
-      ayuda: 'プロジェクトの「ターミナル」を使うか、「設定」でWolfCore DevをPATHに追加してください。',
+      ayuda:
+        'プロジェクトの「ターミナル」を使うか、「設定」でWolfCore DevをPATHに追加してください。',
       instaladoOk: 'Composerをインストールしました',
       sinPhp: '先にPHPをインストールしてください',
       actualizado: (v: string) => `Composerを更新しました: ${v}`,
@@ -1463,8 +1492,7 @@ export const ja: Textos = {
       claveAyuda: 'このコピーのみに使用され、保存されません。',
       baseOrigen: '移行元データベース',
       destino: 'このPC上の移行先データベース',
-      destinoAyuda:
-        '存在しない場合は作成されます。テーブルがある場合は置換前に確認を求めます。',
+      destinoAyuda: '存在しない場合は作成されます。テーブルがある場合は置換前に確認を求めます。',
       faltaHost: 'ホストを入力してください',
       faltaPuerto: '1〜65535 のポートを指定してください',
       faltaUsuario: 'ユーザーを入力してください',
@@ -1532,16 +1560,17 @@ export const ja: Textos = {
       ocultar: 'パスワードを隠す',
       copiarDato: (dato: string) => `${dato}をコピー`,
       env: '.env ファイル用ブロック',
-      envAyuda: 'プロジェクトの .env に貼り付けてください。WolfCore Dev はプロジェクトを書き換えません。',
+      envAyuda:
+        'プロジェクトの .env に貼り付けてください。WolfCore Dev はプロジェクトを書き換えません。',
       copiarEnv: 'ブロックをコピー',
       cargando: '接続情報を読み込み中…',
     },
     pgvector: {
       titulo: 'pgvector',
       enCurso: 'pgvector のインストールがすでに実行中です。',
-      descripcion:
-        'PostgreSQL 内での類似度検索（埋め込みベクトル）。公式ソースからビルドします。',
-      instalado: (v: string | null) => (v ? `インストール済み（バージョン ${v}）` : 'インストール済み'),
+      descripcion: 'PostgreSQL 内での類似度検索（埋め込みベクトル）。公式ソースからビルドします。',
+      instalado: (v: string | null) =>
+        v ? `インストール済み（バージョン ${v}）` : 'インストール済み',
       noInstalado: '未インストール',
       herramientas: 'ビルドツール',
       herramientasSi: '準備完了',
@@ -1706,15 +1735,12 @@ export const ja: Textos = {
     phpNoInstalada: (pedida: string, elegida: string) =>
       `プロジェクトは PHP ${pedida} を要求していますが未インストールのため、PHP ${elegida} を選択しました。`,
     puertoProxy: 'ローカルポート',
-    puertoProxyAyuda:
-      'Nginx が http://127.0.0.1:<puerto>（例: Vite や Node）へ転送します。',
+    puertoProxyAyuda: 'Nginx が http://127.0.0.1:<puerto>（例: Vite や Node）へ転送します。',
     urlBaseVar: 'ベースURL変数',
-    urlBaseVarAyuda:
-      'トンネルを開くと .env のこの変数に公開URLを書き込み、閉じると元に戻します。',
+    urlBaseVarAyuda: 'トンネルを開くと .env のこの変数に公開URLを書き込み、閉じると元に戻します。',
     urlBaseVarNinguna: 'なし（.env を変更しない）',
     datosReales: '実際の顧客データを含む',
-    datosRealesAyuda:
-      '一覧に目印を付け、トンネル公開時に確認を求めます。',
+    datosRealesAyuda: '一覧に目印を付け、トンネル公開時に確認を求めます。',
     avanzado: '詳細設定',
     reglasExtra: '追加の Nginx ルール',
     reglasExtraAyuda:
@@ -1726,8 +1752,7 @@ export const ja: Textos = {
     guardado: (nombre: string) => `サイト ${nombre} を保存しました`,
     errorGuardar: 'サイトを保存できませんでした',
     nginxFallo: 'サイトは保存されましたが、Nginx が設定を拒否しました',
-    nginxFalloAyuda:
-      '以前の Nginx 設定に戻しました。追加ルールを確認して再度保存してください。',
+    nginxFalloAyuda: '以前の Nginx 設定に戻しました。追加ルールを確認して再度保存してください。',
     errores: {
       carpeta: 'プロジェクトフォルダを選択してください',
       sufijo: 'ドメインは .test で終わる必要があります',
@@ -1800,8 +1825,7 @@ export const ja: Textos = {
     nombreTunel: 'トンネル名',
     nombreTunelAyuda: '小文字英字、数字、ハイフン。',
     dominioPublico: '公開ドメイン',
-    dominioPublicoAyuda:
-      'Cloudflare 上のご自身のドメインのサブドメイン（例: demo.mydomain.com）。',
+    dominioPublicoAyuda: 'Cloudflare 上のご自身のドメインのサブドメイン（例: demo.mydomain.com）。',
     crear: '作成してルート設定',
     guardadoNombre: '名前付きトンネルの準備ができました。開く際に確認を求めます。',
     guardadoRapido: 'このサイトはクイックトンネルに戻りました。',
@@ -1859,7 +1883,6 @@ export const ja: Textos = {
     columnas: { sitio: 'サイト', estado: '状態', url: 'リンク', acciones: '操作' },
     vacioTitulo: '開いているトンネルはありません',
     vacio: 'サイトのトンネルスイッチをオンにすると公開リンクを取得できます。',
-    irASitios: 'サイトへ移動',
     sinNombre: '削除済みサイト',
   },
   ajustes: {
@@ -1888,8 +1911,7 @@ export const ja: Textos = {
       descripcion:
         'ベルに保存する通知の種類と、ウィンドウが非表示のときに Windows 通知を出すか設定します。',
       nativas: 'Windows 通知',
-      nativasAyuda:
-        'WolfCore Dev が前面にないときのみ表示。同じ種類は最大5分に1回です。',
+      nativasAyuda: 'WolfCore Dev が前面にないときのみ表示。同じ種類は最大5分に1回です。',
       tiposTitulo: '通知の種類',
       versionesTitulo: 'サービス別の新バージョン通知',
       versionesAyuda:
@@ -1925,8 +1947,7 @@ export const ja: Textos = {
       cancelado: 'Windows の確認がキャンセルされました。変更はありません。',
       fallo: 'HTTPS CA を変更できませんでした',
       quitarTitulo: 'HTTPS CA を削除しますか？',
-      quitarTexto:
-        '再インストールするまで、ブラウザは .test サイトの証明書を信頼しなくなります。',
+      quitarTexto: '再インストールするまで、ブラウザは .test サイトの証明書を信頼しなくなります。',
       puerto: 'HTTPS ポート',
       puertoAyuda:
         '通常は 443 です。他プログラムが使用中の場合は 1024〜65535 を指定してください（URL にポートが付きます）。',
@@ -1952,7 +1973,8 @@ export const ja: Textos = {
       pathAgregar: 'ユーザー PATH に追加',
       pathQuitar: 'PATH から削除',
       pathTitulo: 'PATH を更新しました',
-      pathAviso: '変更を反映するには新しいターミナルを開いてください（開いているターミナルには反映されません）。',
+      pathAviso:
+        '変更を反映するには新しいターミナルを開いてください（開いているターミナルには反映されません）。',
       pathQuitarTitulo: 'WolfCore Dev を PATH から削除しますか？',
       pathQuitarTexto:
         '新しいターミナルでは WolfCore Dev の php と composer が使えなくなります。開いているターミナルは変わりません。',
@@ -2082,7 +2104,8 @@ export const ja: Textos = {
     launchSinCambios: 'launch.json にはすでにこの設定が含まれています。',
     launchEscribir: 'launch.json を書き込む',
     launchCreado: '.vscode に launch.json を作成しました',
-    launchActualizado: (respaldo: string) => `launch.json を更新しました。直前のコピー: ${respaldo}`,
+    launchActualizado: (respaldo: string) =>
+      `launch.json を更新しました。直前のコピー: ${respaldo}`,
     phpStorm: 'PhpStorm 向け設定',
     copiarPhpStorm: 'PhpStorm 設定をコピー',
     errorNginx: (salida: string) => `Nginx が変更を拒否したため元に戻しました。${salida}`,
@@ -2140,8 +2163,7 @@ export const ja: Textos = {
     historial: '履歴',
     historialTitulo: 'vhost の過去バージョン',
     historialVacio: '過去バージョンはまだありません。',
-    historialAyuda:
-      '変更前の最新 10 バージョンを保存します。復元時も nginx -t で検証されます。',
+    historialAyuda: '変更前の最新 10 バージョンを保存します。復元時も nginx -t で検証されます。',
     modoReglas: 'ルール付き自動生成',
     modoManual: '手動記述',
     restaurar: '復元',
@@ -2295,8 +2317,7 @@ export const ja: Textos = {
         destinoPlaceholder: 'your-address@example.com',
         probar: '送信テスト',
         probando: '送信中…',
-        probarAyuda:
-          '検証済みの暗号化接続で実際のメールを1通だけ送信します（最大15秒に1回）。',
+        probarAyuda: '検証済みの暗号化接続で実際のメールを1通だけ送信します（最大15秒に1回）。',
         sinClaveParaProbar: '送信テストを行うにはプロバイダーのキーを保存してください。',
         hostLocal: 'このサーバー名はこのPCまたはローカルネットワークに解決されます。',
         confirmarRed: 'ローカルネットワークを確認',
@@ -2332,7 +2353,8 @@ export const ja: Textos = {
         starttls: 'STARTTLS（ポート 587）',
         usuario: 'ユーザー',
         usuarioObligatorio: 'ユーザーを入力してください。',
-        usuarioFijoAyuda: 'このプロバイダーは常にこのユーザーを使用します。キーはご自身のアカウントのものです。',
+        usuarioFijoAyuda:
+          'このプロバイダーは常にこのユーザーを使用します。キーはご自身のアカウントのものです。',
         clave: 'SMTP キー',
         claveGuardada: (f: string) => `保存済み: ••••${f}`,
         claveNueva: '保存するキーを入力してください',
@@ -2496,7 +2518,8 @@ export const ja: Textos = {
       documentacion: 'ドキュメントを見る',
       nombre: '名前',
       urlBase: 'ベースURL',
-      urlAyuda: '空欄 = 公式URL。https:// のみ、または 127.0.0.1 / [::1] 向け http:// (LM Studio)。',
+      urlAyuda:
+        '空欄 = 公式URL。https:// のみ、または 127.0.0.1 / [::1] 向け http:// (LM Studio)。',
       urlObligatoria: '互換プロバイダーのベースURLを入力してください。',
       modelo: '既定のモデル（任意）',
       modeloAyuda: '.env ブロック (AI_MODEL) とテストメッセージで使用されます。',
@@ -2504,8 +2527,7 @@ export const ja: Textos = {
       claveNueva: 'キーを貼り付け',
       claveGuardada: (final: string) =>
         `キーが保存されています (${final})。置き換える場合のみ入力してください。`,
-      claveAyuda:
-        'このPCに暗号化保存され、再表示されません。末尾4文字のみ確認できます。',
+      claveAyuda: 'このPCに暗号化保存され、再表示されません。末尾4文字のみ確認できます。',
       claveOpcional: 'ローカルサーバー (LM Studio) では任意です。',
       borrarClave: 'キーを削除',
       guardar: '保存',
@@ -2581,7 +2603,8 @@ export const ja: Textos = {
     descripcion:
       'Ollama を使ってこのPC上で動作する言語モデルです。データを外部に送信せずプロジェクトから利用できます。',
     sinInstalarTitulo: 'Ollama がインストールされていません',
-    sinInstalar: 'このPCでモデルをダウンロードして使うには「サービス」からインストールしてください。',
+    sinInstalar:
+      'このPCでモデルをダウンロードして使うには「サービス」からインストールしてください。',
     irAServicios: 'サービスへ移動',
     apagadoTitulo: 'Ollama は停止中です',
     apagado: 'モデルの表示・ダウンロード・テストを行うには起動してください。',
@@ -2618,8 +2641,6 @@ export const ja: Textos = {
       yaInstalado: 'そのモデルは既にインストールされています',
       enCurso: 'そのモデルは現在ダウンロード中です',
       confirmarTitulo: (modelo: string) => `${modelo} をダウンロードしますか？`,
-      confirmarTexto:
-        'モデルは数 GB（サイズにより 1 GB〜40 GB 超）になります。Ollama は開始前に容量を通知しませんが、進捗バーで確認できいつでもキャンセルできます。',
       confirmar: 'ダウンロード',
     },
     progreso: {
@@ -2661,8 +2682,7 @@ export const ja: Textos = {
       copiarEnv: 'ブロックをコピー',
       copiarDato: (dato: string) => `${dato}をコピー`,
     },
-    etapaB:
-      'Hermes Agent、Claude Code、Codex はステージBでワンクリック接続できるようになります。',
+    etapaB: 'Hermes Agent、Claude Code、Codex はステージBでワンクリック接続できるようになります。',
   },
   proyectos: {
     titulo: 'プロジェクト',
@@ -2727,7 +2747,8 @@ export const ja: Textos = {
       errorClonar: 'リポジトリをクローンできませんでした',
       sinCancelar:
         'クローンはここからは中断できません。完了までお待ちください（数分かかることがあります）。',
-      sinGit: 'Git がインストールされていません。git-scm.com からインストールして再度開いてください。',
+      sinGit:
+        'Git がインストールされていません。git-scm.com からインストールして再度開いてください。',
     },
     github: {
       estadoGh: (usuario?: string) =>
@@ -2740,14 +2761,12 @@ export const ja: Textos = {
       instalandoGh: 'GitHub CLI をインストール中…',
       ghInstalado: 'GitHub CLI をインストールしました。ログインしてください。',
       iniciarSesion: 'ログイン',
-      sesionAbierta:
-        'ログインウィンドウが開きました。完了したら「再確認」を押してください。',
+      sesionAbierta: 'ログインウィンドウが開きました。完了したら「再確認」を押してください。',
       comprobar: '再確認',
       usarToken: 'トークンを使用',
       token: 'GitHub パーソナルトークン',
       tokenPlaceholder: 'github_pat_…',
-      tokenAyuda:
-        'このPCに暗号化して保存され、再表示やプロジェクトへの書き込みは行われません。',
+      tokenAyuda: 'このPCに暗号化して保存され、再表示やプロジェクトへの書き込みは行われません。',
       guardarToken: 'トークンを保存',
       tokenGuardado: 'トークンを保存しました',
       quitarToken: 'トークンを削除',
@@ -2820,13 +2839,13 @@ export const ja: Textos = {
       detectado: (v: string) => `検出: ${v}`,
       nodeInstalar: 'Node が未インストールです。「サービス」でインストールしてください。',
       pythonInstalar: 'Python が未インストールです。「サービス」でインストールしてください。',
-      lenguajeInstalar: (nombre: string) => `${nombre} が未インストールです。「サービス」でインストールしてください。`,
+      lenguajeInstalar: (nombre: string) =>
+        `${nombre} が未インストールです。「サービス」でインストールしてください。`,
       dominio: 'ドメイン',
       puertoProxy: 'ローカルポート',
       puertoPlaceholder: '8000',
       receta: '手順',
-      recetaAyuda:
-        '上から順に実行されます。不要な手順はオフにでき、任意の手順は並び替えできます。',
+      recetaAyuda: '上から順に実行されます。不要な手順はオフにでき、任意の手順は並び替えできます。',
       subir: '上へ',
       bajar: '下へ',
       fijo: 'この手順は必須です',
@@ -2852,7 +2871,8 @@ export const ja: Textos = {
       verRegistro: 'ログを表示',
       ocultarRegistro: 'ログを隠す',
       listo: 'プロジェクトの準備が整いました。',
-      fallo: (paso: string) => `失敗: ${paso}。再試行・スキップ・キャンセルを選択できます（実行済み内容は保持されます）。`,
+      fallo: (paso: string) =>
+        `失敗: ${paso}。再試行・スキップ・キャンセルを選択できます（実行済み内容は保持されます）。`,
       cancelada: 'セットアップを中止しました。プロジェクトカードから再開できます。',
       incompleta: '未実行の手順が残っています。',
       errorCrear: 'プロジェクトを作成できませんでした',
@@ -2868,8 +2888,7 @@ export const ja: Textos = {
       receta: 'セットアップ',
       reinstalar: '依存関係を再インストール',
       reinstalarTitulo: (nombre: string) => `${nombre} のレシピを実行しますか？`,
-      reinstalarTexto:
-        '前回のセットアップ手順（ウィザードで確認したもの）を再実行します:',
+      reinstalarTexto: '前回のセットアップ手順（ウィザードで確認したもの）を再実行します:',
       noRestaura: '復元は再実行されません',
       recetaCambio:
         '信頼後にプロジェクトのレシピ (wolfcore.yml) が変更されました。再インストールは保存済みレシピを実行します。新しい内容は「レシピを確認」で見てください。',
@@ -2889,7 +2908,8 @@ export const ja: Textos = {
       baseDatosAyuda: (base: string) =>
         `認証済みでデータベース「${base}」を開く (Adminer または phpMyAdmin)`,
       baseDatosSinDetectar: 'プロジェクトのデータベースを開く (Adminer または phpMyAdmin)',
-      sinBase: 'プロジェクトの .env に MySQL、MariaDB、PostgreSQL データベースが定義されていません。',
+      sinBase:
+        'プロジェクトの .env に MySQL、MariaDB、PostgreSQL データベースが定義されていません。',
       adminerNoListo: 'Adminer の準備ができていません',
       entradaAutomatica: 'パスワード入力なしで認証済みで開きます。',
       elegirBd: 'Adminer または phpMyAdmin を選択',
@@ -2969,7 +2989,8 @@ export const ja: Textos = {
       nombrePlaceholder: 'Vite',
       comando: 'コマンド',
       comandoPlaceholder: 'npm run dev',
-      comandoAyuda: 'シェルを介さずプログラムと引数を指定します。空白を含む引数は引用符で囲んでください。',
+      comandoAyuda:
+        'シェルを介さずプログラムと引数を指定します。空白を含む引数は引用符で囲んでください。',
       cwd: 'フォルダ',
       cwdPlaceholder: 'raiz',
       cwdAyuda: 'raiz またはプロジェクト内のサブフォルダ（例: frontend）。',
@@ -3092,8 +3113,7 @@ export const ja: Textos = {
       'Nginx、PHP、サービス、サイト、プロジェクトプロセス、トンネルのログをリアルタイムで追跡します。',
     fuente: 'ソース',
     elegirFuente: 'ログを選択',
-    sinFuentes:
-      'ログがまだありません。サービス、サイト、またはプロセスが出力すると表示されます。',
+    sinFuentes: 'ログがまだありません。サービス、サイト、またはプロセスが出力すると表示されます。',
     buscar: 'テキストで絞り込み',
     niveles: { error: 'ERROR', warning: 'WARNING', info: 'INFO' } as Record<string, string>,
     pausar: '一時停止',
@@ -3252,7 +3272,10 @@ export const ja: Textos = {
         nombre: '暗号ツール',
         descripcion: 'ハッシュ、Base64、URL、UUID、パスワード、JWT。',
       },
-      markdown: { nombre: 'Markdown プレビュー', descripcion: '入力しながらリアルタイムで確認できます。' },
+      markdown: {
+        nombre: 'Markdown プレビュー',
+        descripcion: '入力しながらリアルタイムで確認できます。',
+      },
       entorno: { nombre: 'システム環境', descripcion: 'PATH、バージョン、環境変数を確認。' },
       buscar: {
         nombre: '検索',
@@ -3262,7 +3285,10 @@ export const ja: Textos = {
         nombre: 'ファイル情報',
         descripcion: 'サイズ、種類、ハッシュ値を確認します。',
       },
-      websocket: { nombre: 'WebSocket クライアント', descripcion: '接続・送信・受信ログを確認します。' },
+      websocket: {
+        nombre: 'WebSocket クライアント',
+        descripcion: '接続・送信・受信ログを確認します。',
+      },
       contrasenas: {
         nombre: 'パスワード',
         descripcion: '強度測定とデータベース内の弱いパスワード監査。',
@@ -3289,7 +3315,6 @@ export const ja: Textos = {
       jsonInvalido: (linea: number, columna: number) =>
         `無効な JSON です: ${linea} 行目、${columna} 列目を確認してください。`,
       banderas: '無効なフラグです: d, g, i, m, s, u, v, y を重複なく指定してください。',
-      regex: (detalle: string) => `無効な正規表現です (${detalle})。`,
       trabajador: 'バックグラウンド処理を実行できませんでした。',
       diffLento: 'テキストの差分が大きすぎて時間内に比較できませんでした。',
       base64: '無効な Base64 です。',
@@ -3460,8 +3485,7 @@ export const ja: Textos = {
       jwtToken: 'トークン',
       cabecera: 'ヘッダー',
       carga: 'ペイロード',
-      firmaNoVerificada:
-        '署名は検証されていません。内容は改ざんされている可能性があります。',
+      firmaNoVerificada: '署名は検証されていません。内容は改ざんされている可能性があります。',
       vencido: 'トークンは期限切れです (exp)。',
       vigente: 'トークンは有効期限内です (exp)。',
       salida: '結果',
@@ -3507,7 +3531,6 @@ export const ja: Textos = {
       regex: '正規表現',
       mayusculas: '大文字・小文字を区別',
       incluir: '対象ファイルのみ（カンマ区切り、例: *.php）',
-      excluir: '除外（カンマ区切り）',
       buscar: '検索',
       cancelar: 'キャンセル',
       buscando: '検索中…',
@@ -3541,8 +3564,7 @@ export const ja: Textos = {
       conectado: '接続済み',
       desconectado: '未接続',
       error: '接続エラー',
-      cerrado: (codigo: number, motivo: string) =>
-        `切断 (${codigo}${motivo ? `: ${motivo}` : ''})`,
+      cerrado: (codigo: number, motivo: string) => `切断 (${codigo}${motivo ? `: ${motivo}` : ''})`,
       enviado: '送信',
       recibido: '受信',
       binario: (n: number) => `[バイナリ、${n} バイト]`,
@@ -3561,8 +3583,7 @@ export const ja: Textos = {
       ocultar: '隠す',
       aviso:
         'QRコードにはパスワードがそのまま含まれます。見たり撮影したりした人は誰でも接続できます。このPC内で生成され、保存されずパネルを閉じると消去されます。',
-      avisoPng:
-        'ダウンロードした PNG にもパスワードが含まれます。安全な場所に保管してください。',
+      avisoPng: 'ダウンロードした PNG にもパスワードが含まれます。安全な場所に保管してください。',
       escribala:
         'パスワードは手動入力します。WolfCore Dev はシステムに保存された Wi-Fi パスワードを読み取りません。',
       errorSsid: 'ネットワーク名を入力してください（最大 32 文字）。',
@@ -3626,8 +3647,7 @@ export const ja: Textos = {
       despues: '処理後',
       sinMejora: '最適化しても小さくならないためファイルを作成しませんでした。',
       sufijoOptimizado: '-optimized',
-      omitidos: (n: number) =>
-        `リンク・読み取り不可フォルダ・特殊ファイル ${n} 件を除外しました。`,
+      omitidos: (n: number) => `リンク・読み取り不可フォルダ・特殊ファイル ${n} 件を除外しました。`,
       archivos: (n: number) => `${n} ファイル`,
       ahorro: (porcentaje: number) =>
         porcentaje > 0
@@ -3852,8 +3872,6 @@ export const ja: Textos = {
         '表示されたコマンドで Visual Studio Build Tools（C++ ツール込み）をインストールしてください。数 GB あり管理者権限が必要なため手動実行となります。',
       antivirus:
         'データフォルダをウイルス対策の除外に追加するかは、表示コマンドを用いてご判断ください。',
-      firewall:
-        'これらのルールを削除するかは管理者コンソールで表示コマンドを実行してご判断ください。WolfCore Dev はファイアウォールを変更しません。',
       reintentar_servicio: 'サービスを再起動します。',
       firefox_confianza:
         '各 Firefox プロファイルの user.js に Windows 認証局を信頼する設定を追加します（事前バックアップあり）。prefs.js は変更せず、開いているプロファイルはスキップします。',
@@ -3899,8 +3917,7 @@ export const ja: Textos = {
         resultadoOk: (n: number) => `${plural(n, '件のプロファイル')}で完了しました。`,
         resultadoAbiertos: (n: number) =>
           `Firefox が起動中のため ${plural(n, '件のプロファイル')}をスキップしました。閉じて再試行してください。`,
-        resultadoError: (n: number) =>
-          `${plural(n, '件のプロファイル')}を変更できませんでした。`,
+        resultadoError: (n: number) => `${plural(n, '件のプロファイル')}を変更できませんでした。`,
       },
       confirmar: '確認',
       cancelar: 'キャンセル',
@@ -4002,8 +4019,7 @@ export const ja: Textos = {
     },
     confirmarRegistrar: {
       titulo: (nombre: string) => `${nombre} に MCP を登録しますか？`,
-      texto:
-        'このファイルの「wolfcore」項目のみ追加または更新します（その他は変更しません）:',
+      texto: 'このファイルの「wolfcore」項目のみ追加または更新します（その他は変更しません）:',
       aceptar: '登録する',
       hecho: (nombre: string) => `${nombre} に MCP を登録しました。`,
     },
@@ -4261,8 +4277,7 @@ export const ja: Textos = {
       datos: 'データ:',
       respaldo: 'バックアップ先:',
       espacio: '空き容量:',
-      espacioLibre: (libres: string, necesarios: string) =>
-        `空き ${libres} / 必要 ${necesarios}`,
+      espacioLibre: (libres: string, necesarios: string) => `空き ${libres} / 必要 ${necesarios}`,
       datosQuedan:
         '以前のデータは削除されません。コピーとダンプは手動削除するまで「更新バックアップ」に残ります。',
       sinEspacio: 'バックアップに必要な空き容量が足りません。容量を空けて再試行してください。',
@@ -4271,8 +4286,7 @@ export const ja: Textos = {
       ramaExplicacion:
         '新しいメジャーバージョンは既存を置き換えず、専用のデータフォルダとポートを持つ新規インスタンスとして作成されます。既存インスタンスはそのまま残ります。',
       copiarDesdeTitulo: '新インスタンスのデータ',
-      copiarDesde: (id: string) =>
-        `${id} からデータをコピー（ダンプと復元。元は変更しません）`,
+      copiarDesde: (id: string) => `${id} からデータをコピー（ダンプと復元。元は変更しません）`,
       vacia: '空の状態で開始',
       ramaNota:
         'データベースユーザーはコピーされません。プロジェクトは新インスタンスのポートを指定してください。',
@@ -4299,8 +4313,7 @@ export const ja: Textos = {
       destinoTitulo: '処理方法',
       papelera: 'ゴミ箱へ移動: 7日間保持（その間ディスク容量を消費します）',
       definitivo: '完全に削除: 今すぐ容量を解放（元に戻せません）',
-      avisoDefinitivo:
-        '完全削除: これらのバージョンを再度使うには再ダウンロードが必要です。',
+      avisoDefinitivo: '完全削除: これらのバージョンを再度使うには再ダウンロードが必要です。',
       instantanea:
         '完全削除を選んだ場合、実行前に環境設定のスナップショットを保存します。ゴミ箱からは復元可能です。',
       entiendo: '元に戻せないことを理解しました',
@@ -4340,8 +4353,7 @@ export const ja: Textos = {
       binario: 'このバージョンのプログラムファイルのみ削除します。',
       instancia: (id: string) =>
         `インスタンス ${id} が使用中です。停止してインスタンス一覧から削除します。`,
-      datosQuedan:
-        'データはディスクに残ります。このバージョンを再インストールすれば再び開けます。',
+      datosQuedan: 'データはディスクに残ります。このバージョンを再インストールすれば再び開けます。',
       borrarDatos: 'データも一緒に削除する',
       borrarAviso: (id: string) =>
         `${id} のデータフォルダとすべてのデータベースを削除します。元に戻せません。確認のため "${id}" と入力してください。`,
@@ -4427,7 +4439,26 @@ export const ja: Textos = {
     tema: 'テーマ',
     temas: { sistema: 'システム', claro: 'ライト', oscuro: 'ダーク' },
     idioma: '言語',
-    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語', ko: '한국어', hi: 'हिन्दी', tr: 'Türkçe', id: 'Bahasa Indonesia', pl: 'Polski', nl: 'Nederlands', uk: 'Українська' },
+    idiomas: {
+      es: 'Español',
+      en: 'English',
+      pt: 'Português',
+      fr: 'Français',
+      de: 'Deutsch',
+      it: 'Italiano',
+      ru: 'Русский',
+      zh: '中文 简体',
+      ja: '日本語',
+      ko: '한국어',
+      hi: 'हिन्दी',
+      tr: 'Türkçe',
+      id: 'Bahasa Indonesia',
+      pl: 'Polski',
+      nl: 'Nederlands',
+      uk: 'Українська',
+    },
+    /** Aviso junto a los idiomas que no son es, en, pt ni fr (la traducción es automática y revisada). */
+    traduccionAutomatica: '機械翻訳（確認済み）',
     acento: 'アクセントカラー',
     acentos: {
       indigo: 'インディゴ',
@@ -4439,10 +4470,6 @@ export const ja: Textos = {
     },
     acentoPropio: (color: string) => `カスタム (${color})`,
     errorGuardar: '設定を保存できませんでした',
-    asistente: '初期セットアップウィザード',
-    asistenteAyuda:
-      '初期手順をやり直します: プロジェクトフォルダ、基本ツール、CA、GitHub、監視フォルダ。',
-    asistenteAbrir: 'ウィザードを開く',
   },
   paleta: {
     titulo: 'コマンドパレット',
@@ -4472,7 +4499,6 @@ export const ja: Textos = {
     nuevoProyecto: '新規プロジェクトを作成',
     tema: (tema: string) => `テーマ: ${tema}`,
     idioma: (idioma: string) => `言語: ${idioma}`,
-    asistente: '初期セットアップウィザードを開く',
   },
   nuevoProyecto: {
     titulo: '新規プロジェクト',
@@ -4498,7 +4524,10 @@ export const ja: Textos = {
         nombre: 'FastAPI',
         descripcion: '仮想環境、requirements.txt、uvicorn プロセス。',
       },
-      wordpress: { nombre: 'WordPress', descripcion: '公式版ダウンロードと wp-config.php 設定済み。' },
+      wordpress: {
+        nombre: 'WordPress',
+        descripcion: '公式版ダウンロードと wp-config.php 設定済み。',
+      },
       estatico: {
         nombre: '静的サイト',
         descripcion: 'Nginx で配信する HTML/CSS（データベース不要）。',
@@ -4520,9 +4549,9 @@ export const ja: Textos = {
       sinBase: 'データベースなし',
       instancia: 'データベースサーバー',
       apagada: '停止中',
-      apagadaAyuda:
-        'このサーバーは停止中です。作成前に「サービス」で起動してください。',
-      sinMotores: 'このプロジェクト種別に対応したデータベースサーバーがインストールされていません。',
+      apagadaAyuda: 'このサーバーは停止中です。作成前に「サービス」で起動してください。',
+      sinMotores:
+        'このプロジェクト種別に対応したデータベースサーバーがインストールされていません。',
       nombreBase: 'データベース名',
       starterKit: 'スターターキット',
       starterKits: { ninguno: 'なし', react: 'React', vue: 'Vue', livewire: 'Livewire' },
@@ -4666,8 +4695,7 @@ export const ja: Textos = {
         `${n} 件のサイトを現在のフォルダのまま関連付けます。ファイルの移動・コピー・変更は行いません。`,
       sinConfianza:
         '「このリポジトリを信頼する」にチェックするまで、インポートしたサイトでレシピは実行されません。',
-      hosts:
-        'Nginx と hosts ファイルを更新します（Windows が管理者権限を求める場合があります）。',
+      hosts: 'Nginx と hosts ファイルを更新します（Windows が管理者権限を求める場合があります）。',
       basesNuevas: (nombres: string) => `次のデータベースをコピーします: ${nombres}。`,
       basesReemplazo: (nombres: string) =>
         `既存の次のデータベースを置換します: ${nombres}。事前にそれぞれバックアップします。`,
@@ -4688,7 +4716,8 @@ export const ja: Textos = {
       baseOk: (n: string) => `データベース ${n} をインポートしました`,
       baseFallo: (n: string) => `データベース ${n} をインポートできませんでした`,
       copiaPrevia: (ruta: string) => `元のデータベースのバックアップ: ${ruta}`,
-      phpDistinto: (v: string) => `PHP ${v} を使用しました（元のバージョンが未インストールのため）。`,
+      phpDistinto: (v: string) =>
+        `PHP ${v} を使用しました（元のバージョンが未インストールのため）。`,
       sinAplicar:
         'Nginx または hosts ファイルが反映されませんでした。「プロジェクト」の通知から再試行してください。',
       resumen: (s: number, b: number) =>
@@ -4732,8 +4761,7 @@ export const ja: Textos = {
       titulo: 'マイテンプレート',
       ayuda:
         '既存プロジェクトのレシピ・設定・構造（データなし）から新しいプロジェクトを開始できます。',
-      vacia:
-        'テンプレートはまだありません。プロジェクトカードのメニューから保存できます。',
+      vacia: 'テンプレートはまだありません。プロジェクトカードのメニューから保存できます。',
       conArchivosEtiqueta: 'ファイルあり',
       soloEsquema: 'レシピと構造',
       conBase: (motor: string) => `${motor} スキーマのみ`,
@@ -4762,8 +4790,7 @@ export const ja: Textos = {
     sinVariables: '.env に変数がありません。',
     secretaEtiqueta: '機密',
     duplicadaEtiqueta: '重複',
-    duplicadaAyuda:
-      'この変数は .env 内に複数回定義されています。最後の定義を表示・編集します。',
+    duplicadaAyuda: 'この変数は .env 内に複数回定義されています。最後の定義を表示・編集します。',
     soloLecturaEtiqueta: '複数行',
     soloLecturaAyuda: '複数行にわたるため、ファイル上で直接編集してください。',
     seQuitara: '保存時に削除されます',
@@ -4785,8 +4812,7 @@ export const ja: Textos = {
     agregarNombre: '変数名',
     agregarValor: '値',
     agregar: '追加',
-    nombreInvalido:
-      '英数字・アンダースコア・ドットを使用してください（数字開始不可、重複不可）。',
+    nombreInvalido: '英数字・アンダースコア・ドットを使用してください（数字開始不可、重複不可）。',
     comparar: {
       titulo: 'サンプルファイルと比較',
       sinEjemplo: '比較用の .env.example がありません。',
@@ -4857,57 +4883,9 @@ export const ja: Textos = {
     guardadoConCopia: '.env を保存しました（以前のバージョンをバックアップ済み）。',
   },
   asistenteInicio: {
-    titulo: 'WolfCore Dev へようこそ',
-    subtitulo:
-      '5つのステップで環境を整えます。各ステップのボタンを押すまで何もインストール・変更されません。',
     paso: (n: number, total: number) => `ステップ ${n} / ${total}`,
     anterior: '戻る',
     siguiente: '次へ',
-    omitirTodo: 'ウィザードをスキップ',
-    terminar: '完了',
-    hecho: '完了',
-    reabrir: '「設定」からいつでも再度開けます。',
-    pasos: {
-      carpeta: {
-        titulo: 'プロジェクトフォルダ',
-        texto:
-          'プロジェクトの保存先です。新規リポジトリのクローン先となり、最後のステップで監視対象になります。',
-        elegir: 'フォルダを選択',
-        actual: (ruta: string) => `選択済みフォルダ: ${ruta}`,
-        guardada: (ruta: string) => `現在のフォルダ: ${ruta}`,
-        ninguna: '未選択: C:\\Proyectos があれば使用されます。',
-      },
-      basicos: {
-        titulo: '基本ツールのインストール',
-        texto:
-          'Nginx、PHP 8.4、Composer、Node LTS を公式配布元からチェックサム検証付きで導入します。ボタンを押したものだけインストールされます。',
-        instalado: 'インストール済み',
-        instalar: (version: string) => `${version} をインストール`,
-        sinVersion: 'カタログにバージョンがありません',
-        cargando: 'バージョンを検索中…',
-        nombres: { nginx: 'Nginx', php: 'PHP 8.4', composer: 'Composer', node: 'Node LTS' },
-      },
-      ca: {
-        titulo: 'ローカル認証局を信頼する',
-        texto:
-          '.test サイトを警告なしで HTTPS 表示するため、Windows で WolfCore Dev の認証局を信頼します。Windows が確認画面を表示します。',
-        confiar: 'CA を信頼する',
-        confiada: 'Windows は既にローカル認証局を信頼しています。',
-      },
-      github: {
-        titulo: 'GitHub に接続',
-        texto:
-          'リポジトリの一覧表示とワンクリッククローンができます。GitHub CLI でログインするか、このPCに暗号化保存されるパーソナルトークンを使います。',
-      },
-      vigilar: {
-        titulo: 'フォルダを監視',
-        texto:
-          'プロジェクトフォルダに新しいフォルダが現れるとセットアップを提案します。確認なしで自動構築されることはありません。',
-        activar: 'このフォルダを監視する',
-        activa: (ruta: string) => `監視中: ${ruta}`,
-        sinCarpeta: '先にプロジェクトフォルダを選択してください（ステップ1）。',
-      },
-    },
   },
   /** Resultado de importar o exportar un perfil (D26). */
   perfiles: {
@@ -4925,8 +4903,7 @@ export const ja: Textos = {
         texto:
           'サイト、バージョン、インスタンス、テンプレート、設定を .wolfperfil ファイルに保存します。',
         bases: 'データベースを含める',
-        basesAyuda:
-          '完全なダンプ（顧客データを含む）がパスフレーズで暗号化されて含まれます。',
+        basesAyuda: '完全なダンプ（顧客データを含む）がパスフレーズで暗号化されて含まれます。',
         ca: '認証局 (CA) を含める',
         caAyuda: 'パスフレーズで暗号化されます。必ずご自身の別PCのみにインポートしてください。',
         certificados: 'サイトの証明書を含める',
@@ -4981,8 +4958,7 @@ export const ja: Textos = {
       buscar: 'フォルダを選択…',
       cambiar: '変更',
       comoPendiente: '保留としてインポート',
-      prefijo: (viejo: string, nuevo: string) =>
-        `残りにも同じパス置換を適用 (${viejo} → ${nuevo})`,
+      prefijo: (viejo: string, nuevo: string) => `残りにも同じパス置換を適用 (${viejo} → ${nuevo})`,
       omitido: 'インポートしません',
     },
     asistente: {
@@ -5076,8 +5052,7 @@ export const ja: Textos = {
         comparar: '受け入れる前に移行元PCのフィンガープリントと照合してください。',
         importar: 'プロファイルの CA をインポート',
         noImportar: 'インポートしない場合、現在の CA または新規 CA を使用します。',
-        ajena:
-          'この CA には WolfCore Dev 以外の名前制限があるためインポートできません。',
+        ajena: 'この CA には WolfCore Dev 以外の名前制限があるためインポートできません。',
         sinRestricciones:
           'この CA には名前制限がなく、銀行やメールを含む任意のサイトに署名できます。ご自身の CA でフィンガープリントが一致する場合のみインポートしてください。',
         aceptarSin: 'リスクを理解しています。自分の CA でありフィンガープリントも一致しています',
@@ -5088,7 +5063,8 @@ export const ja: Textos = {
       },
       frase: {
         titulo: 'プロファイルのパスフレーズ',
-        texto: 'プロファイルには暗号化されたデータベースまたは CA が含まれます。エクスポート時のパスフレーズを入力してください。',
+        texto:
+          'プロファイルには暗号化されたデータベースまたは CA が含まれます。エクスポート時のパスフレーズを入力してください。',
         campo: 'パスフレーズ',
         omitirBases: 'データベースなしでインポート',
         nota: 'パスフレーズはこの画面でのみ使用され、保存されず完了時・終了時に消去されます。',
@@ -5114,7 +5090,8 @@ export const ja: Textos = {
           reemplazar_ca: 'このPCの CA を置換する確認を別途行ってください。',
         },
       },
-      progreso: 'プロファイルをインポート中… データベースやダウンロードにより時間がかかるためウィンドウを閉じないでください。',
+      progreso:
+        'プロファイルをインポート中… データベースやダウンロードにより時間がかかるためウィンドウを閉じないでください。',
       fases: {
         copia: '置換対象をバックアップ中',
         versiones: 'バージョンをインストール中',
@@ -5169,7 +5146,8 @@ export const ja: Textos = {
           hecho: '旧 CA を信頼ストアから削除しました。',
         },
         descartadosWorkspace: (lista: string) => `このPCに存在しないため除外: ${lista}`,
-        workspacesInvalidos: (n: number) => `無効なワークスペース ${n} 件はインポートしませんでした。`,
+        workspacesInvalidos: (n: number) =>
+          `無効なワークスペース ${n} 件はインポートしませんでした。`,
         puerto: (de: number, a: number) => `ポート ${de} → ${a}`,
         copiaEnv: (ruta: string) => `.env バックアップ: ${ruta}`,
       },
@@ -5184,8 +5162,7 @@ export const ja: Textos = {
       tunel_con_nombre: '名前付きトンネルは移行されないためクイックトンネルに戻りました。',
       php_ini: '一部の php.ini 設定はインポートされませんでした。',
       xdebug: 'Xdebug 設定が無効だったため削除しました。',
-      nginx_desactivado:
-        'Nginx ルールは保存されましたが未適用です。エディターで確認してください。',
+      nginx_desactivado: 'Nginx ルールは保存されましたが未適用です。エディターで確認してください。',
       carpeta_no_existe: 'フォルダがこのPCに存在しません。指定してください。',
       correo_sin_proveedor: 'SMTP プロバイダーは移行されないためローカルキャッチャーを使用します。',
       sitio_invalido: 'サイトが無効です。',
@@ -5203,7 +5180,8 @@ export const ja: Textos = {
       danada: 'プロファイル内のファイルが破損しています。',
       bases_omitidas: 'データベースなしでインポートされました。',
       instancia_apagada: 'インスタンスを起動できませんでした。',
-      sin_copia_previa: '事前スナップショットを作成できなかったためデータベースは置換されませんでした。',
+      sin_copia_previa:
+        '事前スナップショットを作成できなかったためデータベースは置換されませんでした。',
       sin_base: '.env がローカルデータベースを指していません。',
       base_no_resuelta: 'どのインスタンスのデータベースか特定できませんでした。',
       error_inesperado: 'エラーが発生しました。',
@@ -5213,7 +5191,8 @@ export const ja: Textos = {
         '以前の CA がシステム信頼ストアに残っています（現在は未使用）。ここから削除できます。',
       base_no_incluida: 'データベース {base} ({instancia}) は含まれませんでした。',
       sin_ca: 'このPCに CA がないため CA なしでエクスポートされます。',
-      ca_no_importada: 'プロファイルの CA はインポートされませんでした。現在の CA または新規 CA を使用します。',
+      ca_no_importada:
+        'プロファイルの CA はインポートされませんでした。現在の CA または新規 CA を使用します。',
       certificados: '証明書を準備できませんでした: {detalle}',
       aplicar:
         'インポートしたサイトが完全に適用されませんでした (Nginx: {nginx}、hosts: {hosts})。',

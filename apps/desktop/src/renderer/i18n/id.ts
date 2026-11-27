@@ -3,14 +3,13 @@
  * Glosarium tetap: layanan, instans, situs, terowongan, cadangan, pemberitahuan; Doctor dan
  * WolfCore Dev tidak diterjemahkan. Nada formal dan netral; di luar Git selalu 'versi'.
  */
-import type { Textos } from './es';
+import type { TextosParciales } from './es';
 
 const plural = (n: number, texto: string): string => `${n} ${texto}`;
 
-export const id: Textos = {
+export const id: TextosParciales = {
   app: {
     nombre: 'WolfCore Dev',
-    lema: 'PHP dan Nginx tanpa ribet',
     version: 'Versi',
   },
   nav: {
@@ -147,7 +146,8 @@ export const id: Textos = {
       'instancias.ultima': '{id} adalah satu-satunya instans: tidak dapat dihapus.',
       'instancias.sin_puerto_libre': 'Tidak ditemukan port kosong untuk instans.',
       'instancias.confirmacion': 'Untuk melanjutkan, ketik "{id}".',
-      'instancias.sin_datos': '{id} tidak memiliki data di foldernya: pilih cadangan untuk dikembalikan.',
+      'instancias.sin_datos':
+        '{id} tidak memiliki data di foldernya: pilih cadangan untuk dikembalikan.',
       'instancias.respaldo_no_existe': 'Cadangan tersebut untuk {id} tidak ada.',
       'instancias.respaldo_en_uso':
         'Salinan tersebut dibutuhkan oleh {id} yang sedang diblokir: selesaikan terlebih dahulu.',
@@ -187,8 +187,7 @@ export const id: Textos = {
         'Memublikasikan {dominio} ke internet memerlukan konfirmasi di WolfCore Dev.',
       'tuneles.confirmacion_obsoleta':
         'Terowongan untuk {dominio} berubah sejak dikonfirmasi: konfirmasi ulang.',
-      'tuneles.cloudflared_no_instalado':
-        'cloudflared belum terpasang. Pasang melalui Layanan.',
+      'tuneles.cloudflared_no_instalado': 'cloudflared belum terpasang. Pasang melalui Layanan.',
       'tuneles.proveedor_no_disponible': 'Penyedia terowongan {proveedor} tidak tersedia.',
       'tuneles.cloudflare_sin_cuenta':
         'Hubungkan akun Cloudflare Anda terlebih dahulu di opsi terowongan.',
@@ -203,12 +202,12 @@ export const id: Textos = {
         'Terowongan {nombre} memiliki koneksi aktif (cloudflared memerlukan -f untuk menghapusnya). Tutup di semua perangkat tempat terowongan terbuka lalu coba lagi, atau gunakan «Lupakan di sini saja».',
       'tuneles.nombre_en_uso': 'Terowongan {nombre} sudah digunakan oleh situs lain.',
       'tuneles.dominio_en_uso': 'Domain {dominio} sudah digunakan oleh situs lain.',
-      'tuneles.confirmacion_olvidar': 'Melupakan atau membuat ulang terowongan {nombre} memerlukan konfirmasi.',
+      'tuneles.confirmacion_olvidar':
+        'Melupakan atau membuat ulang terowongan {nombre} memerlukan konfirmasi.',
       'tuneles.cloudflare_fallo': 'cloudflared tidak dapat menyelesaikan operasi: {detalle}',
       'tuneles.credencial_no_protegida':
         'Kredensial tidak dapat dibatasi hanya untuk pengguna saat ini, sehingga tidak digunakan.',
-      'tuneles.sin_cifrado':
-        'Enkripsi sistem tidak tersedia: kredensial tidak dapat disimpan.',
+      'tuneles.sin_cifrado': 'Enkripsi sistem tidak tersedia: kredensial tidak dapat disimpan.',
       'tuneles.token_invalido':
         'Token tidak valid: hanya huruf, angka, dan _ . - (8 hingga 200 karakter). Simpan ulang di opsi terowongan.',
       'tuneles.ngrok_no_instalado':
@@ -314,8 +313,7 @@ export const id: Textos = {
       'cli.formato_no_admitido': 'Format permintaan tidak diterima oleh CLI.',
       'cli.plazo':
         'Perintah memakan waktu terlalu lama: mungkin masih berjalan. Periksa statusnya di WolfCore Dev.',
-      'cli.ocupado':
-        'WolfCore Dev sedang menangani terlalu banyak perintah CLI: tunggu sebentar.',
+      'cli.ocupado': 'WolfCore Dev sedang menangani terlalu banyak perintah CLI: tunggu sebentar.',
       'cli.requiere_confirmacion':
         'Perintah ini memublikasikan atau mengubah sesuatu dan memerlukan konfirmasi (--si) pada {sitio}.',
       'cli.requiere_confirmacion_datos_reales':
@@ -327,10 +325,8 @@ export const id: Textos = {
       'cli.confirmacion_vencida':
         'Tidak ada yang mengonfirmasi di jendela WolfCore Dev tepat waktu: tidak ada yang dilakukan.',
       'cli.tunel_fallo': 'Terowongan gagal dibuka. Periksa log-nya di WolfCore Dev.',
-      'cli.inicio_fallo':
-        'Tidak semua yang diminta dapat dimulai. Periksa log di WolfCore Dev.',
-      'cli.parada_fallo':
-        'Tidak semua yang diminta dapat dihentikan. Periksa log di WolfCore Dev.',
+      'cli.inicio_fallo': 'Tidak semua yang diminta dapat dimulai. Periksa log di WolfCore Dev.',
+      'cli.parada_fallo': 'Tidak semua yang diminta dapat dihentikan. Periksa log di WolfCore Dev.',
       'cli.interno': 'Kesalahan internal server CLI.',
       'cli.proveedor_distinto':
         'Situs menggunakan penyedia terowongan lain ({proveedor}). Periksa lalu konfirmasi ulang.',
@@ -340,11 +336,9 @@ export const id: Textos = {
       'cli.carpeta_sin_sitio':
         'Folder tersebut bukan milik situs WolfCore Dev mana pun: tautkan terlebih dahulu.',
       'cli.ya_vinculada': 'Folder tersebut sudah menjadi situs {sitio}.',
-      'cli.tipo_no_soportado':
-        'Proyek bertipe {tipo} dibuat melalui antarmuka WolfCore Dev.',
+      'cli.tipo_no_soportado': 'Proyek bertipe {tipo} dibuat melalui antarmuka WolfCore Dev.',
       'cli.sitio_sin_php': 'Situs {sitio} tidak menggunakan PHP.',
-      'cli.version_no_instalada':
-        '{servicio} {version} belum terpasang. Pasang melalui Layanan.',
+      'cli.version_no_instalada': '{servicio} {version} belum terpasang. Pasang melalui Layanan.',
       'cli.fuente_no_existe': 'Log tersebut belum ada.',
       'cli.token_no_protegido':
         'File token tidak dapat dibatasi hanya untuk pengguna saat ini: CLI tidak diaktifkan.',
@@ -382,7 +376,8 @@ export const id: Textos = {
       'env.sin_base': '.env proyek ini tidak memiliki koneksi basis data.',
       'env.base_no_resuelta':
         'Basis data proyek ini bukan milik server lokal WolfCore Dev: tidak ada yang diubah.',
-      'env.motor_no_soportado': 'Saat ini "Gunakan pengguna khusus" berfungsi untuk MySQL dan MariaDB.',
+      'env.motor_no_soportado':
+        'Saat ini "Gunakan pengguna khusus" berfungsi untuk MySQL dan MariaDB.',
       'env.ya_usa_usuario_propio': 'Proyek ini sudah menggunakan pengguna khusus.',
       'plantillas.id_invalido': 'Pengenal templat tidak valid.',
       'plantillas.no_existe': 'Templat tidak ada.',
@@ -394,8 +389,7 @@ export const id: Textos = {
         'Proyek terlalu besar untuk disimpan sebagai templat (maksimal {maximo}). Kecualikan folder besar.',
       'plantillas.exclusion_invalida':
         'Salah satu pengecualian tidak valid (gunakan nama atau jalur relatif tanpa "..").',
-      'plantillas.nombre_invalido':
-        'Nama templat tidak valid (1 hingga 60 karakter).',
+      'plantillas.nombre_invalido': 'Nama templat tidak valid (1 hingga 60 karakter).',
       'plantillas.esquema_fallo':
         'Skema basis data proyek tidak dapat dibaca: pastikan layanannya sedang aktif.',
       'plantillas.base_no_resuelta':
@@ -410,7 +404,8 @@ export const id: Textos = {
         'Skema memuat pernyataan non-struktur dan tidak ada yang dijalankan: {sentencia}',
       'bd.extension_no_permitida':
         'Skema meminta ekstensi {nombre} yang tidak ada dalam daftar yang diizinkan: tidak ada yang dipulihkan.',
-      'bd.esquema_fallo': 'Skema lengkap tidak dapat dipulihkan: tidak ada yang ditinggalkan setengah jalan.',
+      'bd.esquema_fallo':
+        'Skema lengkap tidak dapat dipulihkan: tidak ada yang ditinggalkan setengah jalan.',
       'bd.datos_no_permitidos':
         'Dump data berisi perintah yang bukan data (hanya INSERT, LOCK TABLES, dan SET yang diterima): tidak ada yang diimpor.',
       'bd.datos_fallo':
@@ -437,13 +432,16 @@ export const id: Textos = {
       'herramientas.imagen_grande': 'Ukuran gambar terlalu besar (maksimal {maximo}).',
       'herramientas.imagen_dimensiones':
         'Dimensi gambar terlalu besar ({ancho}×{alto} px; maksimal {maximo} px per sisi) dan tidak dibuka demi keamanan.',
-      'herramientas.zip_sin_archivos': 'Tidak ada file untuk dikompresi (tautan simbolis tidak diikuti).',
+      'herramientas.zip_sin_archivos':
+        'Tidak ada file untuk dikompresi (tautan simbolis tidak diikuti).',
       'herramientas.zip_demasiados': 'Terlalu banyak file untuk dikompresi (maksimal {maximo}).',
-      'herramientas.zip_grande': 'Ukuran total yang akan dikompresi terlalu besar (maksimal {maximo}).',
+      'herramientas.zip_grande':
+        'Ukuran total yang akan dikompresi terlalu besar (maksimal {maximo}).',
       'herramientas.pdf_invalido': 'File bukan PDF yang dapat dioptimalkan.',
       'herramientas.pdf_grande': 'Ukuran PDF terlalu besar (maksimal {maximo}).',
       'herramientas.pdf_cifrado': 'PDF dilindungi kata sandi dan tidak dapat dioptimalkan.',
-      'herramientas.pdf_plazo': 'Proses PDF memakan waktu lebih dari {segundos} dtk dan dibatalkan.',
+      'herramientas.pdf_plazo':
+        'Proses PDF memakan waktu lebih dari {segundos} dtk dan dibatalkan.',
       'herramientas.salida_ocupada': 'Tidak ditemukan nama yang tersedia untuk file baru.',
       'conversor.formato': 'Konversi tersebut tidak tersedia.',
       'conversor.archivo_invalido':
@@ -461,7 +459,8 @@ export const id: Textos = {
         'Konversi tersebut memerlukan LibreOffice yang tidak terinstal di komputer ini (WolfCore Dev tidak menginstalnya).',
       'conversor.libreoffice_fallo': 'LibreOffice tidak dapat mengonversi dokumen.',
       'conversor.limite_celdas': 'Tabel memiliki terlalu banyak sel (maksimal {maximo}).',
-      'conversor.memoria': 'File memerlukan terlalu banyak memori (lebih dari {maximo}) dan dibatalkan.',
+      'conversor.memoria':
+        'File memerlukan terlalu banyak memori (lebih dari {maximo}) dan dibatalkan.',
       'conversor.pdf_no_disponible': 'Pencetakan ke PDF sedang tidak tersedia saat ini.',
       'herramientas.imagen_pixeles':
         'Gambar memiliki terlalu banyak piksel secara total ({ancho}×{alto} px; maksimal {maximo}) dan tidak dibuka demi keamanan.',
@@ -495,7 +494,8 @@ export const id: Textos = {
         'Hanya basis data MySQL dan MariaDB yang dapat diimpor dari program lain.',
       'importar.ruta_fuera':
         'Folder atau file yang mengarah keluar dari instalasi atau ke folder sistem telah diabaikan.',
-      'importar.carpeta_invalida': 'Folder yang sudah tidak ada atau bukan merupakan folder telah diabaikan.',
+      'importar.carpeta_invalida':
+        'Folder yang sudah tidak ada atau bukan merupakan folder telah diabaikan.',
       'importar.archivo_grande':
         'File konfigurasi berukuran lebih dari {maximo} KB dan tidak dibaca.',
       'importar.archivo_ilegible': 'File konfigurasi bukan berupa teks atau tidak dapat dibaca.',
@@ -541,11 +541,11 @@ export const id: Textos = {
         'Langkah "Buat basis data" pada proyek baru tidak dapat dilewati.',
       'proyectos.sin_php': 'PHP belum terinstal: instal dari Layanan.',
       'proyectos.php_no_instalado': 'PHP {version} belum terinstal: instal dari Layanan.',
-      'proyectos.python_no_instalado':
-        'Python {version} belum terinstal: instal dari Layanan.',
+      'proyectos.python_no_instalado': 'Python {version} belum terinstal: instal dari Layanan.',
       'mcp.token_invalido': 'Token server MCP tidak valid.',
       'mcp.solicitud_cancelada': 'Klien MCP membatalkan permintaan: tindakan tidak dijalankan.',
-      'doctor.puerto_ocupado': 'Port {puerto} milik {servicio} digunakan oleh program lain ({proceso}).',
+      'doctor.puerto_ocupado':
+        'Port {puerto} milik {servicio} digunakan oleh program lain ({proceso}).',
       'doctor.puerto_iis': 'IIS ({programa}) menggunakan port {puerto} milik {servicio}.',
       'doctor.puerto_http_sys':
         'Layanan Windows ({programa}) menggunakan port {puerto} milik {servicio}.',
@@ -555,7 +555,8 @@ export const id: Textos = {
       'doctor.puerto_skype': '{programa} menggunakan port {puerto} milik {servicio}.',
       'doctor.puerto_reservado':
         'Port {puerto} milik {servicio} berada dalam rentang yang dicadangkan oleh Windows ({desde}-{hasta}: Hyper-V, WSL, atau Docker).',
-      'doctor.ca_por_vencer': 'Otoritas sertifikat WolfCore Dev akan kedaluwarsa dalam {dias} hari.',
+      'doctor.ca_por_vencer':
+        'Otoritas sertifikat WolfCore Dev akan kedaluwarsa dalam {dias} hari.',
       'doctor.ca_vencida': 'Otoritas sertifikat WolfCore Dev telah kedaluwarsa.',
       'doctor.certificado_por_vencer': 'Sertifikat {dominio} akan kedaluwarsa dalam {dias} hari.',
       'doctor.certificado_vencido': 'Sertifikat {dominio} telah kedaluwarsa.',
@@ -610,7 +611,8 @@ export const id: Textos = {
         'Anda sudah memiliki NODE_EXTRA_CA_CERTS sendiri: WolfCore Dev tidak menggantinya.',
       'confianza.variable_fallida': 'Tidak dapat mengubah variabel pengguna.',
       'firefox.abierto': 'Firefox sedang terbuka: tutup lalu coba lagi.',
-      'firefox.error': 'Tidak dapat mengubah user.js pada profil tersebut; file tetap seperti semula.',
+      'firefox.error':
+        'Tidak dapat mengubah user.js pada profil tersebut; file tetap seperti semula.',
       'firefox.fuera':
         'Ada profil di luar folder Firefox: aktifkan dari Kepercayaan CA, dengan konfirmasi terpisah.',
       'confianza.node_variable_cambiada':
@@ -626,10 +628,10 @@ export const id: Textos = {
       'ia.respuesta_rara': 'Penyedia mengembalikan respons yang tidak terduga.',
       'ia.cancelado': 'Permintaan ke penyedia dibatalkan.',
       'ia.sin_clave': 'Penyedia ini memerlukan kunci: simpan terlebih dahulu.',
-      'ia.clave_mal_formada':
-        'Format kunci tidak valid (tanpa spasi atau jeda baris).',
+      'ia.clave_mal_formada': 'Format kunci tidak valid (tanpa spasi atau jeda baris).',
       'ia.modelo_invalido': 'Nama model tidak valid.',
-      'ia.modelo_no_disponible': 'Model tidak ada atau akun Anda tidak memiliki akses ke model tersebut.',
+      'ia.modelo_no_disponible':
+        'Model tidak ada atau akun Anda tidak memiliki akses ke model tersebut.',
       'ia.proveedor_invalido': 'Konfigurasi penyedia tidak valid.',
       'ia.env_conflicto':
         '.env sudah mendefinisikan {claves} dengan nilai lain: konfirmasikan jika Anda ingin menggantinya.',
@@ -697,28 +699,29 @@ export const id: Textos = {
       'agentes.config_en_uso':
         '{archivo} berubah saat WolfCore Dev mengeditnya: tutup agen lalu coba lagi. Tidak ada yang diubah.',
       'agentes.proveedor_incompatible': '{agente} tidak dapat menggunakan penyedia AI tersebut.',
-      'agentes.sin_cambios_preparados': 'Tidak ada perubahan yang disiapkan (git add) untuk dideskripsikan.',
+      'agentes.sin_cambios_preparados':
+        'Tidak ada perubahan yang disiapkan (git add) untuk dideskripsikan.',
       'agentes.argumento_invalido': 'Data tidak valid ({campo}).',
       'git.commit_fallo': 'Tidak dapat membuat commit: {detalle}',
       'git.mensaje_invalido': 'Pesan commit kosong atau tidak valid.',
       'php.rama_no_instalada': 'PHP {rama} belum terinstal.',
       'php.argumento_invalido': 'Data tidak valid ({campo}).',
       'php.valor_invalido': 'Nilai untuk {clave} tidak valid.',
-      'php.ini_invalido': 'PHP tidak dapat dijalankan dengan php.ini tersebut; tidak ada yang disimpan. Keluaran: {salida}',
+      'php.ini_invalido':
+        'PHP tidak dapat dijalankan dengan php.ini tersebut; tidak ada yang disimpan. Keluaran: {salida}',
       'php.no_arranco':
         'PHP {rama} gagal dimulai ulang dengan perubahan tersebut; konfigurasi sebelumnya dipulihkan dan merespons seperti semula.',
       'php.caido_tras_restaurar':
         'PHP {rama} gagal dimulai ulang; konfigurasi sebelumnya telah dipulihkan, tetapi masih belum merespons. Periksa Layanan dan log PHP.',
       'php.respaldo_no_existe': 'Cadangan php.ini tersebut tidak ada.',
       'php.extension_no_existe': 'Ekstensi {nombre} tidak ada di folder ext pada versi ini.',
-      'php.extension_no_catalogo':
-        'Ekstensi {nombre} tidak ada di katalog untuk versi ini.',
+      'php.extension_no_catalogo': 'Ekstensi {nombre} tidak ada di katalog untuk versi ini.',
       'php.variante_desconocida': 'Tidak dapat mengetahui cara kompilasi PHP ini.',
       'php.sin_variante': 'Katalog tidak memiliki {nombre} untuk kompilasi {variante}.',
-      'php.huella_distinta': 'Unduhan tidak cocok dengan sidik jari yang dipublikasikan; tidak ada yang diinstal.',
+      'php.huella_distinta':
+        'Unduhan tidak cocok dengan sidik jari yang dipublikasikan; tidak ada yang diinstal.',
       'php.descarga_fallida': 'Tidak dapat mengunduh ekstensi: {detalle}',
-      'php.extension_en_uso':
-        'DLL {nombre} sedang digunakan. Hentikan PHP {rama} lalu coba lagi.',
+      'php.extension_en_uso': 'DLL {nombre} sedang digunakan. Hentikan PHP {rama} lalu coba lagi.',
       'php.extension_sin_dll':
         'Tidak dapat mengganti DLL {nombre} dan folder ext milik PHP {rama} tidak memilikinya. Hentikan PHP {rama} lalu coba lagi: DLL sebelumnya akan kembali ke tempatnya saat dijalankan.',
       'php.sitio_sin_php': 'Situs tersebut tidak menggunakan PHP.',
@@ -778,12 +781,12 @@ export const id: Textos = {
       'catalogo.huella_debil':
         '{servicio} {version} hanya memiliki checksum lemah (MD5 atau SHA-1): konfirmasikan pemasangan di kotak dialog.',
       'catalogo.huella_no_coincide': 'Unduhan tidak cocok dengan checksum yang dipublikasikan.',
-      'catalogo.redireccion_ajena': 'Unduhan mencoba mengarah ke situs yang tidak diizinkan ({host}).',
+      'catalogo.redireccion_ajena':
+        'Unduhan mencoba mengarah ke situs yang tidak diizinkan ({host}).',
       'catalogo.demasiadas_redirecciones':
         'Unduhan melakukan terlalu banyak pengalihan (lebih dari {maximo}).',
       'catalogo.respuesta_grande': 'Respons server terlalu besar.',
-      'catalogo.version_no_encontrada':
-        'Versi {version} dari {servicio} tidak ada di katalog.',
+      'catalogo.version_no_encontrada': 'Versi {version} dari {servicio} tidak ada di katalog.',
       'catalogo.huella_no_disponible':
         'Tidak dapat memperoleh checksum {servicio} {version} (tanpa koneksi atau sumber tidak merespons). Coba lagi.',
       'catalogo.firma_invalida':
@@ -802,8 +805,7 @@ export const id: Textos = {
         'phpMyAdmin hanya membuka basis data MySQL dan MariaDB; gunakan Adminer untuk PostgreSQL.',
       'acceso_bd.servidor_no_resuelto':
         'Basis data proyek ini bukan berasal dari server lokal WolfCore Dev.',
-      'acceso_bd.no_listo':
-        'Alat belum siap: pasang melalui Layanan dan nyalakan PHP.',
+      'acceso_bd.no_listo': 'Alat belum siap: pasang melalui Layanan dan nyalakan PHP.',
       'auditoria.tabla_invalida': 'Tabel tidak ada di basis data tersebut.',
       'auditoria.columna_invalida':
         'Kolom tidak ada di tabel tersebut (dan kolom pengguna serta kolom hash harus berbeda).',
@@ -823,11 +825,11 @@ export const id: Textos = {
         'Audit kata sandi hanya untuk MySQL, MariaDB, dan PostgreSQL.',
       'auditoria.cancelada': 'Audit dibatalkan.',
       'auditoria.usuario_invalido': 'Pengguna harus terdiri dari 1 hingga 256 karakter.',
-      'auditoria.en_curso': 'Sudah ada audit yang sedang berlangsung: tunggu hingga selesai atau batalkan.',
+      'auditoria.en_curso':
+        'Sudah ada audit yang sedang berlangsung: tunggu hingga selesai atau batalkan.',
       'auditoria.base_sistema': 'Basis data sistem tidak diaudit: pilih basis data proyek.',
       'auditoria.esquema_invalido': 'Skema tidak ada di basis data tersebut.',
-      'auditoria.fila_cambio':
-        'Akun berubah sementara itu: tidak diatur ulang. Coba lagi.',
+      'auditoria.fila_cambio': 'Akun berubah sementara itu: tidak diatur ulang. Coba lagi.',
       'auditoria.verificacion_fallo':
         'Basis data tidak menyimpan kata sandi sesuai yang diharapkan: perubahan dibatalkan.',
       'auditoria.columna_corta':
@@ -836,7 +838,8 @@ export const id: Textos = {
         'Basis data ini berisi data asli pelanggan: pengaturan ulang kata sandi memerlukan konfirmasi tambahan.',
       'instantaneas.id_invalido': 'Snapshot tidak valid.',
       'instantaneas.no_encontrada': 'Snapshot tidak ditemukan; mungkin sudah dihapus.',
-      'instantaneas.otra_base': 'Snapshot ini milik basis data lain: tidak dapat diterapkan ke basis data ini.',
+      'instantaneas.otra_base':
+        'Snapshot ini milik basis data lain: tidak dapat diterapkan ke basis data ini.',
       'instantaneas.sin_confirmar': 'Konfirmasikan bahwa Anda ingin kembali ke snapshot ini.',
       'instantaneas.motor_no_soportado': 'Snapshot hanya untuk MySQL, MariaDB, dan PostgreSQL.',
       'instantaneas.demasiado_grande':
@@ -873,8 +876,7 @@ export const id: Textos = {
     vacio: 'Belum ada snapshot untuk basis data ini.',
     automatica: 'Otomatis',
     sinNota: 'Tanpa catatan',
-    detalle: (tablas: number, tamano: string) =>
-      `${tablas} tabel · ${tamano}`,
+    detalle: (tablas: number, tamano: string) => `${tablas} tabel · ${tamano}`,
     volver: 'Kembali ke snapshot ini',
     borrar: 'Hapus',
     borrada: 'Snapshot dipindahkan ke tempat sampah',
@@ -914,7 +916,8 @@ export const id: Textos = {
       hecho: (base: string) => `Basis data ${base} telah kembali ke snapshot`,
       respaldoPrevio: 'Kondisi sebelumnya tersimpan di snapshot otomatis tanggal',
       advertencias: 'Pemulihan selesai dengan pemberitahuan:',
-      hechoConAvisos: (base: string) => `Basis data ${base} kembali ke snapshot, dengan pemberitahuan`,
+      hechoConAvisos: (base: string) =>
+        `Basis data ${base} kembali ke snapshot, dengan pemberitahuan`,
       baseVacia: 'Basis data tidak ada atau kosong: tidak ada yang perlu disimpan sebelum kembali.',
       sinGuardarTitulo: 'Tidak dapat menyimpan kondisi saat ini',
       sinGuardarTexto:
@@ -971,7 +974,8 @@ export const id: Textos = {
         'Proyek tidak ditandai sebagai tepercaya: centang "Saya memercayai repositori ini" agar dapat berjalan.',
       receta_cambio:
         'Resep proyek berubah sejak Anda memercayainya: tinjau kembali lalu centang ulang "Saya memercayai repositori ini".',
-      sin_confirmar: 'Perintahnya belum dikonfirmasi: tidak dijalankan hingga Anda meninjau dan mengonfirmasinya.',
+      sin_confirmar:
+        'Perintahnya belum dikonfirmasi: tidak dijalankan hingga Anda meninjau dan mengonfirmasinya.',
       comando_invalido: 'Perintahnya tidak diizinkan (hanya php, node, npm run, dan python).',
       cron_invalida: 'Jadwalnya bukan ekspresi cron yang valid.',
       carpeta: 'Folder proyek tidak ada.',
@@ -1064,7 +1068,8 @@ export const id: Textos = {
       comillasSinCerrar: 'Ada tanda kutip yang belum ditutup.',
       tiempo: 'Batas waktu',
       minutos: 'menit',
-      tiempoAyuda: 'Jika berjalan lebih lama, akan dihentikan otomatis (hanya proses tersebut dan proses turunannya).',
+      tiempoAyuda:
+        'Jika berjalan lebih lama, akan dihentikan otomatis (hanya proses tersebut dan proses turunannya).',
       activa: 'Aktif (berjalan otomatis selama aplikasi terbuka)',
       advertencia:
         'Dengan menyetujui, Anda mengizinkan perintah persis ini: perintah akan berjalan otomatis di folder proyek ini setiap kali jadwal tiba. Jika Anda mengubahnya, Anda harus mengonfirmasinya kembali.',
@@ -1115,7 +1120,8 @@ export const id: Textos = {
         procesos: 'Proses proyek',
       },
       sinOpciones: 'Tidak ada yang dapat dipilih di sini.',
-      captadorUnico: 'Hanya satu penangkap email dalam satu waktu: memilih yang lain akan menggantikan yang sebelumnya.',
+      captadorUnico:
+        'Hanya satu penangkap email dalam satu waktu: memilih yang lain akan menggantikan yang sebelumnya.',
       yaNoExisten: (lista: string) => `Sudah tidak ada dan akan dihapus saat disimpan: ${lista}`,
       guardar: 'Simpan',
       guardado: (n: string) => `Workspace "${n}" tersimpan.`,
@@ -1160,8 +1166,7 @@ export const id: Textos = {
       corregido: 'File hosts diperbarui',
       fallo: 'Tidak dapat memperbarui file hosts',
       verInstrucciones: 'Lihat petunjuk',
-      duplicados:
-        'Domain ini sudah ada di hosts di luar blok WolfCore Dev (tetap dipertahankan):',
+      duplicados: 'Domain ini sudah ada di hosts di luar blok WolfCore Dev (tetap dipertahankan):',
       motivos: {
         cancelado: 'Izin administrator dibatalkan. File hosts tidak berubah.',
         tiempo:
@@ -1253,8 +1258,6 @@ export const id: Textos = {
     ftp: {
       interruptor: 'Server FTP',
       redLocal: 'Izinkan koneksi dari jaringan lokal',
-      redLocalAyuda:
-        'Jika nonaktif, hanya perangkat ini yang dapat terhubung (127.0.0.1). Setiap situs mengaktifkan aksesnya di Situs.',
       avisoTitulo: 'Buka FTP ke jaringan lokal',
       avisoTexto:
         'FTP mengirim nama pengguna, kata sandi, dan file tanpa enkripsi. Perangkat apa pun di jaringan Anda dapat mencoba terhubung. Gunakan hanya di jaringan tepercaya.',
@@ -1270,7 +1273,8 @@ export const id: Textos = {
       sinVersion: 'belum terpasang',
       uso: 'Penggunaan',
       usoTexto: 'composer',
-      ayuda: 'Gunakan "Terminal" di dalam proyek, atau tambahkan WolfCore Dev ke PATH di Pengaturan.',
+      ayuda:
+        'Gunakan "Terminal" di dalam proyek, atau tambahkan WolfCore Dev ke PATH di Pengaturan.',
       instaladoOk: 'Composer terpasang',
       sinPhp: 'Pasang PHP terlebih dahulu',
       actualizado: (v: string) => `Composer diperbarui: ${v}`,
@@ -1369,8 +1373,7 @@ export const id: Textos = {
     } as Record<string, string>,
     formatoDesconocido:
       'Format tidak dikenali. Jika berupa file terkompresi, ekstrak terlebih dahulu lalu pilih file .sql atau .dump di dalamnya.',
-    formatoIncompatible:
-      'File ini adalah cadangan PostgreSQL: pulihkan di tab PostgreSQL.',
+    formatoIncompatible: 'File ini adalah cadangan PostgreSQL: pulihkan di tab PostgreSQL.',
     nombre: {
       etiqueta: 'Nama basis data',
       vacio: 'Masukkan nama',
@@ -1557,7 +1560,8 @@ export const id: Textos = {
       sinWinget:
         'Perangkat ini tidak memiliki winget. Pasang "Build Tools for Visual Studio 2022" dari visualstudio.microsoft.com dengan beban kerja "Desktop development with C++" lalu coba lagi.',
       falloHerramientas: 'Gagal memasang alat kompilasi',
-      activarAyuda: 'Setelahnya, gunakan "Aktifkan vektor" di setiap basis data yang membutuhkannya.',
+      activarAyuda:
+        'Setelahnya, gunakan "Aktifkan vektor" di setiap basis data yang membutuhkannya.',
       errorEstado: 'Gagal membaca status pgvector',
     },
   },
@@ -1611,7 +1615,8 @@ export const id: Textos = {
   },
   sitios: {
     titulo: 'Situs',
-    descripcion: 'Setiap situs adalah folder yang dilayani oleh Nginx pada domain .test miliknya sendiri.',
+    descripcion:
+      'Setiap situs adalah folder yang dilayani oleh Nginx pada domain .test miliknya sendiri.',
     nuevo: 'Situs baru',
     buscar: 'Cari berdasarkan nama atau domain',
     sinResultados: (q: string) => `Tidak ada situs yang cocok dengan "${q}".`,
@@ -1679,7 +1684,8 @@ export const id: Textos = {
     cambiarCarpeta: 'Ubah',
     detectando: 'Menganalisis proyek…',
     detectado: (tipo: string) => `Terdeteksi: ${tipo}`,
-    sinDeteccionAlEditar: 'Deteksi otomatis hanya berlaku saat membuat situs baru; periksa jenis proyek dan versi PHP.',
+    sinDeteccionAlEditar:
+      'Deteksi otomatis hanya berlaku saat membuat situs baru; periksa jenis proyek dan versi PHP.',
     nombre: 'Nama',
     nombreAyuda: 'Hanya untuk mengenalinya di dalam daftar.',
     nombreCopia: (nombre: string) => `${nombre} (salinan)`,
@@ -1794,12 +1800,12 @@ export const id: Textos = {
     nombreTunel: 'Nama terowongan',
     nombreTunelAyuda: 'Huruf kecil, angka, dan tanda hubung.',
     dominioPublico: 'Domain publik',
-    dominioPublicoAyuda:
-      'Subdomain dari domain Anda di Cloudflare, misalnya demo.domainanda.com.',
+    dominioPublicoAyuda: 'Subdomain dari domain Anda di Cloudflare, misalnya demo.domainanda.com.',
     crear: 'Buat dan rutekan',
     guardadoNombre: 'Terowongan bernama siap digunakan. Konfirmasi akan diminta saat membukanya.',
     guardadoRapido: 'Situs ini kembali menggunakan terowongan cepat.',
-    cambiarCierra: 'Mengganti penyedia akan menutup terowongan yang sedang terbuka untuk situs ini.',
+    cambiarCierra:
+      'Mengganti penyedia akan menutup terowongan yang sedang terbuka untuk situs ini.',
     usarRapido: 'Gunakan terowongan cepat',
     nombreActual: (nombre: string, dominio: string) => `Terowongan "${nombre}" di ${dominio}`,
     confirmarPublicoNombreTexto: (dominio: string, publico: string) =>
@@ -1827,9 +1833,11 @@ export const id: Textos = {
       'Expose harus sudah terpasang atau memiliki file expose.phar di folder bin/expose pada data WolfCore Dev (di Windows hanya berfungsi dengan phar; tidak ada unduhan dengan sidik jari). Inspektor permintaannya terlihat di seluruh jaringan lokal, oleh karena itu tidak digunakan untuk situs dengan data asli. Konfigurasi global Anda tidak diubah.',
     tailscaleAlcance: 'Jangkauan akses',
     tailscaleServe: 'Serve: hanya tailnet Anda',
-    tailscaleServeAyuda: 'Hanya perangkat di jaringan Tailscale Anda. Tidak dipublikasikan ke internet.',
+    tailscaleServeAyuda:
+      'Hanya perangkat di jaringan Tailscale Anda. Tidak dipublikasikan ke internet.',
     tailscaleFunnel: 'Funnel: seluruh internet',
-    tailscaleFunnelAyuda: 'Siapa pun yang memiliki tautan dapat mengaksesnya, baik berada di tailnet Anda maupun tidak.',
+    tailscaleFunnelAyuda:
+      'Siapa pun yang memiliki tautan dapat mengaksesnya, baik berada di tailnet Anda maupun tidak.',
     tailscaleFunnelAviso:
       'Funnel memublikasikan situs ini ke internet: siapa pun yang memiliki tautan dapat mengaksesnya selama masih terbuka.',
     tailscaleAyudaInstalacion:
@@ -1847,13 +1855,13 @@ export const id: Textos = {
   },
   tuneles: {
     titulo: 'Terowongan',
-    descripcion: 'Tautan publik sementara dari Cloudflare untuk menampilkan situs di luar jaringan Anda.',
+    descripcion:
+      'Tautan publik sementara dari Cloudflare untuk menampilkan situs di luar jaringan Anda.',
     explicacion:
       'Terowongan cepat mengubah alamat setiap kali dibuka atau diperbarui, dan hanya berfungsi selama perangkat ini menyala dan prosesnya tetap berjalan (jika Anda keluar dari WolfCore Dev dengan membiarkannya menyala, terowongan tetap aktif).',
     columnas: { sitio: 'Situs', estado: 'Status', url: 'Tautan', acciones: 'Tindakan' },
     vacioTitulo: 'Tidak ada terowongan yang terbuka',
     vacio: 'Aktifkan sakelar terowongan pada suatu situs untuk mendapatkan tautan publik.',
-    irASitios: 'Buka Situs',
     sinNombre: 'Situs dihapus',
   },
   ajustes: {
@@ -1946,7 +1954,8 @@ export const id: Textos = {
       pathAgregar: 'Tambahkan ke PATH pengguna',
       pathQuitar: 'Hapus dari PATH',
       pathTitulo: 'PATH diperbarui',
-      pathAviso: 'Buka terminal baru untuk melihat perubahan: terminal yang sudah terbuka tidak melihatnya.',
+      pathAviso:
+        'Buka terminal baru untuk melihat perubahan: terminal yang sudah terbuka tidak melihatnya.',
       pathQuitarTitulo: 'Hapus WolfCore Dev dari PATH?',
       pathQuitarTexto:
         'php dan composer milik WolfCore Dev tidak akan lagi tersedia di terminal baru. Terminal yang sudah terbuka tidak berubah.',
@@ -1987,9 +1996,11 @@ export const id: Textos = {
   formSitioHttps: {
     titulo: 'HTTPS',
     https: 'Layani juga melalui HTTPS',
-    httpsAyuda: 'Dengan sertifikat khusus untuk domain dan aliasnya, ditandatangani oleh WolfCore Dev.',
+    httpsAyuda:
+      'Dengan sertifikat khusus untuk domain dan aliasnya, ditandatangani oleh WolfCore Dev.',
     redirigir: 'Alihkan ke HTTPS',
-    redirigirAyuda: 'Kunjungan melalui http dialihkan ke https. Terowongan publik tidak terpengaruh.',
+    redirigirAyuda:
+      'Kunjungan melalui http dialihkan ke https. Terowongan publik tidak terpengaruh.',
     redirigirDeshabilitado: 'Aktifkan HTTPS terlebih dahulu',
     sinAutoridadTitulo: 'Otoritas HTTPS belum terpasang',
     sinAutoridadTexto:
@@ -2076,10 +2087,12 @@ export const id: Textos = {
     launchSinCambios: 'File launch.json sudah memiliki konfigurasi ini.',
     launchEscribir: 'Tulis launch.json',
     launchCreado: 'launch.json dibuat di .vscode',
-    launchActualizado: (respaldo: string) => `launch.json diperbarui. Cadangan sebelumnya: ${respaldo}`,
+    launchActualizado: (respaldo: string) =>
+      `launch.json diperbarui. Cadangan sebelumnya: ${respaldo}`,
     phpStorm: 'Konfigurasi untuk PhpStorm',
     copiarPhpStorm: 'Salin konfigurasi PhpStorm',
-    errorNginx: (salida: string) => `Nginx menolak perubahan; dikembalikan ke sebelumnya. ${salida}`,
+    errorNginx: (salida: string) =>
+      `Nginx menolak perubahan; dikembalikan ke sebelumnya. ${salida}`,
   },
   nginxEditor: {
     etiqueta: 'Nginx',
@@ -2248,7 +2261,8 @@ export const id: Textos = {
     redLocalAviso:
       'FTP menerima koneksi dari jaringan lokal dan mengirim kata sandi serta file tanpa enkripsi. Gunakan hanya di jaringan tepercaya.',
     redLocalHost: 'atau IP perangkat ini di jaringan Anda',
-    servidorApagado: 'Server FTP sedang mati: tidak ada yang dapat terhubung sebelum Anda menyalakannya.',
+    servidorApagado:
+      'Server FTP sedang mati: tidak ada yang dapat terhubung sebelum Anda menyalakannya.',
     encender: 'Nyalakan FTP',
     urlEtiqueta: 'Alamat',
     urlAyuda: 'Alamat ini tidak menyertakan kata sandi: kata sandi akan diminta saat terhubung.',
@@ -2326,7 +2340,8 @@ export const id: Textos = {
         starttls: 'STARTTLS (port 587)',
         usuario: 'Pengguna',
         usuarioObligatorio: 'Masukkan pengguna.',
-        usuarioFijoAyuda: 'Penyedia ini selalu menggunakan pengguna ini; kata sandinya adalah milik akun Anda.',
+        usuarioFijoAyuda:
+          'Penyedia ini selalu menggunakan pengguna ini; kata sandinya adalah milik akun Anda.',
         clave: 'Kata sandi SMTP',
         claveGuardada: (f: string) => `Tersimpan: ••••${f}`,
         claveNueva: 'Masukkan kata sandi untuk menyimpannya',
@@ -2361,7 +2376,8 @@ export const id: Textos = {
         volvio: (n: string) =>
           `${n} kembali mengirim ke penangkap lokal, tetapi file .env tidak disentuh: variabel MAIL_* dari penyedia (dan kata sandinya, jika Anda menuliskannya) tetap ada. Tulis ulang blok emailnya.`,
         incluirClave: 'Tulis juga kata sandi ke dalam .env',
-        incluirClaveAyuda: 'Jika tidak dicentang, blok tidak menyertakan MAIL_PASSWORD dan Anda menambahkannya sendiri.',
+        incluirClaveAyuda:
+          'Jika tidak dicentang, blok tidak menyertakan MAIL_PASSWORD dan Anda menambahkannya sendiri.',
         sinClaveGuardada: 'Penyedia ini belum memiliki kata sandi tersimpan.',
         vista: 'Perubahan pada .env (kata sandi disamarkan)',
         textoPlano:
@@ -2382,8 +2398,7 @@ export const id: Textos = {
         desconocidoTexto: 'Tidak dapat memastikan apakah git melacak .env proyek ini.',
         aceptarVersionado: 'Tetap tulis',
         aceptarTitulo: 'Tulis ke .env yang dilacak git',
-        aceptarTexto:
-          'Jika git melacak .env, variabel ini dapat masuk ke repositori. Tetap tulis?',
+        aceptarTexto: 'Jika git melacak .env, variabel ini dapat masuk ke repositori. Tetap tulis?',
         aceptarConfirmar: 'Tetap tulis',
         confirmarTitulo: 'Tulis ke .env',
         confirmarTexto: (ruta: string) =>
@@ -2538,7 +2553,8 @@ export const id: Textos = {
         'Kunci akan tersimpan dalam teks biasa di .env proyek. Siapa pun yang memiliki akses ke folder tersebut dapat membacanya.',
       copiaPrevia:
         'File .env saat ini akan disalin terlebih dahulu di luar proyek (di folder data WolfCore Dev).',
-      sinClave: 'Penyedia ini memerlukan kunci: simpan terlebih dahulu sebelum menggunakannya di proyek.',
+      sinClave:
+        'Penyedia ini memerlukan kunci: simpan terlebih dahulu sebelum menggunakannya di proyek.',
       gitignoreFalta: 'File .gitignore proyek tidak mengabaikan .env.',
       gitignoreNoExiste: 'Proyek tidak memiliki .gitignore.',
       gitignoreOk: 'File .gitignore sudah mengabaikan .env.',
@@ -2614,8 +2630,6 @@ export const id: Textos = {
       yaInstalado: 'Model tersebut sudah terpasang',
       enCurso: 'Model tersebut sedang diunduh',
       confirmarTitulo: (modelo: string) => `Unduh ${modelo}?`,
-      confirmarTexto:
-        'Model biasanya berukuran beberapa GB (mulai dari 1 hingga lebih dari 40 GB tergantung ukurannya). Ollama tidak menampilkan ukuran sebelum dimulai: Anda akan melihatnya di bilah progres dan dapat membatalkannya kapan saja.',
       confirmar: 'Unduh',
     },
     progreso: {
@@ -2643,7 +2657,8 @@ export const id: Textos = {
       placeholder: 'Tulis pertanyaan singkat lalu tekan Enter',
       enviar: 'Kirim',
       respuesta: 'Respons',
-      pensando: 'Model sedang merespons… pertama kali mungkin memerlukan waktu lebih lama saat dimuat.',
+      pensando:
+        'Model sedang merespons… pertama kali mungkin memerlukan waktu lebih lama saat dimuat.',
       vacia: '(Model tidak mengembalikan teks.)',
       sinModelos: 'Unduh model terlebih dahulu untuk mengujinya.',
     },
@@ -2723,7 +2738,8 @@ export const id: Textos = {
       errorClonar: 'Gagal mengklon repositori',
       sinCancelar:
         'Proses klon tidak dapat dihentikan dari sini: tunggu hingga selesai (mungkin memakan waktu beberapa menit).',
-      sinGit: 'Git belum terpasang. Pasang terlebih dahulu (git-scm.com) lalu buka kembali dialog ini.',
+      sinGit:
+        'Git belum terpasang. Pasang terlebih dahulu (git-scm.com) lalu buka kembali dialog ini.',
     },
     github: {
       estadoGh: (usuario?: string) =>
@@ -2736,8 +2752,7 @@ export const id: Textos = {
       instalandoGh: 'Menginstal GitHub CLI…',
       ghInstalado: 'GitHub CLI terinstal. Sekarang masuklah ke akun Anda.',
       iniciarSesion: 'Masuk',
-      sesionAbierta:
-        'Jendela untuk masuk telah dibuka. Setelah selesai, tekan "Periksa lagi".',
+      sesionAbierta: 'Jendela untuk masuk telah dibuka. Setelah selesai, tekan "Periksa lagi".',
       comprobar: 'Periksa lagi',
       usarToken: 'Gunakan token',
       token: 'Token pribadi GitHub',
@@ -2848,7 +2863,8 @@ export const id: Textos = {
       verRegistro: 'Lihat log',
       ocultarRegistro: 'Sembunyikan log',
       listo: 'Proyek sudah siap.',
-      fallo: (paso: string) => `Gagal: ${paso}. Coba lagi, lewati, atau batalkan; tidak ada yang dibatalkan.`,
+      fallo: (paso: string) =>
+        `Gagal: ${paso}. Coba lagi, lewati, atau batalkan; tidak ada yang dibatalkan.`,
       cancelada: 'Persiapan dibatalkan. Anda dapat melanjutkannya dari kartu proyek.',
       incompleta: 'Masih ada langkah yang belum dijalankan.',
       errorCrear: 'Tidak dapat membuat proyek',
@@ -2857,8 +2873,7 @@ export const id: Textos = {
         'Resep proyek (wolfcore.yml) telah berubah sejak Anda mempercayainya. Coba lagi menggunakan resep yang tersimpan dari terakhir kali.',
       recargar: 'Tinjau resep baru',
       seguirGuardada: 'Lanjutkan dengan yang tersimpan',
-      soloLectura:
-        'Jenis, PHP, domain, versi, dan port mengikuti proyek: ubah melalui Edit.',
+      soloLectura: 'Jenis, PHP, domain, versi, dan port mengikuti proyek: ubah melalui Edit.',
     },
     tarjeta: {
       receta: 'Persiapan',
@@ -2911,7 +2926,8 @@ export const id: Textos = {
       atras: (n: number) => `${n} untuk ditarik`,
       adelante: (n: number) => `${n} untuk diunggah`,
       traer: 'Tarik perubahan',
-      traerAyuda: 'git pull tanpa penggabungan: jika ada perubahan lokal atau cabang divergen, tidak ada yang diubah.',
+      traerAyuda:
+        'git pull tanpa penggabungan: jika ada perubahan lokal atau cabang divergen, tidak ada yang diubah.',
       alDia: 'Sudah terbaru.',
       actualizado: 'Perubahan ditarik',
       sugeridosTitulo: 'Perubahan ditarik',
@@ -2930,14 +2946,14 @@ export const id: Textos = {
         titulo: 'Commit dengan pesan yang disarankan',
         proveedor: 'Penyedia AI',
         modelo: 'Model',
-        sinProveedores:
-          'Konfigurasikan penyedia AI cloud (layar AI) untuk menyarankan pesan.',
+        sinProveedores: 'Konfigurasikan penyedia AI cloud (layar AI) untuk menyarankan pesan.',
         privacidad:
           'Diff dari perubahan yang disiapkan dikirim ke penyedia, tanpa .env, kunci, sertifikat, file kredensial, atau biner, dan maksimal 20.000 karakter. Menggunakan sedikit token.',
         sugerir: 'Sarankan pesan',
         mensaje: 'Pesan (dapat diedit)',
         commit: 'Lakukan commit',
-        commitAyuda: 'Hanya yang sudah disiapkan (git add): tidak menambahkan file atau melakukan push.',
+        commitAyuda:
+          'Hanya yang sudah disiapkan (git add): tidak menambahkan file atau melakukan push.',
         hecho: 'Commit selesai dengan perubahan yang disiapkan.',
       },
     },
@@ -2965,7 +2981,8 @@ export const id: Textos = {
       nombrePlaceholder: 'Vite',
       comando: 'Perintah',
       comandoPlaceholder: 'npm run dev',
-      comandoAyuda: 'Program dan argumen, tanpa shell. Gunakan tanda kutip untuk argumen dengan spasi.',
+      comandoAyuda:
+        'Program dan argumen, tanpa shell. Gunakan tanda kutip untuk argumen dengan spasi.',
       cwd: 'Folder',
       cwdPlaceholder: 'raiz',
       cwdAyuda: 'raiz atau subfolder proyek (misalnya, frontend).',
@@ -3097,8 +3114,7 @@ export const id: Textos = {
     niveles: { error: 'ERROR', warning: 'WARNING', info: 'INFO' } as Record<string, string>,
     pausar: 'Jeda',
     reanudar: 'Lanjutkan',
-    pausadoNuevas: (n: number) =>
-      n === 1 ? '1 baris baru dijeda' : `${n} baris baru dijeda`,
+    pausadoNuevas: (n: number) => (n === 1 ? '1 baris baru dijeda' : `${n} baris baru dijeda`),
     copiar: 'Salin yang terlihat',
     copiadas: (n: number) => (n === 1 ? '1 baris disalin' : `${n} baris disalin`),
     limpiar: 'Bersihkan',
@@ -3222,7 +3238,8 @@ export const id: Textos = {
     },
   },
   herramientas: {
-    descripcion: 'Utilitas untuk kebutuhan sehari-hari. Berfungsi offline dan tanpa layanan eksternal.',
+    descripcion:
+      'Utilitas untuk kebutuhan sehari-hari. Berfungsi offline dan tanpa layanan eksternal.',
     buscar: 'Cari alat…',
     sinResultados: 'Tidak ada alat yang cocok dengan pencarian.',
     abrir: 'Buka',
@@ -3233,7 +3250,10 @@ export const id: Textos = {
     pendienteApi: 'Tertunda: inti belum mengekspos informasi ini ke antarmuka.',
     lista: {
       qr: { nombre: 'Generator QR', descripcion: 'Dari teks atau tautan terowongan; PNG.' },
-      json: { nombre: 'JSON', descripcion: 'Format, validasi, dan minifikasi, dengan tampilan pohon.' },
+      json: {
+        nombre: 'JSON',
+        descripcion: 'Format, validasi, dan minifikasi, dengan tampilan pohon.',
+      },
       regex: {
         nombre: 'Ekspresi reguler',
         descripcion: 'Penguji dengan kecocokan, grup, dan referensi.',
@@ -3285,7 +3305,8 @@ export const id: Textos = {
       },
       conversor: {
         nombre: 'Konverter dokumen',
-        descripcion: 'Konversi Word, Excel, PDF, CSV, dan Markdown tanpa meninggalkan perangkat ini.',
+        descripcion:
+          'Konversi Word, Excel, PDF, CSV, dan Markdown tanpa meninggalkan perangkat ini.',
       },
     },
     errores: {
@@ -3293,7 +3314,6 @@ export const id: Textos = {
       jsonInvalido: (linea: number, columna: number) =>
         `JSON tidak valid: periksa baris ${linea}, kolom ${columna}.`,
       banderas: 'Flag tidak valid: gunakan hanya d, g, i, m, s, u, v, atau y, tanpa pengulangan.',
-      regex: (detalle: string) => `Ekspresi tidak valid (${detalle}).`,
       trabajador: 'Tidak dapat menjalankan operasi di latar belakang.',
       diffLento: 'Teks terlalu berbeda untuk dibandingkan tepat waktu.',
       base64: 'Base64 tidak valid.',
@@ -3335,7 +3355,8 @@ export const id: Textos = {
       coincidencias: (n: number, truncado: boolean) =>
         `${n} kecocokan${truncado ? ' (hanya menampilkan yang pertama)' : ''}`,
       sinCoincidencias: 'Tidak ada kecocokan.',
-      tiempo: 'Ekspresi berjalan terlalu lama dan dihentikan (kemungkinan catastrophic backtracking).',
+      tiempo:
+        'Ekspresi berjalan terlalu lama dan dihentikan (kemungkinan catastrophic backtracking).',
       grupo: (n: number) => `Grup ${n}`,
       referencia: 'Referensi cepat',
       tabla: [
@@ -3511,7 +3532,6 @@ export const id: Textos = {
       regex: 'Ekspresi reguler',
       mayusculas: 'Bedakan huruf besar/kecil',
       incluir: 'Hanya file (pisahkan dengan koma, mis. *.php)',
-      excluir: 'Lewati (pisahkan dengan koma)',
       buscar: 'Cari',
       cancelar: 'Batal',
       buscando: 'Mencari…',
@@ -3628,7 +3648,8 @@ export const id: Textos = {
       optimizando: 'Mengoptimalkan…',
       antes: 'Sebelum',
       despues: 'Sesudah',
-      sinMejora: 'Ukuran PDF tidak menjadi lebih kecil setelah dioptimalkan: tidak ada file yang dibuat.',
+      sinMejora:
+        'Ukuran PDF tidak menjadi lebih kecil setelah dioptimalkan: tidak ada file yang dibuat.',
       sufijoOptimizado: '-dioptimalkan',
       omitidos: (n: number) =>
         `${n} tautan, folder tidak terbaca, atau file khusus tidak disertakan.`,
@@ -3664,7 +3685,8 @@ export const id: Textos = {
       fortaleza: {
         etiqueta: 'Kata sandi yang akan diukur',
         marcador: 'Masukkan kata sandi',
-        privacidad: 'Diukur langsung di sini: tidak ada yang keluar dari perangkat Anda atau disimpan.',
+        privacidad:
+          'Diukur langsung di sini: tidak ada yang keluar dari perangkat Anda atau disimpan.',
         mostrar: 'Tampilkan',
         ocultar: 'Sembunyikan',
         niveles: ['Sangat lemah', 'Lemah', 'Sedang', 'Kuat', 'Sangat kuat'],
@@ -3693,9 +3715,11 @@ export const id: Textos = {
           associatedYears: 'Hindari tahun yang berkaitan dengan Anda.',
           repeated: 'Hindari kata dan karakter yang berulang.',
           longerKeyboardPattern: 'Gunakan pola papan ketik yang lebih panjang dan ubah arahnya.',
-          anotherWord: 'Tambahkan satu atau dua kata lagi; kata yang jarang dipakai lebih membantu.',
+          anotherWord:
+            'Tambahkan satu atau dua kata lagi; kata yang jarang dipakai lebih membantu.',
           useWords: 'Beberapa kata acak membentuk kata sandi yang kuat.',
-          noNeed: 'Kata sandi bisa tetap aman tanpa simbol atau angka: yang terpenting adalah panjangnya.',
+          noNeed:
+            'Kata sandi bisa tetap aman tanpa simbol atau angka: yang terpenting adalah panjangnya.',
         },
       },
       auditar: {
@@ -3835,7 +3859,8 @@ export const id: Textos = {
       servicios: 'Layanan',
     },
     reparaciones: {
-      cambiar_puerto: 'Mengubah port WolfCore Dev ke port yang kosong. Program lain tidak disentuh.',
+      cambiar_puerto:
+        'Mengubah port WolfCore Dev ke port yang kosong. Program lain tidak disentuh.',
       puerto_manual:
         'Memindahkan port WolfCore Dev keluar dari rentang cadangan. Membebaskan rentang tersebut sepenuhnya keputusan Anda menggunakan perintah yang ditampilkan.',
       detener_iis:
@@ -3856,8 +3881,6 @@ export const id: Textos = {
         'Pasang Visual Studio Build Tools (beserta alat C++) dengan perintah yang ditampilkan: ukurannya beberapa GB dan meminta izin administrator, jadi sepenuhnya keputusan Anda.',
       antivirus:
         'Menambahkan folder data ke pengecualian antivirus sepenuhnya keputusan Anda, menggunakan perintah yang ditampilkan.',
-      firewall:
-        'Menghapus aturan tersebut sepenuhnya keputusan Anda, menggunakan perintah yang ditampilkan di konsol administrator. WolfCore Dev tidak pernah mengubah firewall.',
       reintentar_servicio: 'Memulai ulang layanan.',
       firefox_confianza:
         'Menambahkan preferensi di user.js pada setiap profil Firefox agar memercayai otoritas Windows, dengan salinan cadangan terlebih dahulu. prefs.js tidak disentuh dan profil yang terbuka dilewati.',
@@ -3875,7 +3898,8 @@ export const id: Textos = {
         global: 'Juga sebagai variabel pengguna (untuk terminal dan program lain)',
         confirmarActivar:
           'NODE_EXTRA_CA_CERTS akan ditetapkan sebagai variabel pengguna Anda. Berlaku untuk program yang dibuka setelahnya; akan dihapus saat opsi ini dimatikan.',
-        confirmarDesactivar: 'Variabel NODE_EXTRA_CA_CERTS yang ditambahkan WolfCore Dev akan dihapus.',
+        confirmarDesactivar:
+          'Variabel NODE_EXTRA_CA_CERTS yang ditambahkan WolfCore Dev akan dihapus.',
       },
       python: {
         titulo: 'Python',
@@ -3903,8 +3927,7 @@ export const id: Textos = {
         resultadoOk: (n: number) => `Selesai pada ${plural(n, 'profil')}.`,
         resultadoAbiertos: (n: number) =>
           `${plural(n, 'profil dilewati')} karena Firefox sedang terbuka. Tutup lalu coba lagi.`,
-        resultadoError: (n: number) =>
-          `${plural(n, 'profil tidak dapat diubah')}.`,
+        resultadoError: (n: number) => `${plural(n, 'profil tidak dapat diubah')}.`,
       },
       confirmar: 'Konfirmasi',
       cancelar: 'Batal',
@@ -3918,7 +3941,8 @@ export const id: Textos = {
     irServicios: 'Buka Layanan',
     pestanas: { ini: 'php.ini', extensiones: 'Ekstensi' },
     rapidosTitulo: 'Nilai cepat',
-    rapidosAyuda: 'Diterapkan ke teks di bawah; tidak ada yang disimpan sampai Anda mengonfirmasi diff.',
+    rapidosAyuda:
+      'Diterapkan ke teks di bawah; tidak ada yang disimpan sampai Anda mengonfirmasi diff.',
     aplicarRapidos: 'Terapkan ke teks',
     sinValor: 'belum diatur',
     rapidos: {
@@ -3976,7 +4000,8 @@ export const id: Textos = {
     version: (v: string) => `v${v}`,
     versionDesconocida: 'Versi tidak diketahui',
     verVersion: 'Lihat versi',
-    verVersionAyuda: 'Menjalankan program dengan --version (tidak dijalankan otomatis saat layar dibuka).',
+    verVersionAyuda:
+      'Menjalankan program dengan --version (tidak dijalankan otomatis saat layar dibuka).',
     origen: {
       propio: 'Dipasang oleh WolfCore Dev',
       'npm-usuario': 'npm global pengguna',
@@ -4000,7 +4025,8 @@ export const id: Textos = {
       titulo: (nombre: string) => `Pasang ${nombre}?`,
       texto: (paquete: string) =>
         `Versi terbaru ${paquete} yang diterbitkan akan dipasang dari registry.npmjs.org menggunakan Node milik WolfCore Dev di dalam folder datanya.`,
-      aislado: 'Tidak menggunakan konfigurasi npm Anda dan tidak menyentuh npm global Anda. Dapat memakan waktu beberapa menit.',
+      aislado:
+        'Tidak menggunakan konfigurasi npm Anda dan tidak menyentuh npm global Anda. Dapat memakan waktu beberapa menit.',
       aceptar: 'Pasang',
       hecho: (nombre: string) => `${nombre} berhasil dipasang.`,
     },
@@ -4082,7 +4108,8 @@ export const id: Textos = {
     pestanaErrores: 'Kesalahan',
     erroresDescripcion:
       'Kesalahan dari log PHP, Nginx, laravel.log, CodeIgniter 3, dan Python yang dikelompokkan: kesalahan yang sama tampil sekali dengan jumlah kemunculannya.',
-    erroresVacio: 'Tidak ada kesalahan di log. Kesalahan akan muncul di sini segera setelah ditulis.',
+    erroresVacio:
+      'Tidak ada kesalahan di log. Kesalahan akan muncul di sini segera setelah ditulis.',
     erroresElegir: 'Pilih satu kesalahan dari daftar.',
     actualizar: 'Perbarui',
     abrirEditor: 'Buka di editor',
@@ -4256,7 +4283,8 @@ export const id: Textos = {
       tituloRama: (v: string) => `Versi baru: ${v}`,
       ninguna: 'tidak ada',
       instancia: (id: string) => `Instans ${id} akan diperbarui. Sebelum mengubah apa pun:`,
-      pasoInstalar: (v: string) => `${v} dipasang berdampingan dengan versi saat ini (yang tidak dihapus);`,
+      pasoInstalar: (v: string) =>
+        `${v} dipasang berdampingan dengan versi saat ini (yang tidak dihapus);`,
       pasoVolcados: 'setiap basis data dicadangkan (dump) menggunakan versi saat ini;',
       pasoCopia: 'instans dihentikan dan seluruh folder data disalin (cadangan dingin);',
       pasoArrancar: 'dijalankan dengan versi baru dan diperiksa apakah merespons;',
@@ -4278,8 +4306,7 @@ export const id: Textos = {
       copiarDesde: (id: string) =>
         `Salin data dari ${id} (di-dump lalu dipulihkan; aslinya tidak disentuh)`,
       vacia: 'Mulai kosong',
-      ramaNota:
-        'Pengguna basis data tidak disalin; proyek harus diarahkan ke port instans baru.',
+      ramaNota: 'Pengguna basis data tidak disalin; proyek harus diarahkan ke port instans baru.',
       crearInstancia: 'Buat instans baru',
       confirmar: 'Perbarui dengan cadangan',
       hecho: (v: string) => `${v} diperbarui.`,
@@ -4301,7 +4328,8 @@ export const id: Textos = {
       bloqueada: 'Tidak dapat dicentang',
       marcadas: (n: number, tam: string) => `${n} versi · ${tam}`,
       destinoTitulo: 'Tindakan untuk versi ini',
-      papelera: 'Pindahkan ke tempat sampah: disimpan 7 hari dan tetap memakai ruang disk hingga saat itu',
+      papelera:
+        'Pindahkan ke tempat sampah: disimpan 7 hari dan tetap memakai ruang disk hingga saat itu',
       definitivo: 'Hapus permanen: langsung membebaskan ruang dan tidak dapat dibatalkan',
       avisoDefinitivo:
         'Penghapusan permanen: untuk memakai versi ini lagi, Anda harus mengunduhnya kembali.',
@@ -4324,7 +4352,8 @@ export const id: Textos = {
       },
       resultadoTitulo: 'Hasil',
       liberadas: (tam: string) => `${tam} berhasil dibebaskan.`,
-      enPapelera: (tam: string) => `${tam} berada di tempat sampah (dihapus otomatis setelah 7 hari).`,
+      enPapelera: (tam: string) =>
+        `${tam} berada di tempat sampah (dihapus otomatis setelah 7 hari).`,
       saltada: (v: string, motivo: string) => `${v}: ${motivo}`,
       pendientes: (n: number) =>
         `${n} versi sudah keluar dari bin tetapi masih ada sisa file yang akan dicoba hapus lagi saat aplikasi dibuka.`,
@@ -4332,7 +4361,8 @@ export const id: Textos = {
       ajeno: (lista: string) =>
         `Berisi paket yang Anda pasang di dalamnya: ${lista}. Akan hilang jika dihapus.`,
       incluirAjeno: 'Tetap hapus meski paket tersebut hilang',
-      sinCatalogo: 'Sudah tidak ada di katalog: jika dihapus, Anda tidak dapat mengunduhnya kembali.',
+      sinCatalogo:
+        'Sudah tidak ada di katalog: jika dihapus, Anda tidak dapat mengunduhnya kembali.',
       papeleraTitulo: 'Di tempat sampah',
       recuperar: 'Pulihkan',
       recuperada: (v: string) => `${v} dipulihkan.`,
@@ -4431,7 +4461,26 @@ export const id: Textos = {
     tema: 'Tema',
     temas: { sistema: 'Sistem', claro: 'Terang', oscuro: 'Gelap' },
     idioma: 'Bahasa',
-    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語', ko: '한국어', hi: 'हिन्दी', tr: 'Türkçe', id: 'Bahasa Indonesia', pl: 'Polski', nl: 'Nederlands', uk: 'Українська' },
+    idiomas: {
+      es: 'Español',
+      en: 'English',
+      pt: 'Português',
+      fr: 'Français',
+      de: 'Deutsch',
+      it: 'Italiano',
+      ru: 'Русский',
+      zh: '中文 简体',
+      ja: '日本語',
+      ko: '한국어',
+      hi: 'हिन्दी',
+      tr: 'Türkçe',
+      id: 'Bahasa Indonesia',
+      pl: 'Polski',
+      nl: 'Nederlands',
+      uk: 'Українська',
+    },
+    /** Aviso junto a los idiomas que no son es, en, pt ni fr (la traducción es automática y revisada). */
+    traduccionAutomatica: 'Terjemahan mesin, telah ditinjau',
     acento: 'Warna aksen',
     acentos: {
       indigo: 'Indigo',
@@ -4443,10 +4492,6 @@ export const id: Textos = {
     },
     acentoPropio: (color: string) => `Kustom (${color})`,
     errorGuardar: 'Preferensi tidak dapat disimpan',
-    asistente: 'Panduan penggunaan pertama',
-    asistenteAyuda:
-      'Ulangi langkah awal: folder proyek, komponen dasar, CA, GitHub, dan folder terpantau.',
-    asistenteAbrir: 'Buka panduan',
   },
   paleta: {
     titulo: 'Palet perintah',
@@ -4476,13 +4521,11 @@ export const id: Textos = {
     nuevoProyecto: 'Buat proyek baru',
     tema: (tema: string) => `Tema: ${tema}`,
     idioma: (idioma: string) => `Bahasa: ${idioma}`,
-    asistente: 'Buka panduan penggunaan pertama',
   },
   nuevoProyecto: {
     titulo: 'Proyek baru',
     boton: 'Proyek baru',
-    descripcion:
-      'Buat proyek dari awal: folder, situs dengan HTTPS, basis data, dan koneksinya.',
+    descripcion: 'Buat proyek dari awal: folder, situs dengan HTTPS, basis data, dan koneksinya.',
     pasos: { tipo: 'Jenis', datos: 'Data', resumen: 'Ringkasan', crear: 'Membuat' },
     tipos: {
       laravel: {
@@ -4502,7 +4545,10 @@ export const id: Textos = {
         nombre: 'FastAPI',
         descripcion: 'Lingkungan virtual, requirements.txt, dan proses uvicorn.',
       },
-      wordpress: { nombre: 'WordPress', descripcion: 'Unduhan resmi dengan wp-config.php siap pakai.' },
+      wordpress: {
+        nombre: 'WordPress',
+        descripcion: 'Unduhan resmi dengan wp-config.php siap pakai.',
+      },
       estatico: {
         nombre: 'Situs statis',
         descripcion: 'HTML dan CSS dilayani Nginx, tanpa basis data.',
@@ -4511,7 +4557,8 @@ export const id: Textos = {
     campos: {
       nombre: 'Nama proyek',
       nombrePlaceholder: 'toko-saya',
-      nombreAyuda: (dominio: string) => `Akan menjadi ${dominio}: huruf kecil, angka, dan tanda hubung.`,
+      nombreAyuda: (dominio: string) =>
+        `Akan menjadi ${dominio}: huruf kecil, angka, dan tanda hubung.`,
       carpeta: 'Folder induk',
       elegirCarpeta: 'Pilih folder…',
       cambiarCarpeta: 'Ubah folder…',
@@ -4524,8 +4571,7 @@ export const id: Textos = {
       sinBase: 'Tanpa basis data',
       instancia: 'Server basis data',
       apagada: 'mati',
-      apagadaAyuda:
-        'Server tersebut sedang mati: nyalakan di Layanan sebelum membuat proyek.',
+      apagadaAyuda: 'Server tersebut sedang mati: nyalakan di Layanan sebelum membuat proyek.',
       sinMotores: 'Tidak ada server basis data terpasang untuk jenis proyek ini.',
       nombreBase: 'Nama basis data',
       starterKit: 'Starter kit',
@@ -4651,7 +4697,8 @@ export const id: Textos = {
       puerto: 'Port server sumber',
       usuario: 'Pengguna',
       clave: 'Kata sandi',
-      claveAyuda: 'Kosongkan jika pengguna tidak memiliki kata sandi (seperti root di Laragon atau XAMPP).',
+      claveAyuda:
+        'Kosongkan jika pengguna tidak memiliki kata sandi (seperti root di Laragon atau XAMPP).',
       existe: 'sudah ada di tujuan',
       reemplazar: 'Ganti (dibuat cadangan sebelumnya)',
       noSeToca: 'Tidak disentuh jika tidak dicentang.',
@@ -4670,12 +4717,12 @@ export const id: Textos = {
         `${n} situs akan ditautkan di foldernya saat ini. Tidak ada file yang dipindahkan, disalin, atau diubah.`,
       sinConfianza:
         'Tidak ada situs impor yang menjalankan resep hingga Anda mencentang «Saya memercayai repositori ini».',
-      hosts:
-        'Nginx dan file hosts akan diperbarui (Windows mungkin meminta izin administrator).',
+      hosts: 'Nginx dan file hosts akan diperbarui (Windows mungkin meminta izin administrator).',
       basesNuevas: (nombres: string) => `Basis data yang akan disalin: ${nombres}.`,
       basesReemplazo: (nombres: string) =>
         `Basis data berikut yang sudah ada akan diganti: ${nombres}. Sebelumnya dibuat cadangan masing-masing.`,
-      basesSinTocar: (nombres: string) => `Basis data berikut yang sudah ada tidak akan disentuh: ${nombres}.`,
+      basesSinTocar: (nombres: string) =>
+        `Basis data berikut yang sudah ada tidak akan disentuh: ${nombres}.`,
       origen: (puerto: number, usuario: string) =>
         `Akan di-dump dari server program lain (127.0.0.1:${puerto}, pengguna ${usuario}). Dibaca tanpa mengubahnya.`,
       sinBases: 'Tidak ada basis data yang akan diimpor.',
@@ -4695,8 +4742,7 @@ export const id: Textos = {
       phpDistinto: (v: string) => `Menggunakan PHP ${v} (versi asli tidak terpasang).`,
       sinAplicar:
         'Nginx atau file hosts belum sepenuhnya diperbarui: periksa pemberitahuan di Proyek lalu coba lagi.',
-      resumen: (s: number, b: number) =>
-        `${s} situs diimpor, ${b} basis data diimpor.`,
+      resumen: (s: number, b: number) => `${s} situs diimpor, ${b} basis data diimpor.`,
       errorImportar: 'Gagal mengimpor',
     },
   },
@@ -4725,7 +4771,8 @@ export const id: Textos = {
       sinBase: 'Proyek tidak mendeklarasikan basis data: tidak ada skema yang disimpan.',
       avisoMongodb: 'Proyek ini menggunakan MongoDB: skemanya (koleksi dan indeks) tidak disimpan.',
       incluirDeTodosModos: 'Tetap sertakan',
-      avisoIncluir: 'Jika file tersebut berisi kunci asli, kunci itu akan tersimpan di dalam templat.',
+      avisoIncluir:
+        'Jika file tersebut berisi kunci asli, kunci itu akan tersimpan di dalam templat.',
       guardar: 'Simpan templat',
       guardada: (nombre: string) => `Templat «${nombre}» disimpan.`,
       errorGuardar: 'Templat tidak dapat disimpan',
@@ -4736,8 +4783,7 @@ export const id: Textos = {
       titulo: 'Templat saya',
       ayuda:
         'Mulai proyek baru menggunakan resep, pengaturan, dan skema (tanpa data) dari proyek yang sudah Anda miliki.',
-      vacia:
-        'Belum ada templat. Simpan proyek sebagai templat melalui menu pada kartunya.',
+      vacia: 'Belum ada templat. Simpan proyek sebagai templat melalui menu pada kartunya.',
       conArchivosEtiqueta: 'dengan file',
       soloEsquema: 'resep dan skema',
       conBase: (motor: string) => `basis data ${motor} tanpa data`,
@@ -4839,7 +4885,8 @@ export const id: Textos = {
     guardar: 'Tinjau dan simpan…',
     cerrar: 'Tutup',
     cerrarTitulo: 'Tutup tanpa menyimpan?',
-    cerrarTexto: (n: number) => `Ada ${n} perubahan yang belum disimpan. Jika ditutup, perubahan akan hilang.`,
+    cerrarTexto: (n: number) =>
+      `Ada ${n} perubahan yang belum disimpan. Jika ditutup, perubahan akan hilang.`,
     cerrarDescartar: 'Tutup dan buang',
     seguirEditando: 'Lanjut mengedit',
     confirmar: {
@@ -4861,57 +4908,9 @@ export const id: Textos = {
     guardadoConCopia: '.env disimpan; versi sebelumnya disimpan sebagai salinan.',
   },
   asistenteInicio: {
-    titulo: 'Selamat datang di WolfCore Dev',
-    subtitulo:
-      'Lima langkah untuk menyiapkan lingkungan Anda. Tidak ada yang dipasang atau diubah hingga Anda menekan tombol pada setiap langkah.',
     paso: (n: number, total: number) => `Langkah ${n} dari ${total}`,
     anterior: 'Sebelumnya',
     siguiente: 'Berikutnya',
-    omitirTodo: 'Lewati panduan',
-    terminar: 'Selesai',
-    hecho: 'Selesai',
-    reabrir: 'Anda dapat membukanya kembali dari Pengaturan.',
-    pasos: {
-      carpeta: {
-        titulo: 'Folder proyek',
-        texto:
-          'Tempat Anda menyimpan proyek. Repositori baru dikloning ke sini dan folder ini dipantau pada langkah terakhir.',
-        elegir: 'Pilih folder',
-        actual: (ruta: string) => `Folder dipilih: ${ruta}`,
-        guardada: (ruta: string) => `Folder saat ini: ${ruta}`,
-        ninguna: 'Belum dipilih: menggunakan C:\\Proyectos jika ada.',
-      },
-      basicos: {
-        titulo: 'Pasang komponen dasar',
-        texto:
-          'Nginx, PHP 8.4, Composer, dan Node LTS dari sumber resmi dengan hash terverifikasi. Masing-masing hanya dipasang saat Anda menekan tombolnya.',
-        instalado: 'Terpasang',
-        instalar: (version: string) => `Pasang ${version}`,
-        sinVersion: 'Tidak ada versi di katalog',
-        cargando: 'Mencari versi…',
-        nombres: { nginx: 'Nginx', php: 'PHP 8.4', composer: 'Composer', node: 'Node LTS' },
-      },
-      ca: {
-        titulo: 'Percayai otoritas lokal',
-        texto:
-          'Agar situs .test terbuka lewat HTTPS tanpa peringatan, Windows harus memercayai otoritas WolfCore Dev. Windows akan meminta konfirmasi Anda.',
-        confiar: 'Percayai CA',
-        confiada: 'Windows sudah memercayai otoritas lokal.',
-      },
-      github: {
-        titulo: 'Hubungkan GitHub',
-        texto:
-          'Untuk melihat repositori Anda dan mengkloningnya dengan satu klik. Gunakan sesi GitHub CLI atau token pribadi yang disimpan terenkripsi di komputer ini.',
-      },
-      vigilar: {
-        titulo: 'Pantau folder',
-        texto:
-          'WolfCore Dev akan menyarankan pemasangan setiap folder baru yang muncul di folder proyek. Tidak ada yang dipasang tanpa konfirmasi Anda.',
-        activar: 'Pantau folder ini',
-        activa: (ruta: string) => `Memantau ${ruta}`,
-        sinCarpeta: 'Pilih folder proyek terlebih dahulu (langkah 1).',
-      },
-    },
   },
   /** Hasil impor atau ekspor profil (D26). */
   perfiles: {
@@ -5080,8 +5079,7 @@ export const id: Textos = {
         comparar: 'Bandingkan dengan hash di komputer asal sebelum menerimanya.',
         importar: 'Impor CA dari profil',
         noImportar: 'Tanpa mengimpornya, komputer ini memakai CA saat ini atau membuat yang baru.',
-        ajena:
-          'CA ini memiliki batasan nama yang bukan milik WolfCore Dev: tidak dapat diimpor.',
+        ajena: 'CA ini memiliki batasan nama yang bukan milik WolfCore Dev: tidak dapat diimpor.',
         sinRestricciones:
           'CA ini tidak memiliki batasan nama: dapat menandatangani sertifikat untuk situs web mana pun, termasuk bank dan email. Impor hanya jika milik Anda dan hash-nya cocok.',
         aceptarSin: 'Saya memahami risikonya: ini CA saya dan hash-nya cocok',
@@ -5092,7 +5090,8 @@ export const id: Textos = {
       },
       frase: {
         titulo: 'Frasa sandi profil',
-        texto: 'Profil memuat basis data atau CA terenkripsi. Masukkan frasa sandi yang Anda pilih saat mengekspor.',
+        texto:
+          'Profil memuat basis data atau CA terenkripsi. Masukkan frasa sandi yang Anda pilih saat mengekspor.',
         campo: 'Frasa sandi',
         omitirBases: 'Impor tanpa basis data',
         nota: 'Frasa sandi hanya dipakai di jendela ini: tidak disimpan dan dihapus setelah selesai atau ditutup.',
@@ -5118,7 +5117,8 @@ export const id: Textos = {
           reemplazar_ca: 'Konfirmasi terpisah bahwa Anda ingin mengganti CA komputer ini.',
         },
       },
-      progreso: 'Mengimpor profil… Jangan tutup jendela: dengan basis data atau unduhan dapat memakan waktu.',
+      progreso:
+        'Mengimpor profil… Jangan tutup jendela: dengan basis data atau unduhan dapat memakan waktu.',
       fases: {
         copia: 'Menyalin item yang akan diganti',
         versiones: 'Memasang versi',
@@ -5188,8 +5188,7 @@ export const id: Textos = {
       tunel_con_nombre: 'Terowongan bernama tidak ikut: kembali ke terowongan cepat.',
       php_ini: 'Beberapa pengaturan php.ini tidak diimpor.',
       xdebug: 'Pengaturan Xdebug tidak valid dan dihapus.',
-      nginx_desactivado:
-        'Aturan Nginx tersimpan tetapi belum diterapkan: tinjau di editor.',
+      nginx_desactivado: 'Aturan Nginx tersimpan tetapi belum diterapkan: tinjau di editor.',
       carpeta_no_existe: 'Foldernya tidak ada di komputer ini: cari lokasinya.',
       correo_sin_proveedor: 'Penyedia SMTP tidak diimpor: menggunakan penangkap email.',
       sitio_invalido: 'Situs tidak valid.',
@@ -5219,8 +5218,7 @@ export const id: Textos = {
       sin_ca: 'Tidak ada CA di komputer ini: profil diekspor tanpanya.',
       ca_no_importada: 'CA dari profil tidak diimpor: menggunakan CA komputer ini atau CA baru.',
       certificados: 'Sertifikat tidak dapat disiapkan: {detalle}',
-      aplicar:
-        'Situs yang diimpor belum sepenuhnya diterapkan (Nginx: {nginx}; hosts: {hosts}).',
+      aplicar: 'Situs yang diimpor belum sepenuhnya diterapkan (Nginx: {nginx}; hosts: {hosts}).',
     },
     quitado: {
       ia: 'Penyedia AI {id}: menggunakan URL kustom.',

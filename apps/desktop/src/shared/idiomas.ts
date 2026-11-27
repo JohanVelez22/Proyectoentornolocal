@@ -33,6 +33,14 @@ export const IDIOMAS: readonly InfoIdioma[] = [
   { id: 'uk', nombreNativo: 'Українська', localeIntl: 'uk-UA' },
 ] satisfies readonly InfoIdioma[];
 
+/** Idiomas con traducción propia y completa: el resto son traducciones automáticas revisadas. */
+export const IDIOMAS_BASE = ['es', 'en', 'pt', 'fr'] as const satisfies readonly IdiomaUi[];
+
+/** `true` en es, en, pt y fr, los idiomas completos y obligatorios. */
+export function esIdiomaBase(i: IdiomaUi): boolean {
+  return (IDIOMAS_BASE as readonly string[]).includes(i);
+}
+
 /** Idioma de la interfaz para el locale del sistema (`pt-PT` → pt, `fr-CA` → fr…); si no, español. */
 export function idiomaDeLocale(locale: string): IdiomaUi {
   const base = locale.trim().split(/[-_]/)[0]?.toLowerCase() ?? '';

@@ -4,14 +4,14 @@
  * WolfCore Dev bleiben unübersetzt. Formelle Anrede (Sie), niemals „du“; außerhalb von Git
  * immer „Version“ statt „Zweig“.
  */
-import type { Textos } from './es';
+import type { TextosParciales } from './es';
 
-const plural = (n: number, eins: string, mehrere: string): string => `${n} ${n === 1 ? eins : mehrere}`;
+const plural = (n: number, eins: string, mehrere: string): string =>
+  `${n} ${n === 1 ? eins : mehrere}`;
 
-export const de: Textos = {
+export const de: TextosParciales = {
   app: {
     nombre: 'WolfCore Dev',
-    lema: 'PHP und Nginx ohne Aufwand',
     version: 'Version',
   },
   nav: {
@@ -100,17 +100,20 @@ export const de: Textos = {
       'git.destino_es_archivo': 'Das Ziel ist eine Datei, kein Ordner.',
       'git.no_encontrado': 'git wurde nicht gefunden: Installieren Sie es zuerst.',
       'git.gh_no_encontrado': 'GitHub CLI (gh) wurde nicht gefunden: Installieren Sie es zuerst.',
-      'git.plazo': 'Das Klonen hat das Zeitlimit von {minutos} Min. überschritten und wurde abgebrochen.',
+      'git.plazo':
+        'Das Klonen hat das Zeitlimit von {minutos} Min. überschritten und wurde abgebrochen.',
       'git.token_invalido': 'Das GitHub-Token ist ungültig.',
       'git.url_con_credenciales':
         'Die URL darf keinen Benutzernamen und kein Passwort enthalten: Verwenden Sie stattdessen ein separates Token.',
       'servicios.desconocido': 'Unbekannter Dienst: {id}.',
-      'servicios.no_instalado': '{nombre} ist nicht installiert. Installieren Sie es unter Dienste.',
+      'servicios.no_instalado':
+        '{nombre} ist nicht installiert. Installieren Sie es unter Dienste.',
       'servicios.puerto_invalido': 'Der Port muss eine Zahl zwischen 1024 und 65535 sein.',
       'servicios.puerto_asignado': 'Port {puerto} ist bereits {otro} zugewiesen.',
       'servicios.puerto_ocupado':
         'Port {puerto} wird von {nombre} (PID {pid}) verwendet. Beenden Sie den Prozess oder wählen Sie einen anderen Port.',
-      'servicios.confirmacion_borrado': 'Geben Sie "{id}" ein, um die Daten von {nombre} zu löschen.',
+      'servicios.confirmacion_borrado':
+        'Geben Sie "{id}" ein, um die Daten von {nombre} zu löschen.',
       'servicios.ftp_no_disponible': 'Der FTP-Server ist nicht verfügbar.',
       'sistema.sin_cliente_ftp':
         'Auf diesem Computer ist kein FTP-Client verknüpft. Installieren Sie einen (z. B. FileZilla) oder kopieren Sie die Adresse.',
@@ -149,7 +152,8 @@ export const de: Textos = {
       'instancias.ultima': '{id} ist die einzige Instanz und kann nicht entfernt werden.',
       'instancias.sin_puerto_libre': 'Es wurde kein freier Port für die Instanz gefunden.',
       'instancias.confirmacion': 'Geben Sie "{id}" ein, um fortzufahren.',
-      'instancias.sin_datos': '{id} hat keine Daten im Ordner: Wählen Sie eine Sicherung zur Wiederherstellung aus.',
+      'instancias.sin_datos':
+        '{id} hat keine Daten im Ordner: Wählen Sie eine Sicherung zur Wiederherstellung aus.',
       'instancias.respaldo_no_existe': 'Diese Sicherung von {id} existiert nicht.',
       'instancias.respaldo_en_uso':
         'Diese Kopie wird von {id} benötigt, die gesperrt ist: Beheben Sie dies zuerst.',
@@ -174,7 +178,8 @@ export const de: Textos = {
         'Es existiert bereits ein Ordner für {servicio} {version} in bin: Er wird nicht überschrieben. Entfernen Sie ihn, bevor Sie den anderen wiederherstellen.',
       'bd.encender_servicio': 'Starten Sie {nombre}, um dessen Datenbanken zu verwalten.',
       'bd.sin_credenciales': 'Für {nombre} sind keine Zugangsdaten gespeichert.',
-      'bd.confirmacion_borrado': 'Geben Sie zum Löschen der Datenbank {nombre} deren exakten Namen ein.',
+      'bd.confirmacion_borrado':
+        'Geben Sie zum Löschen der Datenbank {nombre} deren exakten Namen ein.',
       'bd.usuario_privilegiado':
         'Der Benutzer {usuario} ist ein Administrator oder eine Systemrolle: Wählen Sie einen eigenen Benutzer für das Projekt.',
       'bd.usuario_en_uso':
@@ -183,7 +188,8 @@ export const de: Textos = {
         'Der Benutzer {usuario} existiert, kann sich aber nicht anmelden (Rolle ohne LOGIN oder Zugriffsregel des Servers). Es wurde nichts geändert.',
       'bd.usuario_clave_distinta':
         'Der Benutzer {usuario} existiert bereits mit einem anderen Passwort. Verwenden Sie das aktuelle Passwort: Es wird nicht geändert, um andere Projekte nicht zu trennen.',
-      'bd.mongosh_faltante': 'mongosh fehlt: Installieren Sie es unter Dienste, um MongoDB zu verwalten.',
+      'bd.mongosh_faltante':
+        'mongosh fehlt: Installieren Sie es unter Dienste, um MongoDB zu verwalten.',
       'tuneles.sitio_no_encontrado': 'Das Projekt wurde nicht gefunden.',
       'tuneles.confirmacion_requerida':
         'Das Veröffentlichen von {dominio} im Internet muss in WolfCore Dev bestätigt werden.',
@@ -203,9 +209,12 @@ export const de: Textos = {
         'Cloudflare hat {registrado} statt {dominio} registriert: Die Domain gehört nicht zur autorisierten Zone. Löschen Sie diesen Eintrag im Cloudflare-Dashboard.',
       'tuneles.cloudflare_conexiones_activas':
         'Der Tunnel {nombre} hat aktive Verbindungen (cloudflared erfordert -f zum Löschen). Schließen Sie ihn auf allen Geräten, auf denen er geöffnet ist, und versuchen Sie es erneut, oder verwenden Sie „Nur hier vergessen“.',
-      'tuneles.nombre_en_uso': 'Der Tunnel {nombre} wird bereits von einer anderen Website verwendet.',
-      'tuneles.dominio_en_uso': 'Die Domain {dominio} wird bereits von einer anderen Website verwendet.',
-      'tuneles.confirmacion_olvidar': 'Das Vergessen oder Neuerstellen des Tunnels {nombre} muss bestätigt werden.',
+      'tuneles.nombre_en_uso':
+        'Der Tunnel {nombre} wird bereits von einer anderen Website verwendet.',
+      'tuneles.dominio_en_uso':
+        'Die Domain {dominio} wird bereits von einer anderen Website verwendet.',
+      'tuneles.confirmacion_olvidar':
+        'Das Vergessen oder Neuerstellen des Tunnels {nombre} muss bestätigt werden.',
       'tuneles.cloudflare_fallo': 'cloudflared konnte den Vorgang nicht abschließen: {detalle}',
       'tuneles.credencial_no_protegida':
         'Die Zugangsdaten konnten nicht auf den Benutzer beschränkt werden und wurden daher nicht verwendet.',
@@ -216,7 +225,8 @@ export const de: Textos = {
       'tuneles.ngrok_no_instalado':
         'ngrok ist auf diesem Computer nicht installiert. Installieren Sie es von ngrok.com und versuchen Sie es erneut.',
       'tuneles.ngrok_sin_token': 'Das ngrok-Token fehlt: Speichern Sie es in den Tunnel-Optionen.',
-      'tuneles.expose_sin_token': 'Das Expose-Token fehlt: Speichern Sie es in den Tunnel-Optionen.',
+      'tuneles.expose_sin_token':
+        'Das Expose-Token fehlt: Speichern Sie es in den Tunnel-Optionen.',
       'tuneles.tailscale_no_instalado':
         'Tailscale ist auf diesem Computer nicht installiert. WolfCore Dev installiert es nicht: Installieren Sie es von tailscale.com.',
       'tuneles.tailscale_sin_sesion':
@@ -232,7 +242,8 @@ export const de: Textos = {
         'Es besteht keine Verbindung zu einem lokalen Netzwerk (WLAN oder Ethernet). Verbinden Sie sich mit einem Netzwerk und versuchen Sie es erneut.',
       'lan.ip_no_valida':
         'Die Adresse {ip} gehört nicht mehr zu Ihrem lokalen Netzwerk. Öffnen Sie den Dialog erneut und bestätigen Sie noch einmal.',
-      'lan.requiere_https': '{dominio} leitet auf HTTPS um: Geben Sie die Website mit der HTTPS-Option frei.',
+      'lan.requiere_https':
+        '{dominio} leitet auf HTTPS um: Geben Sie die Website mit der HTTPS-Option frei.',
       'lan.sin_puertos':
         'Zwischen 8100 und 8199 sind keine freien Ports für das lokale Netzwerk verfügbar (freigegebene Websites und der CA-Link nutzen diesen Bereich). Beenden Sie eine Freigabe oder schließen Sie den CA-Dialog und versuchen Sie es erneut.',
       'tuneles.expose_no_instalado':
@@ -274,16 +285,20 @@ export const de: Textos = {
       'buscar.regex_invalida': 'Der reguläre Ausdruck ist ungültig.',
       'buscar.regex_lenta':
         'Der reguläre Ausdruck dauert zu lange: Vereinfachen Sie ihn oder verwenden Sie literalen Text.',
-      'buscar.demasiadas': 'Es laufen bereits {maximo} Suchen: Brechen Sie eine ab oder warten Sie.',
+      'buscar.demasiadas':
+        'Es laufen bereits {maximo} Suchen: Brechen Sie eine ab oder warten Sie.',
       'terminal.no_abrio': 'Das Terminal konnte nicht geöffnet werden.',
-      'terminal.no_instalada': '{nombre} ist nicht installiert. Wählen Sie unter Einstellungen ein anderes Terminal.',
+      'terminal.no_instalada':
+        '{nombre} ist nicht installiert. Wählen Sie unter Einstellungen ein anderes Terminal.',
       'terminal.invalida': 'Dieses Terminal ist ungültig.',
       'terminal.powershell_restringido':
         'PowerShell befindet sich auf diesem Computer im eingeschränkten Sprachmodus (Organisationsrichtlinie oder AppLocker): WolfCore Dev kann das Terminal nicht öffnen. Öffnen Sie es selbst im Projektordner.',
       'proyectos.no_existe': 'Das Projekt existiert nicht.',
-      'proyectos.no_confiado': 'Aktivieren Sie "Ich vertraue diesem Repository", um das Rezept auszuführen.',
+      'proyectos.no_confiado':
+        'Aktivieren Sie "Ich vertraue diesem Repository", um das Rezept auszuführen.',
       'proyectos.receta_en_curso': 'Für dieses Projekt wird bereits ein Rezept ausgeführt.',
-      'proyectos.paso_no_omitible': 'Der Schritt "Website erstellen" kann nicht übersprungen werden.',
+      'proyectos.paso_no_omitible':
+        'Der Schritt "Website erstellen" kann nicht übersprungen werden.',
       'workspaces.no_existe': 'Dieser Workspace existiert nicht.',
       'workspaces.invalido': 'Der Workspace ist ungültig: Prüfen Sie Name und Elemente.',
       'workspaces.captadores_exclusivos':
@@ -305,7 +320,8 @@ export const de: Textos = {
         'Das Rezept des Projekts hat sich geändert, seit Sie ihm vertraut haben: Prüfen Sie es und aktivieren Sie „Ich vertraue diesem Repository“ erneut.',
       'tareas.aislado':
         'Dies ist ein Testdaten-Ordner (WOLFCORE_DATOS): Erlauben Sie geplante Aufgaben, um sie auszuführen.',
-      'tareas.carpeta': 'Der Projektordner existiert nicht: Die Aufgabe kann nicht ausgeführt werden.',
+      'tareas.carpeta':
+        'Der Projektordner existiert nicht: Die Aufgabe kann nicht ausgeführt werden.',
       'tareas.en_curso': 'Die Aufgabe wird bereits ausgeführt.',
       'tareas.demasiadas': 'Zu viele Aufgaben in diesem Projekt (maximal {maximo}).',
       'cli.no_autorizado':
@@ -328,7 +344,8 @@ export const de: Textos = {
         'Die Bestätigung im WolfCore Dev-Fenster wurde abgelehnt oder war nicht verfügbar: Es wurde nichts geändert.',
       'cli.confirmacion_vencida':
         'Niemand hat rechtzeitig im WolfCore Dev-Fenster bestätigt: Es wurde nichts geändert.',
-      'cli.tunel_fallo': 'Der Tunnel konnte nicht geöffnet werden. Prüfen Sie das zugehörige Protokoll in WolfCore Dev.',
+      'cli.tunel_fallo':
+        'Der Tunnel konnte nicht geöffnet werden. Prüfen Sie das zugehörige Protokoll in WolfCore Dev.',
       'cli.inicio_fallo':
         'Es konnte nicht alles Angeforderte gestartet werden. Prüfen Sie die Protokolle in WolfCore Dev.',
       'cli.parada_fallo':
@@ -352,10 +369,12 @@ export const de: Textos = {
         'Die Token-Datei konnte nicht auf den aktuellen Benutzer beschränkt werden: Die CLI wird nicht aktiviert.',
       'cli.carpeta_ajena':
         'Der Ordner run/ im Datenordner gehört einem anderen Benutzer: Die CLI wird nicht aktiviert.',
-      'cli.ruta_invalida': 'Der Pfad von WolfCore Dev enthält Zeichen, die wolf.cmd nicht unterstützt.',
+      'cli.ruta_invalida':
+        'Der Pfad von WolfCore Dev enthält Zeichen, die wolf.cmd nicht unterstützt.',
       'cli.path_aislado':
         'Bei einem Testdaten-Ordner (WOLFCORE_DATOS) wird der Benutzer-PATH nicht geändert.',
-      'cli.sin_cliente': 'Diese Version von WolfCore Dev enthält den wolf-Client nicht (muss noch kompiliert werden).',
+      'cli.sin_cliente':
+        'Diese Version von WolfCore Dev enthält den wolf-Client nicht (muss noch kompiliert werden).',
       'cli.demasiados_dialogos':
         'Zu viele Bestätigungen in der letzten Minute: Warten Sie einen Moment und versuchen Sie es erneut.',
       'cli.error': 'Der Befehl konnte nicht abgeschlossen werden: {detalle}',
@@ -366,16 +385,19 @@ export const de: Textos = {
       'proyectos.clave_bd_falta':
         'Das gespeicherte Passwort für den Benutzer {usuario} fehlt: Es wurde nichts geschrieben. Im .env-Manager erzeugt "Eigenen Benutzer verwenden" ein neues Passwort.',
       'env.archivo_grande': 'Die Variablendatei ist zu groß (maximal {maximo}).',
-      'env.no_regular': 'Die .env-Datei ist keine reguläre Datei: Sie wird weder gelesen noch geändert.',
+      'env.no_regular':
+        'Die .env-Datei ist keine reguläre Datei: Sie wird weder gelesen noch geändert.',
       'env.clave_inexistente': 'Die Variable {clave} existiert nicht.',
       'env.cambio_invalido': 'Eine Änderung an der .env-Datei ist ungültig.',
       'env.variable_invalida': 'Die Änderung der Variable {clave} ist ungültig.',
-      'env.solo_lectura': 'Die Variable {clave} erstreckt sich über mehrere Zeilen: Bearbeiten Sie sie manuell in der Datei.',
+      'env.solo_lectura':
+        'Die Variable {clave} erstreckt sich über mehrere Zeilen: Bearbeiten Sie sie manuell in der Datei.',
       'env.usuario_compartido':
         'Die Datenbank {base} wird auch vom Projekt {proyecto} verwendet: Bestätigen Sie, ob Sie denselben Benutzer teilen möchten.',
       'env.cambio_externo':
         'Die .env-Datei wurde geändert, seit die Vorschau angezeigt wurde: Prüfen Sie sie vor dem Speichern erneut.',
-      'env.sin_confirmar': 'Bestätigen Sie, dass Sie die Änderungen an der .env-Datei speichern möchten.',
+      'env.sin_confirmar':
+        'Bestätigen Sie, dass Sie die Änderungen an der .env-Datei speichern möchten.',
       'env.versionado':
         'Git verfolgt die .env-Datei dieses Projekts bereits: Der nächste Commit würde ihre Werte hochladen. Bestätigen Sie separat, um fortzufahren.',
       'env.versionado_desconocido':
@@ -384,7 +406,8 @@ export const de: Textos = {
       'env.sin_base': 'Die .env-Datei dieses Projekts enthält keine Datenbankverbindung.',
       'env.base_no_resuelta':
         'Die Datenbank dieses Projekts liegt nicht auf einem lokalen Server von WolfCore Dev: Es wurde nichts geändert.',
-      'env.motor_no_soportado': 'Derzeit funktioniert "Eigenen Benutzer verwenden" mit MySQL und MariaDB.',
+      'env.motor_no_soportado':
+        'Derzeit funktioniert "Eigenen Benutzer verwenden" mit MySQL und MariaDB.',
       'env.ya_usa_usuario_propio': 'Dieses Projekt verwendet bereits einen eigenen Benutzer.',
       'plantillas.id_invalido': 'Die Vorlagen-ID ist ungültig.',
       'plantillas.no_existe': 'Die Vorlage existiert nicht.',
@@ -396,8 +419,7 @@ export const de: Textos = {
         'Das Projekt ist zu groß, um es als Vorlage zu speichern (bis zu {maximo}). Schließen Sie große Ordner aus.',
       'plantillas.exclusion_invalida':
         'Eine der Ausnahmen ist ungültig (verwenden Sie Namen oder relative Pfade ohne "..").',
-      'plantillas.nombre_invalido':
-        'Der Vorlagenname ist ungültig (1 bis 60 Zeichen).',
+      'plantillas.nombre_invalido': 'Der Vorlagenname ist ungültig (1 bis 60 Zeichen).',
       'plantillas.esquema_fallo':
         'Das Datenbankschema des Projekts konnte nicht gelesen werden: Prüfen Sie, ob der zugehörige Dienst gestartet ist.',
       'plantillas.base_no_resuelta':
@@ -412,18 +434,21 @@ export const de: Textos = {
         'Das Schema enthält eine Anweisung, die nicht zur Struktur gehört, daher wurde nichts ausgeführt: {sentencia}',
       'bd.extension_no_permitida':
         'Das Schema erfordert die Erweiterung {nombre}, die nicht auf der Zulassungsliste steht: Es wurde nichts wiederhergestellt.',
-      'bd.esquema_fallo': 'Das vollständige Schema konnte nicht wiederhergestellt werden: Es wurden keine Teiländerungen hinterlassen.',
+      'bd.esquema_fallo':
+        'Das vollständige Schema konnte nicht wiederhergestellt werden: Es wurden keine Teiländerungen hinterlassen.',
       'bd.datos_no_permitidos':
         'Der Daten-Dump enthält Anweisungen, die keine reinen Daten sind (nur INSERT, LOCK TABLES und SET sind zulässig): Es wurde nichts importiert.',
       'bd.datos_fallo':
         'Die Daten konnten nicht importiert werden: Die Datenbank blieb unverändert.',
-      'perfiles.destino_invalido': 'Wählen Sie den Speicherort für das Profil (eine .wolfperfil-Datei).',
+      'perfiles.destino_invalido':
+        'Wählen Sie den Speicherort für das Profil (eine .wolfperfil-Datei).',
       'perfiles.frase_debil': 'Die Passphrase der CA muss mindestens {minimo} Zeichen lang sein.',
       'perfiles.frase_incorrecta': 'Die Passphrase ist falsch: Es wurde nichts importiert.',
       'perfiles.certificados_sin_ca':
         'Website-Zertifikate werden nur zusammen mit der verschlüsselten CA exportiert: Fügen Sie die CA mit einer Passphrase hinzu.',
       'perfiles.no_existe': 'Die Profildatei existiert nicht.',
-      'perfiles.danado': 'Das Profil ist beschädigt oder wurde verändert: Es wurde nichts importiert.',
+      'perfiles.danado':
+        'Das Profil ist beschädigt oder wurde verändert: Es wurde nichts importiert.',
       'perfiles.demasiado_grande': 'Das Profil ist zu groß (maximal {maximo}).',
       'perfiles.version_no_soportada':
         'Das Profil stammt aus einer neueren Version von WolfCore Dev (Format {version}): Aktualisieren Sie die App zum Importieren.',
@@ -439,7 +464,8 @@ export const de: Textos = {
       'herramientas.imagen_grande': 'Das Bild ist zu groß (maximal {maximo}).',
       'herramientas.imagen_dimensiones':
         'Das Bild ist zu groß ({ancho}×{alto} px; maximal {maximo} px pro Seite) und wird aus Sicherheitsgründen nicht geöffnet.',
-      'herramientas.zip_sin_archivos': 'Keine Dateien zum Komprimieren vorhanden (Links werden nicht verfolgt).',
+      'herramientas.zip_sin_archivos':
+        'Keine Dateien zum Komprimieren vorhanden (Links werden nicht verfolgt).',
       'herramientas.zip_demasiados': 'Zu viele Dateien zum Komprimieren (maximal {maximo}).',
       'herramientas.zip_grande': 'Die zu komprimierenden Daten sind zu groß (maximal {maximo}).',
       'herramientas.pdf_invalido': 'Die Datei ist kein optimierbares PDF.',
@@ -463,11 +489,13 @@ export const de: Textos = {
         'Für diese Konvertierung ist LibreOffice erforderlich, das auf diesem Computer nicht installiert ist (WolfCore Dev installiert es nicht).',
       'conversor.libreoffice_fallo': 'LibreOffice konnte das Dokument nicht konvertieren.',
       'conversor.limite_celdas': 'Die Tabelle hat zu viele Zellen (maximal {maximo}).',
-      'conversor.memoria': 'Die Datei benötigt zu viel Speicher (mehr als {maximo}) und wurde abgebrochen.',
+      'conversor.memoria':
+        'Die Datei benötigt zu viel Speicher (mehr als {maximo}) und wurde abgebrochen.',
       'conversor.pdf_no_disponible': 'Das Drucken als PDF ist derzeit nicht verfügbar.',
       'herramientas.imagen_pixeles':
         'Das Bild hat insgesamt zu viele Pixel ({ancho}×{alto} px; maximal {maximo}) und wird aus Sicherheitsgründen nicht geöffnet.',
-      'herramientas.zip_cambio': 'Eine Datei wurde während des Komprimierens geändert: Versuchen Sie es erneut.',
+      'herramientas.zip_cambio':
+        'Eine Datei wurde während des Komprimierens geändert: Versuchen Sie es erneut.',
       'herramientas.pdf_demasiado_complejo':
         'Das PDF ist zu komplex (würde mehr Speicher als zulässig belegen) und wurde abgebrochen.',
       'herramientas.salida_denegada':
@@ -487,7 +515,8 @@ export const de: Textos = {
       'perfiles.en_curso': 'Ein Profilimport läuft bereits: Warten Sie, bis er abgeschlossen ist.',
       'importar.origen_apagado':
         'Keine Verbindung zum Datenbankserver des anderen Programms: Starten Sie ihn dort und versuchen Sie es erneut. Die Websites wurden bereits importiert.',
-      'importar.origen_no_local': 'Der Quellserver muss sich auf diesem Computer befinden (127.0.0.1).',
+      'importar.origen_no_local':
+        'Der Quellserver muss sich auf diesem Computer befinden (127.0.0.1).',
       'importar.origen_rechazado': 'Der Quellserver hat Benutzername oder Passwort abgelehnt.',
       'importar.origen_version':
         'Die Version des Quellservers kann mit den in WolfCore Dev installierten Komponenten nicht importiert werden.',
@@ -497,10 +526,12 @@ export const de: Textos = {
         'Aus anderen Programmen werden nur MySQL- und MariaDB-Datenbanken importiert.',
       'importar.ruta_fuera':
         'Ein Ordner oder eine Datei außerhalb der Installation oder in einem Systemordner wurde übersprungen.',
-      'importar.carpeta_invalida': 'Ein nicht mehr vorhandener oder ungültiger Ordner wurde übersprungen.',
+      'importar.carpeta_invalida':
+        'Ein nicht mehr vorhandener oder ungültiger Ordner wurde übersprungen.',
       'importar.archivo_grande':
         'Eine Konfigurationsdatei ist größer als {maximo} KB und wurde nicht gelesen.',
-      'importar.archivo_ilegible': 'Eine Konfigurationsdatei ist keine Textdatei oder konnte nicht gelesen werden.',
+      'importar.archivo_ilegible':
+        'Eine Konfigurationsdatei ist keine Textdatei oder konnte nicht gelesen werden.',
       'importar.demasiados':
         'Zu viele Websites oder Konfigurationsdateien: Es wurden nur die ersten gelesen.',
       'importar.candidato_desconocido':
@@ -524,7 +555,8 @@ export const de: Textos = {
         'Der Server des anderen Programms reagierte während des Dumps nicht mehr: Die Datenbank wurde nicht importiert.',
       'importar.sin_espacio':
         'Nicht genügend freier Speicherplatz zum Importieren der Datenbank: ca. {necesarios} MB erforderlich, {libres} MB frei.',
-      'importar.origen_fallo': 'Die Datenbank des anderen Programms konnte nicht exportiert werden.',
+      'importar.origen_fallo':
+        'Die Datenbank des anderen Programms konnte nicht exportiert werden.',
       'importar.clave_no_ascii':
         'Das Passwort enthält Akzente oder Sonderzeichen, die nicht übergeben werden können: Verwenden Sie ein reines ASCII-Passwort.',
       'plantillas.sin_esquema': 'Die Vorlage enthält kein Datenbankschema.',
@@ -532,7 +564,8 @@ export const de: Textos = {
       'proyectos.nombre_invalido':
         'Der Projektname darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten (maximal 40).',
       'proyectos.argumento_invalido': 'Ein Projektwert ist ungültig (Feld: {campo}).',
-      'proyectos.base_existe': 'Die Datenbank {nombre} existiert bereits: Wählen Sie einen anderen Namen.',
+      'proyectos.base_existe':
+        'Die Datenbank {nombre} existiert bereits: Wählen Sie einen anderen Namen.',
       'proyectos.dominio_existe': 'Es gibt bereits eine Website mit der Domain {dominio}.',
       'proyectos.carpeta_de_otro_sitio':
         'Dieser Ordner gehört zum Projekt {dominio} oder liegt darin: Wählen Sie einen anderen.',
@@ -542,12 +575,15 @@ export const de: Textos = {
       'proyectos.paso_base_no_omitible':
         'Der Schritt „Datenbank erstellen“ eines neuen Projekts kann nicht übersprungen werden.',
       'proyectos.sin_php': 'Kein PHP installiert: Installieren Sie es unter Dienste.',
-      'proyectos.php_no_instalado': 'PHP {version} ist nicht installiert: Installieren Sie es unter Dienste.',
+      'proyectos.php_no_instalado':
+        'PHP {version} ist nicht installiert: Installieren Sie es unter Dienste.',
       'proyectos.python_no_instalado':
         'Python {version} ist nicht installiert: Installieren Sie es unter Dienste.',
       'mcp.token_invalido': 'Das Token des MCP-Servers ist ungültig.',
-      'mcp.solicitud_cancelada': 'Der MCP-Client hat die Anfrage abgebrochen: Die Aktion wurde nicht ausgeführt.',
-      'doctor.puerto_ocupado': 'Port {puerto} von {servicio} wird von einem anderen Programm ({proceso}) verwendet.',
+      'mcp.solicitud_cancelada':
+        'Der MCP-Client hat die Anfrage abgebrochen: Die Aktion wurde nicht ausgeführt.',
+      'doctor.puerto_ocupado':
+        'Port {puerto} von {servicio} wird von einem anderen Programm ({proceso}) verwendet.',
       'doctor.puerto_iis': 'IIS ({programa}) belegt Port {puerto} von {servicio}.',
       'doctor.puerto_http_sys':
         'Ein Windows-Dienst ({programa}) belegt Port {puerto} von {servicio}.',
@@ -557,7 +593,8 @@ export const de: Textos = {
       'doctor.puerto_skype': '{programa} belegt Port {puerto} von {servicio}.',
       'doctor.puerto_reservado':
         'Port {puerto} von {servicio} liegt in einem von Windows reservierten Bereich ({desde}-{hasta}: Hyper-V, WSL oder Docker).',
-      'doctor.ca_por_vencer': 'Die Zertifizierungsstelle von WolfCore Dev läuft in {dias} Tagen ab.',
+      'doctor.ca_por_vencer':
+        'Die Zertifizierungsstelle von WolfCore Dev läuft in {dias} Tagen ab.',
       'doctor.ca_vencida': 'Die Zertifizierungsstelle von WolfCore Dev ist abgelaufen.',
       'doctor.certificado_por_vencer': 'Das Zertifikat für {dominio} läuft in {dias} Tagen ab.',
       'doctor.certificado_vencido': 'Das Zertifikat für {dominio} ist abgelaufen.',
@@ -595,8 +632,10 @@ export const de: Textos = {
       'doctor.solo_informa':
         'Dieser Befund hat keine automatische Reparatur: Folgen Sie den Hinweisen.',
       'doctor.reparacion_fallida': 'Die Reparatur konnte nicht angewendet werden.',
-      'doctor.reparacion_cancelada': 'Administratorberechtigung abgebrochen: Es wurde nichts geändert.',
-      'doctor.reparacion_denegada': 'Windows oder ein Antivirenprogramm hat den Zugriff verweigert: Es wurde nichts geändert.',
+      'doctor.reparacion_cancelada':
+        'Administratorberechtigung abgebrochen: Es wurde nichts geändert.',
+      'doctor.reparacion_denegada':
+        'Windows oder ein Antivirenprogramm hat den Zugriff verweigert: Es wurde nichts geändert.',
       'doctor.ya_resuelto': 'Das Problem bestand nicht mehr: Keine Änderung erforderlich.',
       'doctor.ca_vieja_sin_quitar':
         'Die neue Zertifizierungsstelle ist aktiv, aber die alte konnte nicht aus dem Windows-Speicher entfernt werden. Sie können sie unter HTTPS entfernen.',
@@ -605,21 +644,25 @@ export const de: Textos = {
         'Die neue Zertifizierungsstelle konnte nicht angewendet werden und das Zurücksetzen war unvollständig. Prüfen Sie den Bereich HTTPS; eine datierte Kopie liegt in etc/respaldos.',
       'doctor.firefox_sin_confianza':
         'Firefox vertraut der Zertifizierungsstelle von WolfCore Dev in {cantidad} Profilen nicht (es nutzt einen eigenen Speicher).',
-      'confianza.sin_ca': 'Noch keine Zertifizierungsstelle vorhanden: Erstellen Sie sie unter HTTPS.',
+      'confianza.sin_ca':
+        'Noch keine Zertifizierungsstelle vorhanden: Erstellen Sie sie unter HTTPS.',
       'confianza.sin_raices':
         'Keine vertrauenswürdigen Stammzertifikate für Python gefunden (weder certifi noch Windows): Es wurde nichts geändert.',
       'confianza.node_variable_ajena':
         'Sie haben bereits eine eigene NODE_EXTRA_CA_CERTS: WolfCore Dev ersetzt sie nicht.',
       'confianza.variable_fallida': 'Die Benutzervariable konnte nicht geändert werden.',
       'firefox.abierto': 'Firefox ist geöffnet: Schließen Sie ihn und versuchen Sie es erneut.',
-      'firefox.error': 'Die user.js dieses Profils konnte nicht geändert werden; sie blieb unverändert.',
+      'firefox.error':
+        'Die user.js dieses Profils konnte nicht geändert werden; sie blieb unverändert.',
       'firefox.fuera':
         'Es gibt Profile außerhalb des Firefox-Ordners: Aktivieren Sie sie unter CA-Vertrauen mit eigener Bestätigung.',
       'confianza.node_variable_cambiada':
         'NODE_EXTRA_CA_CERTS verweist nicht mehr auf die WolfCore Dev-CA (manuell geändert): Sie wurde nicht gelöscht.',
-      'ia.clave_invalida': 'Der Anbieter hat den Schlüssel abgelehnt: Prüfen Sie ihn oder erstellen Sie einen neuen.',
+      'ia.clave_invalida':
+        'Der Anbieter hat den Schlüssel abgelehnt: Prüfen Sie ihn oder erstellen Sie einen neuen.',
       'ia.sin_saldo': 'Das Konto beim Anbieter hat kein Guthaben oder Kontingent mehr.',
-      'ia.limite': 'Der Anbieter hat die Anfragen begrenzt: Warten Sie kurz und versuchen Sie es erneut.',
+      'ia.limite':
+        'Der Anbieter hat die Anfragen begrenzt: Warten Sie kurz und versuchen Sie es erneut.',
       'ia.region': 'Der Anbieter ist in Ihrem Land oder Ihrer Region nicht verfügbar.',
       'ia.sin_red': 'Keine Verbindung zum Anbieter: Prüfen Sie das Netzwerk oder die Basis-URL.',
       'ia.url_invalida':
@@ -631,7 +674,8 @@ export const de: Textos = {
       'ia.clave_mal_formada':
         'Der Schlüssel hat kein gültiges Format (keine Leerzeichen oder Zeilenumbrüche).',
       'ia.modelo_invalido': 'Der Modellname ist ungültig.',
-      'ia.modelo_no_disponible': 'Das Modell existiert nicht oder Ihr Konto hat keinen Zugriff darauf.',
+      'ia.modelo_no_disponible':
+        'Das Modell existiert nicht oder Ihr Konto hat keinen Zugriff darauf.',
       'ia.proveedor_invalido': 'Die Anbieterkonfiguration ist ungültig.',
       'ia.env_conflicto':
         'Die .env definiert {claves} bereits mit einem anderen Wert: Bestätigen Sie das Ersetzen.',
@@ -668,8 +712,7 @@ export const de: Textos = {
         'Der gespeicherte Schlüssel des Anbieters konnte nicht gelesen werden: Löschen und speichern Sie ihn erneut.',
       'correo.cambia_con_clave':
         'Der Anbieter hat einen gespeicherten Schlüssel: Bestätigen Sie das Senden an den neuen Server.',
-      'correo.env_sin_confirmar':
-        'Bestätigen Sie das Schreiben der E-Mail-Variablen in die .env.',
+      'correo.env_sin_confirmar': 'Bestätigen Sie das Schreiben der E-Mail-Variablen in die .env.',
       'correo.ocupado': 'Ein Versandtest läuft bereits.',
       'correo.limite': 'Warten Sie {segundos} s vor einem weiteren Versandtest.',
       'correo.clave_mal_formada':
@@ -679,7 +722,8 @@ export const de: Textos = {
       'agentes.sin_confirmar': 'Bestätigen Sie die Aktion im Dialog, bevor Sie fortfahren.',
       'agentes.no_instalable':
         'Dieser Agent wird nicht über WolfCore Dev installiert: Folgen Sie der offiziellen Anleitung ({guia}).',
-      'agentes.sin_node': 'Installieren Sie Node unter Dienste, um den Agenten installieren zu können.',
+      'agentes.sin_node':
+        'Installieren Sie Node unter Dienste, um den Agenten installieren zu können.',
       'agentes.node_antiguo':
         '{agente} benötigt Node {requerida} oder neuer, aktiv wäre jedoch {actual}. Installieren Sie ein neueres Node unter Dienste.',
       'agentes.node_version_desconocida':
@@ -687,7 +731,8 @@ export const de: Textos = {
       'instalador.zip_demasiado_grande':
         'Das heruntergeladene Paket ist zu groß oder enthält zu viele Dateien: Es wird nicht installiert.',
       'rust.rustup_init_fallo': 'rustup-init wurde nicht sauber beendet (Code {codigo}): {detalle}',
-      'rust.toolchain_fallo': 'Rust {version} konnte nicht installiert werden (Code {codigo}): {detalle}',
+      'rust.toolchain_fallo':
+        'Rust {version} konnte nicht installiert werden (Code {codigo}): {detalle}',
       'rust.desinstalar_fallo': 'Rust {version} konnte nicht deinstalliert werden: {detalle}',
       'rust.descarga_fallo': 'rustup konnte nicht heruntergeladen werden (HTTP {estado}).',
       'agentes.instalacion_fallo': 'Der Agent konnte nicht installiert werden: {detalle}',
@@ -699,25 +744,29 @@ export const de: Textos = {
       'agentes.config_en_uso':
         '{archivo} wurde während der Bearbeitung durch WolfCore Dev geändert: Schließen Sie den Agenten und versuchen Sie es erneut. Es wurde nichts geändert.',
       'agentes.proveedor_incompatible': '{agente} kann diesen KI-Anbieter nicht verwenden.',
-      'agentes.sin_cambios_preparados': 'Keine vorgemerkten Änderungen (git add) zum Beschreiben vorhanden.',
+      'agentes.sin_cambios_preparados':
+        'Keine vorgemerkten Änderungen (git add) zum Beschreiben vorhanden.',
       'agentes.argumento_invalido': 'Ungültiger Wert ({campo}).',
       'git.commit_fallo': 'Der Commit konnte nicht erstellt werden: {detalle}',
       'git.mensaje_invalido': 'Die Commit-Nachricht ist leer oder ungültig.',
       'php.rama_no_instalada': 'PHP {rama} ist nicht installiert.',
       'php.argumento_invalido': 'Ungültiger Wert ({campo}).',
       'php.valor_invalido': 'Der Wert für {clave} ist ungültig.',
-      'php.ini_invalido': 'PHP startet nicht mit dieser php.ini; es wurde nichts gespeichert. Ausgabe: {salida}',
+      'php.ini_invalido':
+        'PHP startet nicht mit dieser php.ini; es wurde nichts gespeichert. Ausgabe: {salida}',
       'php.no_arranco':
         'PHP {rama} startete mit der Änderung nicht neu; der vorherige Stand wurde wiederhergestellt und läuft wie zuvor.',
       'php.caido_tras_restaurar':
         'PHP {rama} startete nicht neu; der vorherige Stand wurde wiederhergestellt, antwortet aber weiterhin nicht. Prüfen Sie Dienste und PHP-Protokolle.',
       'php.respaldo_no_existe': 'Diese Sicherung der php.ini existiert nicht.',
-      'php.extension_no_existe': 'Die Erweiterung {nombre} befindet sich nicht im ext-Ordner dieser Version.',
+      'php.extension_no_existe':
+        'Die Erweiterung {nombre} befindet sich nicht im ext-Ordner dieser Version.',
       'php.extension_no_catalogo':
         'Die Erweiterung {nombre} ist im Katalog für diese Version nicht vorhanden.',
       'php.variante_desconocida': 'Die Build-Variante dieses PHP konnte nicht ermittelt werden.',
       'php.sin_variante': 'Der Katalog enthält {nombre} nicht für den Build {variante}.',
-      'php.huella_distinta': 'Der Download stimmt nicht mit der veröffentlichten Prüfsumme überein; es wurde nichts installiert.',
+      'php.huella_distinta':
+        'Der Download stimmt nicht mit der veröffentlichten Prüfsumme überein; es wurde nichts installiert.',
       'php.descarga_fallida': 'Die Erweiterung konnte nicht heruntergeladen werden: {detalle}',
       'php.extension_en_uso':
         'Die DLL von {nombre} wird verwendet. Stoppen Sie PHP {rama} und versuchen Sie es erneut.',
@@ -731,10 +780,10 @@ export const de: Textos = {
         'Die .vscode/launch.json des Projekts kann nicht gelesen werden; es wurde nichts geändert.',
       'xdebug.launch_no_seguro':
         'Der Ordner .vscode oder seine launch.json ist ein Link oder etwas anderes: Dort wird nicht geschrieben.',
-      'xdebug.sin_configurar': 'Konfigurieren Sie Xdebug auf der Website, bevor Sie launch.json erzeugen.',
+      'xdebug.sin_configurar':
+        'Konfigurieren Sie Xdebug auf der Website, bevor Sie launch.json erzeugen.',
       'nginx.sitio_no_existe': 'Diese Website existiert nicht mehr.',
-      'nginx.texto_invalido':
-        'Der vhost-Text ist zu lang, leer oder enthält Steuerzeichen.',
+      'nginx.texto_invalido': 'Der vhost-Text ist zu lang, leer oder enthält Steuerzeichen.',
       'nginx.sintaxis': 'Zeile {linea}: {detalle}. Es wurde nichts geändert.',
       'nginx.directiva_prohibida':
         'Zeile {linea}: „{directiva}“ ist im vhost einer Website nicht erlaubt (könnte andere Websites oder Dateien außerhalb des Projekts betreffen). Es wurde nichts geändert.',
@@ -755,7 +804,8 @@ export const de: Textos = {
       'depuracion.puerto_ocupado':
         'Port {puerto} ist bereits belegt: Die Dump-Erfassung kann nicht lauschen. Schließen Sie das verwendende Programm (z. B. Symfony server:dump).',
       'depuracion.no_iniciado': 'Die Dump-Erfassung ist ausgeschaltet.',
-      'depuracion.tipo_no_soportado': 'Die Dump-Erfassung ist für PHP- und FastAPI-Websites gedacht.',
+      'depuracion.tipo_no_soportado':
+        'Die Dump-Erfassung ist für PHP- und FastAPI-Websites gedacht.',
       'depuracion.confirmacion': 'Bestätigen Sie die Dump-Erfassung im Dialog.',
       'depuracion.argumento_invalido': 'Ungültiges Argument: {campo}',
       'depuracion.archivo_fuera_del_sitio':
@@ -779,13 +829,14 @@ export const de: Textos = {
         '{servicio} {version} hat keine veröffentlichte Prüfsumme: Bestätigen Sie die Installation im Dialog.',
       'catalogo.huella_debil':
         '{servicio} {version} hat nur eine schwache Prüfsumme (MD5 oder SHA-1): Bestätigen Sie die Installation im Dialog.',
-      'catalogo.huella_no_coincide': 'Der Download stimmt nicht mit der veröffentlichten Prüfsumme überein.',
-      'catalogo.redireccion_ajena': 'Der Download versuchte auf eine nicht erlaubte Website ({host}) umzuleiten.',
+      'catalogo.huella_no_coincide':
+        'Der Download stimmt nicht mit der veröffentlichten Prüfsumme überein.',
+      'catalogo.redireccion_ajena':
+        'Der Download versuchte auf eine nicht erlaubte Website ({host}) umzuleiten.',
       'catalogo.demasiadas_redirecciones':
         'Der Download führte zu viele Weiterleitungen aus (mehr als {maximo}).',
       'catalogo.respuesta_grande': 'Die Serverantwort ist zu groß.',
-      'catalogo.version_no_encontrada':
-        'Version {version} von {servicio} ist nicht im Katalog.',
+      'catalogo.version_no_encontrada': 'Version {version} von {servicio} ist nicht im Katalog.',
       'catalogo.huella_no_disponible':
         'Die Prüfsumme für {servicio} {version} konnte nicht abgerufen werden (keine Verbindung oder Quelle antwortete nicht). Versuchen Sie es erneut.',
       'catalogo.firma_invalida':
@@ -820,13 +871,16 @@ export const de: Textos = {
       'auditoria.sin_confirmar': 'Bestätigen Sie, dass Sie dieses Passwort zurücksetzen möchten.',
       'auditoria.respaldo_previo_fallo':
         'Vor dem Zurücksetzen konnte keine Sicherung der Datenbank erstellt werden: Es wurde nichts geändert.',
-      'auditoria.copia_fallo': 'Die Zeilenkopie konnte nicht gespeichert werden: Es wurde nichts geändert.',
+      'auditoria.copia_fallo':
+        'Die Zeilenkopie konnte nicht gespeichert werden: Es wurde nichts geändert.',
       'auditoria.motor_no_soportado':
         'Die Passwortprüfung ist für MySQL, MariaDB und PostgreSQL gedacht.',
       'auditoria.cancelada': 'Prüfung abgebrochen.',
       'auditoria.usuario_invalido': 'Der Benutzername muss zwischen 1 und 256 Zeichen lang sein.',
-      'auditoria.en_curso': 'Eine Prüfung läuft bereits: Warten Sie auf den Abschluss oder brechen Sie sie ab.',
-      'auditoria.base_sistema': 'Eine Systemdatenbank wird nicht geprüft: Wählen Sie eine Projektdatenbank.',
+      'auditoria.en_curso':
+        'Eine Prüfung läuft bereits: Warten Sie auf den Abschluss oder brechen Sie sie ab.',
+      'auditoria.base_sistema':
+        'Eine Systemdatenbank wird nicht geprüft: Wählen Sie eine Projektdatenbank.',
       'auditoria.esquema_invalido': 'Das Schema existiert in dieser Datenbank nicht.',
       'auditoria.fila_cambio':
         'Das Konto wurde zwischenzeitlich geändert: Nicht zurückgesetzt. Versuchen Sie es erneut.',
@@ -837,17 +891,22 @@ export const de: Textos = {
       'auditoria.datos_reales_sin_confirmar':
         'Diese Datenbank enthält echte Kundendaten: Das Zurücksetzen eines Passworts erfordert eine verstärkte Bestätigung.',
       'instantaneas.id_invalido': 'Der Schnappschuss ist ungültig.',
-      'instantaneas.no_encontrada': 'Der Schnappschuss wurde nicht gefunden; möglicherweise wurde er gelöscht.',
-      'instantaneas.otra_base': 'Dieser Schnappschuss gehört zu einer anderen Datenbank und kann hier nicht angewendet werden.',
-      'instantaneas.sin_confirmar': 'Bestätigen Sie, dass Sie zu diesem Schnappschuss zurückkehren möchten.',
-      'instantaneas.motor_no_soportado': 'Schnappschüsse sind für MySQL, MariaDB und PostgreSQL verfügbar.',
+      'instantaneas.no_encontrada':
+        'Der Schnappschuss wurde nicht gefunden; möglicherweise wurde er gelöscht.',
+      'instantaneas.otra_base':
+        'Dieser Schnappschuss gehört zu einer anderen Datenbank und kann hier nicht angewendet werden.',
+      'instantaneas.sin_confirmar':
+        'Bestätigen Sie, dass Sie zu diesem Schnappschuss zurückkehren möchten.',
+      'instantaneas.motor_no_soportado':
+        'Schnappschüsse sind für MySQL, MariaDB und PostgreSQL verfügbar.',
       'instantaneas.demasiado_grande':
         'Die Datenbank ist größer als {maximo} MB, das Maximum für einen Schnappschuss.',
       'instantaneas.sin_espacio':
         'Nicht genügend freier Speicherplatz für den Schnappschuss: {necesarios} MB erforderlich, {libres} MB frei.',
       'instantaneas.limite':
         'Es gibt bereits {maximo} Schnappschüsse dieser Datenbank: Löschen Sie einen, um einen neuen zu erstellen.',
-      'instantaneas.tomar_fallo': 'Der Schnappschuss konnte nicht erstellt werden. Die Datenbank blieb unverändert.',
+      'instantaneas.tomar_fallo':
+        'Der Schnappschuss konnte nicht erstellt werden. Die Datenbank blieb unverändert.',
       'instantaneas.huella_no_coincide':
         'Die Schnappschussdatei wurde verändert oder ist beschädigt: Es wurde nichts wiederhergestellt.',
       'instantaneas.respaldo_previo_fallo':
@@ -892,7 +951,8 @@ export const de: Textos = {
     borrarSi: 'In Papierkorb verschieben',
     notaAutomatica: (fecha: string) =>
       `Vorheriger Stand, gesichert vor Rückkehr zum Schnappschuss vom ${fecha}`,
-    notaAutomaticaSinOrigen: 'Vorheriger Stand, gesichert vor Rückkehr zu einem anderen Schnappschuss',
+    notaAutomaticaSinOrigen:
+      'Vorheriger Stand, gesichert vor Rückkehr zu einem anderen Schnappschuss',
     extensionesAviso: (lista: string) =>
       `Enthält PostgreSQL-Erweiterungen (${lista}), die nur mit dem Prüfsummenregister dieses Computers wiederhergestellt werden.`,
     limites:
@@ -912,11 +972,13 @@ export const de: Textos = {
         `Die Datenbank ${base} wird vollständig durch diesen Schnappschuss ersetzt: Alle seither erfolgten Änderungen gehen verloren. Zuvor wird automatisch ein Schnappschuss des aktuellen Stands erstellt; bei einem Fehler kehrt die Datenbank automatisch dorthin zurück.`,
       pedir: (base: string) => `Geben Sie zur Bestätigung ${base} ein`,
       confirmar: 'Zu diesem Schnappschuss zurückkehren',
-      trabajando: (base: string) => `${base} wird wiederhergestellt… Schließen Sie das Programm bis dahin nicht.`,
+      trabajando: (base: string) =>
+        `${base} wird wiederhergestellt… Schließen Sie das Programm bis dahin nicht.`,
       hecho: (base: string) => `Die Datenbank ${base} wurde auf den Schnappschuss zurückgesetzt`,
       respaldoPrevio: 'Der vorherige Stand wurde gespeichert im automatischen Schnappschuss vom',
       advertencias: 'Die Wiederherstellung endete mit Hinweisen:',
-      hechoConAvisos: (base: string) => `Die Datenbank ${base} wurde mit Hinweisen auf den Schnappschuss zurückgesetzt`,
+      hechoConAvisos: (base: string) =>
+        `Die Datenbank ${base} wurde mit Hinweisen auf den Schnappschuss zurückgesetzt`,
       baseVacia: 'Die Datenbank existiert nicht oder ist leer: Nichts vor der Rückkehr zu sichern.',
       sinGuardarTitulo: 'Aktueller Stand konnte nicht gesichert werden',
       sinGuardarTexto:
@@ -973,7 +1035,8 @@ export const de: Textos = {
         'Das Projekt ist nicht als vertrauenswürdig markiert: Aktivieren Sie „Ich vertraue diesem Repository“.',
       receta_cambio:
         'Das Projektrezept hat sich seit Ihrem Vertrauen geändert: Prüfen Sie es und markieren Sie „Ich vertraue diesem Repository“ erneut.',
-      sin_confirmar: 'Der Befehl wurde noch nicht bestätigt: Er läuft erst nach Prüfung und Bestätigung.',
+      sin_confirmar:
+        'Der Befehl wurde noch nicht bestätigt: Er läuft erst nach Prüfung und Bestätigung.',
       comando_invalido: 'Der Befehl ist nicht zulässig (nur php, node, npm run und python).',
       cron_invalida: 'Der Zeitplan ist kein gültiger Cron-Ausdruck.',
       carpeta: 'Der Projektordner existiert nicht.',
@@ -1117,8 +1180,10 @@ export const de: Textos = {
         procesos: 'Projektprozesse',
       },
       sinOpciones: 'Hier gibt es nichts auszuwählen.',
-      captadorUnico: 'Nur ein Mail-Catcher gleichzeitig: Die Auswahl eines anderen ersetzt den bisherigen.',
-      yaNoExisten: (lista: string) => `Existieren nicht mehr und werden beim Speichern entfernt: ${lista}`,
+      captadorUnico:
+        'Nur ein Mail-Catcher gleichzeitig: Die Auswahl eines anderen ersetzt den bisherigen.',
+      yaNoExisten: (lista: string) =>
+        `Existieren nicht mehr und werden beim Speichern entfernt: ${lista}`,
       guardar: 'Speichern',
       guardado: (n: string) => `Workspace „${n}“ gespeichert.`,
     },
@@ -1255,8 +1320,6 @@ export const de: Textos = {
     ftp: {
       interruptor: 'FTP-Server',
       redLocal: 'Verbindungen aus dem lokalen Netzwerk zulassen',
-      redLocalAyuda:
-        'Ist diese Option deaktiviert, kann sich nur dieser Computer verbinden (127.0.0.1). Jede Website aktiviert ihren Zugriff unter Websites.',
       avisoTitulo: 'FTP für das lokale Netzwerk öffnen',
       avisoTexto:
         'FTP überträgt Benutzernamen, Passwörter und Dateien unverschlüsselt. Jedes Gerät in Ihrem Netzwerk kann versuchen, eine Verbindung herzustellen. Verwenden Sie diese Option nur in einem vertrauenswürdigen Netzwerk.',
@@ -1272,7 +1335,8 @@ export const de: Textos = {
       sinVersion: 'nicht installiert',
       uso: 'Verwendung',
       usoTexto: 'composer',
-      ayuda: 'Verwenden Sie „Terminal“ in einem Projekt oder fügen Sie WolfCore Dev in den Einstellungen zum PATH hinzu.',
+      ayuda:
+        'Verwenden Sie „Terminal“ in einem Projekt oder fügen Sie WolfCore Dev in den Einstellungen zum PATH hinzu.',
       instaladoOk: 'Composer installiert',
       sinPhp: 'Installieren Sie zuerst PHP',
       actualizado: (v: string) => `Composer aktualisiert: ${v}`,
@@ -1294,7 +1358,8 @@ export const de: Textos = {
       disponible: 'Bereit',
       noInstalado: 'Nicht installiert',
       sinPhp: 'PHP fehlt',
-      abrirDesdeProyecto: 'Wird direkt über die jeweilige Projektkarte bereits angemeldet geöffnet.',
+      abrirDesdeProyecto:
+        'Wird direkt über die jeweilige Projektkarte bereits angemeldet geöffnet.',
       faltaExtension: (ext: string, rama: string) =>
         `In PHP ${rama} ist die Erweiterung ${ext} nicht aktiviert. Starten Sie PHP neu oder aktivieren Sie sie in Ihrer php.ini.`,
       phpFueraDeRango: (rama: string) =>
@@ -1338,7 +1403,8 @@ export const de: Textos = {
     irAServicios: 'Zu Dienste',
     apagado: {
       titulo: (motor: string) => `${motor} ist gestoppt`,
-      texto: (motor: string) => `Starten Sie ${motor}, um Ihre Datenbanken anzuzeigen und zu verwalten.`,
+      texto: (motor: string) =>
+        `Starten Sie ${motor}, um Ihre Datenbanken anzuzeigen und zu verwalten.`,
       iniciando: (motor: string) => `${motor} wird gestartet…`,
       error: (motor: string) => `${motor} konnte nicht gestartet werden`,
       encender: (motor: string) => `${motor} starten`,
@@ -1358,7 +1424,8 @@ export const de: Textos = {
       de: (accion: string, base: string) => `${accion}: ${base}`,
     },
     adminerNoDisponible: 'Installieren Sie Adminer und PHP unter Dienste, um es zu öffnen',
-    vectorSinInstalar: 'Installieren Sie pgvector weiter unten, um es in einer Datenbank zu aktivieren',
+    vectorSinInstalar:
+      'Installieren Sie pgvector weiter unten, um es in einer Datenbank zu aktivieren',
     vectorActivado: (base: string) => `Vector in ${base} aktiviert`,
     formatos: {
       sql: 'Einfaches SQL',
@@ -1411,7 +1478,8 @@ export const de: Textos = {
         importar: 'Import fehlgeschlagen',
         respaldar: 'Sicherung fehlgeschlagen',
       } as Record<string, string>,
-      trasReemplazo: 'Die ursprüngliche Datenbank wurde ersetzt und die Wiederherstellung nicht abgeschlossen',
+      trasReemplazo:
+        'Die ursprüngliche Datenbank wurde ersetzt und die Wiederherstellung nicht abgeschlossen',
       trasReemplazoAyuda:
         'Ihre vorherigen Daten befinden sich in der angegebenen Sicherung. Sie können sie über „Sicherung wiederherstellen“ zurückspielen.',
     },
@@ -1486,7 +1554,8 @@ export const de: Textos = {
       creada: (base: string) => `Datenbank ${base} erstellt`,
       mongo: 'In MongoDB wird die Datenbank mit einer initialen Collection (_pel_init) erstellt.',
       cambiarClave: 'Passwort ändern',
-      cambiarClaveTitulo: (u: string) => `Der Benutzer ${u} existiert bereits mit einem anderen Passwort`,
+      cambiarClaveTitulo: (u: string) =>
+        `Der Benutzer ${u} existiert bereits mit einem anderen Passwort`,
       cambiarClaveTexto: (u: string) =>
         `Wenn Sie das Passwort von ${u} ändern, können Projekte, die es bereits verwenden, keine Verbindung mehr herstellen, bis Sie deren .env aktualisieren. Üblicherweise sollte das aktuelle Passwort beibehalten werden. Trotzdem ändern?`,
     },
@@ -1528,7 +1597,8 @@ export const de: Textos = {
       ocultar: 'Passwort verbergen',
       copiarDato: (dato: string) => `${dato} kopieren`,
       env: 'Block für die .env-Datei',
-      envAyuda: 'Fügen Sie diesen in die .env-Datei Ihres Projekts ein. WolfCore Dev schreibt nicht in Ihre Projekte.',
+      envAyuda:
+        'Fügen Sie diesen in die .env-Datei Ihres Projekts ein. WolfCore Dev schreibt nicht in Ihre Projekte.',
       copiarEnv: 'Block kopieren',
       cargando: 'Verbindungsdaten werden gelesen…',
     },
@@ -1559,7 +1629,8 @@ export const de: Textos = {
       sinWinget:
         'Auf diesem Computer ist winget nicht verfügbar. Installieren Sie „Build Tools für Visual Studio 2022“ von visualstudio.microsoft.com mit der Workload „Desktopentwicklung mit C++“ und versuchen Sie es erneut.',
       falloHerramientas: 'Die Build-Werkzeuge konnten nicht installiert werden',
-      activarAyuda: 'Verwenden Sie anschließend „Vector aktivieren“ bei jeder Datenbank, die es benötigt.',
+      activarAyuda:
+        'Verwenden Sie anschließend „Vector aktivieren“ bei jeder Datenbank, die es benötigt.',
       errorEstado: 'Der Status von pgvector konnte nicht gelesen werden',
     },
   },
@@ -1613,7 +1684,8 @@ export const de: Textos = {
   },
   sitios: {
     titulo: 'Websites',
-    descripcion: 'Jede Website ist ein Ordner, den Nginx unter einer eigenen .test-Domain bereitstellt.',
+    descripcion:
+      'Jede Website ist ein Ordner, den Nginx unter einer eigenen .test-Domain bereitstellt.',
     nuevo: 'Neue Website',
     buscar: 'Nach Name oder Domain suchen',
     sinResultados: (q: string) => `Keine Website entspricht „${q}“.`,
@@ -1681,7 +1753,8 @@ export const de: Textos = {
     cambiarCarpeta: 'Ändern',
     detectando: 'Projekt wird analysiert…',
     detectado: (tipo: string) => `Erkannt: ${tipo}`,
-    sinDeteccionAlEditar: 'Die automatische Erkennung erfolgt nur beim Erstellen; prüfen Sie Typ und PHP-Version.',
+    sinDeteccionAlEditar:
+      'Die automatische Erkennung erfolgt nur beim Erstellen; prüfen Sie Typ und PHP-Version.',
     nombre: 'Name',
     nombreAyuda: 'Nur zur Erkennung in der Liste.',
     nombreCopia: (nombre: string) => `${nombre} (Kopie)`,
@@ -1822,7 +1895,8 @@ export const de: Textos = {
     guardarToken: 'Token speichern',
     borrarToken: 'Token löschen',
     usarProveedor: 'Diesen Anbieter verwenden',
-    guardadoProveedor: 'Anbieter gespeichert. Beim Öffnen des Tunnels wird eine Bestätigung verlangt.',
+    guardadoProveedor:
+      'Anbieter gespeichert. Beim Öffnen des Tunnels wird eine Bestätigung verlangt.',
     ngrokAyudaInstalacion:
       'ngrok muss bereits auf diesem Computer installiert sein (WolfCore Dev lädt es nicht herunter, da keine verifizierbare Prüfsumme vorliegt). Ihre globale Konfiguration bleibt unberührt.',
     exposeAyudaInstalacion:
@@ -1849,13 +1923,14 @@ export const de: Textos = {
   },
   tuneles: {
     titulo: 'Tunnel',
-    descripcion: 'Temporäre öffentliche Cloudflare-Links, um eine Website außerhalb Ihres Netzwerks zu zeigen.',
+    descripcion:
+      'Temporäre öffentliche Cloudflare-Links, um eine Website außerhalb Ihres Netzwerks zu zeigen.',
     explicacion:
       'Schnelltunnel wechseln bei jedem Öffnen oder Erneuern ihre Adresse und funktionieren nur, solange dieser Computer läuft und die Prozesse aktiv sind (beim Beenden von WolfCore Dev bleiben sie aktiv, wenn sie weiterlaufen dürfen).',
     columnas: { sitio: 'Website', estado: 'Status', url: 'Link', acciones: 'Aktionen' },
     vacioTitulo: 'Keine offenen Tunnel',
-    vacio: 'Aktivieren Sie den Tunnel-Schalter einer Website, um einen öffentlichen Link zu erhalten.',
-    irASitios: 'Zu Websites',
+    vacio:
+      'Aktivieren Sie den Tunnel-Schalter einer Website, um einen öffentlichen Link zu erhalten.',
     sinNombre: 'Gelöschte Website',
   },
   ajustes: {
@@ -1863,7 +1938,8 @@ export const de: Textos = {
     descripcion: 'Einstellungen der Umgebung.',
     general: 'Allgemein',
     carpetaDatos: 'Datenordner',
-    carpetaDatosAyuda: 'Binärdateien, Konfiguration und Protokolle. Kann geöffnet, aber nicht geändert werden.',
+    carpetaDatosAyuda:
+      'Binärdateien, Konfiguration und Protokolle. Kann geöffnet, aber nicht geändert werden.',
     servicios: 'Dienste',
     puertoNginx: 'Nginx-Port',
     puertoNginxAyuda:
@@ -1948,12 +2024,14 @@ export const de: Textos = {
       pathAgregar: 'Zum Benutzer-PATH hinzufügen',
       pathQuitar: 'Aus PATH entfernen',
       pathTitulo: 'PATH aktualisiert',
-      pathAviso: 'Öffnen Sie ein neues Terminal für die Änderung: Bereits offene Terminals sehen sie nicht.',
+      pathAviso:
+        'Öffnen Sie ein neues Terminal für die Änderung: Bereits offene Terminals sehen sie nicht.',
       pathQuitarTitulo: 'WolfCore Dev aus dem PATH entfernen?',
       pathQuitarTexto:
         'PHP und Composer von WolfCore Dev stehen in neuen Terminals nicht mehr zur Verfügung. Offene Terminals ändern sich nicht.',
       adminer: 'Adminer-Port',
-      adminerAyuda: 'Adminer wird nur lokal auf diesem Computer unter dieser festen Adresse bereitgestellt.',
+      adminerAyuda:
+        'Adminer wird nur lokal auf diesem Computer unter dieser festen Adresse bereitgestellt.',
       terminal: 'Standard-Terminal',
       terminalSistema: 'Systemstandard (PowerShell)',
       terminalAyuda:
@@ -1991,7 +2069,8 @@ export const de: Textos = {
     https: 'Auch über HTTPS ausliefern',
     httpsAyuda: 'Mit eigenem Zertifikat für die Domain und ihre Aliase, signiert von WolfCore Dev.',
     redirigir: 'Auf HTTPS umleiten',
-    redirigirAyuda: 'Aufrufe über http werden auf https umgeleitet. Öffentliche Tunnel bleiben unberührt.',
+    redirigirAyuda:
+      'Aufrufe über http werden auf https umgeleitet. Öffentliche Tunnel bleiben unberührt.',
     redirigirDeshabilitado: 'Aktivieren Sie zuerst HTTPS',
     sinAutoridadTitulo: 'HTTPS-CA ist nicht installiert',
     sinAutoridadTexto:
@@ -2078,10 +2157,12 @@ export const de: Textos = {
     launchSinCambios: 'Die launch.json enthält diese Konfiguration bereits.',
     launchEscribir: 'launch.json schreiben',
     launchCreado: 'launch.json in .vscode erstellt',
-    launchActualizado: (respaldo: string) => `launch.json aktualisiert. Vorherige Sicherung: ${respaldo}`,
+    launchActualizado: (respaldo: string) =>
+      `launch.json aktualisiert. Vorherige Sicherung: ${respaldo}`,
     phpStorm: 'Konfiguration für PhpStorm',
     copiarPhpStorm: 'PhpStorm-Konfiguration kopieren',
-    errorNginx: (salida: string) => `Nginx hat die Änderung abgelehnt; vorheriger Stand wiederhergestellt. ${salida}`,
+    errorNginx: (salida: string) =>
+      `Nginx hat die Änderung abgelehnt; vorheriger Stand wiederhergestellt. ${salida}`,
   },
   nginxEditor: {
     etiqueta: 'Nginx',
@@ -2149,7 +2230,8 @@ export const de: Textos = {
   lan: {
     etiqueta: 'Lokales Netzwerk',
     interruptor: (dominio: string) => `${dominio} im lokalen Netzwerk freigeben`,
-    apagadoAyuda: 'Öffnen Sie diese Website auf Ihrem Smartphone oder einem anderen Gerät im selben Netzwerk.',
+    apagadoAyuda:
+      'Öffnen Sie diese Website auf Ihrem Smartphone oder einem anderen Gerät im selben Netzwerk.',
     sinNginx: 'Starten Sie Nginx, um die Website im lokalen Netzwerk freizugeben.',
     sinRed: 'Kein lokales Netzwerk verbunden (WLAN oder Ethernet).',
     activo: 'Im lokalen Netzwerk sichtbar',
@@ -2238,7 +2320,8 @@ export const de: Textos = {
       'Das aktuelle Passwort verliert sofort seine Gültigkeit und offene Verbindungen dieser Website werden getrennt. Aktualisieren Sie es in Ihrem FTP-Client.',
     regenerada: 'FTP-Passwort neu erzeugt',
     soloLectura: 'Schreibgeschützt',
-    soloLecturaAyuda: 'Dateien können heruntergeladen, aber nicht hochgeladen, geändert oder gelöscht werden.',
+    soloLecturaAyuda:
+      'Dateien können heruntergeladen, aber nicht hochgeladen, geändert oder gelöscht werden.',
     soloLecturaActivado: 'Der FTP-Zugang dieser Website ist jetzt schreibgeschützt',
     soloLecturaDesactivado: 'Der FTP-Zugang dieser Website erlaubt jetzt Schreibzugriff',
     activado: 'FTP-Zugang aktiviert',
@@ -2250,7 +2333,8 @@ export const de: Textos = {
     redLocalAviso:
       'FTP akzeptiert Verbindungen aus dem lokalen Netzwerk und überträgt das Passwort sowie Dateien unverschlüsselt. Verwenden Sie es nur in einem vertrauenswürdigen Netzwerk.',
     redLocalHost: 'oder die IP dieses Computers in Ihrem Netzwerk',
-    servidorApagado: 'Der FTP-Server ist ausgeschaltet: Niemand kann sich verbinden, bis Sie ihn einschalten.',
+    servidorApagado:
+      'Der FTP-Server ist ausgeschaltet: Niemand kann sich verbinden, bis Sie ihn einschalten.',
     encender: 'FTP einschalten',
     urlEtiqueta: 'Adresse',
     urlAyuda: 'Die Adresse enthält nicht das Passwort: Es wird beim Verbinden abgefragt.',
@@ -2293,7 +2377,8 @@ export const de: Textos = {
         probando: 'Wird gesendet…',
         probarAyuda:
           'Sendet eine einzelne echte E-Mail an diese Adresse über eine geprüfte verschlüsselte Verbindung. Maximal eine alle 15 s.',
-        sinClaveParaProbar: 'Speichern Sie das Passwort des Anbieters, um den Versand testen zu können.',
+        sinClaveParaProbar:
+          'Speichern Sie das Passwort des Anbieters, um den Versand testen zu können.',
         hostLocal: 'Dieser Servername wird auf diesen Computer oder das lokale Netzwerk aufgelöst.',
         confirmarRed: 'Lokales Netzwerk bestätigen',
         enviado: (para: string) => `E-Mail an ${para} gesendet. Prüfen Sie Ihren Posteingang.`,
@@ -2312,7 +2397,8 @@ export const de: Textos = {
         editar: (n: string) => `${n} bearbeiten`,
         preset: 'Anbieter',
         presetOtro: 'Anderer (Daten selbst eingeben)',
-        presetAyuda: 'Host und Port stammen aus der offiziellen Dokumentation des jeweiligen Anbieters.',
+        presetAyuda:
+          'Host und Port stammen aus der offiziellen Dokumentation des jeweiligen Anbieters.',
         documentacion: 'Dokumentation ansehen',
         region: 'Region',
         nombre: 'Name',
@@ -2328,7 +2414,8 @@ export const de: Textos = {
         starttls: 'STARTTLS (Port 587)',
         usuario: 'Benutzer',
         usuarioObligatorio: 'Geben Sie den Benutzer ein.',
-        usuarioFijoAyuda: 'Dieser Anbieter verwendet immer diesen Benutzer; das Passwort stammt aus Ihrem Konto.',
+        usuarioFijoAyuda:
+          'Dieser Anbieter verwendet immer diesen Benutzer; das Passwort stammt aus Ihrem Konto.',
         clave: 'SMTP-Passwort',
         claveGuardada: (f: string) => `Gespeichert: ••••${f}`,
         claveNueva: 'Geben Sie das Passwort zum Speichern ein',
@@ -2341,7 +2428,8 @@ export const de: Textos = {
           'Fügen Sie das Passwort genau so ein, wie es der Anbieter vorgibt: Leerzeichen im Inneren bleiben erhalten.',
         borrarClave: 'Passwort löschen',
         borrarClaveTitulo: (n: string) => `Passwort von ${n} löschen?`,
-        borrarClaveTexto: 'Das gespeicherte Passwort wird gelöscht. Der Anbieter bleibt in der Liste.',
+        borrarClaveTexto:
+          'Das gespeicherte Passwort wird gelöscht. Der Anbieter bleibt in der Liste.',
         claveBorrada: 'Passwort gelöscht',
         guardar: 'Speichern',
         guardado: (n: string) => `${n} gespeichert`,
@@ -2363,7 +2451,8 @@ export const de: Textos = {
         volvio: (n: string) =>
           `${n} sendet wieder an den lokalen E-Mail-Catcher, aber die .env-Datei wurde nicht angetastet: Sie behält die MAIL_*-Variablen des Anbieters (und sein Passwort, falls Sie es eingetragen haben). Überschreiben Sie den E-Mail-Block.`,
         incluirClave: 'Passwort ebenfalls in die .env-Datei schreiben',
-        incluirClaveAyuda: 'Ohne Häkchen enthält der Block kein MAIL_PASSWORD und Sie tragen es manuell ein.',
+        incluirClaveAyuda:
+          'Ohne Häkchen enthält der Block kein MAIL_PASSWORD und Sie tragen es manuell ein.',
         sinClaveGuardada: 'Für diesen Anbieter ist kein Passwort gespeichert.',
         vista: 'Änderungen in der .env-Datei (das Passwort wird maskiert)',
         textoPlano:
@@ -2381,7 +2470,8 @@ export const de: Textos = {
         versionadoTexto:
           'Der nächste Commit würde Ihre Werte hochladen. Entfernen Sie sie mit git rm --cached .env aus dem Index.',
         desconocidoTitulo: 'Git konnte nicht geprüft werden',
-        desconocidoTexto: 'Es konnte nicht festgestellt werden, ob Git die .env-Datei dieses Projekts verfolgt.',
+        desconocidoTexto:
+          'Es konnte nicht festgestellt werden, ob Git die .env-Datei dieses Projekts verfolgt.',
         aceptarVersionado: 'Trotzdem schreiben',
         aceptarTitulo: 'In eine versionierte .env-Datei schreiben',
         aceptarTexto:
@@ -2466,7 +2556,8 @@ export const de: Textos = {
       probarMensajeAyuda:
         'Sendet eine kurze, feste Nachricht, um zu prüfen, ob das Modell antwortet. Verbraucht einige wenige Tokens.',
       elegirModelo: 'Modell für die Nachricht',
-      sinModelo: 'Testen Sie die Verbindung oder legen Sie ein Standardmodell fest, um eines auszuwählen.',
+      sinModelo:
+        'Testen Sie die Verbindung oder legen Sie ein Standardmodell fest, um eines auszuwählen.',
       enviando: 'Wird gesendet…',
       respuesta: (ms: number) => `Antwort in ${ms} ms`,
       tokens: (entrada: number, salida: number) =>
@@ -2492,7 +2583,8 @@ export const de: Textos = {
       documentacion: 'Dokumentation ansehen',
       nombre: 'Name',
       urlBase: 'Basis-URL',
-      urlAyuda: 'Leer = die offizielle URL. Nur https:// oder http:// an 127.0.0.1 bzw. [::1] (LM Studio).',
+      urlAyuda:
+        'Leer = die offizielle URL. Nur https:// oder http:// an 127.0.0.1 bzw. [::1] (LM Studio).',
       urlObligatoria: 'Geben Sie die Basis-URL des kompatiblen Anbieters ein.',
       modelo: 'Standardmodell (optional)',
       modeloAyuda: 'Wird im .env-Block (AI_MODEL) und für die Testnachricht verwendet.',
@@ -2540,7 +2632,8 @@ export const de: Textos = {
         'Der Schlüssel steht im Klartext in der .env-Datei des Projekts. Jeder mit Zugriff auf diesen Ordner kann ihn lesen.',
       copiaPrevia:
         'Die aktuelle .env-Datei wird vorher außerhalb des Projekts kopiert (im Datenordner von WolfCore Dev).',
-      sinClave: 'Dieser Anbieter benötigt einen Schlüssel: Speichern Sie ihn, bevor Sie ihn in einem Projekt verwenden.',
+      sinClave:
+        'Dieser Anbieter benötigt einen Schlüssel: Speichern Sie ihn, bevor Sie ihn in einem Projekt verwenden.',
       gitignoreFalta: 'Die .gitignore-Datei des Projekts ignoriert .env nicht.',
       gitignoreNoExiste: 'Das Projekt hat keine .gitignore-Datei.',
       gitignoreOk: 'Die .gitignore-Datei ignoriert .env bereits.',
@@ -2579,7 +2672,8 @@ export const de: Textos = {
     descripcion:
       'Sprachmodelle, die mit Ollama auf Ihrem Computer laufen. Verwenden Sie sie in Ihren Projekten, ohne Daten ins Internet zu senden.',
     sinInstalarTitulo: 'Ollama ist nicht installiert',
-    sinInstalar: 'Installieren Sie es unter Dienste, um Modelle auf Ihrem Computer herunterzuladen und zu nutzen.',
+    sinInstalar:
+      'Installieren Sie es unter Dienste, um Modelle auf Ihrem Computer herunterzuladen und zu nutzen.',
     irAServicios: 'Zu Dienste wechseln',
     apagadoTitulo: 'Ollama ist ausgeschaltet',
     apagado: 'Schalten Sie es ein, um Modelle anzuzeigen, herunterzuladen und zu testen.',
@@ -2604,7 +2698,8 @@ export const de: Textos = {
       titulo: 'Ein Modell herunterladen',
       campo: 'Modellname',
       placeholder: 'llama3.2, qwen2.5-coder:7b…',
-      ayuda: 'Geben Sie den von Ollama verwendeten Namen ein (ollama.com/library) oder wählen Sie einen Vorschlag.',
+      ayuda:
+        'Geben Sie den von Ollama verwendeten Namen ein (ollama.com/library) oder wählen Sie einen Vorschlag.',
       sugerenciaAyuda: {
         'llama3.2': 'Allgemeiner Chat, leichtgewichtig',
         'qwen2.5-coder': 'Programmierung',
@@ -2616,8 +2711,6 @@ export const de: Textos = {
       yaInstalado: 'Dieses Modell ist bereits installiert',
       enCurso: 'Dieses Modell wird bereits heruntergeladen',
       confirmarTitulo: (modelo: string) => `${modelo} herunterladen?`,
-      confirmarTexto:
-        'Modelle sind oft mehrere GB groß (von 1 bis über 40 GB je nach Größe). Ollama teilt die Größe vor Beginn nicht mit: Sie sehen sie im Fortschrittsbalken und können jederzeit abbrechen.',
       confirmar: 'Herunterladen',
     },
     progreso: {
@@ -2645,7 +2738,8 @@ export const de: Textos = {
       placeholder: 'Geben Sie eine kurze Frage ein und drücken Sie Enter',
       enviar: 'Senden',
       respuesta: 'Antwort',
-      pensando: 'Das Modell antwortet… beim ersten Mal kann es etwas dauern, während es geladen wird.',
+      pensando:
+        'Das Modell antwortet… beim ersten Mal kann es etwas dauern, während es geladen wird.',
       vacia: '(Das Modell hat keinen Text zurückgegeben.)',
       sinModelos: 'Laden Sie ein Modell herunter, um es zu testen.',
     },
@@ -2687,7 +2781,8 @@ export const de: Textos = {
         'sitio-crear': 'Website erstellen',
         comando: 'Projektbefehl',
       } as Record<string, string>,
-      sitioCrear: (dominio: string) => (dominio ? `Website ${dominio} erstellen` : 'Website erstellen'),
+      sitioCrear: (dominio: string) =>
+        dominio ? `Website ${dominio} erstellen` : 'Website erstellen',
       bdRestaurar: (archivo: string | null) =>
         archivo ? `Sicherung ${archivo} wiederherstellen` : 'Sicherung wiederherstellen',
       migrar: 'Datenbank migrieren',
@@ -2725,7 +2820,8 @@ export const de: Textos = {
       errorClonar: 'Das Repository konnte nicht geklont werden',
       sinCancelar:
         'Das Klonen kann von hier aus nicht abgebrochen werden: Warten Sie, bis es abgeschlossen ist (kann mehrere Minuten dauern).',
-      sinGit: 'Git ist nicht installiert. Installieren Sie es (git-scm.com) und öffnen Sie diesen Dialog erneut.',
+      sinGit:
+        'Git ist nicht installiert. Installieren Sie es (git-scm.com) und öffnen Sie diesen Dialog erneut.',
     },
     github: {
       estadoGh: (usuario?: string) =>
@@ -2738,8 +2834,7 @@ export const de: Textos = {
       instalandoGh: 'GitHub CLI wird installiert…',
       ghInstalado: 'GitHub CLI installiert. Melden Sie sich nun an.',
       iniciarSesion: 'Anmelden',
-      sesionAbierta:
-        'Ein Anmeldefenster wurde geöffnet. Klicken Sie danach auf „Erneut prüfen“.',
+      sesionAbierta: 'Ein Anmeldefenster wurde geöffnet. Klicken Sie danach auf „Erneut prüfen“.',
       comprobar: 'Erneut prüfen',
       usarToken: 'Token verwenden',
       token: 'Persönliches GitHub-Token',
@@ -2818,7 +2913,8 @@ export const de: Textos = {
       detectado: (v: string) => `Erkannt: ${v}`,
       nodeInstalar: 'Kein Node installiert: Installieren Sie es unter Dienste.',
       pythonInstalar: 'Kein Python installiert: Installieren Sie es unter Dienste.',
-      lenguajeInstalar: (nombre: string) => `Kein ${nombre} installiert: Installieren Sie es unter Dienste.`,
+      lenguajeInstalar: (nombre: string) =>
+        `Kein ${nombre} installiert: Installieren Sie es unter Dienste.`,
       dominio: 'Domain',
       puertoProxy: 'Lokaler Port',
       puertoPlaceholder: '8000',
@@ -2850,7 +2946,8 @@ export const de: Textos = {
       verRegistro: 'Protokoll anzeigen',
       ocultarRegistro: 'Protokoll ausblenden',
       listo: 'Das Projekt ist bereit.',
-      fallo: (paso: string) => `Fehlgeschlagen: ${paso}. Wiederholen, überspringen oder abbrechen; nichts wurde rückgängig gemacht.`,
+      fallo: (paso: string) =>
+        `Fehlgeschlagen: ${paso}. Wiederholen, überspringen oder abbrechen; nichts wurde rückgängig gemacht.`,
       cancelada: 'Einrichtung abgebrochen. Sie können sie über die Projektkarte fortsetzen.',
       incompleta: 'Es stehen noch Schritte aus.',
       errorCrear: 'Das Projekt konnte nicht erstellt werden',
@@ -2913,7 +3010,8 @@ export const de: Textos = {
       atras: (n: number) => `${n} zum Abrufen`,
       adelante: (n: number) => `${n} zum Hochladen`,
       traer: 'Änderungen abrufen',
-      traerAyuda: 'git pull ohne Merge: Bei lokalen Änderungen oder abweichenden Branches wird nichts berührt.',
+      traerAyuda:
+        'git pull ohne Merge: Bei lokalen Änderungen oder abweichenden Branches wird nichts berührt.',
       alDia: 'Bereits aktuell.',
       actualizado: 'Änderungen abgerufen',
       sugeridosTitulo: 'Änderungen abgerufen',
@@ -2939,7 +3037,8 @@ export const de: Textos = {
         sugerir: 'Nachricht vorschlagen',
         mensaje: 'Nachricht (bearbeitbar)',
         commit: 'Commit erstellen',
-        commitAyuda: 'Nur vorgemerkte Änderungen (git add): fügt keine Dateien hinzu und führt kein Push aus.',
+        commitAyuda:
+          'Nur vorgemerkte Änderungen (git add): fügt keine Dateien hinzu und führt kein Push aus.',
         hecho: 'Commit für vorgemerkte Änderungen erstellt.',
       },
     },
@@ -2967,7 +3066,8 @@ export const de: Textos = {
       nombrePlaceholder: 'Vite',
       comando: 'Befehl',
       comandoPlaceholder: 'npm run dev',
-      comandoAyuda: 'Programm und Argumente, ohne Shell. Nutzen Sie Anführungszeichen für Argumente mit Leerzeichen.',
+      comandoAyuda:
+        'Programm und Argumente, ohne Shell. Nutzen Sie Anführungszeichen für Argumente mit Leerzeichen.',
       cwd: 'Ordner',
       cwdPlaceholder: 'raiz',
       cwdAyuda: 'raiz oder ein Unterordner des Projekts (z. B. frontend).',
@@ -2979,7 +3079,8 @@ export const de: Textos = {
       esProxy: 'Ziel des Nginx-Proxys',
       requiereReinicio:
         'Der Prozess läuft: Änderungen an Befehl, Ordner oder Port greifen erst nach einem Neustart.',
-      reinicieAhora: 'Gespeichert. Stoppen und starten Sie den Prozess neu, um die Änderungen anzuwenden.',
+      reinicieAhora:
+        'Gespeichert. Stoppen und starten Sie den Prozess neu, um die Änderungen anzuwenden.',
       guardado: 'Prozess gespeichert',
       errores: {
         comando: 'Geben Sie den Befehl ein',
@@ -3041,7 +3142,8 @@ export const de: Textos = {
     ventana: 'Letzte 5 Minuten',
     pausado: 'Pausiert, solange das Fenster ausgeblendet ist',
     esperando: 'Warte auf erste Messung…',
-    errorMuestreo: (detalle: string) => `Leistungsmessung konnte nicht angefordert werden: ${detalle}`,
+    errorMuestreo: (detalle: string) =>
+      `Leistungsmessung konnte nicht angefordert werden: ${detalle}`,
     cpu: 'CPU',
     ram: 'Arbeitsspeicher',
     disco: 'Datenträger',
@@ -3099,8 +3201,7 @@ export const de: Textos = {
     niveles: { error: 'ERROR', warning: 'WARNING', info: 'INFO' } as Record<string, string>,
     pausar: 'Pausieren',
     reanudar: 'Fortsetzen',
-    pausadoNuevas: (n: number) =>
-      n === 1 ? '1 neue Zeile pausiert' : `${n} neue Zeilen pausiert`,
+    pausadoNuevas: (n: number) => (n === 1 ? '1 neue Zeile pausiert' : `${n} neue Zeilen pausiert`),
     copiar: 'Sichtbares kopieren',
     copiadas: (n: number) => (n === 1 ? '1 Zeile kopiert' : `${n} Zeilen kopiert`),
     limpiar: 'Leeren',
@@ -3163,7 +3264,8 @@ export const de: Textos = {
       'Der wolf-Ordner wird aus Ihrem Benutzer-PATH entfernt, der lokale Server gestoppt und der kopierte Befehl gelöscht. Offene Terminals bleiben unverändert.',
     quitar: 'Entfernen',
     listoTitulo: 'Befehl wolf aktualisiert',
-    ayuda: 'Öffnen Sie nach dem Hinzufügen ein neues Terminal. Der Server lauscht nur auf 127.0.0.1.',
+    ayuda:
+      'Öffnen Sie nach dem Hinzufügen ein neues Terminal. Der Server lauscht nur auf 127.0.0.1.',
     aislado: 'Mit einem Testdatenordner (WOLFCORE_DATOS) wird der PATH nicht geändert.',
     errorCargar: (detalle: string) => `Status von wolf konnte nicht gelesen werden: ${detalle}`,
   },
@@ -3192,7 +3294,8 @@ export const de: Textos = {
     regenerarTexto:
       'Das aktuelle Token wird sofort ungültig: Verbundene Assistenten müssen die neue Konfiguration übernehmen.',
     regenerado: 'Token neu erzeugt. Kopieren Sie die Konfiguration erneut.',
-    errorCargar: (detalle: string) => `Status des MCP-Servers konnte nicht gelesen werden: ${detalle}`,
+    errorCargar: (detalle: string) =>
+      `Status des MCP-Servers konnte nicht gelesen werden: ${detalle}`,
     confirmacion: {
       titulo: 'Ein Assistent bittet um Bestätigung',
       herramienta: 'Werkzeug',
@@ -3249,7 +3352,10 @@ export const de: Textos = {
         nombre: 'Ports und Prozesse',
         descripcion: 'Prüfen, was auf jedem Port lauscht, und Prozesse beenden.',
       },
-      bom: { nombre: 'UTF-8-BOM-Bereinigung', descripcion: 'Entfernt BOM aus Dateien oder Ordnern.' },
+      bom: {
+        nombre: 'UTF-8-BOM-Bereinigung',
+        descripcion: 'Entfernt BOM aus Dateien oder Ordnern.',
+      },
       certificados: {
         nombre: 'Zertifikate',
         descripcion: 'Mit der WolfCore Dev-CA für beliebige Namen ausstellen.',
@@ -3258,7 +3364,10 @@ export const de: Textos = {
         nombre: 'Krypto',
         descripcion: 'Hash, Base64, URL, UUID, Passwörter und JWT.',
       },
-      markdown: { nombre: 'Markdown-Vorschau', descripcion: 'Schreiben und Ergebnis direkt sehen.' },
+      markdown: {
+        nombre: 'Markdown-Vorschau',
+        descripcion: 'Schreiben und Ergebnis direkt sehen.',
+      },
       entorno: { nombre: 'Systemumgebung', descripcion: 'PATH, Versionen und Variablen.' },
       buscar: {
         nombre: 'Suchen',
@@ -3268,7 +3377,10 @@ export const de: Textos = {
         nombre: 'Dateiinformationen',
         descripcion: 'Größe, Typ und Prüfsummen einer Datei.',
       },
-      websocket: { nombre: 'WebSocket-Client', descripcion: 'Verbinden, senden und Nachrichten anzeigen.' },
+      websocket: {
+        nombre: 'WebSocket-Client',
+        descripcion: 'Verbinden, senden und Nachrichten anzeigen.',
+      },
       contrasenas: {
         nombre: 'Passwörter',
         descripcion: 'Passwortstärke prüfen und schwache Konten in Datenbanken finden.',
@@ -3295,7 +3407,6 @@ export const de: Textos = {
       jsonInvalido: (linea: number, columna: number) =>
         `Ungültiges JSON: Prüfen Sie Zeile ${linea}, Spalte ${columna}.`,
       banderas: 'Ungültige Flags: Verwenden Sie nur d, g, i, m, s, u, v oder y ohne Wiederholung.',
-      regex: (detalle: string) => `Ungültiger Ausdruck (${detalle}).`,
       trabajador: 'Die Hintergrundoperation konnte nicht ausgeführt werden.',
       diffLento: 'Die Texte sind zu unterschiedlich für einen rechtzeitigen Vergleich.',
       base64: 'Ungültiges Base64.',
@@ -3337,7 +3448,8 @@ export const de: Textos = {
       coincidencias: (n: number, truncado: boolean) =>
         `${n} ${n === 1 ? 'Treffer' : 'Treffer'}${truncado ? ' (nur die ersten angezeigt)' : ''}`,
       sinCoincidencias: 'Keine Treffer.',
-      tiempo: 'Der Ausdruck dauerte zu lange und wurde gestoppt (mögliches katastrophales Backtracking).',
+      tiempo:
+        'Der Ausdruck dauerte zu lange und wurde gestoppt (mögliches katastrophales Backtracking).',
       grupo: (n: number) => `Gruppe ${n}`,
       referencia: 'Kurzreferenz',
       tabla: [
@@ -3513,7 +3625,6 @@ export const de: Textos = {
       regex: 'Regulärer Ausdruck',
       mayusculas: 'Groß-/Kleinschreibung beachten',
       incluir: 'Nur Dateien (kommagetrennt, z. B. *.php)',
-      excluir: 'Überspringen (kommagetrennt)',
       buscar: 'Suchen',
       cancelar: 'Abbrechen',
       buscando: 'Suche läuft…',
@@ -3598,7 +3709,8 @@ export const de: Textos = {
       guardar: 'Speichern unter…',
       antes: 'Vorher',
       despues: 'Nachher',
-      sinMejora: 'Das Ergebnis ist nicht kleiner als das Original: Probieren Sie eine andere Qualität oder ein anderes Format.',
+      sinMejora:
+        'Das Ergebnis ist nicht kleiner als das Original: Probieren Sie eine andere Qualität oder ein anderes Format.',
       errorAbrir: 'Das Bild konnte auf diesem Computer nicht geöffnet werden.',
       errorProcesar: 'Das Bild konnte nicht verarbeitet werden.',
       sufijoConvertida: '-konvertiert',
@@ -3666,7 +3778,8 @@ export const de: Textos = {
       fortaleza: {
         etiqueta: 'Zu prüfendes Passwort',
         marcador: 'Passwort eingeben',
-        privacidad: 'Wird direkt hier geprüft: Nichts verlässt Ihren Computer oder wird gespeichert.',
+        privacidad:
+          'Wird direkt hier geprüft: Nichts verlässt Ihren Computer oder wird gespeichert.',
         mostrar: 'Anzeigen',
         ocultar: 'Ausblenden',
         niveles: ['Sehr schwach', 'Schwach', 'Mittel', 'Stark', 'Sehr stark'],
@@ -3746,7 +3859,8 @@ export const de: Textos = {
           sha256crypt: 'sha256crypt ($5$)',
           sha512crypt: 'sha512crypt ($6$)',
           scrypt: 'scrypt',
-          argon2: 'Argon2 (auf diesem Computer nicht verfügbar oder Parameter außerhalb des Limits)',
+          argon2:
+            'Argon2 (auf diesem Computer nicht verfügbar oder Parameter außerhalb des Limits)',
           bcrypt_otro: 'bcrypt mit Kosten außerhalb des Bereichs oder Variante $2x$',
           pbkdf2_otro: 'PBKDF2 mit Parametern außerhalb des Limits',
           ldap: 'LDAP-Format ({SHA}…)',
@@ -3779,14 +3893,16 @@ export const de: Textos = {
         copiaFila: 'Zeilenkopie (Kennung und alter Hash, 30 Tage aufbewahrt):',
         instantanea: 'Vorheriger Schnappschuss der Datenbank:',
         instantaneaAyuda: 'Wiederherstellbar unter Datenbanken › Schnappschüsse.',
-        aBcrypt: 'Auf bcrypt umstellen: nur wenn die Anwendung password_verify oder Ähnliches nutzt',
+        aBcrypt:
+          'Auf bcrypt umstellen: nur wenn die Anwendung password_verify oder Ähnliches nutzt',
         avisoLegado:
           'Dieser Hash ist md5 oder sha1 ohne Salt und bleibt in diesem Format. Nutzt die Anwendung ein separates Salt (andere Spalte oder Konstante), lässt sich der Hash nicht nachbilden und das neue Passwort funktioniert nicht.',
         datosReales: {
           titulo: 'Datenbank mit echten Daten',
           texto:
             'Diese Datenbank gehört zu einer Website mit echten Kundendaten: Das Zurücksetzen ändert ein reales Benutzerkonto.',
-          casilla: 'Ich verstehe, dass es echte Daten sind, und möchte dieses Passwort zurücksetzen',
+          casilla:
+            'Ich verstehe, dass es echte Daten sind, und möchte dieses Passwort zurücksetzen',
         },
         rlsActiva:
           'Die Tabelle nutzt Row-Level Security (RLS): Verbirgt die Richtlinie dieses Konto vor der eingeschränkten Rolle, ist kein Zurücksetzen möglich.',
@@ -3839,7 +3955,8 @@ export const de: Textos = {
       servicios: 'Dienste',
     },
     reparaciones: {
-      cambiar_puerto: 'Port von WolfCore Dev auf einen freien Port ändern. Das andere Programm bleibt unberührt.',
+      cambiar_puerto:
+        'Port von WolfCore Dev auf einen freien Port ändern. Das andere Programm bleibt unberührt.',
       puerto_manual:
         'Port von WolfCore Dev aus dem reservierten Bereich verschieben. Das Freigeben des Bereichs entscheiden Sie selbst mit dem angezeigten Befehl.',
       detener_iis:
@@ -3860,8 +3977,6 @@ export const de: Textos = {
         'Installieren Sie die Visual Studio Build Tools (mit C++-Tools) per angezeigtem Befehl: Sie benötigen mehrere GB und Administratorrechte, daher entscheiden Sie selbst.',
       antivirus:
         'Das Hinzufügen des Datenordners zu den Antivirus-Ausschlüssen entscheiden Sie selbst mit dem angezeigten Befehl.',
-      firewall:
-        'Das Entfernen dieser Regeln entscheiden Sie selbst mit dem angezeigten Befehl in einer Administrator-Konsole. WolfCore Dev ändert niemals die Firewall.',
       reintentar_servicio: 'Dienst erneut starten.',
       firefox_confianza:
         'In der user.js jedes Firefox-Profils die Einstellung hinzufügen, die der Windows-Zertifizierungsstelle vertraut, mit vorheriger Sicherung. prefs.js bleibt unberührt und geöffnete Profile werden übersprungen.',
@@ -3870,7 +3985,8 @@ export const de: Textos = {
       titulo: 'CA-Vertrauen',
       texto:
         'Windows vertraut der Zertifizierungsstelle von WolfCore Dev bereits; Node, Python und Firefox verwenden ihren eigenen Speicher.',
-      sinCa: 'Es gibt noch keine Zertifizierungsstelle. Erstellen Sie sie unter HTTPS, um diesen Bereich zu nutzen.',
+      sinCa:
+        'Es gibt noch keine Zertifizierungsstelle. Erstellen Sie sie unter HTTPS, um diesen Bereich zu nutzen.',
       node: {
         titulo: 'Node',
         proyectos:
@@ -3879,7 +3995,8 @@ export const de: Textos = {
         global: 'Auch als Benutzervariable (für andere Terminals und Programme)',
         confirmarActivar:
           'NODE_EXTRA_CA_CERTS wird als Variable Ihres Benutzers gesetzt. Dies gilt für Programme, die Sie danach öffnen; beim Deaktivieren dieser Option wird sie entfernt.',
-        confirmarDesactivar: 'Die von WolfCore Dev gesetzte Variable NODE_EXTRA_CA_CERTS wird entfernt.',
+        confirmarDesactivar:
+          'Die von WolfCore Dev gesetzte Variable NODE_EXTRA_CA_CERTS wird entfernt.',
       },
       python: {
         titulo: 'Python',
@@ -3922,7 +4039,8 @@ export const de: Textos = {
     irServicios: 'Zu Dienste',
     pestanas: { ini: 'php.ini', extensiones: 'Erweiterungen' },
     rapidosTitulo: 'Schnellwerte',
-    rapidosAyuda: 'Werden auf den Text unten angewendet; nichts wird gespeichert, bevor Sie den Diff bestätigen.',
+    rapidosAyuda:
+      'Werden auf den Text unten angewendet; nichts wird gespeichert, bevor Sie den Diff bestätigen.',
     aplicarRapidos: 'Auf Text anwenden',
     sinValor: 'nicht festgelegt',
     rapidos: {
@@ -3980,7 +4098,8 @@ export const de: Textos = {
     version: (v: string) => `v${v}`,
     versionDesconocida: 'Unbekannte Version',
     verVersion: 'Version anzeigen',
-    verVersionAyuda: 'Führt das Programm mit --version aus (geschieht nicht automatisch beim Öffnen der Ansicht).',
+    verVersionAyuda:
+      'Führt das Programm mit --version aus (geschieht nicht automatisch beim Öffnen der Ansicht).',
     origen: {
       propio: 'Von WolfCore Dev installiert',
       'npm-usuario': 'Globales npm des Benutzers',
@@ -4004,7 +4123,8 @@ export const de: Textos = {
       titulo: (nombre: string) => `${nombre} installieren?`,
       texto: (paquete: string) =>
         `Es wird die neueste veröffentlichte Version von ${paquete} von registry.npmjs.org mit dem Node von WolfCore Dev in dessen Datenordner installiert.`,
-      aislado: 'Verwendet nicht Ihre npm-Konfiguration und verändert Ihr globales npm nicht. Dies kann mehrere Minuten dauern.',
+      aislado:
+        'Verwendet nicht Ihre npm-Konfiguration und verändert Ihr globales npm nicht. Dies kann mehrere Minuten dauern.',
       aceptar: 'Installieren',
       hecho: (nombre: string) => `${nombre} wurde installiert.`,
     },
@@ -4017,7 +4137,8 @@ export const de: Textos = {
     },
     confirmarQuitar: {
       titulo: (nombre: string) => `MCP aus ${nombre} entfernen?`,
-      texto: 'Es wird nur der Eintrag „wolfcore“ aus dieser Datei entfernt; alles andere bleibt unverändert:',
+      texto:
+        'Es wird nur der Eintrag „wolfcore“ aus dieser Datei entfernt; alles andere bleibt unverändert:',
       aceptar: 'Entfernen',
       hecho: (nombre: string) => `MCP aus ${nombre} entfernt.`,
     },
@@ -4086,7 +4207,8 @@ export const de: Textos = {
     pestanaErrores: 'Fehler',
     erroresDescripcion:
       'Fehler aus den Protokollen von PHP, Nginx, laravel.log, CodeIgniter 3 und Python, gruppiert: derselbe wiederholte Fehler erscheint einmal mit Zähler.',
-    erroresVacio: 'Keine Fehler in den Protokollen. Sie erscheinen hier, sobald sie geschrieben werden.',
+    erroresVacio:
+      'Keine Fehler in den Protokollen. Sie erscheinen hier, sobald sie geschrieben werden.',
     erroresElegir: 'Wählen Sie einen Fehler aus der Liste.',
     actualizar: 'Aktualisieren',
     abrirEditor: 'Im Editor öffnen',
@@ -4151,7 +4273,8 @@ export const de: Textos = {
     },
     registroTitulo: (n: string) => `Protokolle von „${n}“`,
     registroEsperando: 'Warte auf Zeilen…',
-    registroFin: 'Das Protokoll wurde beendet (der Container wurde gestoppt oder die Engine hat die Verbindung getrennt).',
+    registroFin:
+      'Das Protokoll wurde beendet (der Container wurde gestoppt oder die Engine hat die Verbindung getrennt).',
     cerrar: 'Schließen',
   },
   versiones: {
@@ -4260,7 +4383,8 @@ export const de: Textos = {
       tituloRama: (v: string) => `Neue Version: ${v}`,
       ninguna: 'keine',
       instancia: (id: string) => `Die Instanz ${id} wird aktualisiert. Vor jeder Änderung:`,
-      pasoInstalar: (v: string) => `wird ${v} neben der aktuellen Version installiert (diese wird nicht gelöscht);`,
+      pasoInstalar: (v: string) =>
+        `wird ${v} neben der aktuellen Version installiert (diese wird nicht gelöscht);`,
       pasoVolcados: 'wird jede Datenbank mit der aktuellen Version exportiert;',
       pasoCopia: 'wird der Dienst gestoppt und der gesamte Datenordner kopiert (Kaltsicherung);',
       pasoArrancar: 'wird mit der neuen Version gestartet und geprüft, ob sie antwortet;',
@@ -4273,7 +4397,8 @@ export const de: Textos = {
         `${libres} frei; benötigt werden ${necesarios}`,
       datosQuedan:
         'Die bisherigen Daten werden niemals gelöscht: Sicherung und Dumps bleiben unter Sicherungen der Aktualisierungen erhalten, bis Sie sie löschen.',
-      sinEspacio: 'Nicht genügend Speicherplatz für die Sicherung: Geben Sie Speicherplatz frei und versuchen Sie es erneut.',
+      sinEspacio:
+        'Nicht genügend Speicherplatz für die Sicherung: Geben Sie Speicherplatz frei und versuchen Sie es erneut.',
       alLado: (v: string) =>
         `${v} wird installiert. Die übrigen installierten Versionen bleiben unberührt; Projekte mit einer anderen festgelegten Version nutzen diese weiterhin.`,
       ramaExplicacion:
@@ -4305,8 +4430,10 @@ export const de: Textos = {
       bloqueada: 'Kann nicht ausgewählt werden',
       marcadas: (n: number, tam: string) => `${n} ${n === 1 ? 'Version' : 'Versionen'} · ${tam}`,
       destinoTitulo: 'Was damit geschehen soll',
-      papelera: 'In den Papierkorb verschieben: bleibt 7 Tage erhalten und belegt bis dahin Speicherplatz',
-      definitivo: 'Endgültig löschen: gibt den Speicherplatz sofort frei und kann nicht rückgängig gemacht werden',
+      papelera:
+        'In den Papierkorb verschieben: bleibt 7 Tage erhalten und belegt bis dahin Speicherplatz',
+      definitivo:
+        'Endgültig löschen: gibt den Speicherplatz sofort frei und kann nicht rückgängig gemacht werden',
       avisoDefinitivo:
         'Endgültiges Löschen: Um diese Versionen wieder zu verwenden, müssen sie erneut heruntergeladen werden.',
       instantanea:
@@ -4328,7 +4455,8 @@ export const de: Textos = {
       },
       resultadoTitulo: 'Ergebnis',
       liberadas: (tam: string) => `${tam} wurden freigegeben.`,
-      enPapelera: (tam: string) => `${tam} befinden sich im Papierkorb (werden nach 7 Tagen geleert).`,
+      enPapelera: (tam: string) =>
+        `${tam} befinden sich im Papierkorb (werden nach 7 Tagen geleert).`,
       saltada: (v: string, motivo: string) => `${v}: ${motivo}`,
       pendientes: (n: number) =>
         `${n} ${n === 1 ? 'Version wurde bereits aus bin entfernt, aber es blieben Reste' : 'Versionen wurden bereits aus bin entfernt, aber es blieben Reste'}, die beim nächsten Start der Anwendung erneut entfernt werden.`,
@@ -4336,7 +4464,8 @@ export const de: Textos = {
       ajeno: (lista: string) =>
         `Enthält von Ihnen darin installierte Komponenten: ${lista}. Beim Entfernen gehen diese verloren.`,
       incluirAjeno: 'Trotzdem entfernen, auch wenn dies verloren geht',
-      sinCatalogo: 'Nicht mehr im Katalog vorhanden: Nach dem Entfernen kann sie nicht erneut heruntergeladen werden.',
+      sinCatalogo:
+        'Nicht mehr im Katalog vorhanden: Nach dem Entfernen kann sie nicht erneut heruntergeladen werden.',
       papeleraTitulo: 'Im Papierkorb',
       recuperar: 'Wiederherstellen',
       recuperada: (v: string) => `${v} wiederhergestellt.`,
@@ -4435,7 +4564,26 @@ export const de: Textos = {
     tema: 'Design',
     temas: { sistema: 'System', claro: 'Hell', oscuro: 'Dunkel' },
     idioma: 'Sprache',
-    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語', ko: '한국어', hi: 'हिन्दी', tr: 'Türkçe', id: 'Bahasa Indonesia', pl: 'Polski', nl: 'Nederlands', uk: 'Українська' },
+    idiomas: {
+      es: 'Español',
+      en: 'English',
+      pt: 'Português',
+      fr: 'Français',
+      de: 'Deutsch',
+      it: 'Italiano',
+      ru: 'Русский',
+      zh: '中文 简体',
+      ja: '日本語',
+      ko: '한국어',
+      hi: 'हिन्दी',
+      tr: 'Türkçe',
+      id: 'Bahasa Indonesia',
+      pl: 'Polski',
+      nl: 'Nederlands',
+      uk: 'Українська',
+    },
+    /** Aviso junto a los idiomas que no son es, en, pt ni fr (la traducción es automática y revisada). */
+    traduccionAutomatica: 'Maschinelle Übersetzung, geprüft',
     acento: 'Akzentfarbe',
     acentos: {
       indigo: 'Indigo',
@@ -4447,10 +4595,6 @@ export const de: Textos = {
     },
     acentoPropio: (color: string) => `Benutzerdefiniert (${color})`,
     errorGuardar: 'Einstellung konnte nicht gespeichert werden',
-    asistente: 'Einrichtungsassistent',
-    asistenteAyuda:
-      'Durchlaufen Sie die ersten Schritte erneut: Projektordner, Grundausstattung, CA, GitHub und überwachter Ordner.',
-    asistenteAbrir: 'Assistenten öffnen',
   },
   paleta: {
     titulo: 'Befehlspalette',
@@ -4480,7 +4624,6 @@ export const de: Textos = {
     nuevoProyecto: 'Neues Projekt erstellen',
     tema: (tema: string) => `Design: ${tema}`,
     idioma: (idioma: string) => `Sprache: ${idioma}`,
-    asistente: 'Einrichtungsassistenten öffnen',
   },
   nuevoProyecto: {
     titulo: 'Neues Projekt',
@@ -4506,7 +4649,10 @@ export const de: Textos = {
         nombre: 'FastAPI',
         descripcion: 'Virtuelle Umgebung, requirements.txt und uvicorn-Prozess.',
       },
-      wordpress: { nombre: 'WordPress', descripcion: 'Offizieller Download mit fertiger wp-config.php.' },
+      wordpress: {
+        nombre: 'WordPress',
+        descripcion: 'Offizieller Download mit fertiger wp-config.php.',
+      },
       estatico: {
         nombre: 'Statische Website',
         descripcion: 'HTML und CSS über Nginx ausgeliefert, ohne Datenbank.',
@@ -4515,7 +4661,8 @@ export const de: Textos = {
     campos: {
       nombre: 'Projektname',
       nombrePlaceholder: 'mein-shop',
-      nombreAyuda: (dominio: string) => `Ergibt ${dominio}: Kleinbuchstaben, Ziffern und Bindestriche.`,
+      nombreAyuda: (dominio: string) =>
+        `Ergibt ${dominio}: Kleinbuchstaben, Ziffern und Bindestriche.`,
       carpeta: 'Übergeordneter Ordner',
       elegirCarpeta: 'Ordner wählen…',
       cambiarCarpeta: 'Ordner ändern…',
@@ -4547,7 +4694,8 @@ export const de: Textos = {
       noDisponible:
         'Die Prüfsumme konnte jetzt nicht gelesen werden (keine Verbindung oder die Quelle hat nicht geantwortet); sie wird beim Erstellen erneut gelesen.',
       fuente: 'Quelle: wordpress.org',
-      casilla: 'Ich verstehe, dass die Prüfsumme schwach ist, und möchte das Projekt trotzdem erstellen',
+      casilla:
+        'Ich verstehe, dass die Prüfsumme schwach ist, und möchte das Projekt trotzdem erstellen',
     },
     resumen: {
       titulo: 'Dies wird erstellt',
@@ -4568,9 +4716,12 @@ export const de: Textos = {
       nombreInvalido:
         'Der Name darf nur Kleinbuchstaben, Ziffern und Bindestriche enthalten (max. 40 Zeichen) und nicht mit einem Bindestrich beginnen oder enden.',
       sinCarpeta: 'Wählen Sie den übergeordneten Ordner des Projekts.',
-      sinPhp: 'Wählen Sie eine PHP-Version (installieren Sie eine unter Dienste, falls keine vorhanden ist).',
-      sinPython: 'Wählen Sie eine Python-Version (installieren Sie eine unter Dienste, falls keine vorhanden ist).',
-      sinInstancia: 'Wählen Sie den Server für die Datenbankerstellung oder deaktivieren Sie die Datenbank.',
+      sinPhp:
+        'Wählen Sie eine PHP-Version (installieren Sie eine unter Dienste, falls keine vorhanden ist).',
+      sinPython:
+        'Wählen Sie eine Python-Version (installieren Sie eine unter Dienste, falls keine vorhanden ist).',
+      sinInstancia:
+        'Wählen Sie den Server für die Datenbankerstellung oder deaktivieren Sie die Datenbank.',
       baseInvalida: 'Der Datenbankname ist für diese Engine nicht gültig.',
       motorNoVale: 'WordPress benötigt MySQL oder MariaDB.',
       pgvectorMotor: 'pgvector benötigt PostgreSQL.',
@@ -4635,7 +4786,8 @@ export const de: Textos = {
       sin_dominio: 'Hat im anderen Programm keine Domain: Es wird eine vorgeschlagen.',
       dominio_invalido: 'Die Domain ist ungültig: Es wird eine vorgeschlagen.',
       sin_vhost: 'Hat keinen eigenen Virtual Host: Es wird eine Domain vorgeschlagen.',
-      php_desconocido: 'Verwendete PHP-Version unbekannt: Es wird eine installierte Version gewählt.',
+      php_desconocido:
+        'Verwendete PHP-Version unbekannt: Es wird eine installierte Version gewählt.',
       base_no_local: 'Die Datenbank liegt auf einem anderen Server: Sie wird nicht importiert.',
       base_nombre_invalido: 'Der Datenbankname ist ungültig: Sie wird nicht importiert.',
       motor_no_soportado: 'Die Datenbank ist weder MySQL noch MariaDB: Sie wird nicht importiert.',
@@ -4656,7 +4808,8 @@ export const de: Textos = {
       puerto: 'Port des Quellservers',
       usuario: 'Benutzer',
       clave: 'Passwort',
-      claveAyuda: 'Leer lassen, wenn der Benutzer kein Passwort hat (wie root in Laragon oder XAMPP).',
+      claveAyuda:
+        'Leer lassen, wenn der Benutzer kein Passwort hat (wie root in Laragon oder XAMPP).',
       existe: 'existiert bereits am Ziel',
       reemplazar: 'Ersetzen (zuvor wird eine Sicherung erstellt)',
       noSeToca: 'Bleibt unberührt, wenn nicht ausgewählt.',
@@ -4680,7 +4833,8 @@ export const de: Textos = {
       basesNuevas: (nombres: string) => `Folgende Datenbanken werden kopiert: ${nombres}.`,
       basesReemplazo: (nombres: string) =>
         `Diese bereits vorhandenen Datenbanken werden ersetzt: ${nombres}. Zuvor wird von jeder eine Sicherung angelegt.`,
-      basesSinTocar: (nombres: string) => `Diese bereits vorhandenen Datenbanken bleiben unberührt: ${nombres}.`,
+      basesSinTocar: (nombres: string) =>
+        `Diese bereits vorhandenen Datenbanken bleiben unberührt: ${nombres}.`,
       origen: (puerto: number, usuario: string) =>
         `Die Daten werden vom Server des anderen Programms exportiert (127.0.0.1:${puerto}, Benutzer ${usuario}). Es wird nur lesend zugegriffen.`,
       sinBases: 'Es wird keine Datenbank importiert.',
@@ -4691,13 +4845,15 @@ export const de: Textos = {
       titulo: 'Importergebnis',
       importando: 'Wird importiert…',
       cancelar: 'Import abbrechen',
-      restaurada: 'Die ursprüngliche Datenbank wurde automatisch aus ihrer Sicherung wiederhergestellt und ist unverändert.',
+      restaurada:
+        'Die ursprüngliche Datenbank wurde automatisch aus ihrer Sicherung wiederhergestellt und ist unverändert.',
       sitioOk: 'Importiert',
       sitioFallo: 'Nicht importiert',
       baseOk: (n: string) => `Datenbank ${n} importiert`,
       baseFallo: (n: string) => `Datenbank ${n} nicht importiert`,
       copiaPrevia: (ruta: string) => `Sicherung der vorherigen Datenbank: ${ruta}`,
-      phpDistinto: (v: string) => `PHP ${v} wurde verwendet (die ursprüngliche Version war nicht installiert).`,
+      phpDistinto: (v: string) =>
+        `PHP ${v} wurde verwendet (die ursprüngliche Version war nicht installiert).`,
       sinAplicar:
         'Nginx oder die hosts-Datei konnten nicht aktualisiert werden: Prüfen Sie den Hinweis unter Projekte und versuchen Sie es erneut.',
       resumen: (s: number, b: number) =>
@@ -4714,7 +4870,8 @@ export const de: Textos = {
       nombre: 'Name der Vorlage',
       nombrePlaceholder: 'Mein Basisprojekt',
       conArchivos: 'Projektdateien ebenfalls einschließen',
-      conArchivosAyuda: 'Ohne diese Option werden nur Rezept, Einstellungen und Schema gespeichert.',
+      conArchivosAyuda:
+        'Ohne diese Option werden nur Rezept, Einstellungen und Schema gespeichert.',
       siempre: 'Immer ausgeschlossen',
       siempreLista:
         '.env und .env.*, vendor, node_modules, .git, .venv, Protokolle, Dumps und Dateidatenbanken (*.sql, *.dump, *.sqlite), Schlüssel und Zertifikate (*.pem, *.key, *.crt…), wp-config.php und wolfcore.yml. Dateien, die einen Schlüssel oder ein Passwort enthalten, werden ebenfalls ausgeschlossen.',
@@ -4728,9 +4885,11 @@ export const de: Textos = {
       baseVolcado: (nombre: string, servidor: string) =>
         `Es wird nur die Struktur der Datenbank ${nombre} (Server ${servidor}) gespeichert, ohne Datenzeilen.`,
       sinBase: 'Das Projekt deklariert keine Datenbank: Es wird kein Schema gespeichert.',
-      avisoMongodb: 'Dieses Projekt nutzt MongoDB: Dessen Schema (Collections und Indizes) wird nicht gespeichert.',
+      avisoMongodb:
+        'Dieses Projekt nutzt MongoDB: Dessen Schema (Collections und Indizes) wird nicht gespeichert.',
       incluirDeTodosModos: 'Trotzdem einschließen',
-      avisoIncluir: 'Wenn diese Datei einen echten Schlüssel enthält, wird dieser in der Vorlage gespeichert.',
+      avisoIncluir:
+        'Wenn diese Datei einen echten Schlüssel enthält, wird dieser in der Vorlage gespeichert.',
       guardar: 'Vorlage speichern',
       guardada: (nombre: string) => `Vorlage „${nombre}“ gespeichert.`,
       errorGuardar: 'Vorlage konnte nicht gespeichert werden',
@@ -4839,7 +4998,8 @@ export const de: Textos = {
       hecho: 'Sicherung wurde wiederhergestellt.',
       error: 'Sicherung konnte nicht wiederhergestellt werden',
     },
-    cambiosPendientes: (n: number) => `${n} ${n === 1 ? 'ungespeicherte Änderung' : 'ungespeicherte Änderungen'}`,
+    cambiosPendientes: (n: number) =>
+      `${n} ${n === 1 ? 'ungespeicherte Änderung' : 'ungespeicherte Änderungen'}`,
     descartar: 'Änderungen verwerfen',
     guardar: 'Prüfen und speichern…',
     cerrar: 'Schließen',
@@ -4864,60 +5024,13 @@ export const de: Textos = {
     errorVistaPrevia: 'Vorschau konnte nicht erstellt werden',
     errorGuardar: '.env konnte nicht gespeichert werden',
     guardado: 'Die .env wurde gespeichert.',
-    guardadoConCopia: 'Die .env wurde gespeichert; die vorherige Version wurde als Sicherung abgelegt.',
+    guardadoConCopia:
+      'Die .env wurde gespeichert; die vorherige Version wurde als Sicherung abgelegt.',
   },
   asistenteInicio: {
-    titulo: 'Willkommen bei WolfCore Dev',
-    subtitulo:
-      'Fünf Schritte für eine einsatzbereite Umgebung. Nichts wird installiert oder geändert, bis Sie im jeweiligen Schritt auf die Schaltfläche klicken.',
     paso: (n: number, total: number) => `Schritt ${n} von ${total}`,
     anterior: 'Zurück',
     siguiente: 'Weiter',
-    omitirTodo: 'Assistenten überspringen',
-    terminar: 'Abschließen',
-    hecho: 'Erledigt',
-    reabrir: 'Sie können ihn jederzeit unter Einstellungen erneut öffnen.',
-    pasos: {
-      carpeta: {
-        titulo: 'Projektordner',
-        texto:
-          'Hier werden Ihre Projekte gespeichert. Neue Repositories werden hierhin geklont, und dieser Ordner wird im letzten Schritt überwacht.',
-        elegir: 'Ordner wählen',
-        actual: (ruta: string) => `Gewählter Ordner: ${ruta}`,
-        guardada: (ruta: string) => `Aktueller Ordner: ${ruta}`,
-        ninguna: 'Nicht gewählt: Es wird C:\\Proyectos verwendet, falls vorhanden.',
-      },
-      basicos: {
-        titulo: 'Grundausstattung installieren',
-        texto:
-          'Nginx, PHP 8.4, Composer und Node LTS aus ihren offiziellen Quellen mit geprüfter Prüfsumme. Jedes Paket wird erst beim Klick auf seine Schaltfläche installiert.',
-        instalado: 'Installiert',
-        instalar: (version: string) => `${version} installieren`,
-        sinVersion: 'Keine Version im Katalog',
-        cargando: 'Versionen werden gesucht…',
-        nombres: { nginx: 'Nginx', php: 'PHP 8.4', composer: 'Composer', node: 'Node LTS' },
-      },
-      ca: {
-        titulo: 'Lokaler Zertifizierungsstelle vertrauen',
-        texto:
-          'Damit .test-Sites ohne Hinweise über HTTPS geöffnet werden, muss Windows der Zertifizierungsstelle von WolfCore Dev vertrauen. Windows bittet Sie um eine Bestätigung.',
-        confiar: 'CA vertrauen',
-        confiada: 'Windows vertraut der lokalen Zertifizierungsstelle bereits.',
-      },
-      github: {
-        titulo: 'GitHub verbinden',
-        texto:
-          'Um Ihre Repositories anzuzeigen und mit einem Klick zu klonen. Nutzen Sie die GitHub CLI-Sitzung oder ein persönliches Token, das verschlüsselt auf diesem Computer gespeichert wird.',
-      },
-      vigilar: {
-        titulo: 'Ordner überwachen',
-        texto:
-          'WolfCore Dev schlägt Ihnen vor, jeden neuen Ordner einzubinden, der im Projektordner erscheint. Ohne Ihre Bestätigung wird nichts eingebunden.',
-        activar: 'Diesen Ordner überwachen',
-        activa: (ruta: string) => `Überwachung aktiv: ${ruta}`,
-        sinCarpeta: 'Wählen Sie zuerst den Projektordner aus (Schritt 1).',
-      },
-    },
   },
   /** Ergebnis des Imports oder Exports eines Profils (D26). */
   perfiles: {
@@ -4938,7 +5051,8 @@ export const de: Textos = {
         basesAyuda:
           'Die vollständigen Dumps (einschließlich Ihrer Kundendaten) werden mit der Passphrase verschlüsselt übertragen.',
         ca: 'Zertifizierungsstelle (CA) einschließen',
-        caAyuda: 'Wird mit der Passphrase verschlüsselt. Importieren Sie sie nur auf einem eigenen Computer.',
+        caAyuda:
+          'Wird mit der Passphrase verschlüsselt. Importieren Sie sie nur auf einem eigenen Computer.',
         certificados: 'Site-Zertifikate einschließen',
         certificadosAyuda: 'Werden nur zusammen mit der CA und mit ihr verschlüsselt übertragen.',
         frase: 'Passphrase',
@@ -4946,7 +5060,8 @@ export const de: Textos = {
         fraseAyuda: (minimo: number) =>
           `Mindestens ${minimo} Zeichen. Ohne sie können die Datenbanken und die CA nicht wiederhergestellt werden, und sie wird nirgendwo gespeichert.`,
         problemas: {
-          frase_corta: (minimo: number) => `Die Passphrase muss mindestens ${minimo} Zeichen lang sein.`,
+          frase_corta: (minimo: number) =>
+            `Die Passphrase muss mindestens ${minimo} Zeichen lang sein.`,
           frase_distinta: 'Die beiden Passphrasen stimmen nicht überein.',
           certificados_sin_ca: 'Zertifikate werden nur zusammen mit der CA übertragen.',
         },
@@ -5013,10 +5128,12 @@ export const de: Textos = {
         error: 'Das Profil konnte nicht gelesen werden',
       },
       origen: (fecha: string, sistema: string) => `Erstellt am ${fecha} auf ${sistema}.`,
-      ignoradas: (n: number) => `${n} Einträge der Datei gehören nicht zu einem Profil und werden ignoriert.`,
+      ignoradas: (n: number) =>
+        `${n} Einträge der Datei gehören nicht zu einem Profil und werden ignoriert.`,
       reemplaza: {
         titulo: 'Was ersetzt wird',
-        ninguno: 'In diesem Ordner befinden sich keine Daten: Der Import erfolgt auf eine saubere Installation.',
+        ninguno:
+          'In diesem Ordner befinden sich keine Daten: Der Import erfolgt auf eine saubere Installation.',
         copia:
           'Vor dem Ersetzen wird eine Kopie in respaldos/pre-perfil-… angelegt und ein Umgebungs-Snapshot erstellt; jede ersetzte Datenbank erhält einen eigenen Snapshot. Der Ordner data wird niemals gelöscht.',
         config: 'Die Konfiguration (config.json)',
@@ -5085,7 +5202,8 @@ export const de: Textos = {
         huella: 'SHA-256-Fingerabdruck der Profil-CA',
         comparar: 'Vergleichen Sie ihn mit dem Ihres Quellcomputers, bevor Sie sie akzeptieren.',
         importar: 'Profil-CA importieren',
-        noImportar: 'Ohne Import verwendet dieser Computer seine aktuelle CA oder erstellt eine neue.',
+        noImportar:
+          'Ohne Import verwendet dieser Computer seine aktuelle CA oder erstellt eine neue.',
         ajena:
           'Diese CA hat Namensbeschränkungen, die nicht von WolfCore Dev stammen: Sie kann nicht importiert werden.',
         sinRestricciones:
@@ -5094,11 +5212,13 @@ export const de: Textos = {
         reemplazaLocal:
           'Dieser Computer hat bereits eine CA. Der Import der Profil-CA ersetzt sie (eine Kopie bleibt in der vorherigen Sicherung erhalten).',
         reemplazar: 'CA dieses Computers ersetzen',
-        noSeInstala: 'Die CA wird nicht automatisch im Zertifikatsspeicher des Systems installiert.',
+        noSeInstala:
+          'Die CA wird nicht automatisch im Zertifikatsspeicher des Systems installiert.',
       },
       frase: {
         titulo: 'Profil-Passphrase',
-        texto: 'Das Profil enthält verschlüsselte Datenbanken oder die CA. Geben Sie die Passphrase ein, die Sie beim Exportieren gewählt haben.',
+        texto:
+          'Das Profil enthält verschlüsselte Datenbanken oder die CA. Geben Sie die Passphrase ein, die Sie beim Exportieren gewählt haben.',
         campo: 'Passphrase',
         omitirBases: 'Ohne Datenbanken importieren',
         nota: 'Die Passphrase wird nur in diesem Fenster verwendet: Sie wird nicht gespeichert und beim Abschluss oder Schließen gelöscht.',
@@ -5118,13 +5238,17 @@ export const de: Textos = {
         bloqueos: {
           sitios_sin_carpeta:
             'Wählen Sie den Ordner für jede Site aus oder markieren Sie sie für den Import als ausstehend.',
-          frase_requerida: 'Geben Sie die Profil-Passphrase ein oder importieren Sie ohne Datenbanken.',
+          frase_requerida:
+            'Geben Sie die Profil-Passphrase ein oder importieren Sie ohne Datenbanken.',
           ca_ajena: 'Die Profil-CA kann nicht importiert werden.',
-          ca_sin_restricciones: 'Bestätigen Sie gesondert, dass Sie eine CA ohne Beschränkungen importieren möchten.',
-          reemplazar_ca: 'Bestätigen Sie gesondert, dass Sie die CA dieses Computers ersetzen möchten.',
+          ca_sin_restricciones:
+            'Bestätigen Sie gesondert, dass Sie eine CA ohne Beschränkungen importieren möchten.',
+          reemplazar_ca:
+            'Bestätigen Sie gesondert, dass Sie die CA dieses Computers ersetzen möchten.',
         },
       },
-      progreso: 'Profil wird importiert… Schließen Sie das Fenster nicht: Bei Datenbanken oder Downloads kann dies eine Weile dauern.',
+      progreso:
+        'Profil wird importiert… Schließen Sie das Fenster nicht: Bei Datenbanken oder Downloads kann dies eine Weile dauern.',
       fases: {
         copia: 'Zu ersetzende Daten werden gesichert',
         versiones: 'Versionen werden installiert',
@@ -5191,20 +5315,24 @@ export const de: Textos = {
       procesos_quitados: 'Ihre Prozesse (Befehle eines anderen Computers) wurden nicht importiert.',
       tareas_quitadas:
         'Ihre geplanten Aufgaben (Befehle eines anderen Computers) wurden nicht importiert. Erstellen Sie sie neu oder übernehmen Sie sie aus wolfcore.yml.',
-      tunel_con_nombre: 'Ihr benannter Tunnel wird nicht übertragen: Es wird auf den Schnell-Tunnel zurückgesetzt.',
+      tunel_con_nombre:
+        'Ihr benannter Tunnel wird nicht übertragen: Es wird auf den Schnell-Tunnel zurückgesetzt.',
       php_ini: 'Einige php.ini-Einstellungen wurden nicht importiert.',
       xdebug: 'Ihre Xdebug-Einstellung war ungültig und wurde entfernt.',
       nginx_desactivado:
         'Ihre Nginx-Regeln bleiben gespeichert, sind aber nicht angewendet: Prüfen Sie sie im Editor.',
       carpeta_no_existe: 'Ihr Ordner existiert auf diesem Computer nicht: Suchen Sie ihn.',
-      correo_sin_proveedor: 'Ihr SMTP-Anbieter wurde nicht importiert: Es wird der lokale Mail-Catcher verwendet.',
+      correo_sin_proveedor:
+        'Ihr SMTP-Anbieter wurde nicht importiert: Es wird der lokale Mail-Catcher verwendet.',
       sitio_invalido: 'Die Site ist ungültig.',
       dominio_invalido: 'Ihre Domain ist ungültig (muss auf .test enden).',
-      ruta_protegida: 'Ihr Ordner gehört zum System oder zu WolfCore Dev: Er wird nicht importiert.',
+      ruta_protegida:
+        'Ihr Ordner gehört zum System oder zu WolfCore Dev: Er wird nicht importiert.',
       dominio_en_uso: 'Eine andere Site auf diesem Computer verwendet diese Domain bereits.',
       sitio_repetido: 'Die Site ist im Profil doppelt vorhanden.',
       no_disponible: 'Diese Version ist nicht mehr im Katalog.',
-      huella_debil: 'Diese Version hat keinen starken Fingerabdruck: Installieren Sie sie manuell unter Versionen.',
+      huella_debil:
+        'Diese Version hat keinen starken Fingerabdruck: Installieren Sie sie manuell unter Versionen.',
       tope_descargas:
         'Wurde nicht heruntergeladen, um nicht zu viele Downloads gleichzeitig auszuführen: Installieren Sie sie unter Versionen.',
       instancia_pendiente: 'Ihre Instanz ist ausstehend geblieben.',
@@ -5213,9 +5341,11 @@ export const de: Textos = {
       danada: 'Ihre Dateien im Profil sind beschädigt.',
       bases_omitidas: 'Wurde ohne Datenbanken importiert.',
       instancia_apagada: 'Ihre Instanz konnte nicht gestartet werden.',
-      sin_copia_previa: 'Der vorherige Snapshot konnte nicht erstellt werden: Die Datenbank wurde nicht ersetzt.',
+      sin_copia_previa:
+        'Der vorherige Snapshot konnte nicht erstellt werden: Die Datenbank wurde nicht ersetzt.',
       sin_base: 'Ihre .env verweist nicht auf eine lokale Datenbank.',
-      base_no_resuelta: 'Es konnte nicht ermittelt werden, zu welcher Instanz Ihre Datenbank gehört.',
+      base_no_resuelta:
+        'Es konnte nicht ermittelt werden, zu welcher Instanz Ihre Datenbank gehört.',
       error_inesperado: 'Etwas ist fehlgeschlagen.',
     },
     avisos: {
@@ -5223,7 +5353,8 @@ export const de: Textos = {
         'Die vorherige CA dieses Computers befindet sich noch im Vertrauensspeicher des Systems und wird nicht mehr verwendet. Sie können sie von hier aus entfernen.',
       base_no_incluida: 'Die Datenbank {base} ({instancia}) wurde nicht eingeschlossen.',
       sin_ca: 'Auf diesem Computer gibt es keine CA: Das Profil wird ohne sie erstellt.',
-      ca_no_importada: 'Die Profil-CA wurde nicht importiert: Es wird die dieses Computers oder eine neue verwendet.',
+      ca_no_importada:
+        'Die Profil-CA wurde nicht importiert: Es wird die dieses Computers oder eine neue verwendet.',
       certificados: 'Die Zertifikate konnten nicht vorbereitet werden: {detalle}',
       aplicar:
         'Die importierten Sites wurden nicht vollständig angewendet (Nginx: {nginx}; hosts: {hosts}).',
@@ -5231,7 +5362,8 @@ export const de: Textos = {
     quitado: {
       ia: 'KI-Anbieter {id}: verwendet eine eigene URL.',
       smtp: 'SMTP-Anbieter {id}: Der Host gehört nicht zu einem bekannten Anbieter oder der Benutzer fehlt.',
-      puerto: 'Port von {id}: außerhalb des zulässigen Bereichs, wird auf den Standardwert zurückgesetzt.',
+      puerto:
+        'Port von {id}: außerhalb des zulässigen Bereichs, wird auf den Standardwert zurückgesetzt.',
       carpeta_vigilada: 'Der überwachte Ordner stammt von einem anderen Computer.',
     },
   },

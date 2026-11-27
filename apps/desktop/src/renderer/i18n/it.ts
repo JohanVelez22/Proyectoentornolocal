@@ -3,14 +3,13 @@
  * Glossario fisso: servizio, istanza, sito, tunnel, backup, avviso; Doctor e WolfCore Dev
  * non si traducono. Tono formale e neutro (Lei), mai «tu»; fuori da Git sempre «versione».
  */
-import type { Textos } from './es';
+import type { TextosParciales } from './es';
 
 const plural = (n: number, uno: string, molti: string): string => `${n} ${n === 1 ? uno : molti}`;
 
-export const it: Textos = {
+export const it: TextosParciales = {
   app: {
     nombre: 'WolfCore Dev',
-    lema: 'PHP e Nginx senza complicazioni',
     version: 'Versione',
   },
   nav: {
@@ -72,8 +71,8 @@ export const it: Textos = {
     reinstalar: 'Reinstallare',
   },
   errores: {
-    titulo: 'Impossibile completare l\'azione',
-    arranque: 'Impossibile leggere lo stato dell\'ambiente',
+    titulo: "Impossibile completare l'azione",
+    arranque: "Impossibile leggere lo stato dell'ambiente",
     desconocido: 'Si è verificato un errore imprevisto.',
     /** Dettagli che il core invia come codice all'interno di un errore. */
     detalles: {
@@ -91,8 +90,9 @@ export const it: Textos = {
       'git.divergencia':
         'Il ramo è divergente rispetto al remoto (ci sono commit locali e remoti diversi): risolva manualmente. Non è stato modificato nulla.',
       'git.sin_upstream':
-        'Il ramo attuale non segue alcun ramo remoto: non c\'è alcuna origine da cui scaricare le modifiche.',
-      'git.sin_rama': 'Il repository è su un commit scollegato (senza ramo): non è stato modificato nulla.',
+        "Il ramo attuale non segue alcun ramo remoto: non c'è alcuna origine da cui scaricare le modifiche.",
+      'git.sin_rama':
+        'Il repository è su un commit scollegato (senza ramo): non è stato modificato nulla.',
       'git.no_repositorio': 'La cartella non è un repository git.',
       'git.destino_no_vacio': 'La cartella di destinazione non è vuota.',
       'git.destino_es_archivo': 'La destinazione è un file, non una cartella.',
@@ -101,17 +101,17 @@ export const it: Textos = {
       'git.plazo': 'La clonazione ha superato il limite di {minutos} min ed è stata annullata.',
       'git.token_invalido': 'Il token di GitHub non è valido.',
       'git.url_con_credenciales':
-        'L\'URL non deve contenere utente né password: usi un token separatamente.',
+        "L'URL non deve contenere utente né password: usi un token separatamente.",
       'servicios.desconocido': 'Servizio sconosciuto: {id}.',
       'servicios.no_instalado': '{nombre} non è installato. Lo installi da Servizi.',
       'servicios.puerto_invalido': 'La porta deve essere un numero compreso tra 1024 e 65535.',
       'servicios.puerto_asignado': 'La porta {puerto} è già assegnata a {otro}.',
       'servicios.puerto_ocupado':
-        'La porta {puerto} è utilizzata da {nombre} (PID {pid}). Lo chiuda o scelga un\'altra porta.',
+        "La porta {puerto} è utilizzata da {nombre} (PID {pid}). Lo chiuda o scelga un'altra porta.",
       'servicios.confirmacion_borrado': 'Per eliminare i dati di {nombre} digiti "{id}".',
       'servicios.ftp_no_disponible': 'Il server FTP non è disponibile.',
       'sistema.sin_cliente_ftp':
-        'Non è presente un client FTP associato su questo computer. Ne installi uno (ad esempio FileZilla) o copi l\'indirizzo.',
+        "Non è presente un client FTP associato su questo computer. Ne installi uno (ad esempio FileZilla) o copi l'indirizzo.",
       'servicios.mailpit_no_responde': 'Mailpit non risponde. Lo avvii da Servizi.',
       'servicios.iniciar_todo_fallos':
         'Avviare tutto non è riuscito ad avviare: {nombres}. Controlli Servizi e i relativi log.',
@@ -131,30 +131,31 @@ export const it: Textos = {
       'servicios.datos_apartados':
         '{nombre} non ha dati nella propria cartella, ma sono presenti dati messi da parte da un aggiornamento: non viene creata una cartella vuota. Controlli Servizi → Versioni.',
       'servicios.puerto_reservado':
-        'La porta {puerto} è riservata dal sistema ({desde}–{hasta}): ne scelga un\'altra.',
+        "La porta {puerto} è riservata dal sistema ({desde}–{hasta}): ne scelga un'altra.",
       'servicios.borrado_con_bloqueo':
-        '{nombre} ha un\'istanza bloccata dopo un aggiornamento: la risolva prima di eliminare i suoi dati.',
+        "{nombre} ha un'istanza bloccata dopo un aggiornamento: la risolva prima di eliminare i suoi dati.",
       'servicios.config_no_revertida':
         '{nombre} {version} non si è avviato e non è stato possibile tornare a {anterior} nella configurazione. Selezioni nuovamente {anterior} in Servizi → Versioni.',
       'servicios.puerto_revertido_apagada':
         '{nombre} non si è avviato sulla nuova porta; si è tornati alla {anterior}, ma non si è avviato nemmeno lì: è rimasto arrestato sulla porta {anterior}.',
       'servicios.puerto_no_revertido':
         '{nombre} non si è avviato sulla porta {nuevo} e non è stato possibile tornare alla {anterior} nella configurazione: è rimasto arrestato.',
-      'instancias.id_invalido': 'L\'identificatore dell\'istanza non è valido.',
-      'instancias.no_existe': 'L\'istanza {id} non esiste.',
-      'instancias.existe': 'L\'istanza {id} esiste già.',
+      'instancias.id_invalido': "L'identificatore dell'istanza non è valido.",
+      'instancias.no_existe': "L'istanza {id} non esiste.",
+      'instancias.existe': "L'istanza {id} esiste già.",
       'instancias.una_sola': '{nombre} supporta una sola istanza.',
-      'instancias.ultima': '{id} è l\'unica istanza: non è possibile rimuoverla.',
-      'instancias.sin_puerto_libre': 'Non è stata trovata alcuna porta libera per l\'istanza.',
+      'instancias.ultima': "{id} è l'unica istanza: non è possibile rimuoverla.",
+      'instancias.sin_puerto_libre': "Non è stata trovata alcuna porta libera per l'istanza.",
       'instancias.confirmacion': 'Per continuare digiti "{id}".',
-      'instancias.sin_datos': '{id} non ha dati nella propria cartella: scelga un backup da ripristinare.',
+      'instancias.sin_datos':
+        '{id} non ha dati nella propria cartella: scelga un backup da ripristinare.',
       'instancias.respaldo_no_existe': 'Quel backup di {id} non esiste.',
       'instancias.respaldo_en_uso':
         'Quella copia è necessaria a {id}, che è bloccata: risolva prima il problema.',
       'instancias.version_requerida':
         'Non è noto a quale versione riportare {id}: scelga una versione installata della stessa versione principale.',
       'instalador.version_en_uso':
-        'Impossibile disinstallare {servicio} {version}: è utilizzata dall\'istanza {instancia}.',
+        "Impossibile disinstallare {servicio} {version}: è utilizzata dall'istanza {instancia}.",
       'limpieza.sin_confirmar': 'Manca la conferma per la pulizia delle versioni.',
       'limpieza.seleccion_invalida': 'La selezione delle versioni non è valida.',
       'limpieza.en_curso': 'È già in corso una pulizia delle versioni.',
@@ -169,26 +170,25 @@ export const it: Textos = {
       'limpieza.contenido_ajeno':
         '{servicio} {version} contiene pacchetti installati da Lei (npm, pip…): è necessario accettarne la perdita per rimuoverlo.',
       'limpieza.destino_ocupado':
-        'Esiste già una cartella di {servicio} {version} in bin: non viene sovrascritta. La rimuova prima di recuperare l\'altra.',
+        "Esiste già una cartella di {servicio} {version} in bin: non viene sovrascritta. La rimuova prima di recuperare l'altra.",
       'bd.encender_servicio': 'Avvii {nombre} per gestire i suoi database.',
       'bd.sin_credenciales': 'Non ci sono credenziali salvate per {nombre}.',
       'bd.confirmacion_borrado': 'Per eliminare il database {nombre} digiti il suo nome esatto.',
       'bd.usuario_privilegiado':
-        'L\'utente {usuario} è un amministratore o un ruolo di sistema: scelga un utente dedicato per il progetto.',
+        "L'utente {usuario} è un amministratore o un ruolo di sistema: scelga un utente dedicato per il progetto.",
       'bd.usuario_en_uso':
-        'Un altro progetto utilizza già l\'utente {usuario}: la sua password non viene modificata per non lasciarlo senza connessione. Non è stato creato nulla.',
+        "Un altro progetto utilizza già l'utente {usuario}: la sua password non viene modificata per non lasciarlo senza connessione. Non è stato creato nulla.",
       'bd.rol_sin_login':
-        'L\'utente {usuario} esiste ma non può accedere (ruolo senza LOGIN o regola di accesso del server). Non è stato modificato nulla.',
+        "L'utente {usuario} esiste ma non può accedere (ruolo senza LOGIN o regola di accesso del server). Non è stato modificato nulla.",
       'bd.usuario_clave_distinta':
-        'L\'utente {usuario} esiste già con un\'altra password. Usi la sua password attuale: non viene modificata per non lasciare senza connessione altri progetti.',
+        "L'utente {usuario} esiste già con un'altra password. Usi la sua password attuale: non viene modificata per non lasciare senza connessione altri progetti.",
       'bd.mongosh_faltante': 'Manca mongosh: lo installi da Servizi per gestire MongoDB.',
       'tuneles.sitio_no_encontrado': 'Progetto non trovato.',
       'tuneles.confirmacion_requerida':
         'Pubblicare {dominio} su internet richiede una conferma in WolfCore Dev.',
       'tuneles.confirmacion_obsoleta':
         'Il tunnel di {dominio} è cambiato dopo la conferma: confermi nuovamente.',
-      'tuneles.cloudflared_no_instalado':
-        'cloudflared non è installato. Lo installi da Servizi.',
+      'tuneles.cloudflared_no_instalado': 'cloudflared non è installato. Lo installi da Servizi.',
       'tuneles.proveedor_no_disponible': 'Il provider di tunnel {proveedor} non è disponibile.',
       'tuneles.cloudflare_sin_cuenta':
         'Colleghi prima il Suo account Cloudflare nelle opzioni del tunnel.',
@@ -203,10 +203,11 @@ export const it: Textos = {
         'Il tunnel {nombre} ha connessioni attive (cloudflared richiede -f per eliminarlo). Lo chiuda su tutti i computer in cui è aperto e riprovi, oppure usi «Dimenticare solo qui».',
       'tuneles.nombre_en_uso': 'Il tunnel {nombre} è già utilizzato da un altro sito.',
       'tuneles.dominio_en_uso': 'Il dominio {dominio} è già utilizzato da un altro sito.',
-      'tuneles.confirmacion_olvidar': 'Dimenticare o ricreare il tunnel {nombre} richiede una conferma.',
-      'tuneles.cloudflare_fallo': 'cloudflared non è riuscito a completare l\'operazione: {detalle}',
+      'tuneles.confirmacion_olvidar':
+        'Dimenticare o ricreare il tunnel {nombre} richiede una conferma.',
+      'tuneles.cloudflare_fallo': "cloudflared non è riuscito a completare l'operazione: {detalle}",
       'tuneles.credencial_no_protegida':
-        'Impossibile limitare le credenziali all\'utente, pertanto non sono state utilizzate.',
+        "Impossibile limitare le credenziali all'utente, pertanto non sono state utilizzate.",
       'tuneles.sin_cifrado':
         'La crittografia di sistema non è disponibile: impossibile salvare le credenziali.',
       'tuneles.token_invalido':
@@ -218,7 +219,7 @@ export const it: Textos = {
       'tuneles.tailscale_no_instalado':
         'Tailscale non è installato su questo computer. WolfCore Dev non lo installa: lo installi da tailscale.com.',
       'tuneles.tailscale_sin_sesion':
-        'Tailscale non ha una sessione attiva: effettui l\'accesso in Tailscale e riprovi.',
+        "Tailscale non ha una sessione attiva: effettui l'accesso in Tailscale e riprovi.",
       'tuneles.tailscale_puerto_ocupado':
         'Tailscale pubblica già qualcosa sulla porta HTTPS {puerto}. WolfCore Dev non lo sovrascrive: lo rimuova tramite Tailscale e riprovi.',
       'lan.sitio_no_encontrado': 'Sito non trovato.',
@@ -229,8 +230,8 @@ export const it: Textos = {
       'lan.sin_red':
         'Nessuna rete locale connessa (Wi-Fi o Ethernet). Si connetta a una rete e riprovi.',
       'lan.ip_no_valida':
-        'L\'indirizzo {ip} non appartiene più alla Sua rete locale. Riapra la finestra di dialogo e confermi nuovamente.',
-      'lan.requiere_https': '{dominio} reindirizza a HTTPS: lo condivida con l\'opzione HTTPS.',
+        "L'indirizzo {ip} non appartiene più alla Sua rete locale. Riapra la finestra di dialogo e confermi nuovamente.",
+      'lan.requiere_https': "{dominio} reindirizza a HTTPS: lo condivida con l'opzione HTTPS.",
       'lan.sin_puertos':
         'Non ci sono porte libere tra 8100 e 8199 per la rete locale (i siti condivisi e il link della CA utilizzano questo intervallo). Interrompa la condivisione di un sito o chiuda la finestra della CA e riprovi.',
       'tuneles.expose_no_instalado':
@@ -250,9 +251,10 @@ export const it: Textos = {
         'Nessuna risposta alla richiesta di autorizzazione amministratore entro {segundos} s; il file hosts è rimasto invariato.',
       'https.sin_dominio': 'Un certificato richiede almeno un dominio.',
       'https.sin_autoridad':
-        'L\'autorità di certificazione di WolfCore Dev non esiste. Installi la CA dalla sezione HTTPS prima di emettere certificati.',
+        "L'autorità di certificazione di WolfCore Dev non esiste. Installi la CA dalla sezione HTTPS prima di emettere certificati.",
       'herramientas.pid_invalido': 'Il PID non è valido.',
-      'herramientas.pid_sistema': 'Il PID {pid} è un processo di sistema e non può essere terminato.',
+      'herramientas.pid_sistema':
+        'Il PID {pid} è un processo di sistema e non può essere terminato.',
       'herramientas.proceso_propio':
         'Non è possibile terminare WolfCore Dev né il processo che lo ha avviato.',
       'herramientas.proceso_inexistente': 'Il processo {pid} non esiste più.',
@@ -269,12 +271,13 @@ export const it: Textos = {
         'Un certificato supporta al massimo {maximo} domini o indirizzi IP.',
       'buscar.consulta_invalida': 'Digiti cosa cercare (fino a 500 caratteri).',
       'buscar.raiz_invalida': 'La cartella o il file non esiste o non è valido.',
-      'buscar.regex_invalida': 'L\'espressione regolare non è valida.',
+      'buscar.regex_invalida': "L'espressione regolare non è valida.",
       'buscar.regex_lenta':
-        'L\'espressione regolare impiega troppo tempo: la semplifichi o usi testo letterale.',
+        "L'espressione regolare impiega troppo tempo: la semplifichi o usi testo letterale.",
       'buscar.demasiadas': 'Sono già in corso {maximo} ricerche: ne annulli una o attenda.',
       'terminal.no_abrio': 'Impossibile aprire il terminale.',
-      'terminal.no_instalada': '{nombre} non è installato. Scelga un altro terminale in Impostazioni.',
+      'terminal.no_instalada':
+        '{nombre} non è installato. Scelga un altro terminale in Impostazioni.',
       'terminal.invalida': 'Questo terminale non è valido.',
       'terminal.powershell_restringido':
         'PowerShell è in modalità linguaggio limitato su questo computer (criterio aziendale o AppLocker): WolfCore Dev non può aprire il terminale. Lo apra manualmente nella cartella del progetto.',
@@ -287,39 +290,39 @@ export const it: Textos = {
       'workspaces.captadores_exclusivos':
         'Due catturatori di posta non possono essere avviati contemporaneamente: ne è consentito solo uno.',
       'workspaces.elemento_fallo':
-        'Impossibile completare l\'operazione con {elemento}. Controlli Servizi e i relativi log.',
+        "Impossibile completare l'operazione con {elemento}. Controlli Servizi e i relativi log.",
       'workspaces.base_no_responde':
         '{elemento} non è stato avviato perché il database di quel progetto non risponde.',
       'tareas.cron_invalida':
-        'L\'espressione cron non è valida. Usi 5 campi: minuto, ora, giorno del mese, mese e giorno della settimana (ad esempio, 0 3 * * *).',
+        "L'espressione cron non è valida. Usi 5 campi: minuto, ora, giorno del mese, mese e giorno della settimana (ad esempio, 0 3 * * *).",
       'tareas.comando_invalido':
         'Il comando non è consentito. Usi php, node, npm run o python con un file del progetto, senza codice in linea (-r, -e, -c).',
-      'tareas.invalida': 'L\'attività non è valida: controlli il nome, la pianificazione e il comando.',
+      'tareas.invalida':
+        "L'attività non è valida: controlli il nome, la pianificazione e il comando.",
       'tareas.no_existe': 'Questa attività non esiste più.',
-      'tareas.sin_confirmar': 'Confermi il comando dell\'attività per poterla eseguire.',
+      'tareas.sin_confirmar': "Confermi il comando dell'attività per poterla eseguire.",
       'tareas.sitio_no_confiado':
         'Selezioni «Mi fido di questo repository» nel progetto per eseguire le sue attività.',
       'tareas.receta_cambio':
         'La ricetta del progetto è cambiata da quando ha accordato la fiducia: la controlli e selezioni nuovamente «Mi fido di questo repository».',
       'tareas.aislado':
         'Questa è una cartella di dati di test (WOLFCORE_DATOS): consenta le attività pianificate per eseguirle.',
-      'tareas.carpeta': 'La cartella del progetto non esiste: l\'attività non può essere eseguita.',
-      'tareas.en_curso': 'L\'attività è già in esecuzione.',
+      'tareas.carpeta': "La cartella del progetto non esiste: l'attività non può essere eseguita.",
+      'tareas.en_curso': "L'attività è già in esecuzione.",
       'tareas.demasiadas': 'Ci sono troppe attività in questo progetto (massimo {maximo}).',
       'cli.no_autorizado':
-        'Il comando della CLI non è autorizzato: lo esegua nuovamente con l\'app WolfCore Dev aperta.',
+        "Il comando della CLI non è autorizzato: lo esegua nuovamente con l'app WolfCore Dev aperta.",
       'cli.orden_desconocida': 'WolfCore Dev non riconosce questo comando della CLI.',
       'cli.argumentos_invalidos': 'Gli argomenti del comando non sono validi.',
       'cli.solicitud_grande': 'La richiesta è troppo grande (massimo {maximo} byte).',
       'cli.formato_no_admitido': 'La richiesta non ha il formato accettato dalla CLI.',
       'cli.plazo':
         'Il comando ha impiegato troppo tempo: potrebbe essere ancora in corso. Controlli lo stato in WolfCore Dev.',
-      'cli.ocupado':
-        'WolfCore Dev sta gestendo troppi comandi della CLI: attenda un momento.',
+      'cli.ocupado': 'WolfCore Dev sta gestendo troppi comandi della CLI: attenda un momento.',
       'cli.requiere_confirmacion':
         'Questo comando pubblica o modifica qualcosa e richiede conferma (--si) su {sitio}.',
       'cli.requiere_confirmacion_datos_reales':
-        '{sitio} contiene dati reali: confermi anche con l\'opzione dati reali del comando (il dominio del sito).',
+        "{sitio} contiene dati reali: confermi anche con l'opzione dati reali del comando (il dominio del sito).",
       'cli.requiere_confirmacion_global':
         'Cambiare il PHP di tutti i terminali richiede conferma (--si).',
       'cli.confirmacion_rechazada':
@@ -341,26 +344,27 @@ export const it: Textos = {
         'Questa cartella non appartiene ad alcun sito di WolfCore Dev: la colleghi prima.',
       'cli.ya_vinculada': 'Questa cartella è già il sito {sitio}.',
       'cli.tipo_no_soportado':
-        'I progetti di tipo {tipo} vanno creati dall\'interfaccia di WolfCore Dev.',
+        "I progetti di tipo {tipo} vanno creati dall'interfaccia di WolfCore Dev.",
       'cli.sitio_sin_php': 'Il sito {sitio} non utilizza PHP.',
-      'cli.version_no_instalada':
-        '{servicio} {version} non è installato. Lo installi da Servizi.',
+      'cli.version_no_instalada': '{servicio} {version} non è installato. Lo installi da Servizi.',
       'cli.fuente_no_existe': 'Questo log non esiste ancora.',
       'cli.token_no_protegido':
-        'Impossibile limitare il file del token all\'utente corrente: la CLI non viene attivata.',
+        "Impossibile limitare il file del token all'utente corrente: la CLI non viene attivata.",
       'cli.carpeta_ajena':
         'La cartella run/ della cartella dati appartiene a un altro utente: la CLI non viene attivata.',
-      'cli.ruta_invalida': 'Il percorso di WolfCore Dev contiene caratteri non supportati da wolf.cmd.',
+      'cli.ruta_invalida':
+        'Il percorso di WolfCore Dev contiene caratteri non supportati da wolf.cmd.',
       'cli.path_aislado':
-        'Con una cartella di dati di test (WOLFCORE_DATOS) il PATH dell\'utente non viene modificato.',
-      'cli.sin_cliente': 'Questa versione di WolfCore Dev non include il client wolf (manca la compilazione).',
+        "Con una cartella di dati di test (WOLFCORE_DATOS) il PATH dell'utente non viene modificato.",
+      'cli.sin_cliente':
+        'Questa versione di WolfCore Dev non include il client wolf (manca la compilazione).',
       'cli.demasiados_dialogos':
-        'Troppe conferme nell\'ultimo minuto: attenda un momento e riprovi.',
+        "Troppe conferme nell'ultimo minuto: attenda un momento e riprovi.",
       'cli.error': 'Impossibile completare il comando: {detalle}',
       'proyectos.carpeta_no_vacia':
-        'La cartella del progetto contiene già dei file: ne scelga un\'altra o la svuoti.',
+        "La cartella del progetto contiene già dei file: ne scelga un'altra o la svuoti.",
       'secretos.sin_cifrado':
-        'La crittografia di sistema non è disponibile: impossibile salvare la password dell\'utente dedicato. Non è stato modificato nulla.',
+        "La crittografia di sistema non è disponibile: impossibile salvare la password dell'utente dedicato. Non è stato modificato nulla.",
       'proyectos.clave_bd_falta':
         'Manca la password salvata dell\'utente {usuario}: non è stato scritto nulla. Nel gestore di .env, "Usare utente dedicato" genera una nuova password.',
       'env.archivo_grande': 'Il file delle variabili è troppo grande (massimo {maximo}).',
@@ -368,11 +372,12 @@ export const it: Textos = {
       'env.clave_inexistente': 'La variabile {clave} non esiste.',
       'env.cambio_invalido': 'Una modifica del file .env non è valida.',
       'env.variable_invalida': 'La modifica della variabile {clave} non è valida.',
-      'env.solo_lectura': 'La variabile {clave} occupa più righe: la modifichi manualmente nel file.',
+      'env.solo_lectura':
+        'La variabile {clave} occupa più righe: la modifichi manualmente nel file.',
       'env.usuario_compartido':
         'Il database {base} è utilizzato anche dal progetto {proyecto}: confermi se desidera condividere il suo utente.',
       'env.cambio_externo':
-        'Il file .env è cambiato da quando è stata mostrata l\'anteprima: lo controlli nuovamente prima di salvare.',
+        "Il file .env è cambiato da quando è stata mostrata l'anteprima: lo controlli nuovamente prima di salvare.",
       'env.sin_confirmar': 'Confermi di voler salvare le modifiche del file .env.',
       'env.versionado':
         'Git sta già tracciando il file .env di questo progetto: il prossimo commit ne caricherebbe i valori. Confermi separatamente per continuare.',
@@ -384,7 +389,7 @@ export const it: Textos = {
         'Il database di questo progetto non appartiene a un server locale di WolfCore Dev: non è stato modificato nulla.',
       'env.motor_no_soportado': 'Al momento "Usare utente dedicato" funziona con MySQL e MariaDB.',
       'env.ya_usa_usuario_propio': 'Questo progetto utilizza già un utente dedicato.',
-      'plantillas.id_invalido': 'L\'identificatore del modello non è valido.',
+      'plantillas.id_invalido': "L'identificatore del modello non è valido.",
       'plantillas.no_existe': 'Il modello non esiste.',
       'plantillas.danada':
         'Il modello è danneggiato o è stato modificato: non viene utilizzato. Lo elimini e lo salvi nuovamente.',
@@ -394,8 +399,7 @@ export const it: Textos = {
         'Il progetto è troppo pesante per essere salvato come modello (fino a {maximo}). Escluda le cartelle grandi.',
       'plantillas.exclusion_invalida':
         'Una delle esclusioni non è valida (usi nomi o percorsi relativi, senza "..").',
-      'plantillas.nombre_invalido':
-        'Il nome del modello non è valido (da 1 a 60 caratteri).',
+      'plantillas.nombre_invalido': 'Il nome del modello non è valido (da 1 a 60 caratteri).',
       'plantillas.esquema_fallo':
         'Impossibile leggere lo schema del database del progetto: verifichi che il relativo servizio sia avviato.',
       'plantillas.base_no_resuelta':
@@ -407,10 +411,11 @@ export const it: Textos = {
       'plantillas.motor_distinto':
         'Lo schema del modello è di MySQL e il server selezionato è MariaDB (o viceversa): potrebbero esserci differenze. Confermi di voler continuare.',
       'bd.sql_no_permitido':
-        'Lo schema contiene un\'istruzione non strutturale e non è stato eseguito nulla: {sentencia}',
+        "Lo schema contiene un'istruzione non strutturale e non è stato eseguito nulla: {sentencia}",
       'bd.extension_no_permitida':
-        'Lo schema richiede l\'estensione {nombre}, che non è nell\'elenco consentito: non è stato ripristinato nulla.',
-      'bd.esquema_fallo': 'Impossibile ripristinare lo schema completo: non è stato lasciato nulla a metà.',
+        "Lo schema richiede l'estensione {nombre}, che non è nell'elenco consentito: non è stato ripristinato nulla.",
+      'bd.esquema_fallo':
+        'Impossibile ripristinare lo schema completo: non è stato lasciato nulla a metà.',
       'bd.datos_no_permitidos':
         'Il dump dei dati contiene elementi che non sono dati (sono accettati solo INSERT, LOCK TABLES e SET): non è stato importato nulla.',
       'bd.datos_fallo':
@@ -421,29 +426,33 @@ export const it: Textos = {
       'perfiles.certificados_sin_ca':
         'I certificati dei siti vengono esportati solo insieme alla CA cifrata: includa la CA con una passphrase.',
       'perfiles.no_existe': 'Il file del profilo non esiste.',
-      'perfiles.danado': 'Il profilo è danneggiato o è stato modificato: non è stato importato nulla.',
+      'perfiles.danado':
+        'Il profilo è danneggiato o è stato modificato: non è stato importato nulla.',
       'perfiles.demasiado_grande': 'Il profilo è troppo grande (fino a {maximo}).',
       'perfiles.version_no_soportada':
-        'Il profilo appartiene a una versione più recente di WolfCore Dev (formato {version}): aggiorni l\'app per importarlo.',
+        "Il profilo appartiene a una versione più recente di WolfCore Dev (formato {version}): aggiorni l'app per importarlo.",
       'perfiles.sin_confirmar': 'Confermi di voler importare il profilo.',
       'perfiles.vista_previa_vieja':
-        'La cartella dei dati o il profilo sono cambiati dall\'anteprima: la controlli di nuovo.',
+        "La cartella dei dati o il profilo sono cambiati dall'anteprima: la controlli di nuovo.",
       'perfiles.carpeta_datos_invalida':
         'WOLFCORE_DATOS non è una cartella dati valida: deve essere assoluta, non di sistema e diversa dalla cartella reale.',
       'perfiles.confirmar_reemplazar_ca':
-        'Il profilo include una CA e questo computer ha già la propria: confronti l\'impronta e confermi separatamente di volerla sostituire (solo se è la Sua CA).',
+        "Il profilo include una CA e questo computer ha già la propria: confronti l'impronta e confermi separatamente di volerla sostituire (solo se è la Sua CA).",
       'herramientas.imagen_tipo':
-        'Questo file non è un\'immagine supportata (PNG, JPG, WebP, GIF, BMP o ICO) o il suo contenuto non corrisponde al tipo.',
-      'herramientas.imagen_grande': 'L\'immagine è troppo pesante (fino a {maximo}).',
+        "Questo file non è un'immagine supportata (PNG, JPG, WebP, GIF, BMP o ICO) o il suo contenuto non corrisponde al tipo.",
+      'herramientas.imagen_grande': "L'immagine è troppo pesante (fino a {maximo}).",
       'herramientas.imagen_dimensiones':
-        'L\'immagine è troppo grande ({ancho}×{alto} px; fino a {maximo} px per lato) e non viene aperta per sicurezza.',
-      'herramientas.zip_sin_archivos': 'Non ci sono file da comprimere (i collegamenti non vengono seguiti).',
+        "L'immagine è troppo grande ({ancho}×{alto} px; fino a {maximo} px per lato) e non viene aperta per sicurezza.",
+      'herramientas.zip_sin_archivos':
+        'Non ci sono file da comprimere (i collegamenti non vengono seguiti).',
       'herramientas.zip_demasiados': 'Ci sono troppi file da comprimere (fino a {maximo}).',
-      'herramientas.zip_grande': 'Gli elementi da comprimere sono troppo pesanti (fino a {maximo}).',
+      'herramientas.zip_grande':
+        'Gli elementi da comprimere sono troppo pesanti (fino a {maximo}).',
       'herramientas.pdf_invalido': 'Il file non è un PDF ottimizzabile.',
       'herramientas.pdf_grande': 'Il PDF è troppo pesante (fino a {maximo}).',
       'herramientas.pdf_cifrado': 'Il PDF è protetto da password e non può essere ottimizzato.',
-      'herramientas.pdf_plazo': 'L\'elaborazione del PDF ha impiegato più di {segundos} s ed è stata annullata.',
+      'herramientas.pdf_plazo':
+        "L'elaborazione del PDF ha impiegato più di {segundos} s ed è stata annullata.",
       'herramientas.salida_ocupada': 'Impossibile trovare un nome libero per il nuovo file.',
       'conversor.formato': 'Questa conversione non è disponibile.',
       'conversor.archivo_invalido':
@@ -461,13 +470,14 @@ export const it: Textos = {
         'Questa conversione richiede LibreOffice, che non è installato su questo computer (WolfCore Dev non lo installa).',
       'conversor.libreoffice_fallo': 'LibreOffice non è riuscito a convertire il documento.',
       'conversor.limite_celdas': 'La tabella ha troppe celle (fino a {maximo}).',
-      'conversor.memoria': 'Il file richiede troppa memoria (oltre {maximo}) e l\'operazione è stata annullata.',
+      'conversor.memoria':
+        "Il file richiede troppa memoria (oltre {maximo}) e l'operazione è stata annullata.",
       'conversor.pdf_no_disponible': 'La stampa su PDF non è disponibile in questo momento.',
       'herramientas.imagen_pixeles':
-        'L\'immagine ha troppi pixel in totale ({ancho}×{alto} px; fino a {maximo}) e non viene aperta per sicurezza.',
+        "L'immagine ha troppi pixel in totale ({ancho}×{alto} px; fino a {maximo}) e non viene aperta per sicurezza.",
       'herramientas.zip_cambio': 'Un file è cambiato durante la compressione: riprovi.',
       'herramientas.pdf_demasiado_complejo':
-        'Il PDF è troppo complesso (richiederebbe più memoria di quella consentita) e l\'operazione è stata annullata.',
+        "Il PDF è troppo complesso (richiederebbe più memoria di quella consentita) e l'operazione è stata annullata.",
       'herramientas.salida_denegada':
         'Impossibile scrivere in quella posizione: controlli i permessi o verifichi che la cartella esista.',
       'herramientas.fuera_de_la_ca':
@@ -477,28 +487,32 @@ export const it: Textos = {
       'perfiles.sin_espacio':
         'Spazio libero insufficiente per importare il profilo: servono {necesarios} e sono disponibili {libres}.',
       'perfiles.ca_sin_restricciones':
-        'Questa CA può firmare qualsiasi sito web: la importi solo se è la Sua e confronti l\'impronta. Confermi separatamente per continuare.',
+        "Questa CA può firmare qualsiasi sito web: la importi solo se è la Sua e confronti l'impronta. Confermi separatamente per continuare.",
       'perfiles.ca_restricciones_ajenas':
         'La CA del profilo ha restrizioni sui nomi diverse da quelle di WolfCore Dev: non viene importata.',
       'perfiles.instantanea_fallo':
-        'Impossibile salvare il backup preventivo dell\'ambiente: non è stato modificato nulla. Controlli lo spazio su disco e i permessi della cartella dati.',
-      'perfiles.en_curso': 'È già in corso un\'importazione di profilo: attenda che termini.',
+        "Impossibile salvare il backup preventivo dell'ambiente: non è stato modificato nulla. Controlli lo spazio su disco e i permessi della cartella dati.",
+      'perfiles.en_curso': "È già in corso un'importazione di profilo: attenda che termini.",
       'importar.origen_apagado':
-        'Impossibile connettersi al server database dell\'altro programma: lo avvii da quel programma e riprovi. I siti sono stati comunque importati.',
-      'importar.origen_no_local': 'Il server di origine deve trovarsi su questo computer (127.0.0.1).',
-      'importar.origen_rechazado': 'Il server di origine ha rifiutato il nome utente o la password.',
+        "Impossibile connettersi al server database dell'altro programma: lo avvii da quel programma e riprovi. I siti sono stati comunque importati.",
+      'importar.origen_no_local':
+        'Il server di origine deve trovarsi su questo computer (127.0.0.1).',
+      'importar.origen_rechazado':
+        'Il server di origine ha rifiutato il nome utente o la password.',
       'importar.origen_version':
         'La versione del server di origine non può essere importata con ciò che è installato in WolfCore Dev.',
       'importar.volcado_enorme':
-        'I dati del database superano {maximo} MB: non possono essere importati in un\'unica operazione.',
+        "I dati del database superano {maximo} MB: non possono essere importati in un'unica operazione.",
       'importar.motor_no_soportado':
         'Da altri programmi vengono importati solo database MySQL e MariaDB.',
       'importar.ruta_fuera':
-        'È stata scartata una cartella o un file che punta fuori dall\'installazione o a una cartella di sistema.',
-      'importar.carpeta_invalida': 'È stata scartata una cartella che non esiste più o non è una cartella.',
+        "È stata scartata una cartella o un file che punta fuori dall'installazione o a una cartella di sistema.",
+      'importar.carpeta_invalida':
+        'È stata scartata una cartella che non esiste più o non è una cartella.',
       'importar.archivo_grande':
         'Un file di configurazione supera {maximo} KB e non è stato letto.',
-      'importar.archivo_ilegible': 'Un file di configurazione non è un file di testo o non è stato possibile leggerlo.',
+      'importar.archivo_ilegible':
+        'Un file di configurazione non è un file di testo o non è stato possibile leggerlo.',
       'importar.demasiados':
         'Ci sono troppi siti o file di configurazione: sono stati letti solo i primi.',
       'importar.candidato_desconocido':
@@ -507,7 +521,7 @@ export const it: Textos = {
       'importar.dominio_existe':
         'Esiste già un sito con il dominio {dominio}: lo modifichi prima di importare.',
       'importar.sin_php':
-        'Questo sito richiede PHP e non c\'è alcuna versione installata: la installi da Servizi.',
+        "Questo sito richiede PHP e non c'è alcuna versione installata: la installi da Servizi.",
       'importar.base_existe':
         'Il database {nombre} esiste già nella destinazione e non è stato toccato. Confermi la sostituzione per importarlo (viene effettuato prima un backup).',
       'importar.base_fallo':
@@ -516,13 +530,14 @@ export const it: Textos = {
       'importar.origen_invalido':
         'I dati del server di origine non sono validi (utente, password o porta).',
       'importar.sin_seleccion': 'Selezioni almeno un sito da importare.',
-      'importar.en_curso': 'È già in corso un\'importazione: attenda che termini.',
-      'importar.cancelado': 'Importazione annullata: ciò che era in corso di importazione è rimasto invariato.',
+      'importar.en_curso': "È già in corso un'importazione: attenda che termini.",
+      'importar.cancelado':
+        'Importazione annullata: ciò che era in corso di importazione è rimasto invariato.',
       'importar.origen_estancado':
-        'Il server dell\'altro programma ha smesso di rispondere durante il dump: il database non è stato importato.',
+        "Il server dell'altro programma ha smesso di rispondere durante il dump: il database non è stato importato.",
       'importar.sin_espacio':
         'Spazio libero insufficiente per importare il database: servono circa {necesarios} MB e sono disponibili {libres} MB.',
-      'importar.origen_fallo': 'Impossibile eseguire il dump del database dell\'altro programma.',
+      'importar.origen_fallo': "Impossibile eseguire il dump del database dell'altro programma.",
       'importar.clave_no_ascii':
         'La password contiene accenti o simboli che non possono essere passati al dump: usi una password con soli caratteri ASCII.',
       'plantillas.sin_esquema': 'Il modello non include lo schema di un database.',
@@ -533,19 +548,20 @@ export const it: Textos = {
       'proyectos.base_existe': 'Il database {nombre} esiste già: scelga un altro nome.',
       'proyectos.dominio_existe': 'Esiste già un sito con il dominio {dominio}.',
       'proyectos.carpeta_de_otro_sitio':
-        'Quella cartella appartiene al progetto {dominio} o si trova al suo interno: ne scelga un\'altra.',
+        "Quella cartella appartiene al progetto {dominio} o si trova al suo interno: ne scelga un'altra.",
       'proyectos.sin_python': 'Python non è installato: lo installi da Servizi.',
       'proyectos.venv_ajeno':
-        'Il progetto include il proprio .venv e WolfCore Dev non esegue il Python di un repository esterno: lo elimini e ricrei l\'ambiente.',
+        "Il progetto include il proprio .venv e WolfCore Dev non esegue il Python di un repository esterno: lo elimini e ricrei l'ambiente.",
       'proyectos.paso_base_no_omitible':
         'Il passaggio "Crea il database" di un nuovo progetto non può essere saltato.',
       'proyectos.sin_php': 'PHP non è installato: lo installi da Servizi.',
       'proyectos.php_no_instalado': 'PHP {version} non è installato: lo installi da Servizi.',
-      'proyectos.python_no_instalado':
-        'Python {version} non è installato: lo installi da Servizi.',
+      'proyectos.python_no_instalado': 'Python {version} non è installato: lo installi da Servizi.',
       'mcp.token_invalido': 'Il token del server MCP non è valido.',
-      'mcp.solicitud_cancelada': 'Il client MCP ha annullato la richiesta: l\'azione non è stata eseguita.',
-      'doctor.puerto_ocupado': 'La porta {puerto} di {servicio} è utilizzata da un altro programma ({proceso}).',
+      'mcp.solicitud_cancelada':
+        "Il client MCP ha annullato la richiesta: l'azione non è stata eseguita.",
+      'doctor.puerto_ocupado':
+        'La porta {puerto} di {servicio} è utilizzata da un altro programma ({proceso}).',
       'doctor.puerto_iis': 'IIS ({programa}) occupa la porta {puerto} di {servicio}.',
       'doctor.puerto_http_sys':
         'Un servizio di Windows ({programa}) occupa la porta {puerto} di {servicio}.',
@@ -555,8 +571,9 @@ export const it: Textos = {
       'doctor.puerto_skype': '{programa} occupa la porta {puerto} di {servicio}.',
       'doctor.puerto_reservado':
         'La porta {puerto} di {servicio} si trova in un intervallo riservato da Windows ({desde}-{hasta}: Hyper-V, WSL o Docker).',
-      'doctor.ca_por_vencer': 'L\'autorità di certificazione di WolfCore Dev scade tra {dias} giorni.',
-      'doctor.ca_vencida': 'L\'autorità di certificazione di WolfCore Dev è scaduta.',
+      'doctor.ca_por_vencer':
+        "L'autorità di certificazione di WolfCore Dev scade tra {dias} giorni.",
+      'doctor.ca_vencida': "L'autorità di certificazione di WolfCore Dev è scaduta.",
       'doctor.certificado_por_vencer': 'Il certificato di {dominio} scade tra {dias} giorni.',
       'doctor.certificado_vencido': 'Il certificato di {dominio} è scaduto.',
       'doctor.hosts_ilegible': 'Impossibile leggere il file hosts.',
@@ -566,22 +583,21 @@ export const it: Textos = {
         'Il file hosts contiene {bloques} blocchi di WolfCore Dev; dovrebbe essercene uno solo.',
       'doctor.hosts_bloque_sin_cierre':
         'Un blocco di WolfCore Dev nel file hosts è rimasto senza il marcatore di chiusura.',
-      'doctor.hosts_dominios_faltantes':
-        'Mancano {cantidad} domini dei Suoi siti nel file hosts.',
+      'doctor.hosts_dominios_faltantes': 'Mancano {cantidad} domini dei Suoi siti nel file hosts.',
       'doctor.hosts_solo_lectura':
         'Il file hosts è di sola lettura (di solito impostato da un antivirus). WolfCore Dev può comunque scriverlo con privilegi di amministratore.',
       'doctor.path_duplicados':
-        'Il PATH dell\'utente contiene {cantidad} voci duplicate di WolfCore Dev.',
+        "Il PATH dell'utente contiene {cantidad} voci duplicate di WolfCore Dev.",
       'doctor.path_ajeno_delante':
-        'Un\'altra cartella con {programa} ({origen}) precede WolfCore Dev nel PATH: nei terminali verrà usata quella.',
+        "Un'altra cartella con {programa} ({origen}) precede WolfCore Dev nel PATH: nei terminali verrà usata quella.",
       'doctor.vcredist_ausente':
         'Manca Microsoft Visual C++ 2015-2022 (x64): PHP e altri servizi non si avviano senza di esso.',
       'doctor.enlazador_msvc_ausente':
         'Rust è installato ma mancano gli strumenti C++ di Visual Studio Build Tools (linker MSVC): cargo non potrà effettuare il link dei programmi.',
       'doctor.antivirus_sin_exclusion':
-        'L\'antivirus scansiona la cartella dati di WolfCore Dev: PHP e i servizi potrebbero avviarsi lentamente.',
+        "L'antivirus scansiona la cartella dati di WolfCore Dev: PHP e i servizi potrebbero avviarsi lentamente.",
       'doctor.firewall_reglas':
-        'Windows consente l\'accesso dalla rete a {cantidad} regola/e di programmi di WolfCore Dev (nginx, PHP o database) nei profili {perfiles}: questi programmi restano esposti alla rete.',
+        "Windows consente l'accesso dalla rete a {cantidad} regola/e di programmi di WolfCore Dev (nginx, PHP o database) nei profili {perfiles}: questi programmi restano esposti alla rete.",
       'doctor.firewall_no_comprobado':
         'Impossibile verificare il firewall di Windows (potrebbero essere necessari privilegi di amministratore).',
       'doctor.firewall_reglas_ajenas':
@@ -589,39 +605,46 @@ export const it: Textos = {
       'doctor.servicio_en_error': '{servicio} è in stato di errore.',
       'doctor.revision_fallida': 'Impossibile completare il controllo {revision}.',
       'doctor.confirmacion_requerida': 'Confermi la riparazione prima di applicarla.',
-      'doctor.hallazgo_desconocido': 'Questo rilevamento non è più presente: esegua un nuovo controllo.',
+      'doctor.hallazgo_desconocido':
+        'Questo rilevamento non è più presente: esegua un nuovo controllo.',
       'doctor.solo_informa':
         'Questo rilevamento non dispone di una riparazione automatica: segua le indicazioni.',
       'doctor.reparacion_fallida': 'Impossibile applicare la riparazione.',
-      'doctor.reparacion_cancelada': 'Permesso di amministratore annullato: non è stato modificato nulla.',
-      'doctor.reparacion_denegada': 'Windows o un antivirus ha negato l\'accesso: non è stato modificato nulla.',
-      'doctor.ya_resuelto': 'Il problema non era più presente: non è stato necessario modificare nulla.',
+      'doctor.reparacion_cancelada':
+        'Permesso di amministratore annullato: non è stato modificato nulla.',
+      'doctor.reparacion_denegada':
+        "Windows o un antivirus ha negato l'accesso: non è stato modificato nulla.",
+      'doctor.ya_resuelto':
+        'Il problema non era più presente: non è stato necessario modificare nulla.',
       'doctor.ca_vieja_sin_quitar':
-        'La nuova autorità di certificazione è già in uso, ma non è stato possibile rimuovere quella precedente dall\'archivio di Windows. Può rimuoverla dalla sezione HTTPS.',
-      'doctor.sin_puerto_libre': 'Impossibile trovare una porta libera su cui spostare il servizio.',
+        "La nuova autorità di certificazione è già in uso, ma non è stato possibile rimuovere quella precedente dall'archivio di Windows. Può rimuoverla dalla sezione HTTPS.",
+      'doctor.sin_puerto_libre':
+        'Impossibile trovare una porta libera su cui spostare il servizio.',
       'doctor.ca_vuelta_atras_incompleta':
         'Impossibile applicare la nuova autorità e il ripristino è rimasto incompleto. Controlli la sezione HTTPS; è presente una copia datata in etc/respaldos.',
       'doctor.firefox_sin_confianza':
-        'Firefox non si fida dell\'autorità di WolfCore Dev in {cantidad} profili (utilizza il proprio archivio).',
-      'confianza.sin_ca': 'Non è ancora presente un\'autorità di certificazione: la crei da HTTPS.',
+        "Firefox non si fida dell'autorità di WolfCore Dev in {cantidad} profili (utilizza il proprio archivio).",
+      'confianza.sin_ca': "Non è ancora presente un'autorità di certificazione: la crei da HTTPS.",
       'confianza.sin_raices':
         'Non sono stati trovati certificati radice attendibili per Python (né certifi né quelli di Windows): non è stato modificato nulla.',
       'confianza.node_variable_ajena':
         'Dispone già della propria NODE_EXTRA_CA_CERTS: WolfCore Dev non la sostituisce.',
       'confianza.variable_fallida': 'Impossibile modificare la variabile utente.',
       'firefox.abierto': 'Firefox è aperto: lo chiuda e riprovi.',
-      'firefox.error': 'Impossibile modificare il file user.js di quel profilo; è rimasto invariato.',
+      'firefox.error':
+        'Impossibile modificare il file user.js di quel profilo; è rimasto invariato.',
       'firefox.fuera':
         'Ci sono profili fuori dalla cartella di Firefox: li attivi da Attendibilità della CA, con conferma separata.',
       'confianza.node_variable_cambiada':
-        'NODE_EXTRA_CA_CERTS non punta più all\'autorità di WolfCore Dev (è stata modificata manualmente): non è stata eliminata.',
-      'ia.clave_invalida': 'Il provider ha rifiutato la chiave: la controlli o ne generi una nuova.',
-      'ia.sin_saldo': 'L\'account del provider non ha credito o quota disponibile.',
+        "NODE_EXTRA_CA_CERTS non punta più all'autorità di WolfCore Dev (è stata modificata manualmente): non è stata eliminata.",
+      'ia.clave_invalida':
+        'Il provider ha rifiutato la chiave: la controlli o ne generi una nuova.',
+      'ia.sin_saldo': "L'account del provider non ha credito o quota disponibile.",
       'ia.limite': 'Il provider ha limitato le richieste: attenda un momento e riprovi.',
       'ia.region': 'Il provider non offre il servizio nel Suo Paese o nella Sua regione.',
-      'ia.sin_red': 'Impossibile connettersi al provider: controlli la rete o l\'URL di base.',
+      'ia.sin_red': "Impossibile connettersi al provider: controlli la rete o l'URL di base.",
       'ia.url_invalida':
-        'L\'URL di base non è valido: usi https:// (o http:// solo verso 127.0.0.1 o [::1]), senza nome utente né password.',
+        "L'URL di base non è valido: usi https:// (o http:// solo verso 127.0.0.1 o [::1]), senza nome utente né password.",
       'ia.plazo': 'Il provider non ha risposto entro {segundos} s.',
       'ia.respuesta_rara': 'Il provider ha restituito una risposta inattesa.',
       'ia.cancelado': 'Richiesta al provider annullata.',
@@ -636,19 +659,19 @@ export const it: Textos = {
       'ia.env_sin_confirmar':
         'Confermi di voler scrivere la chiave nel file .env (rimane in testo in chiaro).',
       'ia.env_versionado':
-        'Git traccia già il file .env di questo progetto: il prossimo commit caricherebbe la chiave anche se è in .gitignore. Lo rimuova dall\'indice con git rm --cached .env.',
+        "Git traccia già il file .env di questo progetto: il prossimo commit caricherebbe la chiave anche se è in .gitignore. Lo rimuova dall'indice con git rm --cached .env.",
       'ia.env_versionado_desconocido':
         'Impossibile verificare se git traccia già il file .env di questo progetto: confermi separatamente di voler scrivere la chiave.',
       'ia.proveedor_no_existe': 'Il provider IA non esiste più.',
       'ia.url_cambia_con_clave':
         'Il provider ha una chiave salvata: confermi di volerla inviare al nuovo URL.',
       'ia.mensaje_sin_confirmar':
-        'Confermi l\'invio del messaggio di prova (consuma token del Suo account).',
+        "Confermi l'invio del messaggio di prova (consuma token del Suo account).",
       'ia.clave_ilegible':
         'Impossibile leggere la chiave salvata del provider: la elimini e la salvi di nuovo.',
       'ia.argumento_invalido': 'Dato non valido ({campo}).',
       'correo.auth': 'Il provider ha rifiutato il nome utente o la password.',
-      'correo.conexion': 'Impossibile connettersi al server SMTP: controlli l\'host e la porta.',
+      'correo.conexion': "Impossibile connettersi al server SMTP: controlli l'host e la porta.",
       'correo.tls':
         'Impossibile stabilire una connessione cifrata e valida con il server (certificato, nome o STARTTLS). Non è stato inviato nulla.',
       'correo.rechazado':
@@ -658,7 +681,7 @@ export const it: Textos = {
         'Il server SMTP deve essere un nome host o un IP, senza schema, porta né percorso.',
       'correo.host_local':
         'Questo server punta a questo computer o alla rete locale: confermi per utilizzarlo.',
-      'correo.destinatario_invalido': 'L\'indirizzo di destinazione non è valido.',
+      'correo.destinatario_invalido': "L'indirizzo di destinazione non è valido.",
       'correo.proveedor_invalido': 'I dati del provider non sono validi.',
       'correo.proveedor_no_existe': 'Il provider di posta non esiste più.',
       'correo.sin_clave': 'Il provider non ha una chiave salvata.',
@@ -666,36 +689,36 @@ export const it: Textos = {
         'Impossibile leggere la chiave salvata del provider: la elimini e la salvi di nuovo.',
       'correo.cambia_con_clave':
         'Il provider ha una chiave salvata: confermi di volerla inviare al nuovo server.',
-      'correo.env_sin_confirmar':
-        'Confermi di voler scrivere le variabili di posta nel file .env.',
+      'correo.env_sin_confirmar': 'Confermi di voler scrivere le variabili di posta nel file .env.',
       'correo.ocupado': 'È già in corso una prova di invio.',
-      'correo.limite': 'Attenda {segundos} s prima di un\'altra prova di invio.',
+      'correo.limite': "Attenda {segundos} s prima di un'altra prova di invio.",
       'correo.clave_mal_formada':
         'La chiave non ha un formato valido: solo caratteri stampabili, senza interruzioni di riga e fino a 4096 caratteri.',
       'correo.argumento_invalido': 'Dato non valido ({campo}).',
       'agentes.no_existe': 'Questo agente non è supportato.',
-      'agentes.sin_confirmar': 'Confermi l\'azione nella finestra di dialogo prima di continuare.',
+      'agentes.sin_confirmar': "Confermi l'azione nella finestra di dialogo prima di continuare.",
       'agentes.no_instalable':
         'Questo agente non si installa da WolfCore Dev: segua la guida ufficiale ({guia}).',
-      'agentes.sin_node': 'Installi Node da Servizi per poter installare l\'agente.',
+      'agentes.sin_node': "Installi Node da Servizi per poter installare l'agente.",
       'agentes.node_antiguo':
         '{agente} richiede Node {requerida} o superiore e quello che verrebbe usato è {actual}. Installi una versione più recente di Node da Servizi.',
       'agentes.node_version_desconocida':
         'Impossibile rilevare la versione di Node e {agente} richiede Node {requerida} o superiore. Controlli Node in Servizi.',
       'instalador.zip_demasiado_grande':
         'Il pacchetto scaricato è troppo grande o contiene troppi file: non viene installato.',
-      'rust.rustup_init_fallo': 'rustup-init non è terminato correttamente (codice {codigo}): {detalle}',
+      'rust.rustup_init_fallo':
+        'rustup-init non è terminato correttamente (codice {codigo}): {detalle}',
       'rust.toolchain_fallo': 'Impossibile installare Rust {version} (codice {codigo}): {detalle}',
       'rust.desinstalar_fallo': 'Impossibile disinstallare Rust {version}: {detalle}',
       'rust.descarga_fallo': 'Impossibile scaricare rustup (HTTP {estado}).',
-      'agentes.instalacion_fallo': 'Impossibile installare l\'agente: {detalle}',
+      'agentes.instalacion_fallo': "Impossibile installare l'agente: {detalle}",
       'agentes.no_instalado': '{agente} non è installato.',
       'agentes.mcp_no_soportado':
-        '{agente} non documenta come leggere il token da una variabile d\'ambiente: l\'MCP non viene registrato.',
+        "{agente} non documenta come leggere il token da una variabile d'ambiente: l'MCP non viene registrato.",
       'agentes.config_ilegible':
         'Impossibile interpretare {archivo}; non è stato modificato. Lo controlli manualmente.',
       'agentes.config_en_uso':
-        '{archivo} è cambiato mentre WolfCore Dev lo modificava: chiuda l\'agente e riprovi. Non è stato modificato.',
+        "{archivo} è cambiato mentre WolfCore Dev lo modificava: chiuda l'agente e riprovi. Non è stato modificato.",
       'agentes.proveedor_incompatible': '{agente} non può utilizzare questo provider IA.',
       'agentes.sin_cambios_preparados': 'Non ci sono modifiche preparate (git add) da descrivere.',
       'agentes.argumento_invalido': 'Dato non valido ({campo}).',
@@ -704,23 +727,25 @@ export const it: Textos = {
       'php.rama_no_instalada': 'PHP {rama} non è installato.',
       'php.argumento_invalido': 'Dato non valido ({campo}).',
       'php.valor_invalido': 'Il valore di {clave} non è valido.',
-      'php.ini_invalido': 'PHP non si avvia con quel php.ini; non è stato salvato nulla. Output: {salida}',
+      'php.ini_invalido':
+        'PHP non si avvia con quel php.ini; non è stato salvato nulla. Output: {salida}',
       'php.no_arranco':
         'PHP {rama} non si è riavviato con la modifica; è stata ripristinata la configurazione precedente e risponde come prima.',
       'php.caido_tras_restaurar':
         'PHP {rama} non si è riavviato; è stata ripristinata la configurazione precedente, ma continua a non rispondere. Controlli Servizi e i log di PHP.',
       'php.respaldo_no_existe': 'Quel backup del php.ini non esiste.',
-      'php.extension_no_existe': 'L\'estensione {nombre} non è presente nella cartella ext di questa versione.',
+      'php.extension_no_existe':
+        "L'estensione {nombre} non è presente nella cartella ext di questa versione.",
       'php.extension_no_catalogo':
-        'L\'estensione {nombre} non è presente nel catalogo per questa versione.',
+        "L'estensione {nombre} non è presente nel catalogo per questa versione.",
       'php.variante_desconocida': 'Impossibile determinare come è compilato questo PHP.',
       'php.sin_variante': 'Il catalogo non dispone di {nombre} per la compilazione {variante}.',
-      'php.huella_distinta': 'Il download non corrisponde all\'impronta pubblicata; non è stato installato nulla.',
-      'php.descarga_fallida': 'Impossibile scaricare l\'estensione: {detalle}',
-      'php.extension_en_uso':
-        'La DLL di {nombre} è in uso. Arresti PHP {rama} e riprovi.',
+      'php.huella_distinta':
+        "Il download non corrisponde all'impronta pubblicata; non è stato installato nulla.",
+      'php.descarga_fallida': "Impossibile scaricare l'estensione: {detalle}",
+      'php.extension_en_uso': 'La DLL di {nombre} è in uso. Arresti PHP {rama} e riprovi.',
       'php.extension_sin_dll':
-        'Impossibile sostituire la DLL di {nombre} e la cartella ext di PHP {rama} ne è rimasta priva. Arresti PHP {rama} e riprovi: quella precedente tornerà al suo posto all\'avvio.',
+        "Impossibile sostituire la DLL di {nombre} e la cartella ext di PHP {rama} ne è rimasta priva. Arresti PHP {rama} e riprovi: quella precedente tornerà al suo posto all'avvio.",
       'php.sitio_sin_php': 'Questo sito non utilizza PHP.',
       'php.sitio_no_arranco':
         'Il PHP dedicato di {sitio} non ha risposto con la modifica; è stata ripristinata la configurazione precedente.',
@@ -728,7 +753,7 @@ export const it: Textos = {
       'xdebug.launch_invalido':
         'Impossibile interpretare il file .vscode/launch.json del progetto; non è stato modificato nulla.',
       'xdebug.launch_no_seguro':
-        'La cartella .vscode o il suo launch.json sono un collegamento o qualcos\'altro: non viene scritto nulla lì.',
+        "La cartella .vscode o il suo launch.json sono un collegamento o qualcos'altro: non viene scritto nulla lì.",
       'xdebug.sin_configurar': 'Configuri Xdebug nel sito prima di generare launch.json.',
       'nginx.sitio_no_existe': 'Quel sito non esiste più.',
       'nginx.texto_invalido':
@@ -767,7 +792,7 @@ export const it: Textos = {
       'contenedores.remoto':
         'La connessione predefinita di {motor} punta a un altro computer: WolfCore Dev utilizza solo motori locali.',
       'contenedores.no_existe': "Il container non esiste più. Aggiorni l'elenco.",
-      'contenedores.accion_fallo': 'Il motore non è riuscito a completare l\'operazione: {detalle}',
+      'contenedores.accion_fallo': "Il motore non è riuscito a completare l'operazione: {detalle}",
       'contenedores.demasiados_registros':
         'È possibile seguire al massimo {maximo} log di container contemporaneamente.',
       'contenedores.sin_confirmar': "Confermi l'azione nella finestra di dialogo.",
@@ -778,7 +803,8 @@ export const it: Textos = {
       'catalogo.huella_debil':
         "{servicio} {version} dispone solo di un'impronta debole (MD5 o SHA-1): confermi l'installazione nella finestra di dialogo.",
       'catalogo.huella_no_coincide': "Il download non corrisponde all'impronta pubblicata.",
-      'catalogo.redireccion_ajena': 'Il download ha tentato di accedere a un sito non consentito ({host}).',
+      'catalogo.redireccion_ajena':
+        'Il download ha tentato di accedere a un sito non consentito ({host}).',
       'catalogo.demasiadas_redirecciones':
         'Il download ha eseguito troppi reindirizzamenti (più di {maximo}).',
       'catalogo.respuesta_grande': 'La risposta del server è troppo grande.',
@@ -802,8 +828,7 @@ export const it: Textos = {
         'phpMyAdmin apre solo database MySQL e MariaDB; utilizzi Adminer per PostgreSQL.',
       'acceso_bd.servidor_no_resuelto':
         'Il database di questo progetto non appartiene a un server locale di WolfCore Dev.',
-      'acceso_bd.no_listo':
-        'Lo strumento non è pronto: lo installi da Servizi e avvii PHP.',
+      'acceso_bd.no_listo': 'Lo strumento non è pronto: lo installi da Servizi e avvii PHP.',
       'auditoria.tabla_invalida': 'La tabella non esiste in quel database.',
       'auditoria.columna_invalida':
         "La colonna non esiste in quella tabella (e la colonna dell'utente e quella dell'hash devono essere diverse).",
@@ -818,13 +843,15 @@ export const it: Textos = {
       'auditoria.sin_confirmar': 'Confermi di voler reimpostare questa password.',
       'auditoria.respaldo_previo_fallo':
         'Impossibile salvare un backup del database prima del ripristino: non è stato modificato nulla.',
-      'auditoria.copia_fallo': 'Impossibile salvare una copia della riga: non è stato modificato nulla.',
+      'auditoria.copia_fallo':
+        'Impossibile salvare una copia della riga: non è stato modificato nulla.',
       'auditoria.motor_no_soportado':
         "L'audit delle password è supportato per MySQL, MariaDB e PostgreSQL.",
       'auditoria.cancelada': 'Audit annullato.',
       'auditoria.usuario_invalido': 'Il nome utente deve contenere tra 1 e 256 caratteri.',
-      'auditoria.en_curso': "È già in corso un audit: attenda il termine o lo annulli.",
-      'auditoria.base_sistema': 'Non è possibile eseguire un audit su un database di sistema: scelga il database di un progetto.',
+      'auditoria.en_curso': 'È già in corso un audit: attenda il termine o lo annulli.',
+      'auditoria.base_sistema':
+        'Non è possibile eseguire un audit su un database di sistema: scelga il database di un progetto.',
       'auditoria.esquema_invalido': 'Lo schema non esiste in quel database.',
       'auditoria.fila_cambio':
         "L'account è cambiato nel frattempo: la password non è stata reimpostata. Riprovi.",
@@ -835,17 +862,20 @@ export const it: Textos = {
       'auditoria.datos_reales_sin_confirmar':
         'Questo database contiene dati reali di clienti: reimpostare una password richiede la conferma rafforzata.',
       'instantaneas.id_invalido': "L'istantanea non è valida.",
-      'instantaneas.no_encontrada': "Istantanea non trovata; potrebbe essere già stata eliminata.",
-      'instantaneas.otra_base': 'Questa istantanea appartiene a un altro database: non può essere applicata a questo.',
+      'instantaneas.no_encontrada': 'Istantanea non trovata; potrebbe essere già stata eliminata.',
+      'instantaneas.otra_base':
+        'Questa istantanea appartiene a un altro database: non può essere applicata a questo.',
       'instantaneas.sin_confirmar': 'Confermi di voler tornare a questa istantanea.',
-      'instantaneas.motor_no_soportado': 'Le istantanee sono supportate per MySQL, MariaDB e PostgreSQL.',
+      'instantaneas.motor_no_soportado':
+        'Le istantanee sono supportate per MySQL, MariaDB e PostgreSQL.',
       'instantaneas.demasiado_grande':
         "Il database supera {maximo} MB, il limite massimo consentito per un'istantanea.",
       'instantaneas.sin_espacio':
         "Spazio libero insufficiente per l'istantanea: servono {necesarios} MB e ne sono disponibili {libres} MB.",
       'instantaneas.limite':
         'Esistono già {maximo} istantanee per questo database: ne elimini qualcuna per crearne una nuova.',
-      'instantaneas.tomar_fallo': "Impossibile creare l'istantanea. Il database non è stato modificato.",
+      'instantaneas.tomar_fallo':
+        "Impossibile creare l'istantanea. Il database non è stato modificato.",
       'instantaneas.huella_no_coincide':
         "Il file dell'istantanea è stato modificato o è danneggiato: non è stato ripristinato nulla.",
       'instantaneas.respaldo_previo_fallo':
@@ -910,12 +940,14 @@ export const it: Textos = {
         `Il database ${base} verrà sostituito completamente da questa istantanea: tutte le modifiche successive andranno perse nel database. Prima viene salvata un'istantanea automatica dello stato attuale; in caso di errore, il database tornerà automaticamente a quello stato.`,
       pedir: (base: string) => `Per confermare, digiti ${base}`,
       confirmar: 'Ripristina questa istantanea',
-      trabajando: (base: string) => `Ripristino di ${base} in corso… Non chiuda il programma fino al completamento.`,
+      trabajando: (base: string) =>
+        `Ripristino di ${base} in corso… Non chiuda il programma fino al completamento.`,
       hecho: (base: string) => `Il database ${base} è stato ripristinato all'istantanea`,
       respaldoPrevio: "Lo stato precedente è stato salvato nell'istantanea automatica del",
       advertencias: 'Il ripristino è terminato con avvisi:',
-      hechoConAvisos: (base: string) => `Il database ${base} è stato ripristinato all'istantanea, con avvisi`,
-      baseVacia: 'Il database non esiste o è vuoto: non c\'è nulla da salvare prima del ripristino.',
+      hechoConAvisos: (base: string) =>
+        `Il database ${base} è stato ripristinato all'istantanea, con avvisi`,
+      baseVacia: "Il database non esiste o è vuoto: non c'è nulla da salvare prima del ripristino.",
       sinGuardarTitulo: 'Impossibile salvare lo stato attuale',
       sinGuardarTexto:
         'WolfCore Dev non è riuscito a salvare lo stato attuale del database prima del ripristino. Se continua SENZA salvarlo e il ripristino fallisce, i dati attuali del database andranno persi.',
@@ -928,7 +960,8 @@ export const it: Textos = {
   },
   tareas: {
     titulo: 'Attività pianificate',
-    resumen: (n: number) => (n === 0 ? 'Nessuna attività' : n === 1 ? '1 attività' : `${n} attività`),
+    resumen: (n: number) =>
+      n === 0 ? 'Nessuna attività' : n === 1 ? '1 attività' : `${n} attività`,
     mostrar: 'Mostra attività',
     ocultar: 'Nascondi',
     cargando: 'Caricamento delle attività',
@@ -936,7 +969,7 @@ export const it: Textos = {
     soloAbierta:
       "Le attività vengono eseguite solo mentre WolfCore Dev è aperto. Non utilizzano l'Utilità di pianificazione di Windows: con l'applicazione chiusa o il computer in sospensione non vengono eseguite e le esecuzioni mancate non vengono recuperate.",
     repoEjecuta:
-      'In un progetto attendibile, ciò che si trova nel repository viene eseguito così com\'è: il file indicato dall\'attività, `artisan`, gli script di `package.json`, `.venv`… Se cambiano dopo un `git pull`, l\'attività eseguirà la nuova versione.',
+      "In un progetto attendibile, ciò che si trova nel repository viene eseguito così com'è: il file indicato dall'attività, `artisan`, gli script di `package.json`, `.venv`… Se cambiano dopo un `git pull`, l'attività eseguirà la nuova versione.",
     vacio:
       'Questo progetto non ha attività pianificate. Ne crei una (ad esempio «php artisan schedule:run» ogni minuto in un progetto Laravel).',
     nueva: 'Nuova attività',
@@ -968,15 +1001,16 @@ export const it: Textos = {
       aislado:
         'Questa è una cartella dati di prova (WOLFCORE_DATOS): non viene eseguita finché non consente le attività in questa sessione.',
       no_confiado:
-        'Il progetto non è contrassegnato come attendibile: selezioni «Mi fido di questo repository» per consentirne l\'esecuzione.',
+        "Il progetto non è contrassegnato come attendibile: selezioni «Mi fido di questo repository» per consentirne l'esecuzione.",
       receta_cambio:
-        'La ricetta del progetto è cambiata da quando l\'ha contrassegnato come attendibile: la controlli e selezioni nuovamente «Mi fido di questo repository».',
-      sin_confirmar: 'È necessario confermare il comando: non verrà eseguito finché non lo esamina e lo conferma.',
+        "La ricetta del progetto è cambiata da quando l'ha contrassegnato come attendibile: la controlli e selezioni nuovamente «Mi fido di questo repository».",
+      sin_confirmar:
+        'È necessario confermare il comando: non verrà eseguito finché non lo esamina e lo conferma.',
       comando_invalido: 'Il comando non è consentito (solo php, node, npm run e python).',
-      cron_invalida: 'La pianificazione non è un\'espressione cron valida.',
+      cron_invalida: "La pianificazione non è un'espressione cron valida.",
       carpeta: 'La cartella del progetto non esiste.',
-      solapada: 'L\'esecuzione precedente era ancora in corso: questa è stata saltata.',
-      retraso: 'In ritardo (l\'applicazione era sospesa): non verrà recuperata.',
+      solapada: "L'esecuzione precedente era ancora in corso: questa è stata saltata.",
+      retraso: "In ritardo (l'applicazione era sospesa): non verrà recuperata.",
       error: 'Impossibile eseguire il programma.',
     },
     acciones: {
@@ -990,7 +1024,7 @@ export const it: Textos = {
     borrar: {
       titulo: (n: string) => `Eliminare «${n}»?`,
       texto:
-        'L\'attività e la relativa cronologia vengono rimosse. Ciò che è già stato eseguito non viene annullato e i file del progetto non vengono toccati.',
+        "L'attività e la relativa cronologia vengono rimosse. Ciò che è già stato eseguito non viene annullato e i file del progetto non vengono toccati.",
       confirmar: 'Elimina',
       hecho: (n: string) => `Attività «${n}» eliminata.`,
     },
@@ -1001,7 +1035,7 @@ export const it: Textos = {
       permitir: 'Consenti in questa sessione',
       confirmarTitulo: 'Consentire le attività in questa cartella di prova?',
       confirmarTexto:
-        'Le attività attive dei progetti attendibili inizieranno a essere eseguite fino alla chiusura dell\'applicazione. I comandi appartengono ai rispettivi progetti e vengono eseguiti nella loro cartella reale.',
+        "Le attività attive dei progetti attendibili inizieranno a essere eseguite fino alla chiusura dell'applicazione. I comandi appartengono ai rispettivi progetti e vengono eseguiti nella loro cartella reale.",
       permitido: 'Attività consentite in questa sessione.',
     },
     yml: {
@@ -1011,11 +1045,11 @@ export const it: Textos = {
       estado: { nueva: 'Nuova', adoptada: 'Adottata', cambiada: 'Modificata' },
       revisar: 'Esamina e adotta',
       cambiada:
-        'Il comando in wolfcore.yml è cambiato da quando l\'ha adottata. L\'attività del progetto continua con il comando confermato; adotti la nuova versione se la riconosce.',
+        "Il comando in wolfcore.yml è cambiato da quando l'ha adottata. L'attività del progetto continua con il comando confermato; adotti la nuova versione se la riconosce.",
       guardarEn: 'Salva in wolfcore.yml',
-      escribirTitulo: 'Scrivere l\'attività in wolfcore.yml?',
+      escribirTitulo: "Scrivere l'attività in wolfcore.yml?",
       escribirTexto:
-        'L\'attività viene aggiunta o aggiornata nel file del progetto (senza modificare il resto) affinché viaggi con il repository. Chi lo clonerà dovrà confermarla sul proprio computer.',
+        "L'attività viene aggiunta o aggiornata nel file del progetto (senza modificare il resto) affinché viaggi con il repository. Chi lo clonerà dovrà confermarla sul proprio computer.",
       escribir: 'Scrivi',
       escrita: 'Attività salvata in wolfcore.yml.',
     },
@@ -1023,7 +1057,7 @@ export const it: Textos = {
       titulo: (n: string) => `Log di «${n}»`,
       historial: 'Ultime esecuzioni',
       sinHistorial: 'Nessuna esecuzione finora.',
-      salida: 'Output dell\'ultima esecuzione',
+      salida: "Output dell'ultima esecuzione",
       sinSalida: 'Nessun output salvato.',
       enmascarado:
         'I log nascondono password e chiavi, hanno una dimensione massima e ruotano automaticamente.',
@@ -1032,8 +1066,8 @@ export const it: Textos = {
     dialogo: {
       tituloNueva: 'Nuova attività pianificata',
       tituloEditar: 'Modifica attività pianificata',
-      tituloAdoptar: 'Adotta l\'attività da wolfcore.yml',
-      tituloConfirmar: 'Conferma il comando dell\'attività',
+      tituloAdoptar: "Adotta l'attività da wolfcore.yml",
+      tituloConfirmar: "Conferma il comando dell'attività",
       nombre: 'Nome',
       nombrePlaceholder: 'Attività di Laravel',
       horario: 'Quando',
@@ -1041,14 +1075,14 @@ export const it: Textos = {
         cadaMinuto: 'Ogni minuto',
         cadaN: 'Ogni tot minuti',
         cadaHora: 'Ogni ora',
-        diaria: 'Tutti i giorni a un\'ora specifica',
-        laborables: 'Dal lunedì al venerdì a un\'ora specifica',
+        diaria: "Tutti i giorni a un'ora specifica",
+        laborables: "Dal lunedì al venerdì a un'ora specifica",
         personalizada: 'Espressione cron personalizzata',
       },
       cadaNOpcion: (n: number) => `Ogni ${n} minuti`,
       hora: 'Ora',
       horaPlaceholder: '03:00',
-      horaInvalida: 'Inserisca un\'ora valida, ad esempio 03:00.',
+      horaInvalida: "Inserisca un'ora valida, ad esempio 03:00.",
       expresion: 'Espressione cron',
       cronEquivale: 'Espressione cron:',
       expresionAyuda:
@@ -1059,13 +1093,14 @@ export const it: Textos = {
       comandoAyuda:
         'Solo php, node, npm run e python, con un file del progetto. Viene eseguito nella cartella del progetto, senza shell e senza codice inline (-r, -e, -c).',
       comandoFijo:
-        'Questo comando contiene argomenti con virgolette che non possono essere scritti come testo: viene conservato così com\'è e non può essere modificato qui (la elimini e ne crei un\'altra se deve cambiarlo).',
+        "Questo comando contiene argomenti con virgolette che non possono essere scritti come testo: viene conservato così com'è e non può essere modificato qui (la elimini e ne crei un'altra se deve cambiarlo).",
       argumentos: 'Verrà eseguito con questi argomenti:',
       comillasSinCerrar: 'Mancano delle virgolette di chiusura.',
       tiempo: 'Tempo massimo',
       minutos: 'minuti',
-      tiempoAyuda: 'Se impiega più tempo, si arresta automaticamente (solo quel processo e quelli avviati da esso).',
-      activa: 'Attiva (viene eseguita automaticamente mentre l\'applicazione è aperta)',
+      tiempoAyuda:
+        'Se impiega più tempo, si arresta automaticamente (solo quel processo e quelli avviati da esso).',
+      activa: "Attiva (viene eseguita automaticamente mentre l'applicazione è aperta)",
       advertencia:
         'Accettando autorizza questo comando esatto: verrà eseguito automaticamente, nella cartella di questo progetto, ogni volta che è pianificato. Se lo modifica, dovrà confermarlo nuovamente.',
       revise: 'Ho esaminato questo comando e lo riconosco.',
@@ -1097,7 +1132,7 @@ export const it: Textos = {
     borrar: {
       titulo: (n: string) => `Eliminare «${n}»?`,
       texto:
-        'L\'eliminazione del workspace non arresta né elimina nulla: rimuove solo il gruppo. Ciò che è avviato rimane avviato.',
+        "L'eliminazione del workspace non arresta né elimina nulla: rimuove solo il gruppo. Ciò che è avviato rimane avviato.",
       confirmar: 'Elimina',
       hecho: (n: string) => `Workspace «${n}» eliminato.`,
     },
@@ -1114,9 +1149,11 @@ export const it: Textos = {
         servicios: 'Servizi',
         procesos: 'Processi dei progetti',
       },
-      sinOpciones: 'Non c\'è nulla da selezionare qui.',
-      captadorUnico: 'È consentito un solo server di cattura email alla volta: selezionarne un altro sostituisce il precedente.',
-      yaNoExisten: (lista: string) => `Non esistono più e verranno rimossi al salvataggio: ${lista}`,
+      sinOpciones: "Non c'è nulla da selezionare qui.",
+      captadorUnico:
+        'È consentito un solo server di cattura email alla volta: selezionarne un altro sostituisce il precedente.',
+      yaNoExisten: (lista: string) =>
+        `Non esistono più e verranno rimossi al salvataggio: ${lista}`,
       guardar: 'Salva',
       guardado: (n: string) => `Workspace «${n}» salvato.`,
     },
@@ -1141,7 +1178,7 @@ export const it: Textos = {
   },
   inicio: {
     titulo: 'Home',
-    bienvenida: 'Il Suo ambiente di sviluppo, a colpo d\'occhio.',
+    bienvenida: "Il Suo ambiente di sviluppo, a colpo d'occhio.",
     tiles: {
       servicios: 'Servizi attivi',
       serviciosDe: (total: number) => `su ${total}`,
@@ -1163,9 +1200,10 @@ export const it: Textos = {
       duplicados:
         'Questi domini sono già presenti in hosts fuori dal blocco di WolfCore Dev (verranno conservati):',
       motivos: {
-        cancelado: 'I privilegi di amministratore sono stati annullati. Il file hosts è rimasto invariato.',
+        cancelado:
+          'I privilegi di amministratore sono stati annullati. Il file hosts è rimasto invariato.',
         tiempo:
-          'Nessuno ha risposto in tempo alla richiesta di privilegi di amministratore. Il sito è stato salvato; il file hosts è rimasto invariato. Se vede ancora l\'avviso di Windows, lo annulli (non avrà più effetto). Applichi le modifiche in sospeso quando può (una sola autorizzazione per tutti).',
+          "Nessuno ha risposto in tempo alla richiesta di privilegi di amministratore. Il sito è stato salvato; il file hosts è rimasto invariato. Se vede ancora l'avviso di Windows, lo annulli (non avrà più effetto). Applichi le modifiche in sospeso quando può (una sola autorizzazione per tutti).",
         denegado:
           'Windows non ha consentito la scrittura del file hosts. Un antivirus potrebbe bloccarlo.',
       } as Record<string, string>,
@@ -1198,7 +1236,7 @@ export const it: Textos = {
     },
     gruposAyuda: {
       web: 'Server che gestisce i domini .test.',
-      php: 'Un\'installazione per versione (8.3, 8.4…); ogni sito utilizza la propria.',
+      php: "Un'installazione per versione (8.3, 8.4…); ogni sito utilizza la propria.",
       bd: 'In ascolto solo su 127.0.0.1.',
       correo: 'Cattura le email inviate dai Suoi progetti, senza farle uscire su internet.',
       ia: 'Modelli linguistici sul Suo computer.',
@@ -1212,7 +1250,7 @@ export const it: Textos = {
     usarPuerto: (p: number) => `Usa porta ${p}`,
     puertoCambiado: (nombre: string, p: number) => `${nombre} ora utilizza la porta ${p}`,
     conflicto: 'Porta occupata',
-    autoIniciar: 'Avvia all\'avvio di WolfCore Dev',
+    autoIniciar: "Avvia all'avvio di WolfCore Dev",
     autoIniciarActivado: (nombre: string) => `${nombre} si avvierà all'avvio di WolfCore Dev`,
     autoIniciarDesactivado: (nombre: string) =>
       `${nombre} non si avvierà più all'avvio di WolfCore Dev`,
@@ -1253,8 +1291,6 @@ export const it: Textos = {
     ftp: {
       interruptor: 'Server FTP',
       redLocal: 'Consenti connessioni dalla rete locale',
-      redLocalAyuda:
-        'Spento, solo questo computer può connettersi (127.0.0.1). Ogni sito attiva il proprio accesso in Siti.',
       avisoTitulo: 'Aprire FTP alla rete locale',
       avisoTexto:
         'FTP invia utenti, password e file senza cifratura. Qualsiasi dispositivo sulla rete potrà tentare di connettersi. Lo usi solo su una rete attendibile.',
@@ -1270,7 +1306,8 @@ export const it: Textos = {
       sinVersion: 'non installato',
       uso: 'Uso',
       usoTexto: 'composer',
-      ayuda: 'Usi «Terminale» in un progetto, oppure aggiunga WolfCore Dev al PATH in Impostazioni.',
+      ayuda:
+        'Usi «Terminale» in un progetto, oppure aggiunga WolfCore Dev al PATH in Impostazioni.',
       instaladoOk: 'Composer installato',
       sinPhp: 'Installi prima PHP',
       actualizado: (v: string) => `Composer aggiornato: ${v}`,
@@ -1331,8 +1368,7 @@ export const it: Textos = {
     cargando: 'Caricamento database…',
     recargar: 'Ricarica elenco',
     vacioTitulo: 'Nessun server di database installato',
-    vacio:
-      'Installi MySQL, MariaDB, PostgreSQL o MongoDB da Servizi per gestire i suoi database.',
+    vacio: 'Installi MySQL, MariaDB, PostgreSQL o MongoDB da Servizi per gestire i suoi database.',
     irAServicios: 'Vai a Servizi',
     apagado: {
       titulo: (motor: string) => `${motor} è spento`,
@@ -1430,8 +1466,7 @@ export const it: Textos = {
     },
     dialogoRestaurar: {
       titulo: (motor: string) => `Ripristina backup in ${motor}`,
-      confianza:
-        'Ripristini solo backup attendibili: un backup può eseguire azioni sul server.',
+      confianza: 'Ripristini solo backup attendibili: un backup può eseguire azioni sul server.',
       archivo: 'File di backup',
       elegir: 'Scegli file…',
       cambiar: 'Cambia',
@@ -1679,7 +1714,8 @@ export const it: Textos = {
     cambiarCarpeta: 'Cambia',
     detectando: 'Analisi del progetto…',
     detectado: (tipo: string) => `Rilevato: ${tipo}`,
-    sinDeteccionAlEditar: 'Il rilevamento automatico vale solo alla creazione; controlli tipo e PHP.',
+    sinDeteccionAlEditar:
+      'Il rilevamento automatico vale solo alla creazione; controlli tipo e PHP.',
     nombre: 'Nome',
     nombreAyuda: 'Solo per riconoscerlo nell’elenco.',
     nombreCopia: (nombre: string) => `${nombre} (copia)`,
@@ -1797,7 +1833,7 @@ export const it: Textos = {
     dominioPublicoAyuda:
       'Un sottodominio di un suo dominio su Cloudflare, ad es. demo.miodominio.com.',
     crear: 'Crea e instrada',
-    guardadoNombre: 'Tunnel con nome pronto. All\'apertura verrà richiesta conferma.',
+    guardadoNombre: "Tunnel con nome pronto. All'apertura verrà richiesta conferma.",
     guardadoRapido: 'Questo sito torna a usare il tunnel rapido.',
     cambiarCierra: 'Cambiando fornitore si chiude il tunnel aperto di questo sito.',
     usarRapido: 'Usa il tunnel rapido',
@@ -1811,20 +1847,20 @@ export const it: Textos = {
     proveedorTailscaleAyuda:
       'Tramite la sua rete privata Tailscale. Richiede Tailscale installato e con sessione attiva.',
     tokenGuardado: (f: string) => `Token salvato (termina con ${f}).`,
-    tokenSinGuardar: 'Non c\'è ancora alcun token salvato.',
+    tokenSinGuardar: "Non c'è ancora alcun token salvato.",
     tokenNgrok: 'Token di ngrok',
     tokenExpose: 'Token di Expose',
     tokenAyuda:
-      'Viene salvato crittografato su questo computer e consegnato al programma solo all\'apertura del tunnel; non viene mai mostrato.',
+      "Viene salvato crittografato su questo computer e consegnato al programma solo all'apertura del tunnel; non viene mai mostrato.",
     tokenPlaceholder: 'Incolli qui il token',
     guardarToken: 'Salva token',
     borrarToken: 'Elimina token',
     usarProveedor: 'Usa questo fornitore',
-    guardadoProveedor: 'Fornitore salvato. All\'apertura del tunnel verrà richiesta conferma.',
+    guardadoProveedor: "Fornitore salvato. All'apertura del tunnel verrà richiesta conferma.",
     ngrokAyudaInstalacion:
       'ngrok deve essere già installato su questo computer (WolfCore Dev non lo scarica perché ngrok non pubblica un download verificabile). La configurazione globale non viene modificata.',
     exposeAyudaInstalacion:
-      'Expose deve essere già installato oppure avere il file expose.phar nella cartella bin/expose dei dati di WolfCore Dev (su Windows funziona solo con il file phar; non esiste un download con impronta verificabile). Il suo inspector delle richieste rimane visibile sull\'intera rete locale, per questo non va usato con siti contenenti dati reali. La configurazione globale non viene modificata.',
+      "Expose deve essere già installato oppure avere il file expose.phar nella cartella bin/expose dei dati di WolfCore Dev (su Windows funziona solo con il file phar; non esiste un download con impronta verificabile). Il suo inspector delle richieste rimane visibile sull'intera rete locale, per questo non va usato con siti contenenti dati reali. La configurazione globale non viene modificata.",
     tailscaleAlcance: 'Ambito di visibilità',
     tailscaleServe: 'Serve: solo la sua tailnet',
     tailscaleServeAyuda: 'Solo i computer della sua rete Tailscale. Non è esposto su Internet.',
@@ -1847,18 +1883,18 @@ export const it: Textos = {
   },
   tuneles: {
     titulo: 'Tunnel',
-    descripcion: 'Link pubblici temporanei di Cloudflare per mostrare un sito fuori dalla sua rete.',
+    descripcion:
+      'Link pubblici temporanei di Cloudflare per mostrare un sito fuori dalla sua rete.',
     explicacion:
       'I tunnel rapidi cambiano indirizzo ogni volta che vengono aperti o rinnovati e funzionano solo finché questo computer è acceso e i relativi processi restano attivi (se esce da WolfCore Dev lasciandoli accesi, continuano a funzionare).',
     columnas: { sitio: 'Sito', estado: 'Stato', url: 'Link', acciones: 'Azioni' },
     vacioTitulo: 'Nessun tunnel aperto',
-    vacio: 'Attivi l\'interruttore del tunnel di un sito per ottenere un link pubblico.',
-    irASitios: 'Vai a Siti',
+    vacio: "Attivi l'interruttore del tunnel di un sito per ottenere un link pubblico.",
     sinNombre: 'Sito eliminato',
   },
   ajustes: {
     titulo: 'Impostazioni',
-    descripcion: 'Preferenze dell\'ambiente.',
+    descripcion: "Preferenze dell'ambiente.",
     general: 'Generale',
     carpetaDatos: 'Cartella dati',
     carpetaDatosAyuda: 'File binari, configurazione e log. Può essere aperta, non modificata.',
@@ -1891,7 +1927,7 @@ export const it: Textos = {
       versionesDe: (s: string) => `Avvisa sulle nuove versioni di ${s}`,
       tipos: {
         'servicio-caido': 'Un servizio si è arrestato con un errore',
-        'puerto-ocupado': 'Porta occupata all\'avvio di un servizio',
+        'puerto-ocupado': "Porta occupata all'avvio di un servizio",
         'certificado-por-vencer': 'Certificati in scadenza',
         'tunel-caido': 'Un tunnel si è interrotto',
         'proceso-error': 'Un processo di progetto non è riuscito',
@@ -1908,7 +1944,7 @@ export const it: Textos = {
       titulo: 'HTTPS',
       autoridad: 'Autorità locale',
       autoridadAyuda:
-        'WolfCore Dev firma i certificati dei suoi siti .test con una propria autorità. Viene installata nell\'archivio del suo utente Windows, senza privilegi di amministratore.',
+        "WolfCore Dev firma i certificati dei suoi siti .test con una propria autorità. Viene installata nell'archivio del suo utente Windows, senza privilegi di amministratore.",
       instalada: 'Installata in Windows',
       noInstalada: 'Non installata',
       instalar: 'Installa autorità',
@@ -1917,8 +1953,8 @@ export const it: Textos = {
       instaladaOk: 'Autorità HTTPS installata',
       quitadaOk: 'Autorità HTTPS rimossa',
       cancelado: 'Conferma di Windows annullata. Non è stato modificato nulla.',
-      fallo: 'Impossibile modificare l\'autorità HTTPS',
-      quitarTitulo: 'Rimuovere l\'autorità HTTPS?',
+      fallo: "Impossibile modificare l'autorità HTTPS",
+      quitarTitulo: "Rimuovere l'autorità HTTPS?",
       quitarTexto:
         'I browser smetteranno di fidarsi dei certificati dei suoi siti .test finché non la reinstallerà.',
       puerto: 'Porta HTTPS',
@@ -1928,7 +1964,7 @@ export const it: Textos = {
       puertoGuardado: (p: number) => `HTTPS ora usa la porta ${p}`,
       puertoAplicarFallo: 'Porta salvata, ma Nginx non ha accettato la nuova configurazione',
       firefox:
-        'Firefox usa il proprio archivio di certificati. Affinché si fidi dell\'autorità, apra about:config e attivi',
+        "Firefox usa il proprio archivio di certificati. Affinché si fidi dell'autorità, apra about:config e attivi",
     },
     herramientas: {
       titulo: 'Terminale e strumenti',
@@ -1938,7 +1974,7 @@ export const it: Textos = {
       phpMasReciente: 'La più recente installata',
       phpSinInstalar: 'Installi PHP in Servizi per scegliere una versione',
       phpGuardado: 'PHP predefinito aggiornato',
-      path: 'PATH dell\'utente',
+      path: "PATH dell'utente",
       pathAyuda:
         'Aggiunge php e composer di WolfCore Dev al PATH del suo utente per usarli in qualsiasi terminale.',
       pathActivo: 'Aggiunto al PATH',
@@ -1946,7 +1982,8 @@ export const it: Textos = {
       pathAgregar: 'Aggiungi al PATH utente',
       pathQuitar: 'Rimuovi dal PATH',
       pathTitulo: 'PATH aggiornato',
-      pathAviso: 'Apra un nuovo terminale per vedere la modifica: i terminali già aperti non la rilevano.',
+      pathAviso:
+        'Apra un nuovo terminale per vedere la modifica: i terminali già aperti non la rilevano.',
       pathQuitarTitulo: 'Rimuovere WolfCore Dev dal PATH?',
       pathQuitarTexto:
         'php e composer di WolfCore Dev non saranno più disponibili nei nuovi terminali. I terminali già aperti non cambiano.',
@@ -1955,12 +1992,12 @@ export const it: Textos = {
       terminal: 'Terminale predefinito',
       terminalSistema: 'Quello di sistema (PowerShell)',
       terminalAyuda:
-        'Quello aperto da «Terminale» nei progetti. Se il progetto richiede variabili proprie (il proprio PHP nel PATH, la chiave di un agente), con «Windows Terminal» si apre PowerShell nel terminale predefinito di Windows: un\'istanza già aperta di Windows Terminal non riceverebbe tali variabili.',
+        "Quello aperto da «Terminale» nei progetti. Se il progetto richiede variabili proprie (il proprio PHP nel PATH, la chiave di un agente), con «Windows Terminal» si apre PowerShell nel terminale predefinito di Windows: un'istanza già aperta di Windows Terminal non riceverebbe tali variabili.",
       terminalGuardada: 'Terminale predefinito aggiornato',
       editor: 'Editor predefinito',
       editorPrimero: 'Il primo rilevato',
       editorAyuda:
-        'Quello aperto da «Editor» nei progetti e da «Apri nell\'editor» nelle ricerche e negli errori. Vengono rilevati VS Code, Cursor, Windsurf, PhpStorm, Sublime Text, Zed e Notepad++.',
+        "Quello aperto da «Editor» nei progetti e da «Apri nell'editor» nelle ricerche e negli errori. Vengono rilevati VS Code, Cursor, Windsurf, PhpStorm, Sublime Text, Zed e Notepad++.",
       editorGuardado: 'Editor predefinito aggiornato',
       editorNinguno: 'Nessun editor rilevato.',
     },
@@ -1977,43 +2014,45 @@ export const it: Textos = {
     pendienteCorto: 'HTTPS in sospeso',
     ocupado: (puerto: number, nombre: string, pid: number) =>
       `la porta ${puerto} è usata da ${nombre} (PID ${pid}).`,
-    sinAutoridad: 'manca l\'autorità di certificazione. La installi in Impostazioni.',
+    sinAutoridad: "manca l'autorità di certificazione. La installi in Impostazioni.",
     pendienteAyuda:
-      'Il sito continua a funzionare via HTTP. Chiuda quel programma o scelga un\'altra porta HTTPS in Impostazioni.',
+      "Il sito continua a funzionare via HTTP. Chiuda quel programma o scelga un'altra porta HTTPS in Impostazioni.",
     sinConfianza: 'Autorità non installata',
     sinConfianzaAyuda:
-      'Il browser mostrerà un avviso di sicurezza finché non installerà l\'autorità di WolfCore Dev (Impostazioni → HTTPS).',
+      "Il browser mostrerà un avviso di sicurezza finché non installerà l'autorità di WolfCore Dev (Impostazioni → HTTPS).",
   },
   formSitioHttps: {
     titulo: 'HTTPS',
     https: 'Servi anche via HTTPS',
-    httpsAyuda: 'Con un certificato proprio per il dominio e i suoi alias, firmato da WolfCore Dev.',
+    httpsAyuda:
+      'Con un certificato proprio per il dominio e i suoi alias, firmato da WolfCore Dev.',
     redirigir: 'Reindirizza a HTTPS',
     redirigirAyuda: 'Le visite via http passano a https. I tunnel pubblici non sono interessati.',
     redirigirDeshabilitado: 'Attivi prima HTTPS',
-    sinAutoridadTitulo: 'L\'autorità HTTPS non è installata',
+    sinAutoridadTitulo: "L'autorità HTTPS non è installata",
     sinAutoridadTexto:
-      'Senza di essa il browser mostrerà un avviso di sicurezza. Windows le chiederà di confermare l\'installazione.',
+      "Senza di essa il browser mostrerà un avviso di sicurezza. Windows le chiederà di confermare l'installazione.",
     instalar: 'Installa autorità',
     instalada: 'Autorità HTTPS installata',
     cancelado: 'Conferma di Windows annullata. Non è stato modificato nulla.',
-    fallo: 'Impossibile installare l\'autorità HTTPS',
+    fallo: "Impossibile installare l'autorità HTTPS",
   },
   terminalSitio: {
     boton: 'Terminale',
-    ayuda: 'Apre un terminale nella cartella del progetto, con il relativo PHP e Composer nel PATH.',
+    ayuda:
+      'Apre un terminale nella cartella del progetto, con il relativo PHP e Composer nel PATH.',
     elegir: 'Scegli terminale',
     predeterminada: 'predefinito',
   },
   editorSitio: {
-    ayuda: 'Apre la cartella del progetto nell\'editor predefinito.',
+    ayuda: "Apre la cartella del progetto nell'editor predefinito.",
     elegir: 'Apri con…',
     predeterminada: 'predefinito',
     sustituido: (pred: string, usado: string) =>
       '{pred} non è installato: aperto con {usado}.'
         .replace('{pred}', pred)
         .replace('{usado}', usado),
-    error: 'Impossibile aprire l\'editor',
+    error: "Impossibile aprire l'editor",
   },
   phpSitio: {
     etiqueta: 'PHP',
@@ -2027,7 +2066,7 @@ export const it: Textos = {
       `PHP ${rama} è arrestato: il PHP dedicato di questo sito si avvia insieme ad esso.`,
     ajustesTitulo: 'php.ini personalizzato',
     ajustesAyuda: (rama: string) =>
-      `Si aggiungono al php.ini di PHP ${rama} solo per questo sito. Con almeno un\'impostazione (o con Xdebug), il sito usa un proprio PHP con 1 o 2 processi; gli altri siti non cambiano.`,
+      `Si aggiungono al php.ini di PHP ${rama} solo per questo sito. Con almeno un'impostazione (o con Xdebug), il sito usa un proprio PHP con 1 o 2 processi; gli altri siti non cambiano.`,
     clave: 'Direttiva',
     valor: 'Valore',
     clavePlaceholder: 'memory_limit',
@@ -2036,7 +2075,7 @@ export const it: Textos = {
     agregar: 'Aggiungi impostazione',
     guardarAjustes: 'Verifica e salva',
     ajustesGuardados: 'Impostazioni PHP del sito applicate',
-    sinAjustes: 'Nessuna impostazione personalizzata: usa il php.ini condiviso così com\'è.',
+    sinAjustes: "Nessuna impostazione personalizzata: usa il php.ini condiviso così com'è.",
     xdebugTitulo: 'Xdebug',
     xdebugInterruptor: (dominio: string) => `Xdebug per ${dominio}`,
     xdebugAyuda:
@@ -2051,15 +2090,15 @@ export const it: Textos = {
       profile: 'profile (profilazione)',
       trace: 'trace (traccia)',
     },
-    puerto: 'Porta dell\'editor',
+    puerto: "Porta dell'editor",
     inicio: 'Quando si connette',
     inicioTrigger: 'Solo con XDEBUG_TRIGGER',
     inicioYes: 'A ogni richiesta',
     inicioAyuda:
-      'Con «Solo con XDEBUG_TRIGGER», il debug inizia quando la richiesta include il cookie, il parametro GET/POST o l\'estensione del browser (Xdebug Helper).',
+      "Con «Solo con XDEBUG_TRIGGER», il debug inizia quando la richiesta include il cookie, il parametro GET/POST o l'estensione del browser (Xdebug Helper).",
     guardarXdebug: 'Salva Xdebug',
     xdebugPuertoEnUso: (puerto: number) =>
-      `La porta ${puerto} è già usata da un PHP o un altro servizio di WolfCore Dev: il suo editor non potrà restare in ascolto su di essa. Ne scelga un\'altra (9003 è quella abituale).`,
+      `La porta ${puerto} è già usata da un PHP o un altro servizio di WolfCore Dev: il suo editor non potrà restare in ascolto su di essa. Ne scelga un'altra (9003 è quella abituale).`,
     xdebugGuardado: 'Xdebug del sito applicato',
     quitarXdebug: 'Rimuovi Xdebug',
     quitarXdebugTitulo: 'Rimuovere Xdebug da questo sito?',
@@ -2076,10 +2115,12 @@ export const it: Textos = {
     launchSinCambios: 'Il file launch.json contiene già questa configurazione.',
     launchEscribir: 'Scrivi launch.json',
     launchCreado: 'launch.json creato in .vscode',
-    launchActualizado: (respaldo: string) => `launch.json aggiornato. Backup precedente: ${respaldo}`,
+    launchActualizado: (respaldo: string) =>
+      `launch.json aggiornato. Backup precedente: ${respaldo}`,
     phpStorm: 'Configurazione per PhpStorm',
     copiarPhpStorm: 'Copia configurazione PhpStorm',
-    errorNginx: (salida: string) => `Nginx non ha accettato la modifica; ripristinato lo stato precedente. ${salida}`,
+    errorNginx: (salida: string) =>
+      `Nginx non ha accettato la modifica; ripristinato lo stato precedente. ${salida}`,
   },
   nginxEditor: {
     etiqueta: 'Nginx',
@@ -2091,7 +2132,7 @@ export const it: Textos = {
     cargando: 'Lettura del vhost…',
     reglasTitulo: 'Regole personalizzate',
     reglasAyuda:
-      'Vanno all\'interno del blocco server di questo sito. Prima di applicarle vengono verificate con nginx -t su una copia dell\'intera configurazione; in caso di errore, tutto rimane invariato.',
+      "Vanno all'interno del blocco server di questo sito. Prima di applicarle vengono verificate con nginx -t su una copia dell'intera configurazione; in caso di errore, tutto rimane invariato.",
     reglasEtiqueta: 'Regole personalizzate di Nginx',
     reglasPlaceholder: '# Ad esempio: client_max_body_size 256m;',
     snippetsTitulo: 'Frammenti',
@@ -2109,16 +2150,16 @@ export const it: Textos = {
     aplicar: 'Verifica e applica',
     descartar: 'Scarta modifiche',
     aplicado: 'Vhost applicato e Nginx ricaricato',
-    aplicadoApagado: 'Vhost salvato; verrà usato all\'avvio di Nginx',
+    aplicadoApagado: "Vhost salvato; verrà usato all'avvio di Nginx",
     fallo: 'Nginx non ha accettato la modifica; il vhost rimane invariato',
     salidaTitulo: 'Output di nginx -t',
     desactivado:
-      'Nginx non ha accettato quanto scritto per questo sito durante l\'applicazione della configurazione ed è stato escluso dal vhost (rimane comunque salvato). Lo corregga e lo applichi di nuovo per riutilizzarlo.',
+      "Nginx non ha accettato quanto scritto per questo sito durante l'applicazione della configurazione ed è stato escluso dal vhost (rimane comunque salvato). Lo corregga e lo applichi di nuovo per riutilizzarlo.",
     avisoDestino: (destino: string, linea: number) =>
       `Riga ${linea}: il traffico viene inviato a un altro computer (${destino}). Verifichi che sia ciò che desidera.`,
     generadoTitulo: 'Vhost generato (sola lettura)',
     avanzadoTitulo: 'Modalità avanzata',
-    avanzadoInterruptor: 'Scrivi l\'intero vhost manualmente',
+    avanzadoInterruptor: "Scrivi l'intero vhost manualmente",
     avanzadoAyuda:
       'Sostituisce il vhost generato. WolfCore Dev non lo rigenererà più: se cambia il dominio, HTTPS, le porte o la cartella, dovrà adeguarlo manualmente. Può usare solo i domini e le porte di questo sito.',
     avanzadoActivarTitulo: 'Scrivere il vhost manualmente?',
@@ -2160,7 +2201,7 @@ export const it: Textos = {
     qrAviso: 'Scansioni il QR con un telefono connesso alla stessa rete.',
     confirmarTitulo: 'Condividi sulla rete locale',
     confirmarTexto: (dominio: string, ip: string) =>
-      `${dominio} diventerà visibile a qualsiasi dispositivo connesso alla stessa rete di questo computer (${ip}), senza richiedere password. La condivisione si interrompe disattivando l\'interruttore, chiudendo WolfCore Dev e al successivo riavvio.`,
+      `${dominio} diventerà visibile a qualsiasi dispositivo connesso alla stessa rete di questo computer (${ip}), senza richiedere password. La condivisione si interrompe disattivando l'interruttore, chiudendo WolfCore Dev e al successivo riavvio.`,
     ipEtiqueta: 'Rete (IP di questo computer)',
     https: 'Usa HTTPS',
     httpsAyuda:
@@ -2175,13 +2216,13 @@ export const it: Textos = {
     redPublica:
       'Questa rete è contrassegnata come pubblica in Windows: il firewall bloccherà le connessioni in entrata e il comando apre solo reti private. La contrassegni come privata se si tratta della sua rete di fiducia.',
     firewallTexto:
-      'WolfCore Dev non modifica il firewall. Non accetti l\'avviso di Windows per l\'intero programma: esegua il comando per questa porta (solo sottorete locale e solo reti private) in PowerShell come amministratore. Su una rete pubblica non si aprirà e un\'eventuale regola di blocco già esistente ha la priorità su quella di autorizzazione.',
+      "WolfCore Dev non modifica il firewall. Non accetti l'avviso di Windows per l'intero programma: esegua il comando per questa porta (solo sottorete locale e solo reti private) in PowerShell come amministratore. Su una rete pubblica non si aprirà e un'eventuale regola di blocco già esistente ha la priorità su quella di autorizzazione.",
     copiarComando: 'Copia comando',
   },
   caMovil: {
     titulo: 'Installa la CA sul telefono',
     intro:
-      'Scansioni il QR con un telefono connesso alla stessa rete per scaricare il certificato dell\'autorità di WolfCore Dev. Viene fornito solo questo file e il link si chiude automaticamente.',
+      "Scansioni il QR con un telefono connesso alla stessa rete per scaricare il certificato dell'autorità di WolfCore Dev. Viene fornito solo questo file e il link si chiude automaticamente.",
     abriendo: 'Apertura del link…',
     expira: (minutos: number) => `Il link si chiude automaticamente tra ${minutos} min.`,
     expirado: 'Il link è stato chiuso.',
@@ -2189,22 +2230,22 @@ export const it: Textos = {
     android: 'Android',
     ios: 'iPhone o iPad',
     pasosAndroid: [
-      'Scansioni il QR o apra l\'indirizzo nel browser del telefono e scarichi il file.',
+      "Scansioni il QR o apra l'indirizzo nel browser del telefono e scarichi il file.",
       'Apra Impostazioni > Sicurezza e privacy > Altre impostazioni di sicurezza > Crittografia e credenziali > Installa un certificato > Certificato CA (i nomi variano in base al produttore).',
-      'Prima di autorizzarlo, confronti l\'impronta SHA-256 del certificato mostrata sul telefono con quella di questa finestra: se non coincidono, non lo installi.',
-      'Selezioni il file scaricato e accetti l\'avviso: è normale, Android avvisa per ogni CA.',
+      "Prima di autorizzarlo, confronti l'impronta SHA-256 del certificato mostrata sul telefono con quella di questa finestra: se non coincidono, non lo installi.",
+      "Selezioni il file scaricato e accetti l'avviso: è normale, Android avvisa per ogni CA.",
     ],
     pasosIos: [
-      'Apra l\'indirizzo in Safari e consenta il download del profilo.',
-      'Apra Impostazioni > Profilo scaricato e confronti l\'impronta SHA-1 nei dettagli con quella di questa finestra: se non coincidono, non lo installi. Poi proceda con l\'installazione.',
-      'Apra Impostazioni > Generali > Info > Impostazioni attendibilità certificati e attivi l\'attendibilità completa per la CA di WolfCore Dev.',
+      "Apra l'indirizzo in Safari e consenta il download del profilo.",
+      "Apra Impostazioni > Profilo scaricato e confronti l'impronta SHA-1 nei dettagli con quella di questa finestra: se non coincidono, non lo installi. Poi proceda con l'installazione.",
+      "Apra Impostazioni > Generali > Info > Impostazioni attendibilità certificati e attivi l'attendibilità completa per la CA di WolfCore Dev.",
     ],
     aviso:
       'Una CA installata rende attendibile tutto ciò che firma su quel telefono: la installi solo sui suoi dispositivi e la rimuova al termine.',
     firewallAviso: (puerto: number) =>
       'Affinché il telefono possa raggiungere il link è necessario aprire la porta ' +
       puerto +
-      ' (solo sottorete locale e reti private). Non accetti l\'avviso di Windows per l\'intero programma: esegua questo comando in PowerShell come amministratore. Su una rete pubblica non si aprirà e un\'eventuale regola di blocco già esistente ha la priorità.',
+      " (solo sottorete locale e reti private). Non accetti l'avviso di Windows per l'intero programma: esegua questo comando in PowerShell come amministratore. Su una rete pubblica non si aprirà e un'eventuale regola di blocco già esistente ha la priorità.",
     huellas: 'Impronte del certificato',
     tituloError: 'Impossibile aprire il link della CA',
   },
@@ -2237,26 +2278,26 @@ export const it: Textos = {
     regenerada: 'Password FTP rigenerata',
     soloLectura: 'Sola lettura',
     soloLecturaAyuda: 'È possibile scaricare i file, ma non caricarli, modificarli né eliminarli.',
-    soloLecturaActivado: 'L\'FTP di questo sito è ora in sola lettura',
-    soloLecturaDesactivado: 'L\'FTP di questo sito ora consente la scrittura',
+    soloLecturaActivado: "L'FTP di questo sito è ora in sola lettura",
+    soloLecturaDesactivado: "L'FTP di questo sito ora consente la scrittura",
     activado: 'Accesso FTP attivato',
-    desactivarTitulo: 'Rimuovere l\'accesso FTP da questo sito?',
+    desactivarTitulo: "Rimuovere l'accesso FTP da questo sito?",
     desactivarTexto:
       'La password viene eliminata e le connessioni aperte vengono chiuse. La cartella del sito non viene toccata.',
     desactivar: 'Rimuovere accesso',
     desactivado: 'Accesso FTP rimosso',
     redLocalAviso:
-      'L\'FTP accetta connessioni dalla rete locale e invia la password e i file non cifrati. Lo usi solo su una rete fidata.',
-    redLocalHost: 'o l\'IP di questo computer sulla sua rete',
+      "L'FTP accetta connessioni dalla rete locale e invia la password e i file non cifrati. Lo usi solo su una rete fidata.",
+    redLocalHost: "o l'IP di questo computer sulla sua rete",
     servidorApagado: 'Il server FTP è spento: nessuno potrà connettersi finché non lo avvia.',
     encender: 'Avviare FTP',
     urlEtiqueta: 'Indirizzo',
-    urlAyuda: 'L\'indirizzo non include la password: viene richiesta al momento della connessione.',
+    urlAyuda: "L'indirizzo non include la password: viene richiesta al momento della connessione.",
     abrirUrl: 'Aprire in un client FTP',
-    copiarUrl: 'Copiare l\'indirizzo FTP',
-    verQr: 'Mostrare il codice QR dell\'indirizzo',
+    copiarUrl: "Copiare l'indirizzo FTP",
+    verQr: "Mostrare il codice QR dell'indirizzo",
     qrTitulo: 'Indirizzo FTP di questo sito',
-    qrAviso: 'Il codice contiene solo l\'indirizzo, non la password.',
+    qrAviso: "Il codice contiene solo l'indirizzo, non la password.",
   },
   correo: {
     descripcion:
@@ -2265,11 +2306,11 @@ export const it: Textos = {
     seccionProveedores: 'Provider SMTP remoti',
     proveedores: {
       descripcion:
-        'Un provider SMTP reale invia l\'e-mail per davvero: lo usi per testare l\'invio del suo progetto prima di pubblicarlo. La password viene salvata cifrata su questo computer e non viene mai mostrata.',
+        "Un provider SMTP reale invia l'e-mail per davvero: lo usi per testare l'invio del suo progetto prima di pubblicarlo. La password viene salvata cifrata su questo computer e non viene mai mostrata.",
       agregar: 'Aggiungere provider',
       vacio:
         'Non ha ancora aggiunto alcun provider. Scelga Mailtrap, Resend, Brevo, Mailgun, SendGrid, Postmark, Amazon SES, SMTP2GO o Gmail, oppure inserisca il suo.',
-      errorLista: 'Impossibile leggere l\'elenco dei provider',
+      errorLista: "Impossibile leggere l'elenco dei provider",
       tarjeta: {
         servidor: 'Server',
         usuario: 'Utente',
@@ -2282,7 +2323,7 @@ export const it: Textos = {
         borrar: 'Eliminare',
         borrarTitulo: (n: string) => `Eliminare ${n}?`,
         borrarTexto:
-          'Vengono eliminati il provider e la sua password salvata. I progetti che lo usano tornano all\'intercettatore locale, ma i loro file .env non vengono toccati: conservano le variabili MAIL_* di questo provider (e la sua password, se l\'ha scritta). Riscriva il blocco della posta in ciascun .env.',
+          "Vengono eliminati il provider e la sua password salvata. I progetti che lo usano tornano all'intercettatore locale, ma i loro file .env non vengono toccati: conservano le variabili MAIL_* di questo provider (e la sua password, se l'ha scritta). Riscriva il blocco della posta in ciascun .env.",
         borrado: (n: string) => `${n} eliminato`,
         usar: 'Usare in un progetto',
         destino: 'Indirizzo di destinazione del test',
@@ -2290,14 +2331,14 @@ export const it: Textos = {
         probar: 'Testare invio',
         probando: 'Invio in corso…',
         probarAyuda:
-          'Invia una sola e-mail reale a quell\'indirizzo, con connessione cifrata verificata. Massimo una ogni 15 s.',
-        sinClaveParaProbar: 'Salvi la password del provider per poter testare l\'invio.',
+          "Invia una sola e-mail reale a quell'indirizzo, con connessione cifrata verificata. Massimo una ogni 15 s.",
+        sinClaveParaProbar: "Salvi la password del provider per poter testare l'invio.",
         hostLocal: 'Il nome di questo server si risolve a questo computer o alla rete locale.',
         confirmarRed: 'Confermare rete locale',
         enviado: (para: string) => `E-mail inviata a ${para}. Controlli la sua casella.`,
         fallos: {
-          'correo.auth': 'Il provider ha rifiutato l\'utente o la password.',
-          'correo.conexion': 'Impossibile connettersi: controlli l\'host e la porta.',
+          'correo.auth': "Il provider ha rifiutato l'utente o la password.",
+          'correo.conexion': "Impossibile connettersi: controlli l'host e la porta.",
           'correo.tls':
             'La connessione cifrata non è valida (certificato, nome o STARTTLS). Non è stato inviato nulla.',
           'correo.rechazado':
@@ -2316,7 +2357,7 @@ export const it: Textos = {
         nombre: 'Nome',
         nombreObligatorio: 'Inserisca un nome.',
         host: 'Server (host)',
-        hostAyuda: 'Solo il nome o l\'IP, senza smtp:// né porta.',
+        hostAyuda: "Solo il nome o l'IP, senza smtp:// né porta.",
         hostObligatorio: 'Inserisca il server.',
         puerto: 'Porta',
         seguridad: 'Crittografia',
@@ -2325,8 +2366,9 @@ export const it: Textos = {
         tls: 'TLS diretto (porta 465)',
         starttls: 'STARTTLS (porta 587)',
         usuario: 'Utente',
-        usuarioObligatorio: 'Inserisca l\'utente.',
-        usuarioFijoAyuda: 'Questo provider usa sempre questo utente; la password è quella del suo account.',
+        usuarioObligatorio: "Inserisca l'utente.",
+        usuarioFijoAyuda:
+          'Questo provider usa sempre questo utente; la password è quella del suo account.',
         clave: 'Password SMTP',
         claveGuardada: (f: string) => `Salvata: ••••${f}`,
         claveNueva: 'Inserisca la password per salvarla',
@@ -2339,7 +2381,7 @@ export const it: Textos = {
           'Incolli la password così come fornita dal provider: gli spazi interni vengono conservati.',
         borrarClave: 'Eliminare la password',
         borrarClaveTitulo: (n: string) => `Eliminare la password di ${n}?`,
-        borrarClaveTexto: 'La password salvata viene eliminata. Il provider rimane nell\'elenco.',
+        borrarClaveTexto: "La password salvata viene eliminata. Il provider rimane nell'elenco.",
         claveBorrada: 'Password eliminata',
         guardar: 'Salvare',
         guardado: (n: string) => `${n} salvato`,
@@ -2357,11 +2399,12 @@ export const it: Textos = {
         proyecto: 'Progetto',
         sinProyectos: 'Non ci sono ancora progetti.',
         yaUsaSmtp: 'Questo progetto invia già tramite un provider SMTP.',
-        volverCaptador: 'Tornare all\'intercettatore locale',
+        volverCaptador: "Tornare all'intercettatore locale",
         volvio: (n: string) =>
           `${n} torna a inviare all'intercettatore locale, ma il suo file .env non è stato toccato: conserva le variabili MAIL_* del provider (e la sua password, se l'ha scritta). Riscriva il blocco della posta.`,
         incluirClave: 'Scrivere anche la password nel file .env',
-        incluirClaveAyuda: 'Se non selezionato, il blocco non contiene MAIL_PASSWORD e la aggiunge manualmente.',
+        incluirClaveAyuda:
+          'Se non selezionato, il blocco non contiene MAIL_PASSWORD e la aggiunge manualmente.',
         sinClaveGuardada: 'Il provider non ha una password salvata.',
         vista: 'Modifiche al file .env (la password è mascherata)',
         textoPlano:
@@ -2377,7 +2420,7 @@ export const it: Textos = {
         gitignoreConfirmar: 'Aggiungere',
         versionadoTitulo: 'Git traccia già il file .env',
         versionadoTexto:
-          'Il prossimo commit caricherebbe i suoi valori. Lo rimuova dall\'indice con git rm --cached .env.',
+          "Il prossimo commit caricherebbe i suoi valori. Lo rimuova dall'indice con git rm --cached .env.",
         desconocidoTitulo: 'Impossibile verificare git',
         desconocidoTexto: 'Impossibile determinare se git traccia il file .env di questo progetto.',
         aceptarVersionado: 'Scrivere comunque',
@@ -2410,7 +2453,7 @@ export const it: Textos = {
     copiarEnv: 'Copiare blocco',
     irAServicios: 'Andare a Servizi',
     cargando: 'Lettura degli intercettatori in corso…',
-    errorLista: 'Impossibile leggere l\'elenco degli intercettatori',
+    errorLista: "Impossibile leggere l'elenco degli intercettatori",
     captador: {
       opcional: 'Opzionale',
       elegido: 'Riceve la posta dei suoi progetti',
@@ -2423,9 +2466,9 @@ export const it: Textos = {
         'Questo intercettatore non riceve quasi più manutenzione. Preferisca Mailpit o smtp4dev.',
     },
     notaDescartados:
-      'MailHog e MailDev non sono offerti: MailHog non pubblica un\'impronta con cui verificare il download e MailDev esiste solo su npm. Senza un\'impronta verificabile non viene scaricato nulla.',
+      "MailHog e MailDev non sono offerti: MailHog non pubblica un'impronta con cui verificare il download e MailDev esiste solo su npm. Senza un'impronta verificabile non viene scaricato nulla.",
     notaHost:
-      'Le caselle web rispondono solo su 127.0.0.1, ma mentre un intercettatore è acceso una pagina web malevola potrebbe tentare di leggere la sua casella (DNS rebinding). smtp4dev e Papercut rifiutano intestazioni Host estranee; Mailpit serve la sua casella sotto un percorso segreto proprio di questo computer (WolfCore Dev apre quell\'indirizzo per Lei); Inbucket non ha alcuna protezione: lo spenga quando non lo usa.',
+      "Le caselle web rispondono solo su 127.0.0.1, ma mentre un intercettatore è acceso una pagina web malevola potrebbe tentare di leggere la sua casella (DNS rebinding). smtp4dev e Papercut rifiutano intestazioni Host estranee; Mailpit serve la sua casella sotto un percorso segreto proprio di questo computer (WolfCore Dev apre quell'indirizzo per Lei); Inbucket non ha alcuna protezione: lo spenga quando non lo usa.",
   },
   ia: {
     descripcion:
@@ -2435,7 +2478,7 @@ export const it: Textos = {
       agregar: 'Aggiungere provider',
       vacio:
         'Non ha ancora aggiunto alcun provider. Aggiunga OpenAI, Anthropic, Gemini, Hermes (Nous) o un provider compatibile con OpenAI.',
-      errorLista: 'Impossibile leggere l\'elenco dei provider',
+      errorLista: "Impossibile leggere l'elenco dei provider",
     },
     local: { titulo: 'IA locale (Ollama)' },
     tipos: {
@@ -2485,13 +2528,14 @@ export const it: Textos = {
       editar: (nombre: string) => `Modificare ${nombre}`,
       tipo: 'Tipo',
       preset: 'Provider compatibile',
-      presetAyuda: 'Compila il nome e l\'URL; può modificarli.',
+      presetAyuda: "Compila il nome e l'URL; può modificarli.",
       presetOtro: 'Altro',
       documentacion: 'Vedere documentazione',
       nombre: 'Nome',
       urlBase: 'URL base',
-      urlAyuda: 'Vuoto = quello ufficiale. Solo https://, oppure http:// verso 127.0.0.1 o [::1] (LM Studio).',
-      urlObligatoria: 'Inserisca l\'URL base del provider compatibile.',
+      urlAyuda:
+        'Vuoto = quello ufficiale. Solo https://, oppure http:// verso 127.0.0.1 o [::1] (LM Studio).',
+      urlObligatoria: "Inserisca l'URL base del provider compatibile.",
       modelo: 'Modello predefinito (opzionale)',
       modeloAyuda: 'Viene usato nel blocco .env (AI_MODEL) e nel messaggio di test.',
       clave: 'Chiave API',
@@ -2512,7 +2556,7 @@ export const it: Textos = {
     borrar: {
       claveTitulo: (nombre: string) => `Eliminare la chiave di ${nombre}?`,
       claveTexto:
-        'La chiave viene eliminata da questo computer. I file .env in cui l\'ha scritta non vengono toccati: la modifichi anche lì se la revoca.',
+        "La chiave viene eliminata da questo computer. I file .env in cui l'ha scritta non vengono toccati: la modifichi anche lì se la revoca.",
       proveedorTitulo: (nombre: string) => `Eliminare ${nombre}?`,
       proveedorTexto:
         'Vengono eliminati il provider e la sua chiave salvata. I file .env dei suoi progetti non vengono toccati.',
@@ -2521,7 +2565,7 @@ export const it: Textos = {
           ? 'Eliminare anche le copie del file .env di 1 progetto che contengono questa chiave in testo in chiaro'
           : `Eliminare anche le copie del file .env di ${n} progetti che contengono questa chiave in testo in chiaro`,
       respaldosAyuda:
-        'WolfCore Dev salva copie del file .env prima di scriverlo, fuori dai progetti. L\'eliminazione non può essere annullata.',
+        "WolfCore Dev salva copie del file .env prima di scriverlo, fuori dai progetti. L'eliminazione non può essere annullata.",
       claveBorrada: 'Chiave eliminata',
       proveedorBorrado: (nombre: string) => `${nombre} eliminato`,
       respaldosBorrados: (n: number) => `Eliminate le copie del file .env di ${n} progetto/i`,
@@ -2531,9 +2575,9 @@ export const it: Textos = {
       proyecto: 'Progetto',
       sinProyectos: 'Non ci sono progetti montati.',
       modelo: 'Modello (AI_MODEL)',
-      modeloAyuda: 'Opzionale. Ne scelga uno dall\'elenco o lo scriva.',
+      modeloAyuda: "Opzionale. Ne scelga uno dall'elenco o lo scriva.",
       vista: 'Blocco che verrà scritto nel file .env (la chiave è mostrata mascherata)',
-      cargando: 'Preparazione dell\'anteprima…',
+      cargando: "Preparazione dell'anteprima…",
       textoPlano:
         'La chiave resterà in testo in chiaro nel file .env del progetto. Chiunque abbia accesso a quella cartella potrà leggerla.',
       copiaPrevia:
@@ -2549,7 +2593,7 @@ export const it: Textos = {
       gitignoreConfirmar: 'Aggiungere a .gitignore',
       versionadoTitulo: 'Git traccia già il file .env di questo progetto',
       versionadoTexto:
-        'Anche se è in .gitignore, il prossimo commit caricherebbe la chiave. Prima di scriverla, lo rimuova dall\'indice ed esegua il commit:',
+        "Anche se è in .gitignore, il prossimo commit caricherebbe la chiave. Prima di scriverla, lo rimuova dall'indice ed esegua il commit:",
       desconocidoTitulo: 'Impossibile verificare se git traccia il file .env',
       desconocidoTexto:
         'Git non ha risposto (non è installato o la cartella non è fidata). Se il file .env è già nel repository, il prossimo commit caricherebbe la chiave. Verifichi con:',
@@ -2587,8 +2631,8 @@ export const it: Textos = {
     verServicios: 'Vedere in Servizi',
     modelos: 'Modelli installati',
     sinModelos: 'Non ci sono ancora modelli. Ne scarichi uno qui sotto.',
-    errorModelos: 'Impossibile leggere l\'elenco dei modelli',
-    recargar: 'Ricaricare l\'elenco',
+    errorModelos: "Impossibile leggere l'elenco dei modelli",
+    recargar: "Ricaricare l'elenco",
     total: (n: number) => plural(n, 'modello', 'modelli'),
     espacio: 'Spazio utilizzato',
     espacioAyuda: 'Lo spazio occupato da tutti i modelli nella cartella dati.',
@@ -2614,8 +2658,6 @@ export const it: Textos = {
       yaInstalado: 'Quel modello è già installato',
       enCurso: 'Quel modello è già in fase di download',
       confirmarTitulo: (modelo: string) => `Scaricare ${modelo}?`,
-      confirmarTexto:
-        'I modelli occupano spesso diversi GB (da 1 a oltre 40 a seconda delle dimensioni). Ollama non comunica le dimensioni prima di iniziare: le vedrà nella barra di avanzamento e può annullare in qualsiasi momento.',
       confirmar: 'Scaricare',
     },
     progreso: {
@@ -2672,14 +2714,14 @@ export const it: Textos = {
       porTipo: {
         'composer-install': 'Installare le dipendenze PHP (composer install)',
         'env-crear': 'Creare il file .env',
-        'key-generate': 'Generare la chiave dell\'applicazione',
+        'key-generate': "Generare la chiave dell'applicazione",
         'bd-crear': 'Creare il database',
         'bd-restaurar': 'Ripristinare un backup',
         migrar: 'Eseguire le migrazioni del database',
         'storage-link': 'Collegare storage (storage:link)',
         'npm-ci': 'Installare le dipendenze Node (npm ci)',
         'npm-build': 'Compilare le risorse (npm run build)',
-        'python-venv': 'Creare l\'ambiente virtuale (.venv)',
+        'python-venv': "Creare l'ambiente virtuale (.venv)",
         'pip-install': 'Installare le dipendenze Python (pip)',
         'pgvector-activar': 'Attivare pgvector nel database',
         'sitio-crear': 'Creare il sito',
@@ -2734,7 +2776,7 @@ export const it: Textos = {
         'Acceda con GitHub CLI (consigliato) o usi un token personale granulare con permesso di lettura dei contenuti.',
       instalarGh: 'Installare GitHub CLI',
       instalandoGh: 'Installazione di GitHub CLI in corso…',
-      ghInstalado: 'GitHub CLI installato. Ora effettui l\'accesso.',
+      ghInstalado: "GitHub CLI installato. Ora effettui l'accesso.",
       iniciarSesion: 'Accedi',
       sesionAbierta:
         'È stata aperta una finestra per effettuare l\'accesso. Al termine, prema "Controlla di nuovo".',
@@ -2754,21 +2796,23 @@ export const it: Textos = {
       cargarMas: 'Carica altri',
       privado: 'Privato',
       yaClonado: 'Già clonato',
-      yaClonadoAyuda: 'Esiste già un progetto con questo repository o nella sua cartella di destinazione.',
+      yaClonadoAyuda:
+        'Esiste già un progetto con questo repository o nella sua cartella di destinazione.',
       actualizado: (fecha: string) => `Aggiornato ${fecha}`,
       elegir: 'Scegli',
-      errorRepos: 'Impossibile leggere l\'elenco dei repository',
+      errorRepos: "Impossibile leggere l'elenco dei repository",
     },
     url: {
       etiqueta: 'URL del repository',
       placeholder: 'https://github.com/usuario/proyecto.git',
       ayuda:
-        'https://…, git@host:percorso o utente/progetto (GitHub). Senza utente né password nell\'URL.',
+        "https://…, git@host:percorso o utente/progetto (GitHub). Senza utente né password nell'URL.",
       invalida: 'Usi https://…, git@host:percorso o utente/progetto',
     },
     carpeta: {
       titulo: 'Progetto già presente sul computer',
-      texto: 'Scelga la cartella: viene rilevato il tipo di progetto e proposta la relativa ricetta.',
+      texto:
+        'Scelga la cartella: viene rilevato il tipo di progetto e proposta la relativa ricetta.',
       elegir: 'Scegli cartella',
       manual: 'Aggiungi senza ricetta (configurazione manuale)',
       yaEsProyecto: (nombre: string) => `Questa cartella è già il progetto ${nombre}.`,
@@ -2848,13 +2892,14 @@ export const it: Textos = {
       verRegistro: 'Visualizza registro',
       ocultarRegistro: 'Nascondi registro',
       listo: 'Il progetto è pronto.',
-      fallo: (paso: string) => `Errore: ${paso}. Riprovi, lo salti o annulli; nulla è stato annullato.`,
+      fallo: (paso: string) =>
+        `Errore: ${paso}. Riprovi, lo salti o annulli; nulla è stato annullato.`,
       cancelada: 'La preparazione è stata annullata. Può riprenderla dalla scheda del progetto.',
       incompleta: 'Restano passaggi da eseguire.',
       errorCrear: 'Impossibile creare il progetto',
       errorReceta: 'Impossibile leggere la ricetta',
       recetaCambio:
-        'La ricetta del progetto (wolfcore.yml) è cambiata da quando ha accordato fiducia. Riprova usa la ricetta salvata l\'ultima volta.',
+        "La ricetta del progetto (wolfcore.yml) è cambiata da quando ha accordato fiducia. Riprova usa la ricetta salvata l'ultima volta.",
       recargar: 'Rivedi la nuova ricetta',
       seguirGuardada: 'Continua con quella salvata',
       soloLectura:
@@ -2865,7 +2910,7 @@ export const it: Textos = {
       reinstalar: 'Reinstalla dipendenze',
       reinstalarTitulo: (nombre: string) => `Eseguire la ricetta di ${nombre}?`,
       reinstalarTexto:
-        'Vengono ripetuti i passaggi dell\'ultima preparazione (quelli rivisti nella procedura guidata):',
+        "Vengono ripetuti i passaggi dell'ultima preparazione (quelli rivisti nella procedura guidata):",
       noRestaura: 'non viene ripristinato nuovamente',
       recetaCambio:
         'La ricetta del progetto (wolfcore.yml) è cambiata da quando ha accordato fiducia. Reinstalla ripete quella salvata; usi "Rivedi la ricetta" per controllare quella nuova.',
@@ -2879,8 +2924,8 @@ export const it: Textos = {
       verRegistros: 'Visualizza registri',
       abrirAgente: 'Apri un agente IA',
       vscode: 'Editor',
-      vscodeAyuda: 'Apri la cartella del progetto nell\'editor predefinito',
-      vscodeError: 'Impossibile aprire l\'editor',
+      vscodeAyuda: "Apri la cartella del progetto nell'editor predefinito",
+      vscodeError: "Impossibile aprire l'editor",
       baseDatos: 'Database',
       baseDatosAyuda: (base: string) =>
         `Apri il database «${base}» già autenticato (Adminer o phpMyAdmin)`,
@@ -2911,7 +2956,8 @@ export const it: Textos = {
       atras: (n: number) => `${n} da scaricare`,
       adelante: (n: number) => `${n} da caricare`,
       traer: 'Scarica modifiche',
-      traerAyuda: 'git pull senza merge: se ci sono modifiche locali o rami divergenti non tocca nulla.',
+      traerAyuda:
+        'git pull senza merge: se ci sono modifiche locali o rami divergenti non tocca nulla.',
       alDia: 'Era già aggiornato.',
       actualizado: 'Modifiche scaricate',
       sugeridosTitulo: 'Modifiche scaricate',
@@ -2965,14 +3011,15 @@ export const it: Textos = {
       nombrePlaceholder: 'Vite',
       comando: 'Comando',
       comandoPlaceholder: 'npm run dev',
-      comandoAyuda: 'Programma e argomenti, senza shell. Usi le virgolette per gli argomenti con spazi.',
+      comandoAyuda:
+        'Programma e argomenti, senza shell. Usi le virgolette per gli argomenti con spazi.',
       cwd: 'Cartella',
       cwdPlaceholder: 'raiz',
       cwdAyuda: 'raiz o una sottocartella del progetto (ad esempio, frontend).',
       puertoCampo: 'Porta',
       puertoNinguno: 'Nessuna',
       puertoAyuda: 'Solo informativo, a meno che il processo non sia la destinazione del proxy.',
-      autoIniciar: 'Avvia all\'avvio di WolfCore Dev',
+      autoIniciar: "Avvia all'avvio di WolfCore Dev",
       reiniciar: 'Riavvia in caso di arresto anomalo',
       esProxy: 'Destinazione del proxy Nginx',
       requiereReinicio:
@@ -2983,7 +3030,7 @@ export const it: Textos = {
         comando: 'Inserisca il comando',
         puerto: 'La porta deve essere compresa tra 1 e 65535',
         proxySinPuerto: 'La destinazione del proxy richiede una porta',
-        cwd: 'Usi raiz o una sottocartella all\'interno del progetto',
+        cwd: "Usi raiz o una sottocartella all'interno del progetto",
         repetido: 'Esiste già un processo con questo nome',
       },
       estados: {
@@ -3005,7 +3052,7 @@ export const it: Textos = {
     sugerencias: {
       titulo: (n: number) =>
         n === 1
-          ? 'C\'è una nuova cartella che sembra un progetto'
+          ? "C'è una nuova cartella che sembra un progetto"
           : `Ci sono ${n} nuove cartelle che sembrano progetti`,
       montar: 'Prepara',
       ignorar: 'Ignora',
@@ -3039,7 +3086,8 @@ export const it: Textos = {
     ventana: 'Ultimi 5 minuti',
     pausado: 'In pausa mentre la finestra è nascosta',
     esperando: 'In attesa del primo campione…',
-    errorMuestreo: (detalle: string) => `Impossibile richiedere il campionamento delle prestazioni: ${detalle}`,
+    errorMuestreo: (detalle: string) =>
+      `Impossibile richiedere il campionamento delle prestazioni: ${detalle}`,
     cpu: 'CPU',
     ram: 'Memoria',
     disco: 'Disco dati',
@@ -3097,8 +3145,7 @@ export const it: Textos = {
     niveles: { error: 'ERROR', warning: 'WARNING', info: 'INFO' } as Record<string, string>,
     pausar: 'Metti in pausa',
     reanudar: 'Riprendi',
-    pausadoNuevas: (n: number) =>
-      n === 1 ? '1 nuova riga in pausa' : `${n} nuove righe in pausa`,
+    pausadoNuevas: (n: number) => (n === 1 ? '1 nuova riga in pausa' : `${n} nuove righe in pausa`),
     copiar: 'Copia visibili',
     copiadas: (n: number) => (n === 1 ? '1 riga copiata' : `${n} righe copiate`),
     limpiar: 'Pulisci',
@@ -3143,18 +3190,18 @@ export const it: Textos = {
     reparar: 'Ripara',
     repararTitulo: 'Riparare il comando wolf?',
     repararTexto:
-      'wolf è nel PATH ma i suoi file non sono completi. Verranno copiati nuovamente nella cartella dati e verrà avviato il server locale, come durante l\'aggiunta.',
+      "wolf è nel PATH ma i suoi file non sono completi. Verranno copiati nuovamente nella cartella dati e verrà avviato il server locale, come durante l'aggiunta.",
     titulo: 'Terminale: comando wolf',
     descripcion:
-      'Gestisca WolfCore Dev da PowerShell, cmd o Git Bash: wolf status, wolf use php@8.4, wolf share, wolf logs. Funziona solo con l\'app aperta.',
+      "Gestisca WolfCore Dev da PowerShell, cmd o Git Bash: wolf status, wolf use php@8.4, wolf share, wolf logs. Funziona solo con l'app aperta.",
     activo: 'Disponibile nel PATH',
     enPathSinServidor: 'Nel PATH, server arrestato',
     inactivo: 'Non presente nel PATH',
     agregarBoton: 'Aggiungi wolf al PATH',
     quitarBoton: 'Rimuovi wolf dal PATH',
-    agregarTitulo: 'Aggiungere wolf al PATH dell\'utente?',
+    agregarTitulo: "Aggiungere wolf al PATH dell'utente?",
     agregarTexto:
-      'Il comando wolf verrà copiato nella cartella dati di WolfCore Dev, tale cartella sarà aggiunta al PATH del Suo utente (viene salvata una copia del PATH originale) e verrà avviato un server locale su 127.0.0.1 che risponde solo a wolf con una chiave che cambia a ogni avvio. Pubblicare un sito su Internet o cambiare la versione di PHP per tutti i terminali richiede comunque conferma nella finestra dell\'app. Può rimuoverlo in qualsiasi momento.',
+      "Il comando wolf verrà copiato nella cartella dati di WolfCore Dev, tale cartella sarà aggiunta al PATH del Suo utente (viene salvata una copia del PATH originale) e verrà avviato un server locale su 127.0.0.1 che risponde solo a wolf con una chiave che cambia a ogni avvio. Pubblicare un sito su Internet o cambiare la versione di PHP per tutti i terminali richiede comunque conferma nella finestra dell'app. Può rimuoverlo in qualsiasi momento.",
     agregar: 'Aggiungi',
     quitarTitulo: 'Rimuovere wolf dal PATH?',
     quitarTexto:
@@ -3188,7 +3235,7 @@ export const it: Textos = {
     regenerar: 'Rigenera token',
     regenerarTitulo: 'Rigenerare il token del server MCP?',
     regenerarTexto:
-      'Il token attuale smette di essere valido all\'istante: gli assistenti connessi dovranno utilizzare la nuova configurazione.',
+      "Il token attuale smette di essere valido all'istante: gli assistenti connessi dovranno utilizzare la nuova configurazione.",
     regenerado: 'Token rigenerato. Copi nuovamente la configurazione.',
     errorCargar: (detalle: string) => `Impossibile leggere lo stato del server MCP: ${detalle}`,
     confirmacion: {
@@ -3230,10 +3277,13 @@ export const it: Textos = {
     copiar: 'Copia',
     copiado: 'Copiato negli appunti',
     limpiar: 'Pulisci',
-    pendienteApi: 'In sospeso: il nucleo non espone ancora queste informazioni all\'interfaccia.',
+    pendienteApi: "In sospeso: il nucleo non espone ancora queste informazioni all'interfaccia.",
     lista: {
       qr: { nombre: 'Generatore QR', descripcion: 'Da un testo o dal link di un tunnel; PNG.' },
-      json: { nombre: 'JSON', descripcion: 'Formattare, validare e minificare, con vista ad albero.' },
+      json: {
+        nombre: 'JSON',
+        descripcion: 'Formattare, validare e minificare, con vista ad albero.',
+      },
       regex: {
         nombre: 'Espressioni regolari',
         descripcion: 'Strumento di test con corrispondenze, gruppi e guida rapida.',
@@ -3266,7 +3316,10 @@ export const it: Textos = {
         nombre: 'Informazioni file',
         descripcion: 'Dimensione, tipo e hash di un file.',
       },
-      websocket: { nombre: 'Client WebSocket', descripcion: 'Connettersi, inviare e visualizzare messaggi.' },
+      websocket: {
+        nombre: 'Client WebSocket',
+        descripcion: 'Connettersi, inviare e visualizzare messaggi.',
+      },
       contrasenas: {
         nombre: 'Password',
         descripcion: 'Valuta una password e controlla gli account deboli dei Suoi database.',
@@ -3293,15 +3346,14 @@ export const it: Textos = {
       jsonInvalido: (linea: number, columna: number) =>
         `JSON non valido: controlli la riga ${linea}, colonna ${columna}.`,
       banderas: 'Flag non validi: usi solo d, g, i, m, s, u, v o y, senza ripetizioni.',
-      regex: (detalle: string) => `Espressione non valida (${detalle}).`,
-      trabajador: 'Impossibile eseguire l\'operazione in background.',
+      trabajador: "Impossibile eseguire l'operazione in background.",
       diffLento: 'I testi sono troppo diversi per confrontarli in tempo utile.',
       base64: 'Base64 non valido.',
       utf8: 'Il contenuto decodificato non è testo UTF-8.',
       url: 'Sequenza URL non valida.',
       coste: (max: number) => `Il costo di bcrypt deve essere compreso tra 4 e ${max}.`,
       jwtPartes: 'Il JWT deve avere tre parti separate da un punto.',
-      jwtCabecera: 'Impossibile leggere l\'intestazione del JWT.',
+      jwtCabecera: "Impossibile leggere l'intestazione del JWT.",
       jwtCarga: 'Impossibile leggere il payload del JWT.',
       longitud: 'La lunghezza deve essere compresa tra 4 e 256.',
       sinConjuntos: 'Selezioni almeno un tipo di carattere.',
@@ -3335,14 +3387,15 @@ export const it: Textos = {
       coincidencias: (n: number, truncado: boolean) =>
         `${n} ${n === 1 ? 'corrispondenza' : 'corrispondenze'}${truncado ? ' (si mostrano le prime)' : ''}`,
       sinCoincidencias: 'Nessuna corrispondenza.',
-      tiempo: 'L\'espressione ha impiegato troppo tempo ed è stata interrotta (possibile backtracking catastrofico).',
+      tiempo:
+        "L'espressione ha impiegato troppo tempo ed è stata interrotta (possibile backtracking catastrofico).",
       grupo: (n: number) => `Gruppo ${n}`,
       referencia: 'Riferimento rapido',
       tabla: [
         ['.', 'Qualsiasi carattere (eccetto a capo senza s)'],
         ['\\d \\w \\s', 'Cifra, lettera/numero/_ e spazio'],
-        ['\\D \\W \\S', 'L\'opposto dei precedenti'],
-        ['[abc] [^abc]', 'Uno dell\'elenco / nessuno dell\'elenco'],
+        ['\\D \\W \\S', "L'opposto dei precedenti"],
+        ['[abc] [^abc]', "Uno dell'elenco / nessuno dell'elenco"],
         ['^ $', 'Inizio e fine (di riga con m)'],
         ['\\b', 'Confine di parola'],
         ['* + ?', 'Zero o più, uno o più, facoltativo'],
@@ -3398,7 +3451,8 @@ export const it: Textos = {
       propio: 'WolfCore Dev',
       sistema: 'Sistema',
       finalizar: 'Termina',
-      noFinalizable: 'I processi di sistema e quelli di WolfCore Dev non possono essere terminati da qui.',
+      noFinalizable:
+        'I processi di sistema e quelli di WolfCore Dev non possono essere terminati da qui.',
       confirmarTitulo: 'Termina processo',
       confirmarTexto: (nombre: string, pid: number) =>
         `"${nombre}" (PID ${pid}) verrà chiuso senza salvare. Per confermare, digiti il nome del processo:`,
@@ -3413,8 +3467,7 @@ export const it: Textos = {
       seleccion: (n: number) => `${n} ${n === 1 ? 'percorso selezionato' : 'percorsi selezionati'}`,
       analizar: 'Analizza',
       limpiar: 'Rimuovi BOM',
-      confirmar: (n: number) =>
-        `Il BOM verrà rimosso da ${n} file (con copia). Continuare?`,
+      confirmar: (n: number) => `Il BOM verrà rimosso da ${n} file (con copia). Continuare?`,
       conBom: (n: number) => `${n} file con BOM`,
       sinBom: 'Nessun file contiene BOM.',
       limpiados: (n: number) => `${n === 1 ? 'Pulito' : 'Puliti'} ${n} file.`,
@@ -3422,7 +3475,7 @@ export const it: Textos = {
     },
     certificados: {
       explicacion:
-        'Firma un certificato con la CA locale di WolfCore Dev. Il file .crt viene salvato dove sceglie e la chiave (.key) accanto ad esso; la chiave non passa mai attraverso l\'interfaccia.',
+        "Firma un certificato con la CA locale di WolfCore Dev. Il file .crt viene salvato dove sceglie e la chiave (.key) accanto ad esso; la chiave non passa mai attraverso l'interfaccia.",
       dominios: 'Nomi o IP (separati da spazio, virgola o riga)',
       ejemplo: 'miapp.test, *.miapp.test, 127.0.0.1',
       emitir: 'Emetti e salva',
@@ -3439,8 +3492,8 @@ export const it: Textos = {
       bcryptTrunca: 'bcrypt utilizza solo i primi 72 byte del testo.',
       bcryptVerificar: 'Hash bcrypt da verificare',
       verificar: 'Verifica',
-      coincide: 'Il testo corrisponde all\'hash.',
-      noCoincide: 'Il testo non corrisponde all\'hash.',
+      coincide: "Il testo corrisponde all'hash.",
+      noCoincide: "Il testo non corrisponde all'hash.",
       base64: 'Base64',
       base64Url: 'Variante URL',
       codificar: 'Codifica',
@@ -3465,7 +3518,7 @@ export const it: Textos = {
       cabecera: 'Intestazione',
       carga: 'Payload',
       firmaNoVerificada:
-        'Firma non verificata: il contenuto è mostrato così com\'è e potrebbe essere stato alterato.',
+        "Firma non verificata: il contenuto è mostrato così com'è e potrebbe essere stato alterato.",
       vencido: 'Il token è scaduto (exp).',
       vigente: 'Il token non è scaduto (exp).',
       salida: 'Risultato',
@@ -3476,12 +3529,12 @@ export const it: Textos = {
       ejemplo:
         '# Titolo\n\nTesto con **grassetto**, _corsivo_ e un [collegamento](https://example.com).\n\n- Uno\n- Due\n\n```\ncodice\n```\n',
       seguro:
-        'L\'HTML grezzo viene mostrato come testo, i collegamenti pericolosi vengono scartati e le immagini non vengono caricate.',
+        "L'HTML grezzo viene mostrato come testo, i collegamenti pericolosi vengono scartati e le immagini non vengono caricate.",
       imagenOmitida: (alt: string) => `[immagine${alt ? `: ${alt}` : ''}]`,
     },
     entorno: {
       aplicacion: 'Versione di WolfCore Dev',
-      navegador: 'Motore dell\'interfaccia',
+      navegador: "Motore dell'interfaccia",
       plataforma: 'Piattaforma',
       idioma: 'Lingua',
       zona: 'Fuso orario',
@@ -3492,7 +3545,7 @@ export const it: Textos = {
       herramientas: 'Strumenti di WolfCore Dev',
       noInstalada: 'Non installato',
       sinRespuesta: 'Nessuna risposta in tempo',
-      variables: 'Variabili d\'ambiente',
+      variables: "Variabili d'ambiente",
       filtro: 'Filtra variabili',
       enmascarada: 'Valore nascosto: il nome sembra appartenere a un segreto.',
     },
@@ -3511,14 +3564,13 @@ export const it: Textos = {
       regex: 'Espressione regolare',
       mayusculas: 'Distingui maiuscole/minuscole',
       incluir: 'Solo file (separi con virgole, es. *.php)',
-      excluir: 'Escludi (separi con virgole)',
       buscar: 'Cerca',
       cancelar: 'Annulla',
       buscando: 'Ricerca in corso…',
       sinResultados: 'Nessuna corrispondenza.',
       truncado: 'Ci sono più risultati di quelli mostrati: affini la ricerca.',
       cancelada: 'Ricerca annullata.',
-      abrir: 'Apri nell\'editor',
+      abrir: "Apri nell'editor",
       coincidencias: (n: number) => `${n} ${n === 1 ? 'corrispondenza' : 'corrispondenze'}`,
       resumen: (archivos: number, examinados: number) =>
         `in ${archivos} file (${examinados} esaminati)`,
@@ -3566,7 +3618,7 @@ export const it: Textos = {
       aviso:
         'Il codice QR contiene la password in chiaro: chiunque lo veda o lo fotografi può connettersi alla Sua rete. Viene generato qui, non viene salvato e viene cancellato alla chiusura di questo pannello.',
       avisoPng:
-        'Anche il file PNG scaricato contiene la password all\'interno del codice: lo conservi dove solo Lei può vederlo.',
+        "Anche il file PNG scaricato contiene la password all'interno del codice: lo conservi dove solo Lei può vederlo.",
       escribala:
         'La password viene inserita da Lei: WolfCore Dev non legge mai le password Wi-Fi salvate nel sistema.',
       errorSsid: 'Inserisca il nome della rete (fino a 32 caratteri).',
@@ -3581,13 +3633,13 @@ export const it: Textos = {
     imagenes: {
       elegir: 'Seleziona immagine',
       ayuda:
-        'Viene elaborata su questo computer (fino a 30 MB e 12000 px per lato). L\'originale non viene modificato: il risultato è un nuovo file.',
+        "Viene elaborata su questo computer (fino a 30 MB e 12000 px per lato). L'originale non viene modificato: il risultato è un nuovo file.",
       original: 'Originale',
       accion: 'Cosa fare',
       aIco: 'Converti in ICO',
       aPng: 'Converti in PNG',
       comprimir: 'Comprimi',
-      tamanos: 'Dimensioni dell\'ICO',
+      tamanos: "Dimensioni dell'ICO",
       formato: 'Formato',
       calidad: 'Qualità',
       ladoMax: 'Lato massimo in px (vuoto = originale)',
@@ -3596,9 +3648,9 @@ export const it: Textos = {
       guardar: 'Salva con nome…',
       antes: 'Prima',
       despues: 'Dopo',
-      sinMejora: 'Il risultato non pesa meno dell\'originale: provi con un\'altra qualità o formato.',
-      errorAbrir: 'Impossibile aprire l\'immagine su questo computer.',
-      errorProcesar: 'Impossibile elaborare l\'immagine.',
+      sinMejora: "Il risultato non pesa meno dell'originale: provi con un'altra qualità o formato.",
+      errorAbrir: "Impossibile aprire l'immagine su questo computer.",
+      errorProcesar: "Impossibile elaborare l'immagine.",
       sufijoConvertida: '-convertita',
       sufijoComprimida: '-compressa',
       dimensiones: (ancho: number, alto: number) => `${ancho}×${alto} px`,
@@ -3622,13 +3674,13 @@ export const it: Textos = {
       creando: 'Creazione in corso…',
       pdf: 'Ottimizza PDF',
       pdfAyuda:
-        'Viene salvato nuovamente con flussi di oggetti, in un thread separato. Il file viene creato solo se pesa meno; non vengono aperti PDF protetti da password. L\'originale non viene toccato. Attenzione: risalvando si perdono le firme digitali e la conformità PDF/A.',
+        "Viene salvato nuovamente con flussi di oggetti, in un thread separato. Il file viene creato solo se pesa meno; non vengono aperti PDF protetti da password. L'originale non viene toccato. Attenzione: risalvando si perdono le firme digitali e la conformità PDF/A.",
       elegirPdf: 'Seleziona PDF',
       optimizar: 'Ottimizza…',
       optimizando: 'Ottimizzazione…',
       antes: 'Prima',
       despues: 'Dopo',
-      sinMejora: 'Il PDF non peserebbe meno dopo l\'ottimizzazione: non è stato creato alcun file.',
+      sinMejora: "Il PDF non peserebbe meno dopo l'ottimizzazione: non è stato creato alcun file.",
       sufijoOptimizado: '-ottimizzato',
       omitidos: (n: number) =>
         `${n} ${n === 1 ? 'collegamento, cartella illeggibile o file speciale non è stato incluso' : 'collegamenti, cartelle illeggibili o file speciali non sono stati inclusi'}.`,
@@ -3643,7 +3695,7 @@ export const it: Textos = {
     },
     conversor: {
       ayuda:
-        'Viene convertito su questo computer: il documento non viene caricato da nessuna parte. L\'originale non viene modificato; il risultato è un nuovo file e non sovrascrive mai uno esistente.',
+        "Viene convertito su questo computer: il documento non viene caricato da nessuna parte. L'originale non viene modificato; il risultato è un nuovo file e non sovrascrive mai uno esistente.",
       elegir: 'Seleziona documento',
       tipoNoSoportado:
         'Non ci sono conversioni per questo tipo di file. Sono supportati docx, xlsx, csv, md, html e pdf (e odt, pptx e doc con LibreOffice).',
@@ -3719,8 +3771,7 @@ export const it: Textos = {
         resumen: (r: number, d: number) =>
           `${r} ${r === 1 ? 'account verificato' : 'account verificati'} · ${d} ${d === 1 ? 'debole' : 'deboli'}`,
         sinDebiles: 'Nessun account verificato corrisponde a una password molto comune.',
-        noRevisables: (n: number) =>
-          `Impossibile verificare ${n} account:`,
+        noRevisables: (n: number) => `Impossibile verificare ${n} account:`,
         truncado:
           'La verifica è stata interrotta per il limite di 10 000 righe o di 60 secondi: alcuni account non sono stati verificati.',
         usuario: 'Utente',
@@ -3753,17 +3804,17 @@ export const it: Textos = {
         rlsActiva:
           'La tabella dispone di sicurezza a livello di riga (RLS): la verifica vede solo le righe consentite dalla policy al ruolo limitato, quindi potrebbe mancare qualche account.',
         falsoPositivo:
-          'Un valore di 32 o 40 caratteri esadecimali viene considerato md5 o sha1, ma potrebbe essere qualcos\'altro (un token, ad esempio). Se la colonna non memorizza password, il risultato non è valido.',
+          "Un valore di 32 o 40 caratteri esadecimali viene considerato md5 o sha1, ma potrebbe essere qualcos'altro (un token, ad esempio). Se la colonna non memorizza password, il risultato non è valido.",
       },
       restablecer: {
         titulo: (u: string) => `Reimpostare la password di ${u}`,
         ayuda:
-          'Non è possibile recuperare una password: se ne imposta una nuova. Prima viene creata un\'istantanea del database e salvata una copia della riga.',
-        cargando: 'Preparazione dell\'anteprima…',
+          "Non è possibile recuperare una password: se ne imposta una nuova. Prima viene creata un'istantanea del database e salvata una copia della riga.",
+        cargando: "Preparazione dell'anteprima…",
         sentencia: 'Verrà eseguita (i valori sono separati e non vengono mostrati)',
         formatoActual: (f: string) => `Formato attuale: ${f}`,
         cambiaFormato:
-          'L\'account passerà a bcrypt: l\'applicazione deve essere in grado di verificarlo (ad esempio con password_verify); altrimenti nessuno potrà accedere con quell\'account.',
+          "L'account passerà a bcrypt: l'applicazione deve essere in grado di verificarlo (ad esempio con password_verify); altrimenti nessuno potrà accedere con quell'account.",
         nueva: 'Nuova password',
         generar: 'Genera password',
         mostrar: 'Mostra',
@@ -3777,9 +3828,9 @@ export const it: Textos = {
         copiaFila: 'Copia della riga (identificativo e hash precedente, conservata per 30 giorni):',
         instantanea: 'Istantanea precedente del database:',
         instantaneaAyuda: 'È possibile ripristinarla da Database › Istantanee.',
-        aBcrypt: 'Passa a bcrypt: solo se l\'applicazione usa password_verify o equivalente',
+        aBcrypt: "Passa a bcrypt: solo se l'applicazione usa password_verify o equivalente",
         avisoLegado:
-          'Questo hash è md5 o sha1 senza salt e viene mantenuto in tale formato. Se l\'applicazione memorizza il salt separatamente (in un\'altra colonna o in una costante), l\'hash non può essere riprodotto e la nuova password non consentirebbe l\'accesso.',
+          "Questo hash è md5 o sha1 senza salt e viene mantenuto in tale formato. Se l'applicazione memorizza il salt separatamente (in un'altra colonna o in una costante), l'hash non può essere riprodotto e la nuova password non consentirebbe l'accesso.",
         datosReales: {
           titulo: 'Database con dati reali',
           texto:
@@ -3789,13 +3840,13 @@ export const it: Textos = {
         rlsActiva:
           'La tabella dispone di sicurezza a livello di riga (RLS): se la policy nasconde questo account al ruolo limitato, non sarà possibile reimpostarlo.',
         copiaSinRestringir:
-          'Impossibile limitare tale copia all\'utente di questo computer: verifichi i permessi della cartella.',
+          "Impossibile limitare tale copia all'utente di questo computer: verifichi i permessi della cartella.",
       },
     },
   },
   doctor: {
     descripcion:
-      'Controlla porte, certificati, il file hosts, il PATH, Visual C++, l\'antivirus e i servizi, e propone come ripararli.',
+      "Controlla porte, certificati, il file hosts, il PATH, Visual C++, l'antivirus e i servizi, e propone come ripararli.",
     revisarAhora: 'Controlla ora',
     revisando: 'Controllo in corso…',
     sinRevision: 'Nessun controllo eseguito finora. Faccia clic su «Controlla ora».',
@@ -3803,7 +3854,8 @@ export const it: Textos = {
     gravedades: { error: 'Errori', aviso: 'Avvisi', info: 'Informazioni' },
     evidencia: 'Cosa è stato rilevato',
     requiereAdmin: 'Richiede permessi di amministratore',
-    comandoManual: 'Comando per una console di amministratore (non viene eseguito automaticamente):',
+    comandoManual:
+      'Comando per una console di amministratore (non viene eseguito automaticamente):',
     copiar: 'Copia comando',
     copiado: 'Comando copiato.',
     reparar: 'Ripara',
@@ -3837,9 +3889,10 @@ export const it: Textos = {
       servicios: 'Servizi',
     },
     reparaciones: {
-      cambiar_puerto: 'Cambiare la porta di WolfCore Dev con una libera. L\'altro programma non viene toccato.',
+      cambiar_puerto:
+        "Cambiare la porta di WolfCore Dev con una libera. L'altro programma non viene toccato.",
       puerto_manual:
-        'Spostare la porta di WolfCore Dev fuori dall\'intervallo riservato. Liberare l\'intervallo è una Sua decisione tramite il comando mostrato.',
+        "Spostare la porta di WolfCore Dev fuori dall'intervallo riservato. Liberare l'intervallo è una Sua decisione tramite il comando mostrato.",
       detener_iis:
         'Arrestare il servizio IIS (W3SVC) per liberare la porta. Non viene disabilitato: riparte al riavvio di Windows.',
       regenerar_ca:
@@ -3847,7 +3900,7 @@ export const it: Textos = {
       regenerar_certificados: 'Riemettere i certificati dei siti e ricaricare Nginx.',
       hosts_reescribir:
         'Riscrivere il blocco di WolfCore Dev nel file hosts in UTF-8, con una copia preventiva. Le righe esterne non vengono toccate.',
-      hosts_solo_lectura: 'Rimuovere l\'attributo di sola lettura dal file hosts.',
+      hosts_solo_lectura: "Rimuovere l'attributo di sola lettura dal file hosts.",
       path_duplicados:
         'Rimuovere le voci duplicate di WolfCore Dev dal PATH utente, salvando una copia del valore precedente. Le voci esterne non vengono toccate.',
       path_ajeno:
@@ -3857,9 +3910,7 @@ export const it: Textos = {
       instalar_build_tools:
         'Installi i Build Tools di Visual Studio (con gli strumenti C++) tramite il comando mostrato: occupano diversi GB e richiedono permessi di amministratore, quindi la scelta spetta a Lei.',
       antivirus:
-        'Aggiungere la cartella dei dati alle esclusioni dell\'antivirus è una Sua decisione, tramite il comando mostrato.',
-      firewall:
-        'Rimuovere tali regole è una Sua decisione, tramite il comando mostrato, in una console di amministratore. WolfCore Dev non modifica mai il firewall.',
+        "Aggiungere la cartella dei dati alle esclusioni dell'antivirus è una Sua decisione, tramite il comando mostrato.",
       reintentar_servicio: 'Riavviare il servizio.',
       firefox_confianza:
         'Aggiunge al file user.js di ogni profilo Firefox la preferenza per fidarsi dell’autorità di Windows, con una copia preventiva. prefs.js non viene toccato e i profili aperti vengono saltati.',
@@ -3868,7 +3919,8 @@ export const it: Textos = {
       titulo: 'Attendibilità della CA',
       texto:
         'Windows si fida già dell’autorità di WolfCore Dev; Node, Python e Firefox usano ciascuno il proprio archivio.',
-      sinCa: 'Non esiste ancora alcuna autorità di certificazione. La crei da HTTPS per usare questa sezione.',
+      sinCa:
+        'Non esiste ancora alcuna autorità di certificazione. La crei da HTTPS per usare questa sezione.',
       node: {
         titulo: 'Node',
         proyectos:
@@ -3877,7 +3929,8 @@ export const it: Textos = {
         global: 'Anche come variabile utente (per altri terminali e programmi)',
         confirmarActivar:
           'NODE_EXTRA_CA_CERTS verrà impostata come variabile utente. Vale per i programmi aperti in seguito; viene rimossa disattivando questa opzione.',
-        confirmarDesactivar: 'La variabile NODE_EXTRA_CA_CERTS impostata da WolfCore Dev verrà rimossa.',
+        confirmarDesactivar:
+          'La variabile NODE_EXTRA_CA_CERTS impostata da WolfCore Dev verrà rimossa.',
       },
       python: {
         titulo: 'Python',
@@ -3905,8 +3958,7 @@ export const it: Textos = {
         resultadoOk: (n: number) => `Fatto in ${plural(n, 'profilo', 'profili')}.`,
         resultadoAbiertos: (n: number) =>
           `${plural(n, 'profilo è stato saltato', 'profili sono stati saltati')} perché Firefox è aperto. Lo chiuda e riprovi.`,
-        resultadoError: (n: number) =>
-          `Impossibile modificare ${plural(n, 'profilo', 'profili')}.`,
+        resultadoError: (n: number) => `Impossibile modificare ${plural(n, 'profilo', 'profili')}.`,
       },
       confirmar: 'Conferma',
       cancelar: 'Annulla',
@@ -3978,7 +4030,8 @@ export const it: Textos = {
     version: (v: string) => `v${v}`,
     versionDesconocida: 'Versione sconosciuta',
     verVersion: 'Vedi versione',
-    verVersionAyuda: 'Esegue il programma con --version (non viene eseguito automaticamente all’apertura).',
+    verVersionAyuda:
+      'Esegue il programma con --version (non viene eseguito automaticamente all’apertura).',
     origen: {
       propio: 'Installato da WolfCore Dev',
       'npm-usuario': 'npm globale dell’utente',
@@ -4002,7 +4055,8 @@ export const it: Textos = {
       titulo: (nombre: string) => `Installare ${nombre}?`,
       texto: (paquete: string) =>
         `Installa l’ultima versione pubblicata di ${paquete} da registry.npmjs.org, usando il Node di WolfCore Dev nella sua cartella dati.`,
-      aislado: 'Non usa la configurazione npm dell’utente né tocca npm globale. Può richiedere alcuni minuti.',
+      aislado:
+        'Non usa la configurazione npm dell’utente né tocca npm globale. Può richiedere alcuni minuti.',
       aceptar: 'Installa',
       hecho: (nombre: string) => `${nombre} installato.`,
     },
@@ -4258,7 +4312,8 @@ export const it: Textos = {
       tituloRama: (v: string) => `Nuova versione: ${v}`,
       ninguna: 'nessuna',
       instancia: (id: string) => `Si aggiorna l’istanza ${id}. Prima di cambiare qualsiasi cosa:`,
-      pasoInstalar: (v: string) => `viene installata ${v} accanto alla versione attuale (che non viene rimossa);`,
+      pasoInstalar: (v: string) =>
+        `viene installata ${v} accanto alla versione attuale (che non viene rimossa);`,
       pasoVolcados: 'viene eseguito il dump di ogni database con la versione attuale;',
       pasoCopia: 'viene fermata e copiata l’intera cartella dati (copia a freddo);',
       pasoArrancar: 'viene avviata la nuova versione e verificata la risposta;',
@@ -4433,7 +4488,26 @@ export const it: Textos = {
     tema: 'Tema',
     temas: { sistema: 'Sistema', claro: 'Chiaro', oscuro: 'Scuro' },
     idioma: 'Lingua',
-    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語', ko: '한국어', hi: 'हिन्दी', tr: 'Türkçe', id: 'Bahasa Indonesia', pl: 'Polski', nl: 'Nederlands', uk: 'Українська' },
+    idiomas: {
+      es: 'Español',
+      en: 'English',
+      pt: 'Português',
+      fr: 'Français',
+      de: 'Deutsch',
+      it: 'Italiano',
+      ru: 'Русский',
+      zh: '中文 简体',
+      ja: '日本語',
+      ko: '한국어',
+      hi: 'हिन्दी',
+      tr: 'Türkçe',
+      id: 'Bahasa Indonesia',
+      pl: 'Polski',
+      nl: 'Nederlands',
+      uk: 'Українська',
+    },
+    /** Aviso junto a los idiomas que no son es, en, pt ni fr (la traducción es automática y revisada). */
+    traduccionAutomatica: 'Traduzione automatica rivista',
     acento: 'Colore principale',
     acentos: {
       indigo: 'Indaco',
@@ -4445,10 +4519,6 @@ export const it: Textos = {
     },
     acentoPropio: (color: string) => `Personalizzato (${color})`,
     errorGuardar: 'Impossibile salvare la preferenza',
-    asistente: 'Procedura guidata iniziale',
-    asistenteAyuda:
-      'Ripercorra i passaggi iniziali: cartella dei progetti, strumenti di base, CA, GitHub e cartella monitorata.',
-    asistenteAbrir: 'Apri la procedura guidata',
   },
   paleta: {
     titulo: 'Tavolozza comandi',
@@ -4478,7 +4548,6 @@ export const it: Textos = {
     nuevoProyecto: 'Crea un nuovo progetto',
     tema: (tema: string) => `Tema: ${tema}`,
     idioma: (idioma: string) => `Lingua: ${idioma}`,
-    asistente: 'Apri la procedura guidata iniziale',
   },
   nuevoProyecto: {
     titulo: 'Nuovo progetto',
@@ -4491,7 +4560,10 @@ export const it: Textos = {
         nombre: 'Laravel',
         descripcion: 'Con Composer; chiave dell’applicazione, database e migrazioni.',
       },
-      codeigniter4: { nombre: 'CodeIgniter 4', descripcion: 'Appstarter ufficiale con il relativo .env.' },
+      codeigniter4: {
+        nombre: 'CodeIgniter 4',
+        descripcion: 'Appstarter ufficiale con il relativo .env.',
+      },
       codeigniter3: {
         nombre: 'CodeIgniter 3',
         descripcion: 'Framework classico con database.php configurato.',
@@ -4504,7 +4576,10 @@ export const it: Textos = {
         nombre: 'FastAPI',
         descripcion: 'Ambiente virtuale, requirements.txt e processo uvicorn.',
       },
-      wordpress: { nombre: 'WordPress', descripcion: 'Download ufficiale con wp-config.php pronto.' },
+      wordpress: {
+        nombre: 'WordPress',
+        descripcion: 'Download ufficiale con wp-config.php pronto.',
+      },
       estatico: {
         nombre: 'Sito statico',
         descripcion: 'HTML e CSS serviti da Nginx, senza database.',
@@ -4526,8 +4601,7 @@ export const it: Textos = {
       sinBase: 'Senza database',
       instancia: 'Server del database',
       apagada: 'arrestata',
-      apagadaAyuda:
-        'Questo server è arrestato: lo avvii in Servizi prima di creare il progetto.',
+      apagadaAyuda: 'Questo server è arrestato: lo avvii in Servizi prima di creare il progetto.',
       sinMotores: 'Non c’è alcun server di database installato per questo tipo di progetto.',
       nombreBase: 'Nome del database',
       starterKit: 'Starter kit',
@@ -4633,7 +4707,8 @@ export const it: Textos = {
       sin_dominio: 'Non ha un dominio nell’altro programma: ne viene proposto uno.',
       dominio_invalido: 'Il suo dominio non è valido: ne viene proposto uno.',
       sin_vhost: 'Non ha un host virtuale proprio: viene proposto un dominio.',
-      php_desconocido: 'Non si conosce la versione di PHP utilizzata: ne viene scelta una installata.',
+      php_desconocido:
+        'Non si conosce la versione di PHP utilizzata: ne viene scelta una installata.',
       base_no_local: 'Il suo database si trova su un altro server: non viene importato.',
       base_nombre_invalido: 'Il nome del suo database non è valido: non viene importato.',
       motor_no_soportado: 'Il suo database non è MySQL né MariaDB: non viene importato.',
@@ -4677,7 +4752,8 @@ export const it: Textos = {
       basesNuevas: (nombres: string) => `Verranno copiati i database: ${nombres}.`,
       basesReemplazo: (nombres: string) =>
         `Verranno sostituiti questi database, già esistenti: ${nombres}. Prima viene salvata una copia di ciascuno.`,
-      basesSinTocar: (nombres: string) => `Non verranno toccati questi database, già esistenti: ${nombres}.`,
+      basesSinTocar: (nombres: string) =>
+        `Non verranno toccati questi database, già esistenti: ${nombres}.`,
       origen: (puerto: number, usuario: string) =>
         `Verranno esportati dal server dell’altro programma (127.0.0.1:${puerto}, utente ${usuario}). Lettura senza modifiche.`,
       sinBases: 'Non verrà importato alcun database.',
@@ -4688,13 +4764,15 @@ export const it: Textos = {
       titulo: 'Risultato dell’importazione',
       importando: 'Importazione…',
       cancelar: 'Annulla importazione',
-      restaurada: 'Il database originale è stato ripristinato automaticamente dalla sua copia: è rimasto com’era.',
+      restaurada:
+        'Il database originale è stato ripristinato automaticamente dalla sua copia: è rimasto com’era.',
       sitioOk: 'Importato',
       sitioFallo: 'Non importato',
       baseOk: (n: string) => `Database ${n} importato`,
       baseFallo: (n: string) => `Database ${n} non importato`,
       copiaPrevia: (ruta: string) => `Copia del database precedente: ${ruta}`,
-      phpDistinto: (v: string) => `È stato utilizzato PHP ${v} (la versione originale non era installata).`,
+      phpDistinto: (v: string) =>
+        `È stato utilizzato PHP ${v} (la versione originale non era installata).`,
       sinAplicar:
         'Nginx o il file hosts non sono stati aggiornati: controlli l’avviso in Progetti e riprovi.',
       resumen: (s: number, b: number) =>
@@ -4711,7 +4789,8 @@ export const it: Textos = {
       nombre: 'Nome del modello',
       nombrePlaceholder: 'Il mio progetto base',
       conArchivos: 'Includi anche i file del progetto',
-      conArchivosAyuda: 'Senza questa opzione vengono salvati solo la ricetta, le impostazioni e lo schema.',
+      conArchivosAyuda:
+        'Senza questa opzione vengono salvati solo la ricetta, le impostazioni e lo schema.',
       siempre: 'Esclusi sempre',
       siempreLista:
         '.env e .env.*, vendor, node_modules, .git, .venv, log, dump e database su file (*.sql, *.dump, *.sqlite), chiavi e certificati (*.pem, *.key, *.crt…), wp-config.php e wolfcore.yml. Anche qualsiasi file che contenga una chiave o una password viene escluso.',
@@ -4725,7 +4804,8 @@ export const it: Textos = {
       baseVolcado: (nombre: string, servidor: string) =>
         `Verrà salvata solo la struttura del database ${nombre} (server ${servidor}), senza alcuna riga.`,
       sinBase: 'Il progetto non dichiara alcun database: non verrà salvato nessuno schema.',
-      avisoMongodb: 'Questo progetto usa MongoDB: il suo schema (collezioni e indici) non viene salvato.',
+      avisoMongodb:
+        'Questo progetto usa MongoDB: il suo schema (collezioni e indici) non viene salvato.',
       incluirDeTodosModos: 'Includi comunque',
       avisoIncluir: 'Se questo file contiene una chiave reale, rimarrà all’interno del modello.',
       guardar: 'Salva modello',
@@ -4863,57 +4943,9 @@ export const it: Textos = {
     guardadoConCopia: 'Il file .env è stato salvato; la versione precedente è rimasta come copia.',
   },
   asistenteInicio: {
-    titulo: 'Benvenuto in WolfCore Dev',
-    subtitulo:
-      'Cinque passaggi per preparare l’ambiente. Nulla viene installato né modificato finché non fa clic sul pulsante di ciascun passaggio.',
     paso: (n: number, total: number) => `Passaggio ${n} di ${total}`,
     anterior: 'Indietro',
     siguiente: 'Avanti',
-    omitirTodo: 'Salta procedura guidata',
-    terminar: 'Fine',
-    hecho: 'Fatto',
-    reabrir: 'Può riaprirla da Impostazioni.',
-    pasos: {
-      carpeta: {
-        titulo: 'Cartella dei progetti',
-        texto:
-          'Dove salva i suoi progetti. Qui vengono clonati i nuovi repository ed è la cartella monitorata nell’ultimo passaggio.',
-        elegir: 'Scegli cartella',
-        actual: (ruta: string) => `Cartella scelta: ${ruta}`,
-        guardada: (ruta: string) => `Cartella attuale: ${ruta}`,
-        ninguna: 'Non scelta: viene usata C:\\Proyectos se esiste.',
-      },
-      basicos: {
-        titulo: 'Installa gli strumenti di base',
-        texto:
-          'Nginx, PHP 8.4, Composer e Node LTS dalle rispettive fonti ufficiali, con impronta verificata. Ciascuno viene installato solo facendo clic sul relativo pulsante.',
-        instalado: 'Installato',
-        instalar: (version: string) => `Installa ${version}`,
-        sinVersion: 'Nessuna versione nel catalogo',
-        cargando: 'Ricerca versioni…',
-        nombres: { nginx: 'Nginx', php: 'PHP 8.4', composer: 'Composer', node: 'Node LTS' },
-      },
-      ca: {
-        titulo: "Considerare attendibile l'autorità locale",
-        texto:
-          "Affinché i siti .test si aprano in HTTPS senza avvisi, Windows deve considerare attendibile l'autorità di WolfCore Dev. Windows le chiederà conferma.",
-        confiar: 'Rendi attendibile la CA',
-        confiada: "Windows considera già attendibile l'autorità locale.",
-      },
-      github: {
-        titulo: 'Connettere GitHub',
-        texto:
-          'Per visualizzare i suoi repository e clonarli con un clic. Utilizzi la sessione di GitHub CLI o un token personale, che viene salvato cifrato su questo computer.',
-      },
-      vigilar: {
-        titulo: 'Monitorare la cartella',
-        texto:
-          'WolfCore Dev le suggerirà di configurare ogni nuova cartella che compare nella cartella dei progetti. Non viene configurato nulla senza la sua conferma.',
-        activar: 'Monitora questa cartella',
-        activa: (ruta: string) => `Monitoraggio di ${ruta}`,
-        sinCarpeta: 'Scelga prima la cartella dei progetti (passaggio 1).',
-      },
-    },
   },
   /** Risultato dell'importazione o esportazione di un profilo (D26). */
   perfiles: {
@@ -4931,8 +4963,7 @@ export const it: Textos = {
         texto:
           'Salva un file .wolfperfil con i suoi siti, versioni, istanze, modelli e impostazioni.',
         bases: 'Includere i database',
-        basesAyuda:
-          'I dump completi (con i dati dei suoi clienti) viaggiano cifrati con la frase.',
+        basesAyuda: 'I dump completi (con i dati dei suoi clienti) viaggiano cifrati con la frase.',
         ca: "Includere l'autorità di certificazione (CA)",
         caAyuda: 'Viene cifrata con la frase. La importi solo su un suo computer.',
         certificados: 'Includere i certificati dei siti',
@@ -5009,10 +5040,12 @@ export const it: Textos = {
         error: 'Impossibile leggere il profilo',
       },
       origen: (fecha: string, sistema: string) => `Creato il ${fecha} su ${sistema}.`,
-      ignoradas: (n: number) => `${n} voci del file non appartengono a un profilo e vengono ignorate.`,
+      ignoradas: (n: number) =>
+        `${n} voci del file non appartengono a un profilo e vengono ignorate.`,
       reemplaza: {
         titulo: 'Ciò che viene sostituito',
-        ninguno: "Non ci sono dati in questa cartella: l'importazione avviene su un'installazione pulita.",
+        ninguno:
+          "Non ci sono dati in questa cartella: l'importazione avviene su un'installazione pulita.",
         copia:
           "Prima di sostituire viene salvata una copia in respaldos/pre-perfil-… e viene creata un'istantanea dell'ambiente; ogni database sostituito ha la propria istantanea. La cartella data non viene mai eliminata.",
         config: 'La configurazione (config.json)',
@@ -5081,7 +5114,8 @@ export const it: Textos = {
         huella: 'Impronta SHA-256 della CA del profilo',
         comparar: 'La confronti con quella del suo computer di origine prima di accettarla.',
         importar: 'Importa la CA del profilo',
-        noImportar: 'Senza importarla, questo computer usa la propria CA attuale o ne crea una nuova.',
+        noImportar:
+          'Senza importarla, questo computer usa la propria CA attuale o ne crea una nuova.',
         ajena:
           'Questa CA ha vincoli di nome diversi da quelli di WolfCore Dev: non può essere importata.',
         sinRestricciones:
@@ -5090,11 +5124,13 @@ export const it: Textos = {
         reemplazaLocal:
           'Questo computer ha già una CA. Importare quella del profilo la sostituisce (resta una copia nel backup precedente).',
         reemplazar: 'Sostituisci la CA di questo computer',
-        noSeInstala: "La CA non viene installata automaticamente nell'archivio certificati di sistema.",
+        noSeInstala:
+          "La CA non viene installata automaticamente nell'archivio certificati di sistema.",
       },
       frase: {
         titulo: 'Frase del profilo',
-        texto: "Il profilo contiene database o la CA cifrati. Inserisca la frase scelta al momento dell'esportazione.",
+        texto:
+          "Il profilo contiene database o la CA cifrati. Inserisca la frase scelta al momento dell'esportazione.",
         campo: 'Frase',
         omitirBases: 'Importa senza i database',
         nota: 'La frase viene usata solo in questa finestra: non viene salvata e viene cancellata al termine o alla chiusura.',
@@ -5120,7 +5156,8 @@ export const it: Textos = {
           reemplazar_ca: 'Confermi separatamente di voler sostituire la CA di questo computer.',
         },
       },
-      progreso: 'Importazione del profilo in corso… Non chiuda la finestra: con database o download può richiedere tempo.',
+      progreso:
+        'Importazione del profilo in corso… Non chiuda la finestra: con database o download può richiedere tempo.',
       fases: {
         copia: 'Copia di ciò che viene sostituito',
         versiones: 'Installazione delle versioni',
@@ -5193,14 +5230,16 @@ export const it: Textos = {
       nginx_desactivado:
         "Le sue regole di Nginx restano salvate ma non applicate: le verifichi nell'editor.",
       carpeta_no_existe: 'La sua cartella non esiste su questo computer: la cerchi.',
-      correo_sin_proveedor: 'Il suo provider SMTP non è stato importato: usa il raccoglitore di posta.',
+      correo_sin_proveedor:
+        'Il suo provider SMTP non è stato importato: usa il raccoglitore di posta.',
       sitio_invalido: 'Il sito non è valido.',
       dominio_invalido: 'Il suo dominio non è valido (deve terminare in .test).',
       ruta_protegida: 'La sua cartella è di sistema o di WolfCore Dev: non viene importata.',
       dominio_en_uso: 'Un altro sito di questo computer usa già quel dominio.',
       sitio_repetido: 'Il sito è duplicato nel profilo.',
       no_disponible: 'Quella versione non è più nel catalogo.',
-      huella_debil: "Quella versione non ha un'impronta forte: la installi manualmente da Versioni.",
+      huella_debil:
+        "Quella versione non ha un'impronta forte: la installi manualmente da Versioni.",
       tope_descargas:
         'Non è stata scaricata per non effettuare troppi download contemporaneamente: la installi da Versioni.',
       instancia_pendiente: 'La sua istanza è rimasta in sospeso.',
@@ -5209,9 +5248,11 @@ export const it: Textos = {
       danada: 'I suoi file nel profilo sono danneggiati.',
       bases_omitidas: 'Importato senza i database.',
       instancia_apagada: 'Non è stato possibile avviare la sua istanza.',
-      sin_copia_previa: "Impossibile creare l'istantanea precedente: il database non è stato sostituito.",
+      sin_copia_previa:
+        "Impossibile creare l'istantanea precedente: il database non è stato sostituito.",
       sin_base: 'Il suo .env non punta a un database locale.',
-      base_no_resuelta: 'Non è stato possibile determinare a quale istanza appartenga il suo database.',
+      base_no_resuelta:
+        'Non è stato possibile determinare a quale istanza appartenga il suo database.',
       error_inesperado: 'Si è verificato un errore.',
     },
     avisos: {
@@ -5219,7 +5260,8 @@ export const it: Textos = {
         "La CA precedente di questo computer è ancora nell'archivio dei certificati attendibili di sistema e non viene più usata. Può rimuoverla da qui.",
       base_no_incluida: 'Il database {base} ({instancia}) non è stato incluso.',
       sin_ca: "Non c'è una CA su questo computer: il profilo viene esportato senza.",
-      ca_no_importada: 'La CA del profilo non è stata importata: viene usata quella di questo computer o una nuova.',
+      ca_no_importada:
+        'La CA del profilo non è stata importata: viene usata quella di questo computer o una nuova.',
       certificados: 'Impossibile preparare i certificati: {detalle}',
       aplicar:
         'I siti importati non sono stati applicati completamente (Nginx: {nginx}; hosts: {hosts}).',

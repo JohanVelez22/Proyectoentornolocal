@@ -3,14 +3,13 @@
  * 고정 용어집: 서비스, 인스턴스, 사이트, 터널, 백업, 알림; Doctor 및 WolfCore Dev는
  * 번역하지 않습니다. 격식체(합니다체) 사용; Git 외에는 '브랜치' 대신 '버전'을 사용합니다.
  */
-import type { Textos } from './es';
+import type { TextosParciales } from './es';
 
 const plural = (n: number, texto: string): string => `${n}${texto}`;
 
-export const ko: Textos = {
+export const ko: TextosParciales = {
   app: {
     nombre: 'WolfCore Dev',
-    lema: '간편한 PHP 및 Nginx 개발 환경',
     version: '버전',
   },
   nav: {
@@ -103,7 +102,8 @@ export const ko: Textos = {
       'git.url_con_credenciales':
         'URL에 사용자 이름이나 비밀번호를 포함하지 마십시오. 토큰을 별도로 사용하십시오.',
       'servicios.desconocido': '알 수 없는 서비스입니다: {id}.',
-      'servicios.no_instalado': '{nombre} 서비스가 설치되어 있지 않습니다. 서비스 메뉴에서 설치하십시오.',
+      'servicios.no_instalado':
+        '{nombre} 서비스가 설치되어 있지 않습니다. 서비스 메뉴에서 설치하십시오.',
       'servicios.puerto_invalido': '포트는 1024에서 65535 사이의 숫자여야 합니다.',
       'servicios.puerto_asignado': '포트 {puerto}은(는) 이미 {otro}에 할당되어 있습니다.',
       'servicios.puerto_ocupado':
@@ -172,7 +172,8 @@ export const ko: Textos = {
         'bin 폴더에 이미 {servicio} {version} 폴더가 있어 덮어쓰지 않았습니다. 다른 폴더를 복구하기 전에 먼저 제거하십시오.',
       'bd.encender_servicio': '데이터베이스를 관리하려면 {nombre}을(를) 시작하십시오.',
       'bd.sin_credenciales': '{nombre}에 저장된 자격 증명이 없습니다.',
-      'bd.confirmacion_borrado': '데이터베이스 {nombre}을(를) 삭제하려면 정확한 이름을 입력하십시오.',
+      'bd.confirmacion_borrado':
+        '데이터베이스 {nombre}을(를) 삭제하려면 정확한 이름을 입력하십시오.',
       'bd.usuario_privilegiado':
         '사용자 {usuario}은(는) 관리자 또는 시스템 역할입니다. 프로젝트 전용 사용자를 선택하십시오.',
       'bd.usuario_en_uso':
@@ -181,7 +182,8 @@ export const ko: Textos = {
         '사용자 {usuario}이(가) 존재하지만 로그인할 수 없습니다(LOGIN 권한이 없는 역할이거나 서버 접근 규칙 제한). 아무것도 변경되지 않았습니다.',
       'bd.usuario_clave_distinta':
         '사용자 {usuario}이(가) 다른 비밀번호로 이미 존재합니다. 다른 프로젝트의 연결이 끊어지지 않도록 비밀번호를 변경하지 않으므로 현재 비밀번호를 사용하십시오.',
-      'bd.mongosh_faltante': 'mongosh가 설치되어 있지 않습니다. MongoDB를 관리하려면 서비스 메뉴에서 설치하십시오.',
+      'bd.mongosh_faltante':
+        'mongosh가 설치되어 있지 않습니다. MongoDB를 관리하려면 서비스 메뉴에서 설치하십시오.',
       'tuneles.sitio_no_encontrado': '프로젝트를 찾을 수 없습니다.',
       'tuneles.confirmacion_requerida':
         '{dominio}을(를) 인터넷에 공개하려면 WolfCore Dev에서 확인해야 합니다.',
@@ -190,8 +192,7 @@ export const ko: Textos = {
       'tuneles.cloudflared_no_instalado':
         'cloudflared가 설치되어 있지 않습니다. 서비스 메뉴에서 설치하십시오.',
       'tuneles.proveedor_no_disponible': '터널 공급자 {proveedor}을(를) 사용할 수 없습니다.',
-      'tuneles.cloudflare_sin_cuenta':
-        '먼저 터널 옵션에서 Cloudflare 계정을 연결하십시오.',
+      'tuneles.cloudflare_sin_cuenta': '먼저 터널 옵션에서 Cloudflare 계정을 연결하십시오.',
       'tuneles.cloudflare_sin_credencial':
         '이 터널에 저장된 자격 증명이 없습니다. 터널 옵션에서 다시 생성하십시오.',
       'tuneles.cloudflare_datos_invalidos':
@@ -203,12 +204,12 @@ export const ko: Textos = {
         '터널 {nombre}에 활성 연결이 있습니다(삭제하려면 cloudflared에 -f 옵션이 필요합니다). 터널이 열린 모든 컴퓨터에서 연결을 닫고 다시 시도하거나 "여기서만 잊기"를 사용하십시오.',
       'tuneles.nombre_en_uso': '터널 {nombre}은(는) 이미 다른 사이트에서 사용 중입니다.',
       'tuneles.dominio_en_uso': '도메인 {dominio}은(는) 이미 다른 사이트에서 사용 중입니다.',
-      'tuneles.confirmacion_olvidar': '터널 {nombre}을(를) 잊거나 다시 생성하려면 확인이 필요합니다.',
+      'tuneles.confirmacion_olvidar':
+        '터널 {nombre}을(를) 잊거나 다시 생성하려면 확인이 필요합니다.',
       'tuneles.cloudflare_fallo': 'cloudflared가 작업을 완료하지 못했습니다: {detalle}',
       'tuneles.credencial_no_protegida':
         '자격 증명의 접근 권한을 현재 사용자로 제한할 수 없어 사용하지 않았습니다.',
-      'tuneles.sin_cifrado':
-        '시스템 암호화를 사용할 수 없어 자격 증명을 저장할 수 없습니다.',
+      'tuneles.sin_cifrado': '시스템 암호화를 사용할 수 없어 자격 증명을 저장할 수 없습니다.',
       'tuneles.token_invalido':
         '토큰이 올바르지 않습니다. 영문자, 숫자 및 _ . - 기호만 사용할 수 있습니다(8~200자). 터널 옵션에서 다시 저장하십시오.',
       'tuneles.ngrok_no_instalado':
@@ -253,8 +254,7 @@ export const ko: Textos = {
         'WolfCore Dev 인증 기관(CA)이 존재하지 않습니다. 인증서를 발급하기 전에 HTTPS 섹션에서 CA를 설치하십시오.',
       'herramientas.pid_invalido': 'PID가 올바르지 않습니다.',
       'herramientas.pid_sistema': 'PID {pid}은(는) 시스템 프로세스이므로 종료할 수 없습니다.',
-      'herramientas.proceso_propio':
-        'WolfCore Dev 또는 이를 시작한 프로세스는 종료할 수 없습니다.',
+      'herramientas.proceso_propio': 'WolfCore Dev 또는 이를 시작한 프로세스는 종료할 수 없습니다.',
       'herramientas.proceso_inexistente': '프로세스 {pid}이(가) 더 이상 존재하지 않습니다.',
       'herramientas.sin_editor':
         '코드 편집기를 찾을 수 없습니다. 편집기(VS Code, Cursor, PhpStorm, Sublime Text 등)를 설치하십시오.',
@@ -272,9 +272,11 @@ export const ko: Textos = {
       'buscar.regex_invalida': '정규 표현식이 올바르지 않습니다.',
       'buscar.regex_lenta':
         '정규 표현식 처리에 시간이 너무 오래 걸립니다. 식을 단순화하거나 일반 텍스트를 사용하십시오.',
-      'buscar.demasiadas': '이미 {maximo}개의 검색이 진행 중입니다. 하나를 취소하거나 잠시 기다리십시오.',
+      'buscar.demasiadas':
+        '이미 {maximo}개의 검색이 진행 중입니다. 하나를 취소하거나 잠시 기다리십시오.',
       'terminal.no_abrio': '터미널을 열 수 없습니다.',
-      'terminal.no_instalada': '{nombre}이(가) 설치되어 있지 않습니다. 설정에서 다른 터미널을 선택하십시오.',
+      'terminal.no_instalada':
+        '{nombre}이(가) 설치되어 있지 않습니다. 설정에서 다른 터미널을 선택하십시오.',
       'terminal.invalida': '해당 터미널은 올바르지 않습니다.',
       'terminal.powershell_restringido':
         '이 컴퓨터에서 PowerShell이 제한된 언어 모드(조직 정책 또는 AppLocker)로 설정되어 있어 WolfCore Dev가 터미널을 열 수 없습니다. 프로젝트 폴더에서 직접 터미널을 여십시오.',
@@ -314,8 +316,7 @@ export const ko: Textos = {
       'cli.formato_no_admitido': 'CLI에서 허용하지 않는 요청 형식입니다.',
       'cli.plazo':
         '명령 실행 시간이 너무 오래 걸려 여전히 진행 중일 수 있습니다. WolfCore Dev에서 상태를 확인하십시오.',
-      'cli.ocupado':
-        'WolfCore Dev가 너무 많은 CLI 명령을 처리 중입니다. 잠시 기다리십시오.',
+      'cli.ocupado': 'WolfCore Dev가 너무 많은 CLI 명령을 처리 중입니다. 잠시 기다리십시오.',
       'cli.requiere_confirmacion':
         '이 명령은 항목을 게시하거나 변경하므로 {sitio}에서 확인(--si)이 필요합니다.',
       'cli.requiere_confirmacion_datos_reales':
@@ -340,8 +341,7 @@ export const ko: Textos = {
       'cli.carpeta_sin_sitio':
         '해당 폴더는 어떤 WolfCore Dev 사이트에도 속하지 않습니다. 먼저 연결하십시오.',
       'cli.ya_vinculada': '해당 폴더는 이미 {sitio} 사이트로 연결되어 있습니다.',
-      'cli.tipo_no_soportado':
-        '{tipo} 유형의 프로젝트는 WolfCore Dev 인터페이스에서 생성하십시오.',
+      'cli.tipo_no_soportado': '{tipo} 유형의 프로젝트는 WolfCore Dev 인터페이스에서 생성하십시오.',
       'cli.sitio_sin_php': '사이트 {sitio}은(는) PHP를 사용하지 않습니다.',
       'cli.version_no_instalada':
         '{servicio} {version}이(가) 설치되어 있지 않습니다. 서비스 메뉴에서 설치하십시오.',
@@ -353,7 +353,8 @@ export const ko: Textos = {
       'cli.ruta_invalida': 'WolfCore Dev 경로에 wolf.cmd가 지원하지 않는 문자가 포함되어 있습니다.',
       'cli.path_aislado':
         '테스트 데이터 폴더(WOLFCORE_DATOS)를 사용할 때는 사용자의 PATH를 변경하지 않습니다.',
-      'cli.sin_cliente': '이 WolfCore Dev 버전에는 wolf 클라이언트가 포함되어 있지 않습니다(컴파일 필요).',
+      'cli.sin_cliente':
+        '이 WolfCore Dev 버전에는 wolf 클라이언트가 포함되어 있지 않습니다(컴파일 필요).',
       'cli.demasiados_dialogos':
         '최근 1분 동안 확인 요청이 너무 많았습니다. 잠시 기다린 후 다시 시도하십시오.',
       'cli.error': '명령을 완료할 수 없습니다: {detalle}',
@@ -368,7 +369,8 @@ export const ko: Textos = {
       'env.clave_inexistente': '변수 {clave}이(가) 존재하지 않습니다.',
       'env.cambio_invalido': '.env 변경 사항이 올바르지 않습니다.',
       'env.variable_invalida': '변수 {clave}의 변경 사항이 올바르지 않습니다.',
-      'env.solo_lectura': '변수 {clave}은(는) 여러 줄로 구성되어 있습니다. 파일에서 직접 편집하십시오.',
+      'env.solo_lectura':
+        '변수 {clave}은(는) 여러 줄로 구성되어 있습니다. 파일에서 직접 편집하십시오.',
       'env.usuario_compartido':
         '데이터베이스 {base}은(는) 프로젝트 {proyecto}에서도 사용 중입니다. 사용자를 공유할지 확인하십시오.',
       'env.cambio_externo':
@@ -445,8 +447,7 @@ export const ko: Textos = {
       'herramientas.pdf_plazo': 'PDF 처리가 {segundos}초를 초과하여 취소되었습니다.',
       'herramientas.salida_ocupada': '새 파일에 사용할 수 있는 빈 파일 이름을 찾지 못했습니다.',
       'conversor.formato': '해당 변환은 사용할 수 없습니다.',
-      'conversor.archivo_invalido':
-        '파일이 손상되었거나 확장자가 나타내는 형식이 아닙니다.',
+      'conversor.archivo_invalido': '파일이 손상되었거나 확장자가 나타내는 형식이 아닙니다.',
       'conversor.archivo_grande': '파일 용량이 너무 큽니다(최대 {maximo}).',
       'conversor.archivo_peligroso':
         '파일이 ZIP 폭탄으로 의심되거나 조작되었습니다(과도한 콘텐츠, XML 엔티티 또는 잘못된 이름). 보안을 위해 열지 않습니다.',
@@ -495,11 +496,9 @@ export const ko: Textos = {
       'importar.ruta_fuera':
         '설치 경로 외부나 시스템 폴더를 가리키는 폴더 또는 파일을 제외했습니다.',
       'importar.carpeta_invalida': '더 이상 존재하지 않거나 폴더가 아닌 경로를 제외했습니다.',
-      'importar.archivo_grande':
-        '설정 파일 용량이 {maximo} KB를 초과하여 읽지 않았습니다.',
+      'importar.archivo_grande': '설정 파일 용량이 {maximo} KB를 초과하여 읽지 않았습니다.',
       'importar.archivo_ilegible': '설정 파일이 텍스트 형식이 아니거나 읽을 수 없습니다.',
-      'importar.demasiados':
-        '사이트 또는 설정 파일이 너무 많아 처음 항목들만 읽었습니다.',
+      'importar.demasiados': '사이트 또는 설정 파일이 너무 많아 처음 항목들만 읽었습니다.',
       'importar.candidato_desconocido':
         '해당 사이트가 더 이상 원본 프로그램에 표시되지 않습니다. 다시 검색하십시오.',
       'importar.ya_vinculado': '해당 폴더는 이미 WolfCore Dev의 사이트입니다.',
@@ -512,11 +511,11 @@ export const ko: Textos = {
       'importar.base_fallo':
         '{nombre} 데이터베이스를 가져오지 못했습니다. 부분 적용 없이 기존 상태 그대로 유지되었습니다.',
       'importar.sitio_fallo': '사이트를 생성하지 못했습니다.',
-      'importar.origen_invalido':
-        '원본 서버 정보(사용자, 비밀번호 또는 포트)가 올바르지 않습니다.',
+      'importar.origen_invalido': '원본 서버 정보(사용자, 비밀번호 또는 포트)가 올바르지 않습니다.',
       'importar.sin_seleccion': '가져올 사이트를 하나 이상 선택하십시오.',
       'importar.en_curso': '이미 가져오기가 진행 중입니다. 완료될 때까지 기다려 주십시오.',
-      'importar.cancelado': '가져오기가 취소되었습니다. 가져오던 항목은 기존 상태 그대로 유지되었습니다.',
+      'importar.cancelado':
+        '가져오기가 취소되었습니다. 가져오던 항목은 기존 상태 그대로 유지되었습니다.',
       'importar.origen_estancado':
         '덤프 중 다른 프로그램의 서버가 응답을 중지하여 데이터베이스를 가져오지 못했습니다.',
       'importar.sin_espacio':
@@ -539,12 +538,14 @@ export const ko: Textos = {
       'proyectos.paso_base_no_omitible':
         '새 프로젝트의 "데이터베이스 생성" 단계는 건너뛸 수 없습니다.',
       'proyectos.sin_php': 'PHP가 설치되어 있지 않습니다. 서비스에서 설치하십시오.',
-      'proyectos.php_no_instalado': 'PHP {version} 버전이 설치되어 있지 않습니다. 서비스에서 설치하십시오.',
+      'proyectos.php_no_instalado':
+        'PHP {version} 버전이 설치되어 있지 않습니다. 서비스에서 설치하십시오.',
       'proyectos.python_no_instalado':
         'Python {version} 버전이 설치되어 있지 않습니다. 서비스에서 설치하십시오.',
       'mcp.token_invalido': 'MCP 서버 토큰이 올바르지 않습니다.',
       'mcp.solicitud_cancelada': 'MCP 클라이언트가 요청을 취소하여 작업이 실행되지 않았습니다.',
-      'doctor.puerto_ocupado': '{servicio}의 {puerto} 포트를 다른 프로그램({proceso})이 사용 중입니다.',
+      'doctor.puerto_ocupado':
+        '{servicio}의 {puerto} 포트를 다른 프로그램({proceso})이 사용 중입니다.',
       'doctor.puerto_iis': 'IIS({programa})가 {servicio}의 {puerto} 포트를 사용 중입니다.',
       'doctor.puerto_http_sys':
         'Windows 서비스({programa})가 {servicio}의 {puerto} 포트를 사용 중입니다.',
@@ -569,8 +570,7 @@ export const ko: Textos = {
         'hosts 파일에 사이트 도메인 {cantidad}개가 누락되어 있습니다.',
       'doctor.hosts_solo_lectura':
         'hosts 파일이 읽기 전용입니다(보통 백신 프로그램이 설정합니다). WolfCore Dev는 관리자 권한으로 여전히 쓸 수 있습니다.',
-      'doctor.path_duplicados':
-        '사용자 PATH에 WolfCore Dev 항목이 {cantidad}개 중복되어 있습니다.',
+      'doctor.path_duplicados': '사용자 PATH에 WolfCore Dev 항목이 {cantidad}개 중복되어 있습니다.',
       'doctor.path_ajeno_delante':
         '{programa}({origen})이(가) 포함된 다른 폴더가 PATH에서 WolfCore Dev보다 앞에 있어 터미널에서 해당 경로가 사용됩니다.',
       'doctor.vcredist_ausente':
@@ -589,11 +589,11 @@ export const ko: Textos = {
       'doctor.revision_fallida': '{revision} 점검을 완료하지 못했습니다.',
       'doctor.confirmacion_requerida': '복구를 적용하기 전에 먼저 확인하십시오.',
       'doctor.hallazgo_desconocido': '해당 항목이 더 이상 존재하지 않습니다. 다시 점검하십시오.',
-      'doctor.solo_informa':
-        '이 항목은 자동 복구를 지원하지 않습니다. 안내를 따라 주십시오.',
+      'doctor.solo_informa': '이 항목은 자동 복구를 지원하지 않습니다. 안내를 따라 주십시오.',
       'doctor.reparacion_fallida': '복구를 적용하지 못했습니다.',
       'doctor.reparacion_cancelada': '관리자 권한 요청이 취소되어 아무것도 변경되지 않았습니다.',
-      'doctor.reparacion_denegada': 'Windows 또는 백신 프로그램이 액세스를 거부하여 아무것도 변경되지 않았습니다.',
+      'doctor.reparacion_denegada':
+        'Windows 또는 백신 프로그램이 액세스를 거부하여 아무것도 변경되지 않았습니다.',
       'doctor.ya_resuelto': '문제가 이미 해결되어 변경할 내용이 없었습니다.',
       'doctor.ca_vieja_sin_quitar':
         '새 인증 기관(CA)이 이미 사용 중이지만 Windows 저장소에서 이전 인증 기관을 제거하지 못했습니다. HTTPS 섹션에서 제거할 수 있습니다.',
@@ -625,15 +625,13 @@ export const ko: Textos = {
       'ia.respuesta_rara': '공급자가 예기치 않은 응답을 반환했습니다.',
       'ia.cancelado': '공급자에 대한 요청이 취소되었습니다.',
       'ia.sin_clave': '이 공급자에는 키가 필요합니다. 먼저 키를 저장하십시오.',
-      'ia.clave_mal_formada':
-        '키 형식이 올바르지 않습니다(공백이나 줄 바꿈이 없어야 합니다).',
+      'ia.clave_mal_formada': '키 형식이 올바르지 않습니다(공백이나 줄 바꿈이 없어야 합니다).',
       'ia.modelo_invalido': '모델 이름이 올바르지 않습니다.',
       'ia.modelo_no_disponible': '모델이 존재하지 않거나 계정에 액세스 권한이 없습니다.',
       'ia.proveedor_invalido': '공급자 설정이 올바르지 않습니다.',
       'ia.env_conflicto':
         '.env에 {claves} 항목이 이미 다른 값으로 정의되어 있습니다. 교체할지 확인하십시오.',
-      'ia.env_sin_confirmar':
-        '.env에 키를 기록할지 확인하십시오(평문으로 저장됩니다).',
+      'ia.env_sin_confirmar': '.env에 키를 기록할지 확인하십시오(평문으로 저장됩니다).',
       'ia.env_versionado':
         'Git이 이미 이 프로젝트의 .env를 추적하고 있습니다. .gitignore에 있더라도 다음 커밋 시 키가 업로드됩니다. git rm --cached .env 명령으로 인덱스에서 제거하십시오.',
       'ia.env_versionado_desconocido':
@@ -641,10 +639,8 @@ export const ko: Textos = {
       'ia.proveedor_no_existe': 'AI 공급자가 더 이상 존재하지 않습니다.',
       'ia.url_cambia_con_clave':
         '공급자에 저장된 키가 있습니다. 새 URL로 이 키를 전송할지 확인하십시오.',
-      'ia.mensaje_sin_confirmar':
-        '테스트 메시지 전송을 확인하십시오(계정의 토큰이 소비됩니다).',
-      'ia.clave_ilegible':
-        '저장된 공급자 키를 읽지 못했습니다. 삭제한 뒤 다시 저장하십시오.',
+      'ia.mensaje_sin_confirmar': '테스트 메시지 전송을 확인하십시오(계정의 토큰이 소비됩니다).',
+      'ia.clave_ilegible': '저장된 공급자 키를 읽지 못했습니다. 삭제한 뒤 다시 저장하십시오.',
       'ia.argumento_invalido': '올바르지 않은 데이터입니다({campo}).',
       'correo.auth': '공급자가 사용자 이름 또는 비밀번호를 거부했습니다.',
       'correo.conexion': 'SMTP 서버에 연결하지 못했습니다. 호스트와 포트를 확인하십시오.',
@@ -665,8 +661,7 @@ export const ko: Textos = {
         '저장된 공급자 비밀번호를 읽지 못했습니다. 삭제한 뒤 다시 저장하십시오.',
       'correo.cambia_con_clave':
         '공급자에 저장된 비밀번호가 있습니다. 새 서버로 이 비밀번호를 전송할지 확인하십시오.',
-      'correo.env_sin_confirmar':
-        '.env에 메일 환경 변수를 기록할지 확인하십시오.',
+      'correo.env_sin_confirmar': '.env에 메일 환경 변수를 기록할지 확인하십시오.',
       'correo.ocupado': '이미 발송 테스트가 진행 중입니다.',
       'correo.limite': '다음 발송 테스트까지 {segundos}초 기다려 주십시오.',
       'correo.clave_mal_formada':
@@ -683,7 +678,8 @@ export const ko: Textos = {
         'Node 버전을 확인할 수 없으며 {agente}에는 Node {requerida} 이상이 필요합니다. 서비스의 Node를 확인하십시오.',
       'instalador.zip_demasiado_grande':
         '다운로드한 패키지가 너무 크거나 파일이 너무 많아 설치하지 않습니다.',
-      'rust.rustup_init_fallo': 'rustup-init가 정상적으로 종료되지 않았습니다(코드 {codigo}): {detalle}',
+      'rust.rustup_init_fallo':
+        'rustup-init가 정상적으로 종료되지 않았습니다(코드 {codigo}): {detalle}',
       'rust.toolchain_fallo': 'Rust {version} 버전을 설치하지 못했습니다(코드 {codigo}): {detalle}',
       'rust.desinstalar_fallo': 'Rust {version} 버전을 제거하지 못했습니다: {detalle}',
       'rust.descarga_fallo': 'rustup을 다운로드하지 못했습니다(HTTP {estado}).',
@@ -703,18 +699,19 @@ export const ko: Textos = {
       'php.rama_no_instalada': 'PHP {rama} 버전이 설치되어 있지 않습니다.',
       'php.argumento_invalido': '올바르지 않은 데이터입니다({campo}).',
       'php.valor_invalido': '{clave} 값이 올바르지 않습니다.',
-      'php.ini_invalido': '해당 php.ini로 PHP가 시작되지 않아 아무것도 저장되지 않았습니다. 출력: {salida}',
+      'php.ini_invalido':
+        '해당 php.ini로 PHP가 시작되지 않아 아무것도 저장되지 않았습니다. 출력: {salida}',
       'php.no_arranco':
         '변경 후 PHP {rama} 버전이 다시 시작되지 않아 이전 설정으로 복원했으며 이전과 같이 응답합니다.',
       'php.caido_tras_restaurar':
         'PHP {rama} 버전이 다시 시작되지 않아 이전 설정으로 복원했으나 여전히 응답하지 않습니다. 서비스와 PHP 로그를 확인하십시오.',
       'php.respaldo_no_existe': '해당 php.ini 백업이 존재하지 않습니다.',
       'php.extension_no_existe': '{nombre} 확장이 이 버전의 ext 폴더에 없습니다.',
-      'php.extension_no_catalogo':
-        '{nombre} 확장이 이 버전의 카탈로그에 없습니다.',
+      'php.extension_no_catalogo': '{nombre} 확장이 이 버전의 카탈로그에 없습니다.',
       'php.variante_desconocida': '이 PHP의 빌드 구성을 확인할 수 없습니다.',
       'php.sin_variante': '카탈로그에 {variante} 빌드용 {nombre} 확장이 없습니다.',
-      'php.huella_distinta': '다운로드한 파일이 게시된 해시(지문)와 일치하지 않아 아무것도 설치하지 않았습니다.',
+      'php.huella_distinta':
+        '다운로드한 파일이 게시된 해시(지문)와 일치하지 않아 아무것도 설치하지 않았습니다.',
       'php.descarga_fallida': '확장을 다운로드하지 못했습니다: {detalle}',
       'php.extension_en_uso':
         '{nombre}의 DLL이 사용 중입니다. PHP {rama} 버전을 중지한 뒤 다시 시도하십시오.',
@@ -781,8 +778,7 @@ export const ko: Textos = {
       'catalogo.demasiadas_redirecciones':
         '다운로드 중 리디렉션이 너무 많이 발생했습니다({maximo}회 초과).',
       'catalogo.respuesta_grande': '서버 응답이 너무 큽니다.',
-      'catalogo.version_no_encontrada':
-        '{servicio}의 {version} 버전이 카탈로그에 없습니다.',
+      'catalogo.version_no_encontrada': '{servicio}의 {version} 버전이 카탈로그에 없습니다.',
       'catalogo.huella_no_disponible':
         '{servicio} {version}의 체크섬을 가져오지 못했습니다(오프라인 상태이거나 원본 서버가 응답하지 않음). 다시 시도하십시오.',
       'catalogo.firma_invalida':
@@ -801,16 +797,14 @@ export const ko: Textos = {
         'phpMyAdmin은 MySQL 및 MariaDB 데이터베이스만 열 수 있습니다. PostgreSQL에는 Adminer를 사용하십시오.',
       'acceso_bd.servidor_no_resuelto':
         '이 프로젝트의 데이터베이스는 WolfCore Dev 로컬 서버에 속하지 않습니다.',
-      'acceso_bd.no_listo':
-        '도구가 준비되지 않았습니다. 서비스에서 설치하고 PHP를 켜십시오.',
+      'acceso_bd.no_listo': '도구가 준비되지 않았습니다. 서비스에서 설치하고 PHP를 켜십시오.',
       'auditoria.tabla_invalida': '해당 데이터베이스에 테이블이 존재하지 않습니다.',
       'auditoria.columna_invalida':
         '해당 테이블에 열이 존재하지 않습니다(사용자 열과 해시 열은 서로 달라야 합니다).',
       'auditoria.usuario_no_encontrado': '해당 사용자를 가진 계정이 없습니다.',
       'auditoria.usuario_repetido':
         '해당 사용자를 가진 계정이 둘 이상입니다. 잘못된 계정을 변경하지 않도록 재설정을 중단했습니다.',
-      'auditoria.formato_no_soportado':
-        '현재 해시 형식을 재현할 수 없어 재설정하지 않습니다.',
+      'auditoria.formato_no_soportado': '현재 해시 형식을 재현할 수 없어 재설정하지 않습니다.',
       'auditoria.clave_larga':
         'bcrypt는 비밀번호의 처음 72바이트만 사용합니다. 더 짧은 비밀번호를 선택하십시오.',
       'auditoria.clave_invalida': '새 비밀번호가 유효하지 않습니다.',
@@ -822,11 +816,12 @@ export const ko: Textos = {
         '비밀번호 감사는 MySQL, MariaDB 및 PostgreSQL에서 지원됩니다.',
       'auditoria.cancelada': '감사가 취소되었습니다.',
       'auditoria.usuario_invalido': '사용자는 1자에서 256자 사이여야 합니다.',
-      'auditoria.en_curso': '이미 진행 중인 감사가 있습니다. 완료될 때까지 기다리거나 취소하십시오.',
-      'auditoria.base_sistema': '시스템 데이터베이스는 감사할 수 없습니다. 프로젝트 데이터베이스를 선택하십시오.',
+      'auditoria.en_curso':
+        '이미 진행 중인 감사가 있습니다. 완료될 때까지 기다리거나 취소하십시오.',
+      'auditoria.base_sistema':
+        '시스템 데이터베이스는 감사할 수 없습니다. 프로젝트 데이터베이스를 선택하십시오.',
       'auditoria.esquema_invalido': '해당 데이터베이스에 스키마가 존재하지 않습니다.',
-      'auditoria.fila_cambio':
-        '그사이에 계정이 변경되어 재설정하지 않았습니다. 다시 시도하십시오.',
+      'auditoria.fila_cambio': '그사이에 계정이 변경되어 재설정하지 않았습니다. 다시 시도하십시오.',
       'auditoria.verificacion_fallo':
         '데이터베이스에 비밀번호가 예상대로 저장되지 않아 변경 사항을 되돌렸습니다.',
       'auditoria.columna_corta':
@@ -835,7 +830,8 @@ export const ko: Textos = {
         '이 데이터베이스에는 실제 고객 데이터가 들어 있습니다. 비밀번호를 재설정하려면 강화된 확인 절차가 필요합니다.',
       'instantaneas.id_invalido': '스냅샷이 유효하지 않습니다.',
       'instantaneas.no_encontrada': '스냅샷을 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.',
-      'instantaneas.otra_base': '이 스냅샷은 다른 데이터베이스의 것이므로 여기에 적용할 수 없습니다.',
+      'instantaneas.otra_base':
+        '이 스냅샷은 다른 데이터베이스의 것이므로 여기에 적용할 수 없습니다.',
       'instantaneas.sin_confirmar': '이 스냅샷으로 복원할지 확인하십시오.',
       'instantaneas.motor_no_soportado': '스냅샷은 MySQL, MariaDB 및 PostgreSQL에서 지원됩니다.',
       'instantaneas.demasiado_grande':
@@ -844,7 +840,8 @@ export const ko: Textos = {
         '스냅샷을 생성할 여유 공간이 부족합니다. {necesarios} MB가 필요하지만 {libres} MB만 남아 있습니다.',
       'instantaneas.limite':
         '이 데이터베이스의 스냅샷이 이미 {maximo}개 있습니다. 새 스냅샷을 만들려면 기존 스냅샷을 삭제하십시오.',
-      'instantaneas.tomar_fallo': '스냅샷을 생성하지 못했습니다. 데이터베이스는 변경되지 않았습니다.',
+      'instantaneas.tomar_fallo':
+        '스냅샷을 생성하지 못했습니다. 데이터베이스는 변경되지 않았습니다.',
       'instantaneas.huella_no_coincide':
         '스냅샷 파일이 변경되었거나 손상되었습니다. 아무것도 복원되지 않았습니다.',
       'instantaneas.respaldo_previo_fallo':
@@ -872,13 +869,11 @@ export const ko: Textos = {
     vacio: '이 데이터베이스의 스냅샷이 아직 없습니다.',
     automatica: '자동',
     sinNota: '메모 없음',
-    detalle: (tablas: number, tamano: string) =>
-      `테이블 ${tablas}개 · ${tamano}`,
+    detalle: (tablas: number, tamano: string) => `테이블 ${tablas}개 · ${tamano}`,
     volver: '이 스냅샷으로 복원',
     borrar: '삭제',
     borrada: '스냅샷이 휴지통으로 이동되었습니다',
-    papelera:
-      '삭제된 스냅샷은 WolfCore Dev 휴지통에서 7일 동안 복구할 수 있습니다.',
+    papelera: '삭제된 스냅샷은 WolfCore Dev 휴지통에서 7일 동안 복구할 수 있습니다.',
     cerrar: '닫기',
     papeleraTitulo: '휴지통',
     papeleraVacia: '휴지통에 스냅샷이 없습니다.',
@@ -887,8 +882,7 @@ export const ko: Textos = {
     borradaEl: (fecha: string) => `${fecha}에 삭제됨`,
     borrarPregunta: '이 스냅샷을 휴지통으로 이동하시겠습니까?',
     borrarSi: '휴지통으로 이동',
-    notaAutomatica: (fecha: string) =>
-      `${fecha} 스냅샷으로 복원하기 전에 저장된 이전 상태`,
+    notaAutomatica: (fecha: string) => `${fecha} 스냅샷으로 복원하기 전에 저장된 이전 상태`,
     notaAutomaticaSinOrigen: '다른 스냅샷으로 복원하기 전에 저장된 이전 상태',
     extensionesAviso: (lista: string) =>
       `PostgreSQL 확장(${lista})이 포함되어 있으며, 이 컴퓨터의 체크섬 기록이 있어야만 복원됩니다.`,
@@ -913,7 +907,8 @@ export const ko: Textos = {
       hecho: (base: string) => `${base} 데이터베이스가 스냅샷으로 복원되었습니다`,
       respaldoPrevio: '이전 상태가 다음 자동 스냅샷에 저장되었습니다:',
       advertencias: '복원이 완료되었으나 알림이 있습니다:',
-      hechoConAvisos: (base: string) => `${base} 데이터베이스가 스냅샷으로 복원되었습니다(알림 있음)`,
+      hechoConAvisos: (base: string) =>
+        `${base} 데이터베이스가 스냅샷으로 복원되었습니다(알림 있음)`,
       baseVacia: '데이터베이스가 존재하지 않거나 비어 있어 복원 전에 저장할 내용이 없습니다.',
       sinGuardarTitulo: '현재 상태를 저장하지 못했습니다',
       sinGuardarTexto:
@@ -964,8 +959,7 @@ export const ko: Textos = {
       bloqueada: '실행되지 않음',
     },
     motivo: {
-      aislado:
-        '테스트 데이터 폴더(WOLFCORE_DATOS)입니다. 이 세션에서 작업을 허용해야 실행됩니다.',
+      aislado: '테스트 데이터 폴더(WOLFCORE_DATOS)입니다. 이 세션에서 작업을 허용해야 실행됩니다.',
       no_confiado:
         '프로젝트가 신뢰됨으로 표시되지 않았습니다. 실행하려면 "이 저장소를 신뢰합니다"를 선택하십시오.',
       receta_cambio:
@@ -1050,8 +1044,7 @@ export const ko: Textos = {
       horaInvalida: '유효한 시각을 입력하십시오(예: 03:00).',
       expresion: 'Cron 표현식',
       cronEquivale: 'Cron 표현식:',
-      expresionAyuda:
-        '5개 필드: 분, 시, 일, 월, 요일(* , - /). 최소 주기는 1분마다입니다.',
+      expresionAyuda: '5개 필드: 분, 시, 일, 월, 요일(* , - /). 최소 주기는 1분마다입니다.',
       proximas: '다음 실행 예정:',
       comando: '명령',
       comandoPlaceholder: 'php artisan schedule:run',
@@ -1063,7 +1056,8 @@ export const ko: Textos = {
       comillasSinCerrar: '닫히지 않은 따옴표가 있습니다.',
       tiempo: '제한 시간',
       minutos: '분',
-      tiempoAyuda: '제한 시간을 초과하면 자동으로 중지됩니다(해당 프로세스와 하위 프로세스만 해당).',
+      tiempoAyuda:
+        '제한 시간을 초과하면 자동으로 중지됩니다(해당 프로세스와 하위 프로세스만 해당).',
       activa: '활성화(앱이 열려 있는 동안 자동 실행)',
       advertencia:
         '승인하면 이 정확한 명령의 실행을 허용하게 됩니다. 지정된 시점마다 이 프로젝트 폴더에서 자동으로 실행됩니다. 명령을 변경하면 다시 확인해야 합니다.',
@@ -1078,8 +1072,7 @@ export const ko: Textos = {
   },
   workspaces: {
     titulo: '워크스페이스',
-    descripcion:
-      '함께 켜고 끌 수 있는 데이터베이스, 서비스 및 프로세스의 이름 지정 묶음입니다.',
+    descripcion: '함께 켜고 끌 수 있는 데이터베이스, 서비스 및 프로세스의 이름 지정 묶음입니다.',
     nuevo: '새 워크스페이스',
     vacio:
       '아직 워크스페이스가 없습니다. 예를 들어 PostgreSQL, Redis, Ollama 및 프로젝트 프로세스를 묶은 "FastAPI 봇" 워크스페이스를 만들어 보십시오.',
@@ -1114,7 +1107,8 @@ export const ko: Textos = {
         procesos: '프로젝트 프로세스',
       },
       sinOpciones: '여기에서 선택할 수 있는 항목이 없습니다.',
-      captadorUnico: '메일 캡처 도구는 한 번에 하나만 사용할 수 있습니다. 다른 항목을 선택하면 이전 항목을 대체합니다.',
+      captadorUnico:
+        '메일 캡처 도구는 한 번에 하나만 사용할 수 있습니다. 다른 항목을 선택하면 이전 항목을 대체합니다.',
       yaNoExisten: (lista: string) => `더 이상 존재하지 않으며 저장 시 제거됩니다: ${lista}`,
       guardar: '저장',
       guardado: (n: string) => `"${n}" 워크스페이스가 저장되었습니다.`,
@@ -1209,10 +1203,12 @@ export const ko: Textos = {
     versionesDe: (nombre: string) => `${nombre} 버전`,
     instancias: (n: number, encendidas: number) => `인스턴스 ${n}개, ${encendidas}개 켜짐`,
     usarPuerto: (p: number) => `포트 ${p} 사용`,
-    puertoCambiado: (nombre: string, p: number) => `${nombre}이(가) 이제 포트 ${p}을(를) 사용합니다`,
+    puertoCambiado: (nombre: string, p: number) =>
+      `${nombre}이(가) 이제 포트 ${p}을(를) 사용합니다`,
     conflicto: '포트 사용 중',
     autoIniciar: 'WolfCore Dev 시작 시 자동으로 켜기',
-    autoIniciarActivado: (nombre: string) => `WolfCore Dev 시작 시 ${nombre}이(가) 자동으로 켜집니다`,
+    autoIniciarActivado: (nombre: string) =>
+      `WolfCore Dev 시작 시 ${nombre}이(가) 자동으로 켜집니다`,
     autoIniciarDesactivado: (nombre: string) =>
       `WolfCore Dev 시작 시 ${nombre}이(가) 더 이상 자동으로 켜지지 않습니다`,
     dialogoPuerto: {
@@ -1252,8 +1248,6 @@ export const ko: Textos = {
     ftp: {
       interruptor: 'FTP 서버',
       redLocal: '로컬 네트워크 연결 허용',
-      redLocalAyuda:
-        '꺼져 있으면 이 컴퓨터에서만 연결할 수 있습니다(127.0.0.1). 각 사이트의 접근 권한은 사이트에서 활성화합니다.',
       avisoTitulo: '로컬 네트워크에 FTP 열기',
       avisoTexto:
         'FTP는 사용자 이름, 비밀번호 및 파일을 암호화하지 않고 전송합니다. 네트워크의 모든 컴퓨터가 연결을 시도할 수 있습니다. 신뢰할 수 있는 네트워크에서만 사용하십시오.',
@@ -1368,8 +1362,7 @@ export const ko: Textos = {
     } as Record<string, string>,
     formatoDesconocido:
       '형식을 인식할 수 없습니다. 압축 파일인 경우 압축을 풀고 내부의 .sql 또는 .dump 파일을 선택하십시오.',
-    formatoIncompatible:
-      '이 파일은 PostgreSQL 백업입니다. PostgreSQL 탭에서 복원하십시오.',
+    formatoIncompatible: '이 파일은 PostgreSQL 백업입니다. PostgreSQL 탭에서 복원하십시오.',
     nombre: {
       etiqueta: '데이터베이스 이름',
       vacio: '이름을 입력하십시오',
@@ -1446,8 +1439,7 @@ export const ko: Textos = {
       titulo: (motor: string) => `다른 서버에서 ${motor}(으)로 가져오기`,
       soloLectura:
         '원본 서버는 읽기 전용으로만 접근합니다. 데이터베이스가 이 컴퓨터로 복사되며 원본은 수정되지 않습니다.',
-      detectado: (puerto: number) =>
-        `포트 ${puerto}에서 다른 서버가 감지되었습니다(예: FlyEnv).`,
+      detectado: (puerto: number) => `포트 ${puerto}에서 다른 서버가 감지되었습니다(예: FlyEnv).`,
       origen: '원본 서버',
       host: '서버',
       puerto: '포트',
@@ -1525,7 +1517,8 @@ export const ko: Textos = {
       ocultar: '비밀번호 숨기기',
       copiarDato: (dato: string) => `${dato} 복사`,
       env: '.env 파일용 블록',
-      envAyuda: '프로젝트의 .env에 붙여넣으십시오. WolfCore Dev는 프로젝트 파일을 직접 수정하지 않습니다.',
+      envAyuda:
+        '프로젝트의 .env에 붙여넣으십시오. WolfCore Dev는 프로젝트 파일을 직접 수정하지 않습니다.',
       copiarEnv: '블록 복사',
       cargando: '연결 정보를 읽는 중…',
     },
@@ -1562,8 +1555,7 @@ export const ko: Textos = {
   },
   instalar: {
     titulo: '설치',
-    descripcion:
-      '공식 버전을 다운로드합니다. 모든 파일은 사용 전 SHA-256 해시로 검증됩니다.',
+    descripcion: '공식 버전을 다운로드합니다. 모든 파일은 사용 전 SHA-256 해시로 검증됩니다.',
     servicios: {
       nginx: { nombre: 'Nginx', detalle: '웹 서버 (nginx.org)' },
       php: { nombre: 'PHP', detalle: 'NTS x64 (windows.php.net)' },
@@ -1699,15 +1691,13 @@ export const ko: Textos = {
     phpNoInstalada: (pedida: string, elegida: string) =>
       `프로젝트에서 요구하는 PHP ${pedida} 버전이 설치되어 있지 않습니다. PHP ${elegida} 버전이 선택되었습니다.`,
     puertoProxy: '로컬 포트',
-    puertoProxyAyuda:
-      'Nginx가 요청을 http://127.0.0.1:<포트>로 전달합니다(예: Vite 또는 Node).',
+    puertoProxyAyuda: 'Nginx가 요청을 http://127.0.0.1:<포트>로 전달합니다(예: Vite 또는 Node).',
     urlBaseVar: '기본 URL 변수',
     urlBaseVarAyuda:
       '터널을 열면 이 .env 변수에 공개 링크가 기록되고, 터널을 닫으면 원래대로 복원됩니다.',
     urlBaseVarNinguna: '없음 (.env 수정 안 함)',
     datosReales: '실제 고객 데이터 포함',
-    datosRealesAyuda:
-      '목록에 표시되며 터널로 게시하기 전에 확인을 요청합니다.',
+    datosRealesAyuda: '목록에 표시되며 터널로 게시하기 전에 확인을 요청합니다.',
     avanzado: '고급',
     reglasExtra: '추가 Nginx 규칙',
     reglasExtraAyuda:
@@ -1719,8 +1709,7 @@ export const ko: Textos = {
     guardado: (nombre: string) => `${nombre} 사이트가 저장되었습니다`,
     errorGuardar: '사이트를 저장할 수 없습니다',
     nginxFallo: '사이트는 저장되었지만 Nginx가 구성을 거부했습니다',
-    nginxFalloAyuda:
-      '이전 Nginx 구성이 복원되었습니다. 추가 규칙을 확인한 후 다시 저장하십시오.',
+    nginxFalloAyuda: '이전 Nginx 구성이 복원되었습니다. 추가 규칙을 확인한 후 다시 저장하십시오.',
     errores: {
       carpeta: '프로젝트 폴더를 선택하십시오',
       sufijo: '도메인은 .test로 끝나야 합니다',
@@ -1793,8 +1782,7 @@ export const ko: Textos = {
     nombreTunel: '터널 이름',
     nombreTunelAyuda: '소문자, 숫자 및 하이픈을 사용할 수 있습니다.',
     dominioPublico: '공개 도메인',
-    dominioPublicoAyuda:
-      'Cloudflare에 보유한 도메인의 하위 도메인입니다(예: demo.example.com).',
+    dominioPublicoAyuda: 'Cloudflare에 보유한 도메인의 하위 도메인입니다(예: demo.example.com).',
     crear: '생성 및 라우팅',
     guardadoNombre: '지정 터널이 준비되었습니다. 열 때 확인을 요청합니다.',
     guardadoRapido: '이 사이트는 다시 빠른 터널을 사용합니다.',
@@ -1826,7 +1814,8 @@ export const ko: Textos = {
       'Expose가 미리 설치되어 있거나 WolfCore Dev 데이터 폴더의 bin/expose에 expose.phar 파일이 있어야 합니다(Windows에서는 phar로만 작동하며, 체크섬이 제공되는 다운로드가 없습니다). 요청 검사기가 로컬 네트워크 전체에 노출되므로 실제 데이터가 포함된 사이트에는 사용할 수 없습니다. 전역 설정은 변경되지 않습니다.',
     tailscaleAlcance: '공개 범위',
     tailscaleServe: 'Serve: 내 tailnet 전용',
-    tailscaleServeAyuda: '내 Tailscale 네트워크의 기기만 접속할 수 있으며 인터넷에는 공개되지 않습니다.',
+    tailscaleServeAyuda:
+      '내 Tailscale 네트워크의 기기만 접속할 수 있으며 인터넷에는 공개되지 않습니다.',
     tailscaleFunnel: 'Funnel: 인터넷 전체 공개',
     tailscaleFunnelAyuda: 'tailnet 소속 여부와 관계없이 링크가 있는 누구나 접속할 수 있습니다.',
     tailscaleFunnelAviso:
@@ -1852,7 +1841,6 @@ export const ko: Textos = {
     columnas: { sitio: '사이트', estado: '상태', url: '링크', acciones: '작업' },
     vacioTitulo: '열린 터널이 없습니다',
     vacio: '사이트의 터널 스위치를 켜면 공개 링크를 받을 수 있습니다.',
-    irASitios: '사이트로 이동',
     sinNombre: '삭제된 사이트',
   },
   ajustes: {
@@ -1918,8 +1906,7 @@ export const ko: Textos = {
       cancelado: 'Windows 확인이 취소되었습니다. 변경된 사항이 없습니다.',
       fallo: 'HTTPS 인증 기관을 변경하지 못했습니다',
       quitarTitulo: 'HTTPS 인증 기관을 제거하시겠습니까?',
-      quitarTexto:
-        '다시 설치할 때까지 브라우저가 .test 사이트의 인증서를 신뢰하지 않게 됩니다.',
+      quitarTexto: '다시 설치할 때까지 브라우저가 .test 사이트의 인증서를 신뢰하지 않게 됩니다.',
       puerto: 'HTTPS 포트',
       puertoAyuda:
         '기본값은 443입니다. 다른 프로그램이 사용 중이면 1024에서 65535 사이의 포트를 선택하십시오. URL에 포트가 포함됩니다.',
@@ -1945,7 +1932,8 @@ export const ko: Textos = {
       pathAgregar: '사용자 PATH에 추가',
       pathQuitar: 'PATH에서 제거',
       pathTitulo: 'PATH가 업데이트되었습니다',
-      pathAviso: '변경 사항을 적용하려면 새 터미널을 여십시오. 이미 열려 있는 터미널에는 반영되지 않습니다.',
+      pathAviso:
+        '변경 사항을 적용하려면 새 터미널을 여십시오. 이미 열려 있는 터미널에는 반영되지 않습니다.',
       pathQuitarTitulo: 'PATH에서 WolfCore Dev를 제거하시겠습니까?',
       pathQuitarTexto:
         '새 터미널에서 WolfCore Dev의 php 및 composer를 더 이상 사용할 수 없게 됩니다. 이미 열려 있는 터미널은 변경되지 않습니다.',
@@ -2075,10 +2063,12 @@ export const ko: Textos = {
     launchSinCambios: 'launch.json에 이미 이 구성이 포함되어 있습니다.',
     launchEscribir: 'launch.json 쓰기',
     launchCreado: '.vscode에 launch.json이 생성되었습니다',
-    launchActualizado: (respaldo: string) => `launch.json이 업데이트되었습니다. 이전 백업: ${respaldo}`,
+    launchActualizado: (respaldo: string) =>
+      `launch.json이 업데이트되었습니다. 이전 백업: ${respaldo}`,
     phpStorm: 'PhpStorm용 설정',
     copiarPhpStorm: 'PhpStorm 설정 복사',
-    errorNginx: (salida: string) => `Nginx가 변경 사항을 수락하지 않아 이전 상태로 되돌렸습니다. ${salida}`,
+    errorNginx: (salida: string) =>
+      `Nginx가 변경 사항을 수락하지 않아 이전 상태로 되돌렸습니다. ${salida}`,
   },
   nginxEditor: {
     etiqueta: 'Nginx',
@@ -2293,7 +2283,8 @@ export const ko: Textos = {
         sinClaveParaProbar: '발송을 테스트하려면 공급자 비밀번호를 저장하십시오.',
         hostLocal: '이 서버 이름은 이 컴퓨터 또는 로컬 네트워크로 해석됩니다.',
         confirmarRed: '로컬 네트워크 확인',
-        enviado: (para: string) => `${para}(으)로 이메일을 발송했습니다. 받은 편지함을 확인하십시오.`,
+        enviado: (para: string) =>
+          `${para}(으)로 이메일을 발송했습니다. 받은 편지함을 확인하십시오.`,
         fallos: {
           'correo.auth': '공급자가 사용자 또는 비밀번호를 거부했습니다.',
           'correo.conexion': '연결할 수 없습니다. 호스트와 포트를 확인하십시오.',
@@ -2325,7 +2316,8 @@ export const ko: Textos = {
         starttls: 'STARTTLS (포트 587)',
         usuario: '사용자',
         usuarioObligatorio: '사용자를 입력하십시오.',
-        usuarioFijoAyuda: '이 공급자는 항상 이 사용자를 사용하며 비밀번호는 귀하의 계정 비밀번호를 사용합니다.',
+        usuarioFijoAyuda:
+          '이 공급자는 항상 이 사용자를 사용하며 비밀번호는 귀하의 계정 비밀번호를 사용합니다.',
         clave: 'SMTP 비밀번호',
         claveGuardada: (f: string) => `저장됨: ••••${f}`,
         claveNueva: '저장할 비밀번호를 입력하십시오',
@@ -2360,7 +2352,8 @@ export const ko: Textos = {
         volvio: (n: string) =>
           `${n}이(가) 다시 로컬 메일 캐처로 발송하도록 설정되었지만 .env 파일은 변경되지 않았습니다. 공급자의 MAIL_* 변수(및 입력한 경우 비밀번호)가 남아 있으므로 메일 블록을 다시 작성하십시오.`,
         incluirClave: '.env에 비밀번호도 함께 기록',
-        incluirClaveAyuda: '선택하지 않으면 블록에 MAIL_PASSWORD가 포함되지 않으며 직접 추가해야 합니다.',
+        incluirClaveAyuda:
+          '선택하지 않으면 블록에 MAIL_PASSWORD가 포함되지 않으며 직접 추가해야 합니다.',
         sinClaveGuardada: '이 공급자에는 저장된 비밀번호가 없습니다.',
         vista: '.env 변경 사항 (비밀번호는 마스킹됨)',
         textoPlano:
@@ -2371,8 +2364,7 @@ export const ko: Textos = {
         claveConfirmar: '이해했습니다, 비밀번호 포함',
         agregarGitignore: '.gitignore에 .env 추가',
         gitignoreTitulo: '.gitignore 수정',
-        gitignoreTexto:
-          '프로젝트의 .gitignore에 .env 줄을 추가합니다(사전 백업 생성).',
+        gitignoreTexto: '프로젝트의 .gitignore에 .env 줄을 추가합니다(사전 백업 생성).',
         gitignoreConfirmar: '추가',
         versionadoTitulo: 'Git이 이미 .env를 추적하고 있습니다',
         versionadoTexto:
@@ -2466,8 +2458,7 @@ export const ko: Textos = {
       sinModelo: '모델을 선택하려면 연결을 테스트하거나 기본 모델을 지정하십시오.',
       enviando: '전송 중…',
       respuesta: (ms: number) => `${ms} ms 만에 응답함`,
-      tokens: (entrada: number, salida: number) =>
-        `입력 ${entrada} 토큰, 출력 ${salida} 토큰`,
+      tokens: (entrada: number, salida: number) => `입력 ${entrada} 토큰, 출력 ${salida} 토큰`,
       usar: '프로젝트에서 사용',
       editar: '편집',
       borrar: '삭제',
@@ -2489,7 +2480,8 @@ export const ko: Textos = {
       documentacion: '문서 보기',
       nombre: '이름',
       urlBase: '기본 URL',
-      urlAyuda: '비워 두면 공식 URL이 사용됩니다. https:// 또는 127.0.0.1 / [::1] 대상 http://(LM Studio)만 허용됩니다.',
+      urlAyuda:
+        '비워 두면 공식 URL이 사용됩니다. https:// 또는 127.0.0.1 / [::1] 대상 http://(LM Studio)만 허용됩니다.',
       urlObligatoria: '호환 공급자의 기본 URL을 입력하십시오.',
       modelo: '기본 모델 (선택 사항)',
       modeloAyuda: '.env 블록(AI_MODEL) 및 테스트 메시지에 사용됩니다.',
@@ -2513,8 +2505,7 @@ export const ko: Textos = {
       claveTexto:
         '이 컴퓨터에서 키가 삭제됩니다. 키를 기록해 둔 .env 파일은 변경되지 않으므로 키를 폐기하는 경우 해당 파일에서도 변경하십시오.',
       proveedorTitulo: (nombre: string) => `${nombre}을(를) 삭제하시겠습니까?`,
-      proveedorTexto:
-        '공급자와 저장된 키가 삭제됩니다. 프로젝트의 .env 파일은 건드리지 않습니다.',
+      proveedorTexto: '공급자와 저장된 키가 삭제됩니다. 프로젝트의 .env 파일은 건드리지 않습니다.',
       respaldos: (n: number) =>
         n === 1
           ? '이 키가 평문으로 포함된 1개 프로젝트의 .env 백업도 함께 삭제'
@@ -2535,8 +2526,7 @@ export const ko: Textos = {
       cargando: '미리 보기 준비 중…',
       textoPlano:
         '키가 프로젝트의 .env 파일에 평문으로 저장됩니다. 해당 폴더에 접근할 수 있는 누구나 키를 읽을 수 있습니다.',
-      copiaPrevia:
-        '현재 .env 파일은 프로젝트 외부(WolfCore Dev 데이터 폴더)에 미리 백업됩니다.',
+      copiaPrevia: '현재 .env 파일은 프로젝트 외부(WolfCore Dev 데이터 폴더)에 미리 백업됩니다.',
       sinClave: '이 공급자는 키가 필요합니다. 프로젝트에서 사용하기 전에 키를 저장하십시오.',
       gitignoreFalta: '프로젝트의 .gitignore가 .env를 제외하지 않고 있습니다.',
       gitignoreNoExiste: '프로젝트에 .gitignore가 없습니다.',
@@ -2613,8 +2603,6 @@ export const ko: Textos = {
       yaInstalado: '해당 모델은 이미 설치되어 있습니다',
       enCurso: '해당 모델은 이미 다운로드 중입니다',
       confirmarTitulo: (modelo: string) => `${modelo}을(를) 다운로드하시겠습니까?`,
-      confirmarTexto:
-        '모델은 보통 수 GB에 달합니다(크기에 따라 1GB에서 40GB 이상). Ollama는 시작 전에 크기를 알려 주지 않으며, 진행률 표시줄에서 확인하고 언제든지 취소할 수 있습니다.',
       confirmar: '다운로드',
     },
     progreso: {
@@ -2661,8 +2649,7 @@ export const ko: Textos = {
   },
   proyectos: {
     titulo: '프로젝트',
-    descripcion:
-      '각 프로젝트는 .test 사이트, 설치 레시피 및 프로세스를 갖춘 폴더입니다.',
+    descripcion: '각 프로젝트는 .test 사이트, 설치 레시피 및 프로세스를 갖춘 폴더입니다.',
     agregar: '프로젝트 추가',
     vacioTitulo: '아직 프로젝트가 없습니다',
     vacio:
@@ -2685,8 +2672,7 @@ export const ko: Textos = {
         comando: '프로젝트 명령',
       } as Record<string, string>,
       sitioCrear: (dominio: string) => (dominio ? `${dominio} 사이트 생성` : '사이트 생성'),
-      bdRestaurar: (archivo: string | null) =>
-        archivo ? `${archivo} 백업 복원` : '백업 복원',
+      bdRestaurar: (archivo: string | null) => (archivo ? `${archivo} 백업 복원` : '백업 복원'),
       migrar: '데이터베이스 마이그레이션',
       migrarSemilla: '데이터베이스 마이그레이션 및 테스트 데이터 시딩 (--seed)',
       comando: (linea: string) => (linea ? `실행: ${linea}` : '프로젝트 명령'),
@@ -2722,7 +2708,8 @@ export const ko: Textos = {
       errorClonar: '저장소를 복제할 수 없습니다',
       sinCancelar:
         '복제는 여기에서 중단할 수 없습니다. 완료될 때까지 기다려 주십시오(몇 분 정도 걸릴 수 있습니다).',
-      sinGit: 'Git이 설치되어 있지 않습니다. Git(git-scm.com)을 설치한 후 이 대화 상자를 다시 여십시오.',
+      sinGit:
+        'Git이 설치되어 있지 않습니다. Git(git-scm.com)을 설치한 후 이 대화 상자를 다시 여십시오.',
     },
     github: {
       estadoGh: (usuario?: string) =>
@@ -2735,14 +2722,12 @@ export const ko: Textos = {
       instalandoGh: 'GitHub CLI 설치 중…',
       ghInstalado: 'GitHub CLI가 설치되었습니다. 이제 로그인하십시오.',
       iniciarSesion: '로그인',
-      sesionAbierta:
-        '로그인 창이 열렸습니다. 완료되면 "다시 확인"을 누르십시오.',
+      sesionAbierta: '로그인 창이 열렸습니다. 완료되면 "다시 확인"을 누르십시오.',
       comprobar: '다시 확인',
       usarToken: '토큰 사용',
       token: 'GitHub 개인 액세스 토큰',
       tokenPlaceholder: 'github_pat_…',
-      tokenAyuda:
-        '이 컴퓨터에 암호화되어 저장되며, 다시 표시되거나 프로젝트에 기록되지 않습니다.',
+      tokenAyuda: '이 컴퓨터에 암호화되어 저장되며, 다시 표시되거나 프로젝트에 기록되지 않습니다.',
       guardarToken: '토큰 저장',
       tokenGuardado: '토큰이 저장되었습니다',
       quitarToken: '토큰 제거',
@@ -2815,7 +2800,8 @@ export const ko: Textos = {
       detectado: (v: string) => `감지됨: ${v}`,
       nodeInstalar: 'Node가 설치되어 있지 않습니다. 서비스에서 설치하십시오.',
       pythonInstalar: 'Python이 설치되어 있지 않습니다. 서비스에서 설치하십시오.',
-      lenguajeInstalar: (nombre: string) => `${nombre}이(가) 설치되어 있지 않습니다. 서비스에서 설치하십시오.`,
+      lenguajeInstalar: (nombre: string) =>
+        `${nombre}이(가) 설치되어 있지 않습니다. 서비스에서 설치하십시오.`,
       dominio: '도메인',
       puertoProxy: '로컬 포트',
       puertoPlaceholder: '8000',
@@ -2847,7 +2833,8 @@ export const ko: Textos = {
       verRegistro: '로그 보기',
       ocultarRegistro: '로그 숨기기',
       listo: '프로젝트 준비가 완료되었습니다.',
-      fallo: (paso: string) => `실패: ${paso}. 재시도하거나 건너뛰기 또는 취소할 수 있으며, 기존 작업은 되돌려지지 않았습니다.`,
+      fallo: (paso: string) =>
+        `실패: ${paso}. 재시도하거나 건너뛰기 또는 취소할 수 있으며, 기존 작업은 되돌려지지 않았습니다.`,
       cancelada: '준비가 취소되었습니다. 프로젝트 카드에서 다시 이어서 진행할 수 있습니다.',
       incompleta: '아직 실행되지 않은 단계가 남아 있습니다.',
       errorCrear: '프로젝트를 생성할 수 없습니다',
@@ -2863,8 +2850,7 @@ export const ko: Textos = {
       receta: '준비',
       reinstalar: '의존성 재설치',
       reinstalarTitulo: (nombre: string) => `${nombre}의 레시피를 실행하시겠습니까?`,
-      reinstalarTexto:
-        '마지막 준비 시 실행한 단계(마법사에서 검토한 단계)를 다시 실행합니다:',
+      reinstalarTexto: '마지막 준비 시 실행한 단계(마법사에서 검토한 단계)를 다시 실행합니다:',
       noRestaura: '다시 복원되지 않습니다',
       recetaCambio:
         '프로젝트를 신뢰한 이후 레시피(wolfcore.yml)가 변경되었습니다. 재설치는 저장된 레시피를 반복 실행합니다. 새 레시피를 확인하려면 "레시피 검토"를 사용하십시오.',
@@ -2884,7 +2870,8 @@ export const ko: Textos = {
       baseDatosAyuda: (base: string) =>
         `인증된 상태로 "${base}" 데이터베이스 열기 (Adminer 또는 phpMyAdmin)`,
       baseDatosSinDetectar: '프로젝트 데이터베이스 열기 (Adminer 또는 phpMyAdmin)',
-      sinBase: '프로젝트의 .env 파일에 MySQL, MariaDB 또는 PostgreSQL 데이터베이스가 선언되어 있지 않습니다.',
+      sinBase:
+        '프로젝트의 .env 파일에 MySQL, MariaDB 또는 PostgreSQL 데이터베이스가 선언되어 있지 않습니다.',
       adminerNoListo: 'Adminer가 준비되지 않았습니다',
       entradaAutomatica: '비밀번호를 입력하지 않고 자동으로 로그인합니다.',
       elegirBd: 'Adminer 또는 phpMyAdmin 선택',
@@ -2910,7 +2897,8 @@ export const ko: Textos = {
       atras: (n: number) => `가져올 커밋 ${n}개`,
       adelante: (n: number) => `푸시할 커밋 ${n}개`,
       traer: '변경 사항 가져오기',
-      traerAyuda: '병합 없이 git pull을 실행합니다. 로컬 변경 사항이 있거나 브랜치가 분기된 경우 아무것도 변경하지 않습니다.',
+      traerAyuda:
+        '병합 없이 git pull을 실행합니다. 로컬 변경 사항이 있거나 브랜치가 분기된 경우 아무것도 변경하지 않습니다.',
       alDia: '이미 최신 상태입니다.',
       actualizado: '변경 사항을 가져왔습니다',
       sugeridosTitulo: '변경 사항을 가져왔습니다',
@@ -2929,8 +2917,7 @@ export const ko: Textos = {
         titulo: '제안된 메시지로 커밋',
         proveedor: 'AI 제공업체',
         modelo: '모델',
-        sinProveedores:
-          '메시지를 제안받으려면 AI 화면에서 클라우드 AI 제공업체를 설정하십시오.',
+        sinProveedores: '메시지를 제안받으려면 AI 화면에서 클라우드 AI 제공업체를 설정하십시오.',
         privacidad:
           '스테이징된 변경 사항의 diff만 제공업체로 전송됩니다(.env, 키, 인증서, 자격 증명 파일 및 바이너리 제외, 최대 20,000자). 토큰 소모가 적습니다.',
         sugerir: '메시지 제안',
@@ -2964,7 +2951,8 @@ export const ko: Textos = {
       nombrePlaceholder: 'Vite',
       comando: '명령어',
       comandoPlaceholder: 'npm run dev',
-      comandoAyuda: '셸 없이 프로그램과 인수를 입력하십시오. 공백이 포함된 인수는 따옴표로 감싸십시오.',
+      comandoAyuda:
+        '셸 없이 프로그램과 인수를 입력하십시오. 공백이 포함된 인수는 따옴표로 감싸십시오.',
       cwd: '폴더',
       cwdPlaceholder: 'raiz',
       cwdAyuda: 'raiz 또는 프로젝트 하위 폴더(예: frontend)를 입력하십시오.',
@@ -3184,8 +3172,7 @@ export const ko: Textos = {
     configCopiada: '설정이 클립보드에 복사되었습니다',
     regenerar: '토큰 재생성',
     regenerarTitulo: 'MCP 서버 토큰을 재생성하시겠습니까?',
-    regenerarTexto:
-      '현재 토큰은 즉시 무효화되며, 연결된 어시스턴트는 새 설정을 사용해야 합니다.',
+    regenerarTexto: '현재 토큰은 즉시 무효화되며, 연결된 어시스턴트는 새 설정을 사용해야 합니다.',
     regenerado: '토큰이 재생성되었습니다. 설정을 다시 복사하십시오.',
     errorCargar: (detalle: string) => `MCP 서버 상태를 읽을 수 없습니다: ${detalle}`,
     confirmacion: {
@@ -3197,7 +3184,8 @@ export const ko: Textos = {
       aprobada: '작업이 승인되었습니다',
       rechazada: '작업이 거부되었습니다',
       vencida: '요청이 더 이상 대기 상태가 아닙니다.',
-      descartadas: (n: number) => `외 ${n}건은 대기열 초과로 표시되지 않습니다(자동으로 만료됩니다)`,
+      descartadas: (n: number) =>
+        `외 ${n}건은 대기열 초과로 표시되지 않습니다(자동으로 만료됩니다)`,
       falloRespuesta: (detalle: string) =>
         `응답을 전송할 수 없어 요청이 대기 상태로 남아 있습니다. ${detalle}`,
       si: '예',
@@ -3227,7 +3215,10 @@ export const ko: Textos = {
     pendienteApi: '대기 중: 코어에서 아직 이 정보를 인터페이스에 제공하지 않습니다.',
     lista: {
       qr: { nombre: 'QR 생성기', descripcion: '텍스트나 터널 링크로 PNG QR 코드를 생성합니다.' },
-      json: { nombre: 'JSON', descripcion: '트리 뷰와 함께 포맷팅, 유효성 검사 및 압축을 수행합니다.' },
+      json: {
+        nombre: 'JSON',
+        descripcion: '트리 뷰와 함께 포맷팅, 유효성 검사 및 압축을 수행합니다.',
+      },
       regex: {
         nombre: '정규식',
         descripcion: '일치 항목, 그룹 및 레퍼런스를 제공하는 테스터입니다.',
@@ -3260,7 +3251,10 @@ export const ko: Textos = {
         nombre: '파일 정보',
         descripcion: '파일의 크기, 유형 및 해시를 확인합니다.',
       },
-      websocket: { nombre: 'WebSocket 클라이언트', descripcion: '연결하고 메시지를 전송 및 확인합니다.' },
+      websocket: {
+        nombre: 'WebSocket 클라이언트',
+        descripcion: '연결하고 메시지를 전송 및 확인합니다.',
+      },
       contrasenas: {
         nombre: '비밀번호',
         descripcion: '비밀번호 강도를 측정하고 데이터베이스의 취약한 계정을 점검합니다.',
@@ -3279,7 +3273,8 @@ export const ko: Textos = {
       },
       conversor: {
         nombre: '문서 변환기',
-        descripcion: '이 컴퓨터 밖으로 전송하지 않고 Word, Excel, PDF, CSV 및 Markdown을 변환합니다.',
+        descripcion:
+          '이 컴퓨터 밖으로 전송하지 않고 Word, Excel, PDF, CSV 및 Markdown을 변환합니다.',
       },
     },
     errores: {
@@ -3287,7 +3282,6 @@ export const ko: Textos = {
       jsonInvalido: (linea: number, columna: number) =>
         `유효하지 않은 JSON입니다. ${linea}번째 줄, ${columna}번째 열을 확인하십시오.`,
       banderas: '유효하지 않은 플래그입니다. 중복 없이 d, g, i, m, s, u, v 또는 y만 사용하십시오.',
-      regex: (detalle: string) => `유효하지 않은 정규식입니다(${detalle}).`,
       trabajador: '백그라운드에서 작업을 실행할 수 없습니다.',
       diffLento: '텍스트 차이가 너무 커서 제한 시간 내에 비교할 수 없습니다.',
       base64: '유효하지 않은 Base64입니다.',
@@ -3407,8 +3401,7 @@ export const ko: Textos = {
       seleccion: (n: number) => `경로 ${n}개 선택됨`,
       analizar: '분석',
       limpiar: 'BOM 제거',
-      confirmar: (n: number) =>
-        `파일 ${n}개에서 BOM을 제거합니다(사본 저장). 계속하시겠습니까?`,
+      confirmar: (n: number) => `파일 ${n}개에서 BOM을 제거합니다(사본 저장). 계속하시겠습니까?`,
       conBom: (n: number) => `BOM이 포함된 파일 ${n}개`,
       sinBom: 'BOM이 포함된 파일이 없습니다.',
       limpiados: (n: number) => `파일 ${n}개를 정리했습니다.`,
@@ -3505,7 +3498,6 @@ export const ko: Textos = {
       regex: '정규 표현식',
       mayusculas: '대소문자 구분',
       incluir: '포함할 파일만 지정(쉼표로 구분, 예: *.php)',
-      excluir: '건너뛰기(쉼표로 구분)',
       buscar: '검색',
       cancelar: '취소',
       buscando: '검색 중…',
@@ -3710,11 +3702,9 @@ export const ko: Textos = {
         sinMotores: '로컬 MySQL, MariaDB 또는 PostgreSQL 서버가 없습니다.',
         revisar: '검사',
         revisando: '검사 중…',
-        resumen: (r: number, d: number) =>
-          `계정 ${r}개 검사함 · 취약 ${d}개`,
+        resumen: (r: number, d: number) => `계정 ${r}개 검사함 · 취약 ${d}개`,
         sinDebiles: '검사한 계정 중 매우 흔한 비밀번호와 일치하는 항목이 없습니다.',
-        noRevisables: (n: number) =>
-          `검사할 수 없는 계정 ${n}개:`,
+        noRevisables: (n: number) => `검사할 수 없는 계정 ${n}개:`,
         truncado:
           '10,000행 또는 60초 제한에 도달하여 검사가 중단되었습니다. 아직 검사되지 않은 계정이 남아 있습니다.',
         usuario: '사용자',
@@ -3771,7 +3761,8 @@ export const ko: Textos = {
         copiaFila: '행 사본(식별자 및 이전 해시, 30일간 보관):',
         instantanea: '이전 데이터베이스 스냅샷:',
         instantaneaAyuda: '데이터베이스 › 스냅샷에서 이전 상태로 복원할 수 있습니다.',
-        aBcrypt: 'bcrypt로 전환: 애플리케이션이 password_verify 또는 동등한 방식을 사용하는 경우에만 선택하십시오',
+        aBcrypt:
+          'bcrypt로 전환: 애플리케이션이 password_verify 또는 동등한 방식을 사용하는 경우에만 선택하십시오',
         avisoLegado:
           '이 해시는 솔트가 없는 md5 또는 sha1이며 해당 형식이 유지됩니다. 애플리케이션이 솔트를 별도로 저장하는 경우(다른 열이나 상수) 해시를 재현할 수 없으므로 새 비밀번호로 로그인할 수 없게 됩니다.',
         datosReales: {
@@ -3802,7 +3793,8 @@ export const ko: Textos = {
     copiado: '명령어를 복사했습니다.',
     reparar: '복구',
     alternativa: 'WolfCore Dev 포트 변경',
-    soloInforma: 'WolfCore Dev가 이 항목을 자동으로 변경하지 않습니다. 안내에 따라 직접 조치하십시오.',
+    soloInforma:
+      'WolfCore Dev가 이 항목을 자동으로 변경하지 않습니다. 안내에 따라 직접 조치하십시오.',
     dialogo: {
       titulo: '복구 확인',
       queHara: '다음 작업이 수행됩니다:',
@@ -3831,7 +3823,8 @@ export const ko: Textos = {
       servicios: '서비스',
     },
     reparaciones: {
-      cambiar_puerto: 'WolfCore Dev의 포트를 사용 가능한 포트로 변경합니다. 다른 프로그램은 건드리지 않습니다.',
+      cambiar_puerto:
+        'WolfCore Dev의 포트를 사용 가능한 포트로 변경합니다. 다른 프로그램은 건드리지 않습니다.',
       puerto_manual:
         'WolfCore Dev의 포트를 예약된 범위 밖으로 이동합니다. 예약 범위를 해제할지는 표시된 명령어를 통해 직접 결정하십시오.',
       detener_iis:
@@ -3852,8 +3845,6 @@ export const ko: Textos = {
         '표시된 명령어를 사용하여 Visual Studio Build Tools(C++ 도구 포함)를 설치하십시오. 용량이 수 GB에 달하며 관리자 권한이 필요하므로 직접 결정하여 실행하시기 바랍니다.',
       antivirus:
         '표시된 명령어를 사용하여 데이터 폴더를 바이러스 백신 예외 항목에 추가할지 직접 결정하십시오.',
-      firewall:
-        '표시된 명령어를 관리자 콘솔에서 실행하여 해당 규칙을 제거할지 직접 결정하십시오. WolfCore Dev는 방화벽을 절대 변경하지 않습니다.',
       reintentar_servicio: '서비스를 다시 시작합니다.',
       firefox_confianza:
         '각 Firefox 프로필의 user.js에 Windows 인증 기관을 신뢰하는 설정을 추가합니다(사전 백업 생성). prefs.js는 건드리지 않으며 열려 있는 프로필은 건너뜁니다.',
@@ -3899,8 +3890,7 @@ export const ko: Textos = {
         resultadoOk: (n: number) => `프로필 ${plural(n, '개')}에 적용 완료되었습니다.`,
         resultadoAbiertos: (n: number) =>
           `Firefox가 열려 있어 프로필 ${plural(n, '개')}를 건너뛰었습니다. Firefox를 닫고 다시 시도해 주세요.`,
-        resultadoError: (n: number) =>
-          `프로필 ${plural(n, '개')}를 변경할 수 없었습니다.`,
+        resultadoError: (n: number) => `프로필 ${plural(n, '개')}를 변경할 수 없었습니다.`,
       },
       confirmar: '확인',
       cancelar: '취소',
@@ -3955,7 +3945,9 @@ export const ko: Textos = {
       instalar: '설치',
       instalada: (nombre: string) => `${nombre} 확장 기능이 설치 및 활성화되었습니다.`,
       cambiada: (nombre: string, activa: boolean) =>
-        activa ? `${nombre} 확장 기능이 활성화되었습니다.` : `${nombre} 확장 기능이 비활성화되었습니다.`,
+        activa
+          ? `${nombre} 확장 기능이 활성화되었습니다.`
+          : `${nombre} 확장 기능이 비활성화되었습니다.`,
       buscar: '확장 기능 검색',
       vacio: '일치하는 확장 기능이 없습니다.',
     },
@@ -3972,7 +3964,8 @@ export const ko: Textos = {
     version: (v: string) => `v${v}`,
     versionDesconocida: '알 수 없는 버전',
     verVersion: '버전 보기',
-    verVersionAyuda: '프로그램을 --version 옵션으로 실행합니다(화면을 열 때 자동으로 실행되지 않습니다).',
+    verVersionAyuda:
+      '프로그램을 --version 옵션으로 실행합니다(화면을 열 때 자동으로 실행되지 않습니다).',
     origen: {
       propio: 'WolfCore Dev에서 설치함',
       'npm-usuario': '사용자 전역 npm',
@@ -3996,14 +3989,14 @@ export const ko: Textos = {
       titulo: (nombre: string) => `${nombre}을(를) 설치하시겠습니까?`,
       texto: (paquete: string) =>
         `WolfCore Dev의 Node를 사용하여 registry.npmjs.org에서 ${paquete}의 최신 공개 버전을 데이터 폴더에 설치합니다.`,
-      aislado: '사용자의 npm 설정을 사용하지 않으며 전역 npm을 건드리지 않습니다. 몇 분 정도 걸릴 수 있습니다.',
+      aislado:
+        '사용자의 npm 설정을 사용하지 않으며 전역 npm을 건드리지 않습니다. 몇 분 정도 걸릴 수 있습니다.',
       aceptar: '설치',
       hecho: (nombre: string) => `${nombre} 설치가 완료되었습니다.`,
     },
     confirmarRegistrar: {
       titulo: (nombre: string) => `${nombre}에 MCP를 등록하시겠습니까?`,
-      texto:
-        '이 파일에서 «wolfcore» 항목만 추가(또는 업데이트)되며 나머지는 그대로 유지됩니다:',
+      texto: '이 파일에서 «wolfcore» 항목만 추가(또는 업데이트)되며 나머지는 그대로 유지됩니다:',
       aceptar: '등록',
       hecho: (nombre: string) => `${nombre}에 MCP가 등록되었습니다.`,
     },
@@ -4271,8 +4264,7 @@ export const ko: Textos = {
       ramaExplicacion:
         '새 주요 버전은 이전 버전을 대체하지 않습니다. 자체 데이터 폴더와 포트를 가진 새 인스턴스가 생성되며, 기존 인스턴스는 그대로 유지됩니다.',
       copiarDesdeTitulo: '새 인스턴스 데이터',
-      copiarDesde: (id: string) =>
-        `${id}에서 데이터 복사(덤프 후 복원하며 원본은 건드리지 않음)`,
+      copiarDesde: (id: string) => `${id}에서 데이터 복사(덤프 후 복원하며 원본은 건드리지 않음)`,
       vacia: '비어 있는 상태로 시작',
       ramaNota:
         '데이터베이스 사용자는 복사되지 않습니다. 프로젝트는 새 인스턴스의 포트를 가리키도록 설정해야 합니다.',
@@ -4299,8 +4291,7 @@ export const ko: Textos = {
       destinoTitulo: '처리 방법',
       papelera: '휴지통으로 이동: 7일간 보관되며 그때까지 디스크 공간을 차지합니다',
       definitivo: '영구 삭제: 지금 즉시 디스크 공간을 확보하며 되돌릴 수 없습니다',
-      avisoDefinitivo:
-        '영구 삭제: 이 버전들을 다시 사용하려면 새로 다운로드해야 합니다.',
+      avisoDefinitivo: '영구 삭제: 이 버전들을 다시 사용하려면 새로 다운로드해야 합니다.',
       instantanea:
         '영구 삭제를 선택하면 삭제 전에 환경 설정 백업이 저장됩니다. 휴지통으로 이동한 항목은 복구할 수 있습니다.',
       entiendo: '되돌릴 수 없음을 이해했습니다',
@@ -4404,8 +4395,7 @@ export const ko: Textos = {
     campana: '알림',
     campanaConNuevos: (n: number) => `알림: 읽지 않음 ${n}개`,
     titulo: '알림 센터',
-    vacio:
-      '알림이 없습니다. 서비스 중단, 포트 충돌, 만료 예정 인증서 등이 여기에 표시됩니다.',
+    vacio: '알림이 없습니다. 서비스 중단, 포트 충돌, 만료 예정 인증서 등이 여기에 표시됩니다.',
     marcarTodos: '모두 읽음으로 표시',
     limpiar: '기록 지우기',
     ver: '보기',
@@ -4427,7 +4417,26 @@ export const ko: Textos = {
     tema: '테마',
     temas: { sistema: '시스템', claro: '라이트', oscuro: '다크' },
     idioma: '언어',
-    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語', ko: '한국어', hi: 'हिन्दी', tr: 'Türkçe', id: 'Bahasa Indonesia', pl: 'Polski', nl: 'Nederlands', uk: 'Українська' },
+    idiomas: {
+      es: 'Español',
+      en: 'English',
+      pt: 'Português',
+      fr: 'Français',
+      de: 'Deutsch',
+      it: 'Italiano',
+      ru: 'Русский',
+      zh: '中文 简体',
+      ja: '日本語',
+      ko: '한국어',
+      hi: 'हिन्दी',
+      tr: 'Türkçe',
+      id: 'Bahasa Indonesia',
+      pl: 'Polski',
+      nl: 'Nederlands',
+      uk: 'Українська',
+    },
+    /** Aviso junto a los idiomas que no son es, en, pt ni fr (la traducción es automática y revisada). */
+    traduccionAutomatica: '기계 번역(검토됨)',
     acento: '강조 색상',
     acentos: {
       indigo: '인디고',
@@ -4439,10 +4448,6 @@ export const ko: Textos = {
     },
     acentoPropio: (color: string) => `사용자 지정 (${color})`,
     errorGuardar: '환경설정을 저장할 수 없습니다',
-    asistente: '초기 설정 마법사',
-    asistenteAyuda:
-      '초기 단계를 다시 진행합니다: 프로젝트 폴더, 기본 구성 요소, CA, GitHub 및 감시 폴더.',
-    asistenteAbrir: '마법사 열기',
   },
   paleta: {
     titulo: '명령 팔레트',
@@ -4472,7 +4477,6 @@ export const ko: Textos = {
     nuevoProyecto: '새 프로젝트 만들기',
     tema: (tema: string) => `테마: ${tema}`,
     idioma: (idioma: string) => `언어: ${idioma}`,
-    asistente: '초기 설정 마법사 열기',
   },
   nuevoProyecto: {
     titulo: '새 프로젝트',
@@ -4667,8 +4671,7 @@ export const ko: Textos = {
         `현재 폴더의 사이트 ${n}개를 연결합니다. 어떤 파일도 이동, 복사 또는 수정하지 않습니다.`,
       sinConfianza:
         '가져온 사이트는 사용자가 "이 저장소를 신뢰합니다"를 선택하기 전까지 레시피를 실행하지 않습니다.',
-      hosts:
-        'Nginx와 hosts 파일이 업데이트됩니다(Windows에서 관리자 권한을 요청할 수 있습니다).',
+      hosts: 'Nginx와 hosts 파일이 업데이트됩니다(Windows에서 관리자 권한을 요청할 수 있습니다).',
       basesNuevas: (nombres: string) => `복사할 데이터베이스: ${nombres}.`,
       basesReemplazo: (nombres: string) =>
         `이미 존재하는 다음 데이터베이스를 덮어씁니다: ${nombres}. 덮어쓰기 전에 각각의 백업을 저장합니다.`,
@@ -4734,8 +4737,7 @@ export const ko: Textos = {
       titulo: '내 템플릿',
       ayuda:
         '기존 프로젝트의 레시피, 설정 및 스키마(데이터 제외)를 사용하여 새 프로젝트를 시작하십시오.',
-      vacia:
-        '아직 템플릿이 없습니다. 프로젝트 카드 메뉴에서 프로젝트를 템플릿으로 저장하십시오.',
+      vacia: '아직 템플릿이 없습니다. 프로젝트 카드 메뉴에서 프로젝트를 템플릿으로 저장하십시오.',
       conArchivosEtiqueta: '파일 포함',
       soloEsquema: '레시피 및 스키마',
       conBase: (motor: string) => `데이터 없는 ${motor} 데이터베이스`,
@@ -4764,8 +4766,7 @@ export const ko: Textos = {
     sinVariables: '.env에 변수가 없습니다.',
     secretaEtiqueta: '비밀',
     duplicadaEtiqueta: '중복',
-    duplicadaAyuda:
-      '이 변수는 .env에 두 번 이상 나타납니다. 마지막 항목이 표시되고 수정됩니다.',
+    duplicadaAyuda: '이 변수는 .env에 두 번 이상 나타납니다. 마지막 항목이 표시되고 수정됩니다.',
     soloLecturaEtiqueta: '여러 줄',
     soloLecturaAyuda: '여러 줄로 구성되어 있습니다. 파일에서 직접 편집하십시오.',
     seQuitara: '저장 시 제거됨',
@@ -4837,7 +4838,8 @@ export const ko: Textos = {
     guardar: '검토 및 저장…',
     cerrar: '닫기',
     cerrarTitulo: '저장하지 않고 닫으시겠습니까?',
-    cerrarTexto: (n: number) => `저장되지 않은 변경 사항이 ${n}개 있습니다. 닫으면 모두 사라집니다.`,
+    cerrarTexto: (n: number) =>
+      `저장되지 않은 변경 사항이 ${n}개 있습니다. 닫으면 모두 사라집니다.`,
     cerrarDescartar: '닫고 버리기',
     seguirEditando: '계속 편집',
     confirmar: {
@@ -4859,57 +4861,9 @@ export const ko: Textos = {
     guardadoConCopia: '.env가 저장되었으며 이전 버전이 백업으로 보관되었습니다.',
   },
   asistenteInicio: {
-    titulo: 'WolfCore Dev에 오신 것을 환영합니다',
-    subtitulo:
-      '다섯 단계로 개발 환경을 준비합니다. 각 단계의 버튼을 누르기 전까지 아무것도 설치하거나 변경하지 않습니다.',
     paso: (n: number, total: number) => `${total}단계 중 ${n}단계`,
     anterior: '이전',
     siguiente: '다음',
-    omitirTodo: '마법사 건너뛰기',
-    terminar: '완료',
-    hecho: '완료',
-    reabrir: '설정에서 언제든 다시 열 수 있습니다.',
-    pasos: {
-      carpeta: {
-        titulo: '프로젝트 폴더',
-        texto:
-          '프로젝트를 저장할 위치입니다. 새 저장소가 이곳에 복제되며 마지막 단계에서 감시할 폴더가 됩니다.',
-        elegir: '폴더 선택',
-        actual: (ruta: string) => `선택된 폴더: ${ruta}`,
-        guardada: (ruta: string) => `현재 폴더: ${ruta}`,
-        ninguna: '선택 안 함: C:\\Proyectos가 존재하면 해당 폴더를 사용합니다.',
-      },
-      basicos: {
-        titulo: '기본 구성 요소 설치',
-        texto:
-          '공식 출처에서 해시 검증을 거쳐 Nginx, PHP 8.4, Composer, Node LTS를 설치합니다. 각 항목은 해당 버튼을 눌렀을 때만 설치됩니다.',
-        instalado: '설치됨',
-        instalar: (version: string) => `${version} 설치`,
-        sinVersion: '카탈로그에 버전 없음',
-        cargando: '버전 검색 중…',
-        nombres: { nginx: 'Nginx', php: 'PHP 8.4', composer: 'Composer', node: 'Node LTS' },
-      },
-      ca: {
-        titulo: '로컬 인증 기관 신뢰',
-        texto:
-          '.test 사이트가 알림 없이 HTTPS로 열리려면 Windows가 WolfCore Dev의 인증 기관을 신뢰해야 합니다. Windows에서 확인을 요청합니다.',
-        confiar: 'CA 신뢰',
-        confiada: 'Windows가 이미 로컬 인증 기관을 신뢰하고 있습니다.',
-      },
-      github: {
-        titulo: 'GitHub 연결',
-        texto:
-          '리포지토리를 확인하고 한 번의 클릭으로 클론할 수 있습니다. GitHub CLI 세션이나 개인 토큰을 사용하며, 토큰은 이 컴퓨터에 암호화되어 저장됩니다.',
-      },
-      vigilar: {
-        titulo: '폴더 감시',
-        texto:
-          '프로젝트 폴더에 새 폴더가 나타날 때마다 WolfCore Dev가 사이트 연결을 제안합니다. 사용자의 확인 없이는 아무것도 연결되지 않습니다.',
-        activar: '이 폴더 감시',
-        activa: (ruta: string) => `${ruta} 감시 중`,
-        sinCarpeta: '먼저 프로젝트 폴더를 선택하십시오(1단계).',
-      },
-    },
   },
   /** 프로필 가져오기 또는 내보내기 결과 (D26). */
   perfiles: {
@@ -4924,11 +4878,9 @@ export const ko: Textos = {
       },
       exportar: {
         titulo: '환경 내보내기',
-        texto:
-          '사이트, 버전, 인스턴스, 템플릿, 설정이 담긴 .wolfperfil 파일을 저장합니다.',
+        texto: '사이트, 버전, 인스턴스, 템플릿, 설정이 담긴 .wolfperfil 파일을 저장합니다.',
         bases: '데이터베이스 포함',
-        basesAyuda:
-          '전체 덤프(고객 데이터 포함)는 암호 구문으로 암호화되어 저장됩니다.',
+        basesAyuda: '전체 덤프(고객 데이터 포함)는 암호 구문으로 암호화되어 저장됩니다.',
         ca: '인증 기관(CA) 포함',
         caAyuda: '암호 구문으로 암호화됩니다. 반드시 본인의 컴퓨터에만 가져오십시오.',
         certificados: '사이트 인증서 포함',
@@ -5037,7 +4989,8 @@ export const ko: Textos = {
         titulo: '데이터베이스 인스턴스',
         existente: '이미 존재함: 기존 포트와 버전 유지',
         nueva: (puerto: number) => `포트 ${puerto}에 새 자격 증명으로 생성됩니다`,
-        reasignada: (de: number, a: number) => `포트 ${de}이(가) 사용 중이므로 포트 ${a}을(를) 사용합니다`,
+        reasignada: (de: number, a: number) =>
+          `포트 ${de}이(가) 사용 중이므로 포트 ${a}을(를) 사용합니다`,
       },
       bases: {
         titulo: '데이터베이스',
@@ -5078,8 +5031,7 @@ export const ko: Textos = {
         comparar: '수락하기 전에 원본 컴퓨터의 지문과 반드시 비교하십시오.',
         importar: '프로필의 CA 가져오기',
         noImportar: '가져오지 않으면 이 컴퓨터의 현재 CA를 사용하거나 새로 생성합니다.',
-        ajena:
-          '이 CA에는 WolfCore Dev용이 아닌 이름 제약 조건이 설정되어 있어 가져올 수 없습니다.',
+        ajena: '이 CA에는 WolfCore Dev용이 아닌 이름 제약 조건이 설정되어 있어 가져올 수 없습니다.',
         sinRestricciones:
           '이 CA에는 이름 제약 조건이 없습니다. 은행이나 이메일을 포함한 모든 웹사이트의 인증서에 서명할 수 있습니다. 반드시 본인의 CA이고 지문이 일치하는 경우에만 가져오십시오.',
         aceptarSin: '위험을 이해했으며 본인의 CA이고 지문이 일치합니다',
@@ -5090,7 +5042,8 @@ export const ko: Textos = {
       },
       frase: {
         titulo: '프로필 암호 구문',
-        texto: '프로필에 암호화된 데이터베이스 또는 CA가 포함되어 있습니다. 내보낼 때 설정한 암호 구문을 입력하십시오.',
+        texto:
+          '프로필에 암호화된 데이터베이스 또는 CA가 포함되어 있습니다. 내보낼 때 설정한 암호 구문을 입력하십시오.',
         campo: '암호 구문',
         omitirBases: '데이터베이스 제외하고 가져오기',
         nota: '암호 구문은 이 창에서만 사용되며 저장되지 않고, 작업 완료 또는 창을 닫을 때 삭제됩니다.',
@@ -5108,15 +5061,15 @@ export const ko: Textos = {
         revisar: '검토',
         volver: '뒤로',
         bloqueos: {
-          sitios_sin_carpeta:
-            '각 사이트의 폴더를 선택하거나 보류 상태로 가져오도록 표시하십시오.',
+          sitios_sin_carpeta: '각 사이트의 폴더를 선택하거나 보류 상태로 가져오도록 표시하십시오.',
           frase_requerida: '프로필 암호 구문을 입력하거나 데이터베이스를 제외하고 가져오십시오.',
           ca_ajena: '프로필의 CA는 가져올 수 없습니다.',
           ca_sin_restricciones: '제약 조건이 없는 CA를 가져오려면 별도로 확인해야 합니다.',
           reemplazar_ca: '이 컴퓨터의 CA를 교체하려면 별도로 확인해야 합니다.',
         },
       },
-      progreso: '프로필을 가져오는 중… 창을 닫지 마십시오. 데이터베이스 복원이나 다운로드가 있으면 시간이 걸릴 수 있습니다.',
+      progreso:
+        '프로필을 가져오는 중… 창을 닫지 마십시오. 데이터베이스 복원이나 다운로드가 있으면 시간이 걸릴 수 있습니다.',
       fases: {
         copia: '교체 대상 백업 중',
         versiones: '버전 설치 중',
@@ -5171,7 +5124,8 @@ export const ko: Textos = {
           hecho: '이전 CA가 신뢰 목록에서 제거되었습니다.',
         },
         descartadosWorkspace: (lista: string) => `이 컴퓨터에 없어 제거됨: ${lista}`,
-        workspacesInvalidos: (n: number) => `유효하지 않은 워크스페이스 ${n}개는 가져오지 않았습니다.`,
+        workspacesInvalidos: (n: number) =>
+          `유효하지 않은 워크스페이스 ${n}개는 가져오지 않았습니다.`,
         puerto: (de: number, a: number) => `포트 ${de} → ${a}`,
         copiaEnv: (ruta: string) => `.env 백업: ${ruta}`,
       },
@@ -5186,8 +5140,7 @@ export const ko: Textos = {
       tunel_con_nombre: '이름이 지정된 터널은 옮겨지지 않아 빠른 터널로 전환됩니다.',
       php_ini: '일부 php.ini 설정은 가져오지 않았습니다.',
       xdebug: 'Xdebug 설정이 유효하지 않아 제거되었습니다.',
-      nginx_desactivado:
-        'Nginx 규칙은 저장되었으나 적용되지 않았습니다. 편집기에서 확인하십시오.',
+      nginx_desactivado: 'Nginx 규칙은 저장되었으나 적용되지 않았습니다. 편집기에서 확인하십시오.',
       carpeta_no_existe: '해당 폴더가 이 컴퓨터에 존재하지 않습니다. 직접 찾아 지정하십시오.',
       correo_sin_proveedor: 'SMTP 공급자는 가져오지 않아 메일 수집기를 사용합니다.',
       sitio_invalido: '유효하지 않은 사이트입니다.',
@@ -5215,10 +5168,10 @@ export const ko: Textos = {
         '이 컴퓨터의 이전 CA가 시스템 신뢰 저장소에 남아 있으며 더 이상 사용되지 않습니다. 여기에서 제거할 수 있습니다.',
       base_no_incluida: '데이터베이스 {base}({instancia})가 포함되지 않았습니다.',
       sin_ca: '이 컴퓨터에 CA가 없어 CA 없이 프로필을 내보냅니다.',
-      ca_no_importada: '프로필의 CA를 가져오지 않았습니다. 이 컴퓨터의 기존 CA 또는 새 CA를 사용합니다.',
+      ca_no_importada:
+        '프로필의 CA를 가져오지 않았습니다. 이 컴퓨터의 기존 CA 또는 새 CA를 사용합니다.',
       certificados: '인증서를 준비할 수 없습니다: {detalle}',
-      aplicar:
-        '가져온 사이트가 완전히 적용되지 않았습니다(Nginx: {nginx}; hosts: {hosts}).',
+      aplicar: '가져온 사이트가 완전히 적용되지 않았습니다(Nginx: {nginx}; hosts: {hosts}).',
     },
     quitado: {
       ia: 'AI 공급자 {id}: 사용자 지정 URL을 사용합니다.',

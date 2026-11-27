@@ -182,8 +182,7 @@ const TEXTOS = {
     cliPhpGlobal:
       'Ein Terminalbefehl möchte die PHP-Version für alle Terminals auf {version} umstellen.',
     cliCambiar: 'Ändern',
-    carpetaDatosAislada:
-      'Testdatenordner, ohne hosts, PATH oder Systemzertifikate zu verändern',
+    carpetaDatosAislada: 'Testdatenordner, ohne hosts, PATH oder Systemzertifikate zu verändern',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS ist kein gültiger Datenordner: Er muss absolut sein, kein Systemordner und verschieden vom echten (und vorherigen) Ordner. Die App wird ohne Änderungen geschlossen.',
   },
@@ -235,11 +234,9 @@ const TEXTOS = {
     cliDatosReales:
       'ВНИМАНИЕ: {dominio} содержит РЕАЛЬНЫЕ ДАННЫЕ. Чтобы продолжить, выберите ниже его точный домен. Если вы этого не запрашивали, нажмите «Отмена».',
     cliPublicar: 'Опубликовать',
-    cliPhpGlobal:
-      'Команда терминала хочет переключить PHP во всех терминалах на версию {version}.',
+    cliPhpGlobal: 'Команда терминала хочет переключить PHP во всех терминалах на версию {version}.',
     cliCambiar: 'Изменить',
-    carpetaDatosAislada:
-      'тестовая папка данных без изменения hosts, PATH и системных сертификатов',
+    carpetaDatosAislada: 'тестовая папка данных без изменения hosts, PATH и системных сертификатов',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS не является допустимой папкой данных: путь должен быть абсолютным, не системным и отличным от основной (и предыдущей) папки. Приложение закрывается без изменений.',
   },
@@ -257,17 +254,14 @@ const TEXTOS = {
     cliTitulo: '终端命令 (wolf)',
     cliTunelInternet:
       '有一条终端命令希望通过 {proveedor} 将 {dominio} 发布到互联网。任何持有链接的人都可以访问。',
-    cliTunelTailnet:
-      '有一条终端命令希望将 {dominio} 共享给您 tailnet 中的设备（{proveedor}）。',
+    cliTunelTailnet: '有一条终端命令希望将 {dominio} 共享给您 tailnet 中的设备（{proveedor}）。',
     cliPublicoEn: '公开地址：https://{publico}',
     cliDatosReales:
       '警告：{dominio} 包含真实数据。若要继续，请在下方选择其准确域名。若非您本人请求，请取消。',
     cliPublicar: '发布',
-    cliPhpGlobal:
-      '有一条终端命令希望将所有终端的 PHP 切换为版本 {version}。',
+    cliPhpGlobal: '有一条终端命令希望将所有终端的 PHP 切换为版本 {version}。',
     cliCambiar: '切换',
-    carpetaDatosAislada:
-      '测试数据文件夹，不修改系统 hosts、PATH 或证书',
+    carpetaDatosAislada: '测试数据文件夹，不修改系统 hosts、PATH 或证书',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS 不是有效的数据文件夹：必须为绝对路径、非系统目录且不同于真实（及先前的）文件夹。应用将关闭且不做任何更改。',
   },
@@ -294,8 +288,7 @@ const TEXTOS = {
     cliPhpGlobal:
       'ターミナルコマンドがすべてのターミナルの PHP をバージョン {version} に変更しようとしています。',
     cliCambiar: '変更する',
-    carpetaDatosAislada:
-      'テスト用データフォルダ（システムの hosts・PATH・証明書は変更されません）',
+    carpetaDatosAislada: 'テスト用データフォルダ（システムの hosts・PATH・証明書は変更されません）',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS は有効なデータフォルダではありません。絶対パスであり、システムフォルダでなく、本来の（および以前の）フォルダと異なる必要があります。何も変更せず終了します。',
   },
@@ -319,8 +312,7 @@ const TEXTOS = {
     cliDatosReales:
       '주의: {dominio}에는 실제 데이터가 있습니다. 계속하려면 아래에서 정확한 도메인을 선택하십시오. 요청한 작업이 아니라면 취소하십시오.',
     cliPublicar: '공개',
-    cliPhpGlobal:
-      '터미널 명령이 모든 터미널의 PHP를 버전 {version}(으)로 변경하려고 합니다.',
+    cliPhpGlobal: '터미널 명령이 모든 터미널의 PHP를 버전 {version}(으)로 변경하려고 합니다.',
     cliCambiar: '변경',
     carpetaDatosAislada:
       '테스트 데이터 폴더입니다. 시스템 hosts, PATH 및 인증서는 변경하지 않습니다',
@@ -347,11 +339,9 @@ const TEXTOS = {
     cliDatosReales:
       'चेतावनी: {dominio} में वास्तविक डेटा है। जारी रखने के लिए, नीचे इसका सटीक डोमेन चुनें। यदि आपने यह अनुरोध नहीं किया था, तो रद्द करें।',
     cliPublicar: 'प्रकाशित करें',
-    cliPhpGlobal:
-      'एक टर्मिनल कमांड सभी टर्मिनलों का PHP संस्करण {version} में बदलना चाहता है।',
+    cliPhpGlobal: 'एक टर्मिनल कमांड सभी टर्मिनलों का PHP संस्करण {version} में बदलना चाहता है।',
     cliCambiar: 'बदलें',
-    carpetaDatosAislada:
-      'परीक्षण डेटा फ़ोल्डर, बिना hosts, PATH या सिस्टम प्रमाणपत्रों में बदलाव किए',
+    carpetaDatosAislada: 'परीक्षण डेटा फ़ोल्डर, बिना hosts, PATH या सिस्टम प्रमाणपत्रों में बदलाव किए',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS एक मान्य डेटा फ़ोल्डर नहीं है: यह पूर्ण पथ होना चाहिए, सिस्टम फ़ोल्डर नहीं होना चाहिए और वास्तविक फ़ोल्डर (तथा पिछले फ़ोल्डर) से भिन्न होना चाहिए। ऐप बिना किसी बदलाव के बंद हो रहा है।',
   },
@@ -378,8 +368,7 @@ const TEXTOS = {
     cliPhpGlobal:
       'Bir terminal komutu tüm terminallerin PHP sürümünü {version} olarak değiştirmek istiyor.',
     cliCambiar: 'Değiştir',
-    carpetaDatosAislada:
-      'test veri klasörü; hosts, PATH ve sistem sertifikalarına dokunulmaz',
+    carpetaDatosAislada: 'test veri klasörü; hosts, PATH ve sistem sertifikalarına dokunulmaz',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS geçerli bir veri klasörü değil: mutlak olmalı, sistem klasörü olmamalı ve gerçek (ve önceki) klasörden farklı olmalıdır. Uygulama hiçbir şeye dokunmadan kapanıyor.',
   },
@@ -462,8 +451,7 @@ const TEXTOS = {
     cliPhpGlobal:
       'Een terminalopdracht wil de PHP-versie voor alle terminals wijzigen naar versie {version}.',
     cliCambiar: 'Wijzigen',
-    carpetaDatosAislada:
-      'testgegevensmap, zonder hosts, PATH of systeemcertificaten aan te raken',
+    carpetaDatosAislada: 'testgegevensmap, zonder hosts, PATH of systeemcertificaten aan te raken',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS is geen geldige gegevensmap: deze moet absoluut zijn, geen systeemmap zijn en verschillen van de echte map (en de vorige). De app sluit af zonder iets te wijzigen.',
   },
@@ -487,11 +475,9 @@ const TEXTOS = {
     cliDatosReales:
       'УВАГА: {dominio} містить РЕАЛЬНІ ДАНІ. Щоб продовжити, оберіть нижче його точний домен. Якщо ви цього не запитували, скасуйте.',
     cliPublicar: 'Опублікувати',
-    cliPhpGlobal:
-      'Команда з термінала хоче змінити PHP для всіх терміналів на версію {version}.',
+    cliPhpGlobal: 'Команда з термінала хоче змінити PHP для всіх терміналів на версію {version}.',
     cliCambiar: 'Змінити',
-    carpetaDatosAislada:
-      'тестова папка даних, без змін у hosts, PATH чи системних сертифікатах',
+    carpetaDatosAislada: 'тестова папка даних, без змін у hosts, PATH чи системних сертифікатах',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS не є дійсною папкою даних: шлях має бути абсолютним, не системним і відрізнятися від основної папки (та від попередньої). Програма закриється, нічого не змінюючи.',
   },
@@ -499,8 +485,29 @@ const TEXTOS = {
 
 export type TextosMain = (typeof TEXTOS)['es'];
 
+/** es, en, pt y fr son completos y obligatorios: el compilador lo exige aquí. */
+export const COMPLETOS: Record<'es' | 'en' | 'pt' | 'fr', TextosMain> = TEXTOS;
+
+const completados = new Map<IdiomaUi, TextosMain>();
+
+/**
+ * Textos del proceso principal en el idioma pedido (español si es `null`). Los idiomas que no
+ * son es, en, pt ni fr pueden dejar claves sin traducir: lo que falte sale en inglés.
+ */
 export function textosMain(idioma: IdiomaUi | null): TextosMain {
-  return TEXTOS[idioma ?? 'es'];
+  const i = idioma ?? 'es';
+  let t = completados.get(i);
+  if (!t) {
+    t = { ...TEXTOS.en, ...(TEXTOS[i] as Partial<TextosMain>) };
+    completados.set(i, t);
+  }
+  return t;
+}
+
+/** Claves de `textosMain` que cada idioma no tiene propias (las que salen en inglés). */
+export function clavesSinTraducirMain(idioma: IdiomaUi): string[] {
+  const propio = TEXTOS[idioma] as Record<string, string>;
+  return Object.keys(TEXTOS.es).filter((k) => !(k in propio));
 }
 
 /** Idioma de la interfaz para un locale del sistema (`es-CO` → `es`); inglés si no es de los cuatro. */

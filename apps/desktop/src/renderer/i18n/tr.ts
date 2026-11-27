@@ -3,14 +3,14 @@
  * Sabit sözlük: hizmet, örnek, site, tünel, yedek, bildirim; Doctor ve WolfCore Dev
  * çevrilmez. Resmî 'siz' dili; Git dışında 'dal' yerine her zaman 'sürüm' kullanılır.
  */
-import type { Textos } from './es';
+import type { TextosParciales } from './es';
 
-const plural = (n: number, tekil: string, cogul: string): string => `${n} ${n === 1 ? tekil : cogul}`;
+const plural = (n: number, tekil: string, cogul: string): string =>
+  `${n} ${n === 1 ? tekil : cogul}`;
 
-export const tr: Textos = {
+export const tr: TextosParciales = {
   app: {
     nombre: 'WolfCore Dev',
-    lema: 'Zahmetsiz PHP ve Nginx',
     version: 'Sürüm',
   },
   nav: {
@@ -149,8 +149,7 @@ export const tr: Textos = {
       'instancias.confirmacion': 'Devam etmek için "{id}" yazın.',
       'instancias.sin_datos': '{id} klasöründe veri yok: geri yüklemek için bir yedek seçin.',
       'instancias.respaldo_no_existe': '{id} için böyle bir yedek yok.',
-      'instancias.respaldo_en_uso':
-        'Bu kopya kilitli olan {id} için gereklidir: önce onu çözün.',
+      'instancias.respaldo_en_uso': 'Bu kopya kilitli olan {id} için gereklidir: önce onu çözün.',
       'instancias.version_requerida':
         '{id} için hangi sürüme dönüleceği bilinmiyor: aynı ana sürümden yüklü bir sürüm seçin.',
       'instalador.version_en_uso':
@@ -187,11 +186,9 @@ export const tr: Textos = {
         '{dominio} sitesini internette yayınlamak WolfCore Dev içinde onay gerektirir.',
       'tuneles.confirmacion_obsoleta':
         '{dominio} tüneli onaylandıktan sonra değişti: yeniden onaylayın.',
-      'tuneles.cloudflared_no_instalado':
-        'cloudflared yüklü değil. Hizmetler bölümünden yükleyin.',
+      'tuneles.cloudflared_no_instalado': 'cloudflared yüklü değil. Hizmetler bölümünden yükleyin.',
       'tuneles.proveedor_no_disponible': '{proveedor} tünel sağlayıcısı kullanılamıyor.',
-      'tuneles.cloudflare_sin_cuenta':
-        'Önce tünel seçeneklerinden Cloudflare hesabınızı bağlayın.',
+      'tuneles.cloudflare_sin_cuenta': 'Önce tünel seçeneklerinden Cloudflare hesabınızı bağlayın.',
       'tuneles.cloudflare_sin_credencial':
         'Bu tünelin kayıtlı kimlik bilgisi yok: tünel seçeneklerinden yeniden oluşturun.',
       'tuneles.cloudflare_datos_invalidos':
@@ -203,12 +200,12 @@ export const tr: Textos = {
         '{nombre} tünelinde etkin bağlantılar var (cloudflared silmek için -f ister). Açık olduğu tüm bilgisayarlardan kapatıp tekrar deneyin veya «Yalnızca burada unut» seçeneğini kullanın.',
       'tuneles.nombre_en_uso': '{nombre} tüneli başka bir site tarafından kullanılıyor.',
       'tuneles.dominio_en_uso': '{dominio} alan adı başka bir site tarafından kullanılıyor.',
-      'tuneles.confirmacion_olvidar': '{nombre} tünelini unutmak veya yeniden oluşturmak onay gerektirir.',
+      'tuneles.confirmacion_olvidar':
+        '{nombre} tünelini unutmak veya yeniden oluşturmak onay gerektirir.',
       'tuneles.cloudflare_fallo': 'cloudflared işlemi tamamlayamadı: {detalle}',
       'tuneles.credencial_no_protegida':
         'Kimlik bilgisi mevcut kullanıcıyla sınırlandırılamadığı için kullanılmadı.',
-      'tuneles.sin_cifrado':
-        'Sistem şifrelemesi kullanılamıyor: kimlik bilgileri kaydedilemiyor.',
+      'tuneles.sin_cifrado': 'Sistem şifrelemesi kullanılamıyor: kimlik bilgileri kaydedilemiyor.',
       'tuneles.token_invalido':
         'Belirteç geçersiz: yalnızca harf, rakam ve _ . - (8–200 karakter). Tünel seçeneklerinden yeniden kaydedin.',
       'tuneles.ngrok_no_instalado':
@@ -253,8 +250,7 @@ export const tr: Textos = {
         'WolfCore Dev sertifika otoritesi mevcut değil. Sertifika oluşturmadan önce HTTPS bölümünden CA yükleyin.',
       'herramientas.pid_invalido': 'PID geçerli değil.',
       'herramientas.pid_sistema': 'PID {pid} sisteme aittir ve sonlandırılamaz.',
-      'herramientas.proceso_propio':
-        'WolfCore Dev veya onu başlatan işlem sonlandırılamaz.',
+      'herramientas.proceso_propio': 'WolfCore Dev veya onu başlatan işlem sonlandırılamaz.',
       'herramientas.proceso_inexistente': '{pid} işlemi artık mevcut değil.',
       'herramientas.sin_editor':
         'Kod düzenleyici bulunamadı. Bir tane yükleyin (VS Code, Cursor, PhpStorm, Sublime Text…).',
@@ -279,7 +275,8 @@ export const tr: Textos = {
       'terminal.powershell_restringido':
         'Bu bilgisayarda PowerShell kısıtlı dil modunda (kuruluş ilkesi veya AppLocker): WolfCore Dev terminali açamıyor. Proje klasöründe kendiniz açın.',
       'proyectos.no_existe': 'Proje mevcut değil.',
-      'proyectos.no_confiado': 'Reçeteyi çalıştırmak için "Bu depoya güveniyorum" seçeneğini işaretleyin.',
+      'proyectos.no_confiado':
+        'Reçeteyi çalıştırmak için "Bu depoya güveniyorum" seçeneğini işaretleyin.',
       'proyectos.receta_en_curso': 'Bu proje için zaten devam eden bir reçete var.',
       'proyectos.paso_no_omitible': '"Siteyi oluştur" adımı atlanamaz.',
       'workspaces.no_existe': 'Bu çalışma alanı mevcut değil.',
@@ -314,8 +311,7 @@ export const tr: Textos = {
       'cli.formato_no_admitido': 'İstek CLI tarafından kabul edilen biçimde değil.',
       'cli.plazo':
         'Komut çok uzun sürdü: hâlâ sürüyor olabilir. Durumu WolfCore Dev içinde kontrol edin.',
-      'cli.ocupado':
-        'WolfCore Dev çok fazla CLI komutunu işliyor: bir süre bekleyin.',
+      'cli.ocupado': 'WolfCore Dev çok fazla CLI komutunu işliyor: bir süre bekleyin.',
       'cli.requiere_confirmacion':
         'Bu komut bir şey yayınlar veya değiştirir ve {sitio} için onay (--si) gerektirir.',
       'cli.requiere_confirmacion_datos_reales':
@@ -335,13 +331,11 @@ export const tr: Textos = {
       'cli.proveedor_distinto':
         'Site başka bir tünel sağlayıcısı ({proveedor}) kullanıyor. İnceleyip yeniden onaylayın.',
       'cli.sitio_no_encontrado': '{sitio} sitesi mevcut değil.',
-      'cli.carpeta_invalida':
-        'Klasör mevcut değil, sistem klasörü veya WolfCore Dev veri klasörü.',
+      'cli.carpeta_invalida': 'Klasör mevcut değil, sistem klasörü veya WolfCore Dev veri klasörü.',
       'cli.carpeta_sin_sitio':
         'Bu klasör herhangi bir WolfCore Dev sitesine ait değil: önce bağlayın.',
       'cli.ya_vinculada': 'Bu klasör zaten {sitio} sitesidir.',
-      'cli.tipo_no_soportado':
-        '{tipo} türündeki projeler WolfCore Dev arayüzünden oluşturulur.',
+      'cli.tipo_no_soportado': '{tipo} türündeki projeler WolfCore Dev arayüzünden oluşturulur.',
       'cli.sitio_sin_php': '{sitio} sitesi PHP kullanmıyor.',
       'cli.version_no_instalada':
         '{servicio} {version} yüklü değil. Hizmetler bölümünden yükleyin.',
@@ -350,7 +344,8 @@ export const tr: Textos = {
         'Belirteç dosyası mevcut kullanıcıyla sınırlandırılamadı: CLI etkinleştirilmiyor.',
       'cli.carpeta_ajena':
         'Veri klasöründeki run/ klasörü başka bir kullanıcıya ait: CLI etkinleştirilmiyor.',
-      'cli.ruta_invalida': 'WolfCore Dev yolu wolf.cmd tarafından desteklenmeyen karakterler içeriyor.',
+      'cli.ruta_invalida':
+        'WolfCore Dev yolu wolf.cmd tarafından desteklenmeyen karakterler içeriyor.',
       'cli.path_aislado':
         'Test veri klasörüyle (WOLFCORE_DATOS) kullanıcı PATH değeri değiştirilmez.',
       'cli.sin_cliente': 'Bu WolfCore Dev sürümü wolf istemcisini içermiyor (derlenmemiş).',
@@ -371,8 +366,7 @@ export const tr: Textos = {
       'env.solo_lectura': '{clave} değişkeni birden fazla satır kaplıyor: dosyada elle düzenleyin.',
       'env.usuario_compartido':
         '{base} veritabanını {proyecto} projesi de kullanıyor: kullanıcısını paylaşmak istediğinizi onaylayın.',
-      'env.cambio_externo':
-        'Önizlemeden bu yana .env değişti: kaydetmeden önce yeniden inceleyin.',
+      'env.cambio_externo': 'Önizlemeden bu yana .env değişti: kaydetmeden önce yeniden inceleyin.',
       'env.sin_confirmar': '.env değişikliklerini kaydetmek istediğinizi onaylayın.',
       'env.versionado':
         'Git bu projenin .env dosyasını zaten izliyor: sonraki commit değerlerini yükler. Devam etmek için ayrıca onaylayın.',
@@ -382,7 +376,8 @@ export const tr: Textos = {
       'env.sin_base': 'Bu projenin .env dosyasında veritabanı bağlantısı yok.',
       'env.base_no_resuelta':
         'Bu projenin veritabanı yerel bir WolfCore Dev sunucusuna ait değil: hiçbir şey değiştirilmedi.',
-      'env.motor_no_soportado': 'Şimdilik "Özel kullanıcı kullan" yalnızca MySQL ve MariaDB ile çalışır.',
+      'env.motor_no_soportado':
+        'Şimdilik "Özel kullanıcı kullan" yalnızca MySQL ve MariaDB ile çalışır.',
       'env.ya_usa_usuario_propio': 'Bu proje zaten özel kullanıcı kullanıyor.',
       'plantillas.id_invalido': 'Şablon kimliği geçerli değil.',
       'plantillas.no_existe': 'Şablon mevcut değil.',
@@ -394,8 +389,7 @@ export const tr: Textos = {
         'Proje şablon olarak kaydetmek için çok büyük (en fazla {maximo}). Büyük klasörleri hariç tutun.',
       'plantillas.exclusion_invalida':
         'Hariç tutmalardan biri geçersiz (".." olmadan ad veya göreli yol kullanın).',
-      'plantillas.nombre_invalido':
-        'Şablon adı geçersiz (1–60 karakter).',
+      'plantillas.nombre_invalido': 'Şablon adı geçersiz (1–60 karakter).',
       'plantillas.esquema_fallo':
         'Proje veritabanı şeması okunamadı: hizmetinin çalıştığını doğrulayın.',
       'plantillas.base_no_resuelta':
@@ -446,8 +440,7 @@ export const tr: Textos = {
       'herramientas.pdf_plazo': 'PDF {segundos} sn’den uzun sürdü ve iptal edildi.',
       'herramientas.salida_ocupada': 'Yeni dosya için uygun bir ad bulunamadı.',
       'conversor.formato': 'Bu dönüştürme kullanılamıyor.',
-      'conversor.archivo_invalido':
-        'Dosya bozuk veya uzantısının belirttiği türde değil.',
+      'conversor.archivo_invalido': 'Dosya bozuk veya uzantısının belirttiği türde değil.',
       'conversor.archivo_grande': 'Dosya çok büyük (en fazla {maximo}).',
       'conversor.archivo_peligroso':
         'Dosya bir ZIP bombasına benziyor veya kurcalanmış (aşırı içerik, XML varlıkları veya geçersiz adlar) ve güvenlik nedeniyle açılmadı.',
@@ -461,7 +454,8 @@ export const tr: Textos = {
         'Bu dönüştürme LibreOffice gerektirir ancak bu bilgisayarda yüklü değil (WolfCore Dev yüklemez).',
       'conversor.libreoffice_fallo': 'LibreOffice belgeyi dönüştüremedi.',
       'conversor.limite_celdas': 'Tabloda çok fazla hücre var (en fazla {maximo}).',
-      'conversor.memoria': 'Dosya çok fazla bellek gerektiriyor ({maximo} sınırını aştı) ve iptal edildi.',
+      'conversor.memoria':
+        'Dosya çok fazla bellek gerektiriyor ({maximo} sınırını aştı) ve iptal edildi.',
       'conversor.pdf_no_disponible': 'PDF olarak yazdırma şu anda kullanılamıyor.',
       'herramientas.imagen_pixeles':
         'Görselde toplam çok fazla piksel var ({ancho}×{alto} px; en fazla {maximo}) ve güvenlik nedeniyle açılmadı.',
@@ -537,16 +531,17 @@ export const tr: Textos = {
       'proyectos.sin_python': 'Yüklü Python yok: Hizmetler bölümünden yükleyin.',
       'proyectos.venv_ajeno':
         'Proje kendi .venv klasörünü içeriyor ve WolfCore Dev yabancı bir depodaki Python’ı çalıştırmaz: silin ve ortamı yeniden oluşturun.',
-      'proyectos.paso_base_no_omitible':
-        'Yeni bir projede "Veritabanı oluştur" adımı atlanamaz.',
+      'proyectos.paso_base_no_omitible': 'Yeni bir projede "Veritabanı oluştur" adımı atlanamaz.',
       'proyectos.sin_php': 'Yüklü PHP yok: Hizmetler bölümünden yükleyin.',
       'proyectos.php_no_instalado': 'PHP {version} yüklü değil: Hizmetler bölümünden yükleyin.',
       'proyectos.python_no_instalado':
         'Python {version} yüklü değil: Hizmetler bölümünden yükleyin.',
       'mcp.token_invalido': 'MCP sunucu belirteci geçerli değil.',
       'mcp.solicitud_cancelada': 'MCP istemcisi isteği iptal etti: işlem çalıştırılmadı.',
-      'doctor.puerto_ocupado': '{servicio} için {puerto} bağlantı noktasını başka bir program ({proceso}) kullanıyor.',
-      'doctor.puerto_iis': 'IIS ({programa}), {servicio} için {puerto} bağlantı noktasını kullanıyor.',
+      'doctor.puerto_ocupado':
+        '{servicio} için {puerto} bağlantı noktasını başka bir program ({proceso}) kullanıyor.',
+      'doctor.puerto_iis':
+        'IIS ({programa}), {servicio} için {puerto} bağlantı noktasını kullanıyor.',
       'doctor.puerto_http_sys':
         'Bir Windows hizmeti ({programa}), {servicio} için {puerto} bağlantı noktasını kullanıyor.',
       'doctor.puerto_flyenv':
@@ -555,7 +550,8 @@ export const tr: Textos = {
       'doctor.puerto_skype': '{programa}, {servicio} için {puerto} bağlantı noktasını kullanıyor.',
       'doctor.puerto_reservado':
         '{servicio} için {puerto} bağlantı noktası Windows tarafından ayrılmış bir aralıkta ({desde}-{hasta}: Hyper-V, WSL veya Docker).',
-      'doctor.ca_por_vencer': 'WolfCore Dev sertifika otoritesinin süresi {dias} gün içinde dolacak.',
+      'doctor.ca_por_vencer':
+        'WolfCore Dev sertifika otoritesinin süresi {dias} gün içinde dolacak.',
       'doctor.ca_vencida': 'WolfCore Dev sertifika otoritesinin süresi doldu.',
       'doctor.certificado_por_vencer': '{dominio} sertifikasının süresi {dias} gün içinde dolacak.',
       'doctor.certificado_vencido': '{dominio} sertifikasının süresi doldu.',
@@ -590,11 +586,11 @@ export const tr: Textos = {
       'doctor.revision_fallida': '{revision} denetimi tamamlanamadı.',
       'doctor.confirmacion_requerida': 'Uygulamadan önce onarımı onaylayın.',
       'doctor.hallazgo_desconocido': 'Bu bulgu artık yok: yeniden denetleyin.',
-      'doctor.solo_informa':
-        'Bu bulgunun otomatik onarımı yok: yönergeleri izleyin.',
+      'doctor.solo_informa': 'Bu bulgunun otomatik onarımı yok: yönergeleri izleyin.',
       'doctor.reparacion_fallida': 'Onarım uygulanamadı.',
       'doctor.reparacion_cancelada': 'Yönetici izni iptal edildi: hiçbir şey değiştirilmedi.',
-      'doctor.reparacion_denegada': 'Windows veya antivirüs erişimi reddetti: hiçbir şey değiştirilmedi.',
+      'doctor.reparacion_denegada':
+        'Windows veya antivirüs erişimi reddetti: hiçbir şey değiştirilmedi.',
       'doctor.ya_resuelto': 'Sorun zaten giderilmiş: değişiklik gerekmedi.',
       'doctor.ca_vieja_sin_quitar':
         'Yeni sertifika otoritesi kullanımda ancak eskisi Windows deposundan kaldırılamadı. HTTPS bölümünden kaldırabilirsiniz.',
@@ -615,7 +611,8 @@ export const tr: Textos = {
         'Firefox klasörü dışında profiller var: bunları CA güveni bölümünden ayrı onayla etkinleştirin.',
       'confianza.node_variable_cambiada':
         'NODE_EXTRA_CA_CERTS artık WolfCore Dev otoritesine işaret etmiyor (elle değiştirilmiş): silinmedi.',
-      'ia.clave_invalida': 'Sağlayıcı anahtarı reddetti: kontrol edin veya yeni bir anahtar oluşturun.',
+      'ia.clave_invalida':
+        'Sağlayıcı anahtarı reddetti: kontrol edin veya yeni bir anahtar oluşturun.',
       'ia.sin_saldo': 'Sağlayıcı hesabında bakiye veya kota kalmadı.',
       'ia.limite': 'Sağlayıcı istekleri sınırladı: bir süre bekleyip tekrar deneyin.',
       'ia.region': 'Sağlayıcı ülkenizde veya bölgenizde hizmet vermiyor.',
@@ -626,8 +623,7 @@ export const tr: Textos = {
       'ia.respuesta_rara': 'Sağlayıcı beklenmeyen bir yanıt döndürdü.',
       'ia.cancelado': 'Sağlayıcıya yapılan istek iptal edildi.',
       'ia.sin_clave': 'Bu sağlayıcı bir anahtar gerektirir: önce kaydedin.',
-      'ia.clave_mal_formada':
-        'Anahtar biçimi geçersiz (boşluk veya satır sonu olmamalı).',
+      'ia.clave_mal_formada': 'Anahtar biçimi geçersiz (boşluk veya satır sonu olmamalı).',
       'ia.modelo_invalido': 'Model adı geçerli değil.',
       'ia.modelo_no_disponible': 'Model mevcut değil veya hesabınızın erişimi yok.',
       'ia.proveedor_invalido': 'Sağlayıcı ayarları geçerli değil.',
@@ -644,11 +640,11 @@ export const tr: Textos = {
         'Sağlayıcının kayıtlı bir anahtarı var: yeni URL’ye göndermek istediğinizi onaylayın.',
       'ia.mensaje_sin_confirmar':
         'Test mesajının gönderimini onaylayın (hesabınızdan belirteç harcar).',
-      'ia.clave_ilegible':
-        'Sağlayıcının kayıtlı anahtarı okunamadı: silip yeniden kaydedin.',
+      'ia.clave_ilegible': 'Sağlayıcının kayıtlı anahtarı okunamadı: silip yeniden kaydedin.',
       'ia.argumento_invalido': 'Geçersiz veri ({campo}).',
       'correo.auth': 'Sağlayıcı kullanıcı adını veya parolayı reddetti.',
-      'correo.conexion': 'SMTP sunucusuna bağlanılamadı: sunucu ve bağlantı noktasını kontrol edin.',
+      'correo.conexion':
+        'SMTP sunucusuna bağlanılamadı: sunucu ve bağlantı noktasını kontrol edin.',
       'correo.tls':
         'Sunucuyla geçerli bir şifreli bağlantı kurulamadı (sertifika, ad veya STARTTLS). Hiçbir şey gönderilmedi.',
       'correo.rechazado':
@@ -662,8 +658,7 @@ export const tr: Textos = {
       'correo.proveedor_invalido': 'Sağlayıcı verileri geçerli değil.',
       'correo.proveedor_no_existe': 'E-posta sağlayıcısı artık mevcut değil.',
       'correo.sin_clave': 'Sağlayıcının kayıtlı bir anahtarı yok.',
-      'correo.clave_ilegible':
-        'Sağlayıcının kayıtlı anahtarı okunamadı: silip yeniden kaydedin.',
+      'correo.clave_ilegible': 'Sağlayıcının kayıtlı anahtarı okunamadı: silip yeniden kaydedin.',
       'correo.cambia_con_clave':
         'Sağlayıcının kayıtlı bir anahtarı var: yeni sunucuya göndermek istediğinizi onaylayın.',
       'correo.env_sin_confirmar':
@@ -692,8 +687,7 @@ export const tr: Textos = {
       'agentes.no_instalado': '{agente} yüklü değil.',
       'agentes.mcp_no_soportado':
         '{agente}, bir ortam değişkeninden belirteç okumayı belgelemiyor: MCP kaydedilmez.',
-      'agentes.config_ilegible':
-        '{archivo} ayrıştırılamadı; değiştirilmedi. Elle kontrol edin.',
+      'agentes.config_ilegible': '{archivo} ayrıştırılamadı; değiştirilmedi. Elle kontrol edin.',
       'agentes.config_en_uso':
         'WolfCore Dev düzenlerken {archivo} değişti: ajanı kapatıp tekrar deneyin. Değiştirilmedi.',
       'agentes.proveedor_incompatible': '{agente} bu yapay zekâ sağlayıcısını kullanamaz.',
@@ -711,8 +705,7 @@ export const tr: Textos = {
         'PHP {rama} yeniden başlamadı; önceki hâli geri yüklendi ancak hâlâ yanıt vermiyor. Hizmetler ve PHP kayıtlarını kontrol edin.',
       'php.respaldo_no_existe': 'Bu php.ini yedeği mevcut değil.',
       'php.extension_no_existe': '{nombre} uzantısı bu sürümün ext klasöründe yok.',
-      'php.extension_no_catalogo':
-        '{nombre} uzantısı bu sürümün kataloğunda yok.',
+      'php.extension_no_catalogo': '{nombre} uzantısı bu sürümün kataloğunda yok.',
       'php.variante_desconocida': 'Bu PHP’nin derleme türü belirlenemedi.',
       'php.sin_variante': 'Katalogda {variante} derlemesi için {nombre} yok.',
       'php.huella_distinta': 'İndirme yayınlanan özetle eşleşmiyor; hiçbir şey yüklenmedi.',
@@ -731,8 +724,7 @@ export const tr: Textos = {
         '.vscode klasörü veya launch.json dosyası bir bağlantı ya da başka bir tür: buraya yazılmaz.',
       'xdebug.sin_configurar': 'launch.json oluşturmadan önce sitede Xdebug yapılandırın.',
       'nginx.sitio_no_existe': 'Bu site artık mevcut değil.',
-      'nginx.texto_invalido':
-        'vhost metni çok uzun, boş veya denetim karakterleri içeriyor.',
+      'nginx.texto_invalido': 'vhost metni çok uzun, boş veya denetim karakterleri içeriyor.',
       'nginx.sintaxis': 'Satır {linea}: {detalle}. Hiçbir şey değiştirilmedi.',
       'nginx.directiva_prohibida':
         'Satır {linea}: «{directiva}» bir site vhost dosyasında yasaktır (diğer siteleri veya proje dışı dosyaları etkileyebilir). Hiçbir şey değiştirilmedi.',
@@ -778,12 +770,12 @@ export const tr: Textos = {
       'catalogo.huella_debil':
         '{servicio} {version} yalnızca zayıf bir özete sahip (MD5 veya SHA-1): pencereden yüklemeyi onaylayın.',
       'catalogo.huella_no_coincide': 'İndirme yayınlanan özetle eşleşmiyor.',
-      'catalogo.redireccion_ajena': 'İndirme izin verilmeyen bir siteye ({host}) yönlendirmeyi denedi.',
+      'catalogo.redireccion_ajena':
+        'İndirme izin verilmeyen bir siteye ({host}) yönlendirmeyi denedi.',
       'catalogo.demasiadas_redirecciones':
         'İndirme çok fazla yönlendirme yaptı ({maximo} sınırını aştı).',
       'catalogo.respuesta_grande': 'Sunucu yanıtı çok büyük.',
-      'catalogo.version_no_encontrada':
-        '{servicio} için {version} sürümü katalogda yok.',
+      'catalogo.version_no_encontrada': '{servicio} için {version} sürümü katalogda yok.',
       'catalogo.huella_no_disponible':
         '{servicio} {version} özeti alınamadı (bağlantı yok veya kaynak yanıt vermedi). Tekrar deneyin.',
       'catalogo.firma_invalida':
@@ -802,16 +794,14 @@ export const tr: Textos = {
         'phpMyAdmin yalnızca MySQL ve MariaDB veritabanlarını açar; PostgreSQL için Adminer kullanın.',
       'acceso_bd.servidor_no_resuelto':
         'Bu projenin veritabanı yerel bir WolfCore Dev sunucusuna ait değil.',
-      'acceso_bd.no_listo':
-        'Araç hazır değil: Hizmetler bölümünden yükleyin ve PHP’yi başlatın.',
+      'acceso_bd.no_listo': 'Araç hazır değil: Hizmetler bölümünden yükleyin ve PHP’yi başlatın.',
       'auditoria.tabla_invalida': 'Tablo bu veritabanında mevcut değil.',
       'auditoria.columna_invalida':
         'Sütun bu tabloda mevcut değil (kullanıcı ve hash sütunları farklı olmalıdır).',
       'auditoria.usuario_no_encontrado': 'Bu kullanıcı adıyla hiçbir hesap yok.',
       'auditoria.usuario_repetido':
         'Bu kullanıcı adıyla birden fazla hesap var: yanlış hesaba dokunmamak için sıfırlanmaz.',
-      'auditoria.formato_no_soportado':
-        'Geçerli hash biçimi yeniden üretilemiyor: sıfırlanmaz.',
+      'auditoria.formato_no_soportado': 'Geçerli hash biçimi yeniden üretilemiyor: sıfırlanmaz.',
       'auditoria.clave_larga':
         'bcrypt parolanın yalnızca ilk 72 baytını kullanır: daha kısa bir parola seçin.',
       'auditoria.clave_invalida': 'Yeni parola geçerli değil.',
@@ -819,15 +809,13 @@ export const tr: Textos = {
       'auditoria.respaldo_previo_fallo':
         'Sıfırlamadan önce veritabanı yedeği kaydedilemedi: hiçbir şey değiştirilmedi.',
       'auditoria.copia_fallo': 'Satır kopyası kaydedilemedi: hiçbir şey değiştirilmedi.',
-      'auditoria.motor_no_soportado':
-        'Parola denetimi MySQL, MariaDB ve PostgreSQL içindir.',
+      'auditoria.motor_no_soportado': 'Parola denetimi MySQL, MariaDB ve PostgreSQL içindir.',
       'auditoria.cancelada': 'Denetim iptal edildi.',
       'auditoria.usuario_invalido': 'Kullanıcı adı 1 ile 256 karakter arasında olmalıdır.',
       'auditoria.en_curso': 'Zaten bir denetim sürüyor: bitmesini bekleyin veya iptal edin.',
       'auditoria.base_sistema': 'Sistem veritabanı denetlenmez: bir proje veritabanı seçin.',
       'auditoria.esquema_invalido': 'Şema bu veritabanında mevcut değil.',
-      'auditoria.fila_cambio':
-        'Hesap bu sırada değişti: sıfırlanmadı. Tekrar deneyin.',
+      'auditoria.fila_cambio': 'Hesap bu sırada değişti: sıfırlanmadı. Tekrar deneyin.',
       'auditoria.verificacion_fallo':
         'Veritabanı parolayı beklendiği gibi kaydetmedi: değişiklik geri alındı.',
       'auditoria.columna_corta':
@@ -873,13 +861,11 @@ export const tr: Textos = {
     vacio: 'Bu veritabanı için henüz anlık görüntü yok.',
     automatica: 'Otomatik',
     sinNota: 'Not yok',
-    detalle: (tablas: number, tamano: string) =>
-      `${tablas} tablo · ${tamano}`,
+    detalle: (tablas: number, tamano: string) => `${tablas} tablo · ${tamano}`,
     volver: 'Bu anlık görüntüye dön',
     borrar: 'Sil',
     borrada: 'Anlık görüntü çöp kutusuna taşındı',
-    papelera:
-      'Silinen anlık görüntüler WolfCore Dev çöp kutusundan 7 gün boyunca kurtarılabilir.',
+    papelera: 'Silinen anlık görüntüler WolfCore Dev çöp kutusundan 7 gün boyunca kurtarılabilir.',
     cerrar: 'Kapat',
     papeleraTitulo: 'Çöp kutusu',
     papeleraVacia: 'Çöp kutusunda anlık görüntü yok.',
@@ -1079,8 +1065,7 @@ export const tr: Textos = {
   },
   workspaces: {
     titulo: 'Çalışma alanları',
-    descripcion:
-      'Birlikte başlatılıp durdurulan veritabanı, hizmet ve işlem grupları.',
+    descripcion: 'Birlikte başlatılıp durdurulan veritabanı, hizmet ve işlem grupları.',
     nuevo: 'Yeni çalışma alanı',
     vacio:
       'Henüz çalışma alanı yok. Örneğin PostgreSQL, Redis, Ollama ve proje işleminizle «Bot FastAPI» oluşturun.',
@@ -1115,7 +1100,8 @@ export const tr: Textos = {
         procesos: 'Proje işlemleri',
       },
       sinOpciones: 'Burada seçilecek bir şey yok.',
-      captadorUnico: 'Aynı anda yalnızca bir e-posta yakalayıcı: başka birini seçmek öncekini değiştirir.',
+      captadorUnico:
+        'Aynı anda yalnızca bir e-posta yakalayıcı: başka birini seçmek öncekini değiştirir.',
       yaNoExisten: (lista: string) => `Artık mevcut değil ve kaydederken kaldırılacak: ${lista}`,
       guardar: 'Kaydet',
       guardado: (n: string) => `«${n}» çalışma alanı kaydedildi.`,
@@ -1160,8 +1146,7 @@ export const tr: Textos = {
       corregido: 'hosts dosyası güncellendi',
       fallo: 'hosts dosyası güncellenemedi',
       verInstrucciones: 'Yönergeleri gör',
-      duplicados:
-        'Bu alan adları hosts içinde WolfCore Dev bloğunun dışında zaten var (korunur):',
+      duplicados: 'Bu alan adları hosts içinde WolfCore Dev bloğunun dışında zaten var (korunur):',
       motivos: {
         cancelado: 'Yönetici izni iptal edildi. hosts dosyası değişmeden kaldı.',
         tiempo:
@@ -1210,7 +1195,8 @@ export const tr: Textos = {
     versionesDe: (nombre: string) => `${nombre} sürümleri`,
     instancias: (n: number, encendidas: number) => `${n} örnek, ${encendidas} çalışıyor`,
     usarPuerto: (p: number) => `${p} bağlantı noktasını kullan`,
-    puertoCambiado: (nombre: string, p: number) => `${nombre} artık ${p} bağlantı noktasını kullanıyor`,
+    puertoCambiado: (nombre: string, p: number) =>
+      `${nombre} artık ${p} bağlantı noktasını kullanıyor`,
     conflicto: 'Bağlantı noktası kullanımda',
     autoIniciar: 'WolfCore Dev açıldığında başlat',
     autoIniciarActivado: (nombre: string) => `${nombre}, WolfCore Dev açıldığında başlayacak`,
@@ -1243,8 +1229,7 @@ export const tr: Textos = {
         papercut: 'Papercut SMTP tarafından yakalanan tüm e-postalar',
         ollama: 'indirilen tüm Ollama modelleri',
       } as Record<string, string>,
-      texto: (que: string) =>
-        `${que} silinecektir. Geri alınamaz. Program yüklü kalır.`,
+      texto: (que: string) => `${que} silinecektir. Geri alınamaz. Program yüklü kalır.`,
       generico: (nombre: string) => `${nombre} verilerinin tamamı`,
       pedir: (id: string) => `Onaylamak için ${id} yazın`,
       boton: 'Verileri sil',
@@ -1253,8 +1238,6 @@ export const tr: Textos = {
     ftp: {
       interruptor: 'FTP sunucusu',
       redLocal: 'Yerel ağ bağlantısına izin ver',
-      redLocalAyuda:
-        'Kapalıyken yalnızca bu bilgisayar bağlanabilir (127.0.0.1). Her site kendi erişimini Siteler bölümünden açar.',
       avisoTitulo: 'FTP’yi yerel ağa aç',
       avisoTexto:
         'FTP kullanıcı adlarını, parolaları ve dosyaları şifresiz gönderir. Ağınızdaki herhangi bir cihaz bağlanmayı deneyebilir. Yalnızca güvendiğiniz bir ağda kullanın.',
@@ -1270,7 +1253,8 @@ export const tr: Textos = {
       sinVersion: 'yüklü değil',
       uso: 'Kullanım',
       usoTexto: 'composer',
-      ayuda: 'Bir projede «Terminal» kullanın veya Ayarlar bölümünden WolfCore Dev’i PATH’e ekleyin.',
+      ayuda:
+        'Bir projede «Terminal» kullanın veya Ayarlar bölümünden WolfCore Dev’i PATH’e ekleyin.',
       instaladoOk: 'Composer yüklendi',
       sinPhp: 'Önce PHP yükleyin',
       actualizado: (v: string) => `Composer güncellendi: ${v}`,
@@ -1336,7 +1320,8 @@ export const tr: Textos = {
     irAServicios: 'Hizmetlere git',
     apagado: {
       titulo: (motor: string) => `${motor} durduruldu`,
-      texto: (motor: string) => `Veritabanlarını görmek ve yönetmek için ${motor} hizmetini başlatın.`,
+      texto: (motor: string) =>
+        `Veritabanlarını görmek ve yönetmek için ${motor} hizmetini başlatın.`,
       iniciando: (motor: string) => `${motor} başlatılıyor…`,
       error: (motor: string) => `${motor} başlatılamadı`,
       encender: (motor: string) => `${motor} başlat`,
@@ -1369,8 +1354,7 @@ export const tr: Textos = {
     } as Record<string, string>,
     formatoDesconocido:
       'Biçim tanınmadı. Sıkıştırılmış bir dosyaysa açın ve içindeki .sql veya .dump dosyasını seçin.',
-    formatoIncompatible:
-      'Bu dosya bir PostgreSQL yedeğidir: PostgreSQL sekmesinden geri yükleyin.',
+    formatoIncompatible: 'Bu dosya bir PostgreSQL yedeğidir: PostgreSQL sekmesinden geri yükleyin.',
     nombre: {
       etiqueta: 'Veritabanı adı',
       vacio: 'Bir ad yazın',
@@ -1457,8 +1441,7 @@ export const tr: Textos = {
       claveAyuda: 'Yalnızca bu kopyalama için kullanılır ve kaydedilmez.',
       baseOrigen: 'Kaynak veritabanı',
       destino: 'Bu bilgisayardaki hedef veritabanı',
-      destinoAyuda:
-        'Yoksa oluşturulur. Tablolar içeriyorsa değiştirmeden önce onay istenir.',
+      destinoAyuda: 'Yoksa oluşturulur. Tablolar içeriyorsa değiştirmeden önce onay istenir.',
       faltaHost: 'Sunucuyu yazın',
       faltaPuerto: '1 ile 65535 arasında bir bağlantı noktası kullanın',
       faltaUsuario: 'Kullanıcıyı yazın',
@@ -1679,7 +1662,8 @@ export const tr: Textos = {
     cambiarCarpeta: 'Değiştir',
     detectando: 'Proje inceleniyor…',
     detectado: (tipo: string) => `Algılandı: ${tipo}`,
-    sinDeteccionAlEditar: 'Otomatik algılama yalnızca oluştururken geçerlidir; tür ve PHP’yi kontrol edin.',
+    sinDeteccionAlEditar:
+      'Otomatik algılama yalnızca oluştururken geçerlidir; tür ve PHP’yi kontrol edin.',
     nombre: 'Ad',
     nombreAyuda: 'Yalnızca listede tanımak için.',
     nombreCopia: (nombre: string) => `${nombre} (kopya)`,
@@ -1707,8 +1691,7 @@ export const tr: Textos = {
       'Tünel açıldığında genel bağlantı .env içindeki bu değişkene yazılır, kapatıldığında geri yüklenir.',
     urlBaseVarNinguna: 'Yok (.env dosyasına dokunma)',
     datosReales: 'Gerçek müşteri verileri içeriyor',
-    datosRealesAyuda:
-      'Listede işaretlenir ve tünelle yayınlamadan önce onay istenir.',
+    datosRealesAyuda: 'Listede işaretlenir ve tünelle yayınlamadan önce onay istenir.',
     avanzado: 'Gelişmiş',
     reglasExtra: 'Ek Nginx kuralları',
     reglasExtraAyuda:
@@ -1853,7 +1836,6 @@ export const tr: Textos = {
     columnas: { sitio: 'Site', estado: 'Durum', url: 'Bağlantı', acciones: 'İşlemler' },
     vacioTitulo: 'Açık tünel yok',
     vacio: 'Genel bir bağlantı almak için bir sitenin tünel anahtarını açın.',
-    irASitios: 'Sitelere git',
     sinNombre: 'Silinmiş site',
   },
   ajustes: {
@@ -1926,7 +1908,8 @@ export const tr: Textos = {
         'Normalde 443. Başka bir program kullanıyorsa 1024–65535 arası seçin; URL’lerde bağlantı noktası yer alır.',
       puertoRango: '443 veya 1024 ile 65535 arasında bir sayı kullanın',
       puertoGuardado: (p: number) => `HTTPS artık ${p} bağlantı noktasını kullanıyor`,
-      puertoAplicarFallo: 'Bağlantı noktası kaydedildi ancak Nginx yeni yapılandırmayı kabul etmedi',
+      puertoAplicarFallo:
+        'Bağlantı noktası kaydedildi ancak Nginx yeni yapılandırmayı kabul etmedi',
       firefox:
         'Firefox kendi sertifika deposunu kullanır. Güvenmesi için about:config açın ve şunu etkinleştirin:',
     },
@@ -1987,7 +1970,8 @@ export const tr: Textos = {
   formSitioHttps: {
     titulo: 'HTTPS',
     https: 'HTTPS üzerinden de sun',
-    httpsAyuda: 'Alan adı ve takma adları için WolfCore Dev tarafından imzalanmış özel sertifikayla.',
+    httpsAyuda:
+      'Alan adı ve takma adları için WolfCore Dev tarafından imzalanmış özel sertifikayla.',
     redirigir: 'HTTPS’ye yönlendir',
     redirigirAyuda: 'http ziyaretleri https’ye yönlendirilir. Genel tüneller etkilenmez.',
     redirigirDeshabilitado: 'Önce HTTPS’yi etkinleştirin',
@@ -2001,7 +1985,8 @@ export const tr: Textos = {
   },
   terminalSitio: {
     boton: 'Terminal',
-    ayuda: 'Proje klasöründe, kendi PHP ve Composer’ı PATH içinde olacak şekilde bir terminal açar.',
+    ayuda:
+      'Proje klasöründe, kendi PHP ve Composer’ı PATH içinde olacak şekilde bir terminal açar.',
     elegir: 'Terminal seç',
     predeterminada: 'varsayılan',
   },
@@ -2010,9 +1995,7 @@ export const tr: Textos = {
     elegir: 'Birlikte aç…',
     predeterminada: 'varsayılan',
     sustituido: (pred: string, usado: string) =>
-      '{pred} yüklü değil: {usado} ile açıldı.'
-        .replace('{pred}', pred)
-        .replace('{usado}', usado),
+      '{pred} yüklü değil: {usado} ile açıldı.'.replace('{pred}', pred).replace('{usado}', usado),
     error: 'Düzenleyici açılamadı',
   },
   phpSitio: {
@@ -2079,7 +2062,8 @@ export const tr: Textos = {
     launchActualizado: (respaldo: string) => `launch.json güncellendi. Önceki kopya: ${respaldo}`,
     phpStorm: 'PhpStorm yapılandırması',
     copiarPhpStorm: 'PhpStorm yapılandırmasını kopyala',
-    errorNginx: (salida: string) => `Nginx değişikliği kabul etmedi; önceki hâline dönüldü. ${salida}`,
+    errorNginx: (salida: string) =>
+      `Nginx değişikliği kabul etmedi; önceki hâline dönüldü. ${salida}`,
   },
   nginxEditor: {
     etiqueta: 'Nginx',
@@ -2241,8 +2225,7 @@ export const tr: Textos = {
     soloLecturaDesactivado: 'Bu sitenin FTP erişimi artık yazmaya izin veriyor',
     activado: 'FTP erişimi etkinleştirildi',
     desactivarTitulo: 'Bu sitenin FTP erişimi kaldırılsın mı?',
-    desactivarTexto:
-      'Parola silinir ve açık bağlantılar kapatılır. Site klasörüne dokunulmaz.',
+    desactivarTexto: 'Parola silinir ve açık bağlantılar kapatılır. Site klasörüne dokunulmaz.',
     desactivar: 'Erişimi kaldır',
     desactivado: 'FTP erişimi kaldırıldı',
     redLocalAviso:
@@ -2294,7 +2277,8 @@ export const tr: Textos = {
         sinClaveParaProbar: 'Gönderimi test edebilmek için sağlayıcının anahtarını kaydedin.',
         hostLocal: 'Bu sunucu adı bu bilgisayara veya yerel ağa çözülüyor.',
         confirmarRed: 'Yerel ağı onayla',
-        enviado: (para: string) => `${para} adresine e-posta gönderildi. Gelen kutunuzu kontrol edin.`,
+        enviado: (para: string) =>
+          `${para} adresine e-posta gönderildi. Gelen kutunuzu kontrol edin.`,
         fallos: {
           'correo.auth': 'Sağlayıcı kullanıcı adını veya anahtarı reddetti.',
           'correo.conexion': 'Bağlanılamadı: sunucu ve bağlantı noktasını kontrol edin.',
@@ -2326,7 +2310,8 @@ export const tr: Textos = {
         starttls: 'STARTTLS (bağlantı noktası 587)',
         usuario: 'Kullanıcı',
         usuarioObligatorio: 'Kullanıcıyı yazın.',
-        usuarioFijoAyuda: 'Bu sağlayıcı her zaman bu kullanıcıyı kullanır; anahtar hesabınıza aittir.',
+        usuarioFijoAyuda:
+          'Bu sağlayıcı her zaman bu kullanıcıyı kullanır; anahtar hesabınıza aittir.',
         clave: 'SMTP anahtarı',
         claveGuardada: (f: string) => `Kayıtlı: ••••${f}`,
         claveNueva: 'Kaydetmek için anahtarı yazın',
@@ -2335,8 +2320,7 @@ export const tr: Textos = {
         remitente: 'Test göndereni (isteğe bağlı)',
         remitenteAyuda:
           'Birçok sağlayıcı yalnızca doğrulanmış gönderen veya alan adından gönderir. Boş bırakırsanız gönderen hedef adresin kendisi olur.',
-        claveSinEspacios:
-          'Anahtarı sağlayıcının verdiği gibi yapıştırın: iç boşluklar korunur.',
+        claveSinEspacios: 'Anahtarı sağlayıcının verdiği gibi yapıştırın: iç boşluklar korunur.',
         borrarClave: 'Anahtarı sil',
         borrarClaveTitulo: (n: string) => `${n} anahtarı silinsin mi?`,
         borrarClaveTexto: 'Kayıtlı anahtar silinir. Sağlayıcı listede kalmaya devam eder.',
@@ -2372,8 +2356,7 @@ export const tr: Textos = {
         claveConfirmar: 'Anlıyorum, anahtarı ekle',
         agregarGitignore: '.env dosyasını .gitignore içine ekle',
         gitignoreTitulo: '.gitignore dosyasını değiştir',
-        gitignoreTexto:
-          'Projenin .gitignore dosyasına .env satırı eklenir (önceden yedek alınır).',
+        gitignoreTexto: 'Projenin .gitignore dosyasına .env satırı eklenir (önceden yedek alınır).',
         gitignoreConfirmar: 'Ekle',
         versionadoTitulo: 'Git zaten .env dosyasını izliyor',
         versionadoTexto:
@@ -2490,7 +2473,8 @@ export const tr: Textos = {
       documentacion: 'Belgeleri gör',
       nombre: 'Ad',
       urlBase: 'Temel URL',
-      urlAyuda: 'Boş = resmi adres. Yalnızca https:// veya 127.0.0.1 / [::1] için http:// (LM Studio).',
+      urlAyuda:
+        'Boş = resmi adres. Yalnızca https:// veya 127.0.0.1 / [::1] için http:// (LM Studio).',
       urlObligatoria: 'Uyumlu sağlayıcının temel URL’sini yazın.',
       modelo: 'Varsayılan model (isteğe bağlı)',
       modeloAyuda: '.env bloğunda (AI_MODEL) ve test mesajında kullanılır.',
@@ -2534,8 +2518,7 @@ export const tr: Textos = {
       cargando: 'Önizleme hazırlanıyor…',
       textoPlano:
         'Anahtar projenin .env dosyasında düz metin olarak kalacaktır. Bu klasöre erişen herkes okuyabilir.',
-      copiaPrevia:
-        'Mevcut .env öncesinde proje dışına (WolfCore Dev veri klasörüne) kopyalanır.',
+      copiaPrevia: 'Mevcut .env öncesinde proje dışına (WolfCore Dev veri klasörüne) kopyalanır.',
       sinClave: 'Bu sağlayıcı bir anahtar gerektirir: projede kullanmadan önce kaydedin.',
       gitignoreFalta: 'Projenin .gitignore dosyası .env dosyasını yok saymıyor.',
       gitignoreNoExiste: 'Projenin .gitignore dosyası yok.',
@@ -2567,7 +2550,8 @@ export const tr: Textos = {
       confirmarTexto: (carpeta: string) =>
         `Anahtar şifresiz olarak ${carpeta} içine yazılacaktır. Bu dosyayı paylaşmayın ve bir depoya yüklemeyin.`,
       confirmar: 'Anahtarı yaz',
-      escrito: (proyecto: string) => `Yapay zekâ bloğu ${proyecto} projesinin .env dosyasına yazıldı`,
+      escrito: (proyecto: string) =>
+        `Yapay zekâ bloğu ${proyecto} projesinin .env dosyasına yazıldı`,
       copiarComando: 'Komutu kopyala',
     },
   },
@@ -2612,8 +2596,6 @@ export const tr: Textos = {
       yaInstalado: 'Bu model zaten yüklü',
       enCurso: 'Bu model zaten indiriliyor',
       confirmarTitulo: (modelo: string) => `${modelo} indirilsin mi?`,
-      confirmarTexto:
-        'Modeller genellikle birkaç GB boyutundadır (boyuta göre 1 GB’den 40 GB’nin üzerine). Ollama başlamadan boyutu bildirmez: ilerleme çubuğunda görebilir ve istediğiniz zaman iptal edebilirsiniz.',
       confirmar: 'İndir',
     },
     progreso: {
@@ -2650,8 +2632,7 @@ export const tr: Textos = {
       base: 'Ollama temel URL',
       openai: 'OpenAI uyumlu uç nokta',
       env: '.env dosyası için blok',
-      envAyuda:
-        'Laravel veya FastAPI botu için uygundur. WolfCore Dev projelerinize yazmaz.',
+      envAyuda: 'Laravel veya FastAPI botu için uygundur. WolfCore Dev projelerinize yazmaz.',
       copiarEnv: 'Bloğu kopyala',
       copiarDato: (dato: string) => `${dato} kopyala`,
     },
@@ -2660,8 +2641,7 @@ export const tr: Textos = {
   },
   proyectos: {
     titulo: 'Projeler',
-    descripcion:
-      'Her proje kendi .test sitesi, kurulum reçetesi ve işlemleri olan bir klasördür.',
+    descripcion: 'Her proje kendi .test sitesi, kurulum reçetesi ve işlemleri olan bir klasördür.',
     agregar: 'Proje ekle',
     vacioTitulo: 'Henüz proje yok',
     vacio:
@@ -2719,8 +2699,7 @@ export const tr: Textos = {
       clonando: 'Klonlanıyor…',
       clonado: 'Depo klonlandı',
       errorClonar: 'Depo klonlanamadı',
-      sinCancelar:
-        'Klonlama buradan kesilemez: bitmesini bekleyin (birkaç dakika sürebilir).',
+      sinCancelar: 'Klonlama buradan kesilemez: bitmesini bekleyin (birkaç dakika sürebilir).',
       sinGit: 'Git yüklü değil. Yükleyin (git-scm.com) ve bu pencereyi yeniden açın.',
     },
     github: {
@@ -2740,8 +2719,7 @@ export const tr: Textos = {
       usarToken: 'Belirteç kullan',
       token: 'GitHub kişisel belirteci',
       tokenPlaceholder: 'github_pat_…',
-      tokenAyuda:
-        'Bu bilgisayarda şifreli saklanır, bir daha gösterilmez ve projelere yazılmaz.',
+      tokenAyuda: 'Bu bilgisayarda şifreli saklanır, bir daha gösterilmez ve projelere yazılmaz.',
       guardarToken: 'Belirteci kaydet',
       tokenGuardado: 'Belirteç kaydedildi',
       quitarToken: 'Belirteci kaldır',
@@ -2846,7 +2824,8 @@ export const tr: Textos = {
       verRegistro: 'Kaydı gör',
       ocultarRegistro: 'Kaydı gizle',
       listo: 'Proje hazır.',
-      fallo: (paso: string) => `Başarısız: ${paso}. Yeniden deneyin, atlayın veya iptal edin; hiçbir şey geri alınmadı.`,
+      fallo: (paso: string) =>
+        `Başarısız: ${paso}. Yeniden deneyin, atlayın veya iptal edin; hiçbir şey geri alınmadı.`,
       cancelada: 'Hazırlık iptal edildi. Proje kartından devam edebilirsiniz.',
       incompleta: 'Çalıştırılmamış adımlar kaldı.',
       errorCrear: 'Proje oluşturulamadı',
@@ -2862,8 +2841,7 @@ export const tr: Textos = {
       receta: 'Hazırlık',
       reinstalar: 'Bağımlılıkları yeniden yükle',
       reinstalarTitulo: (nombre: string) => `${nombre} reçetesi çalıştırılsın mı?`,
-      reinstalarTexto:
-        'Son hazırlığın adımları (sihirbazda inceledikleriniz) tekrarlanır:',
+      reinstalarTexto: 'Son hazırlığın adımları (sihirbazda inceledikleriniz) tekrarlanır:',
       noRestaura: 'yeniden geri yüklenmez',
       recetaCambio:
         'Proje reçetesi (wolfcore.yml) güvendiğinizden beri değişti. Yeniden yükle kayıtlı olanı tekrarlar; yenisi için "Reçeteyi incele" kullanın.',
@@ -2909,7 +2887,8 @@ export const tr: Textos = {
       atras: (n: number) => `${n} çekilecek`,
       adelante: (n: number) => `${n} gönderilecek`,
       traer: 'Değişiklikleri çek',
-      traerAyuda: 'Birleştirmesiz git pull: yerel değişiklik veya ayrışmış dal varsa hiçbir şeye dokunmaz.',
+      traerAyuda:
+        'Birleştirmesiz git pull: yerel değişiklik veya ayrışmış dal varsa hiçbir şeye dokunmaz.',
       alDia: 'Zaten güncel.',
       actualizado: 'Değişiklikler çekildi',
       sugeridosTitulo: 'Değişiklikler çekildi',
@@ -3089,8 +3068,7 @@ export const tr: Textos = {
       'Nginx, PHP, hizmetler, siteler, proje işlemleri ve tünellerin kayıtlarını canlı izleyin.',
     fuente: 'Kaynak',
     elegirFuente: 'Bir kayıt seçin',
-    sinFuentes:
-      'Henüz kayıt yok. Bir hizmet, site veya işlem ilk satırı yazdığında görünürler.',
+    sinFuentes: 'Henüz kayıt yok. Bir hizmet, site veya işlem ilk satırı yazdığında görünürler.',
     buscar: 'Metne göre filtrele',
     niveles: { error: 'ERROR', warning: 'WARNING', info: 'INFO' } as Record<string, string>,
     pausar: 'Duraklat',
@@ -3197,8 +3175,7 @@ export const tr: Textos = {
       rechazada: 'İşlem reddedildi',
       vencida: 'İstek artık beklemede değil.',
       descartadas: (n: number) => `ve sığmayan ${n} tane daha (kendiliğinden süresi dolacak)`,
-      falloRespuesta: (detalle: string) =>
-        `Yanıt gönderilemedi; istek hâlâ beklemede. ${detalle}`,
+      falloRespuesta: (detalle: string) => `Yanıt gönderilemedi; istek hâlâ beklemede. ${detalle}`,
       si: 'Evet',
       no: 'Hayır',
       campos: {
@@ -3240,7 +3217,10 @@ export const tr: Textos = {
         nombre: 'Bağlantı noktaları ve işlemler',
         descripcion: 'Her bağlantı noktasını kimin dinlediğini görün ve işlemi sonlandırın.',
       },
-      bom: { nombre: 'UTF-8 BOM temizliği', descripcion: 'Dosyalardan veya klasörlerden BOM kaldırır.' },
+      bom: {
+        nombre: 'UTF-8 BOM temizliği',
+        descripcion: 'Dosyalardan veya klasörlerden BOM kaldırır.',
+      },
       certificados: {
         nombre: 'Sertifikalar',
         descripcion: 'Herhangi bir ad için WolfCore Dev CA ile sertifika verin.',
@@ -3259,7 +3239,10 @@ export const tr: Textos = {
         nombre: 'Dosya bilgisi',
         descripcion: 'Bir dosyanın boyutu, türü ve özetleri.',
       },
-      websocket: { nombre: 'WebSocket istemcisi', descripcion: 'Bağlanın, gönderin ve iletileri görün.' },
+      websocket: {
+        nombre: 'WebSocket istemcisi',
+        descripcion: 'Bağlanın, gönderin ve iletileri görün.',
+      },
       contrasenas: {
         nombre: 'Parolalar',
         descripcion: 'Parola gücünü ölçün ve veritabanlarınızdaki zayıf hesapları denetleyin.',
@@ -3286,7 +3269,6 @@ export const tr: Textos = {
       jsonInvalido: (linea: number, columna: number) =>
         `Geçersiz JSON: satır ${linea}, sütun ${columna} konumunu kontrol edin.`,
       banderas: 'Geçersiz bayraklar: yalnızca tekrar etmeden d, g, i, m, s, u, v veya y kullanın.',
-      regex: (detalle: string) => `Geçersiz ifade (${detalle}).`,
       trabajador: 'İşlem arka planda çalıştırılamadı.',
       diffLento: 'Metinler zamanında karşılaştırmak için fazla farklı.',
       base64: 'Geçersiz Base64.',
@@ -3406,8 +3388,7 @@ export const tr: Textos = {
       seleccion: (n: number) => `${n} yol seçildi`,
       analizar: 'İncele',
       limpiar: 'BOM kaldır',
-      confirmar: (n: number) =>
-        `${n} dosyadan BOM kaldırılacak (yedekli). Devam edilsin mi?`,
+      confirmar: (n: number) => `${n} dosyadan BOM kaldırılacak (yedekli). Devam edilsin mi?`,
       conBom: (n: number) => `BOM içeren ${n} dosya`,
       sinBom: 'Hiçbir dosyada BOM yok.',
       limpiados: (n: number) => `${n} dosya temizlendi.`,
@@ -3504,7 +3485,6 @@ export const tr: Textos = {
       regex: 'Düzenli ifade',
       mayusculas: 'Büyük/küçük harf duyarlı',
       incluir: 'Yalnızca dosyalar (virgülle ayırın, ör. *.php)',
-      excluir: 'Atla (virgülle ayırın)',
       buscar: 'Ara',
       cancelar: 'İptal',
       buscando: 'Aranıyor…',
@@ -3623,8 +3603,7 @@ export const tr: Textos = {
       despues: 'Sonra',
       sinMejora: 'PDF optimize edilince küçülmeyecekti: yeni dosya oluşturulmadı.',
       sufijoOptimizado: '-optimize',
-      omitidos: (n: number) =>
-        `${n} bağlantı, okunamayan klasör veya özel dosya dahil edilmedi.`,
+      omitidos: (n: number) => `${n} bağlantı, okunamayan klasör veya özel dosya dahil edilmedi.`,
       archivos: (n: number) => `${n} dosya`,
       ahorro: (porcentaje: number) =>
         porcentaje > 0
@@ -3709,8 +3688,7 @@ export const tr: Textos = {
         sinMotores: 'Kendi MySQL, MariaDB veya PostgreSQL sunucunuz yok.',
         revisar: 'İncele',
         revisando: 'İnceleniyor…',
-        resumen: (r: number, d: number) =>
-          `${r} hesap incelendi · ${d} zayıf`,
+        resumen: (r: number, d: number) => `${r} hesap incelendi · ${d} zayıf`,
         sinDebiles: 'İncelenen hiçbir hesap çok yaygın bir parolayla eşleşmedi.',
         noRevisables: (n: number) => `${n} hesap incelenemedi:`,
         truncado:
@@ -3829,14 +3807,16 @@ export const tr: Textos = {
       servicios: 'Hizmetler',
     },
     reparaciones: {
-      cambiar_puerto: 'WolfCore Dev bağlantı noktasını boş bir bağlantı noktasına taşıyın. Diğer programa dokunulmaz.',
+      cambiar_puerto:
+        'WolfCore Dev bağlantı noktasını boş bir bağlantı noktasına taşıyın. Diğer programa dokunulmaz.',
       puerto_manual:
         'WolfCore Dev bağlantı noktasını ayrılmış aralığın dışına taşıyın. Aralığı serbest bırakmaya gösterilen komutla siz karar verirsiniz.',
       detener_iis:
         'Bağlantı noktasını serbest bırakmak için IIS hizmetini (W3SVC) durdurun. Devre dışı bırakılmaz: Windows yeniden başlayınca tekrar açılır.',
       regenerar_ca:
         'Yeni sertifika otoritesi oluşturun, Windows’ta güvenin (onay ister), sertifikaları yeniden verin ve eskisini kaldırın. Öncesinde kopya alınır.',
-      regenerar_certificados: 'Sitelerin sertifikalarını yeniden verin ve Nginx’i yeniden yükleyin.',
+      regenerar_certificados:
+        'Sitelerin sertifikalarını yeniden verin ve Nginx’i yeniden yükleyin.',
       hosts_reescribir:
         'hosts dosyasındaki WolfCore Dev bloğunu önceden yedek alarak UTF-8 ile yeniden yazın. Diğer satırlara dokunulmaz.',
       hosts_solo_lectura: 'hosts dosyasının salt okunur özniteliğini kaldırın.',
@@ -3850,8 +3830,6 @@ export const tr: Textos = {
         'Gösterilen komutla Visual Studio Build Tools (C++ araçlarıyla) yükleyin: birkaç GB yer kaplar ve yönetici izni ister, kararı siz verirsiniz.',
       antivirus:
         'Veri klasörünü antivirüs dışlamalarına eklemeye gösterilen komutla siz karar verirsiniz.',
-      firewall:
-        'Bu kuralları kaldırmaya yönetici konsolunda gösterilen komutla siz karar verirsiniz. WolfCore Dev güvenlik duvarını asla değiştirmez.',
       reintentar_servicio: 'Hizmeti yeniden başlatın.',
       firefox_confianza:
         'Her Firefox profilinin user.js dosyasına, önceki bir yedekle birlikte Windows sertifika yetkilisine güvenme tercihini ekler. prefs.js dosyasına dokunulmaz ve açık profiller atlanır.',
@@ -3860,7 +3838,8 @@ export const tr: Textos = {
       titulo: 'CA güveni',
       texto:
         'Windows, WolfCore Dev sertifika yetkilisine zaten güveniyor; Node, Python ve Firefox kendi sertifika depolarını kullanır.',
-      sinCa: 'Henüz bir sertifika yetkilisi yok. Bu bölümü kullanmak için HTTPS bölümünden oluşturun.',
+      sinCa:
+        'Henüz bir sertifika yetkilisi yok. Bu bölümü kullanmak için HTTPS bölümünden oluşturun.',
       node: {
         titulo: 'Node',
         proyectos:
@@ -3869,7 +3848,8 @@ export const tr: Textos = {
         global: 'Kullanıcı ortam değişkeni olarak da ayarla (diğer terminaller ve programlar için)',
         confirmarActivar:
           'NODE_EXTRA_CA_CERTS kullanıcı değişkeniniz olarak ayarlanacaktır. Daha sonra açacağınız programları etkiler; bu seçenek kapatıldığında kaldırılır.',
-        confirmarDesactivar: 'WolfCore Dev tarafından eklenen NODE_EXTRA_CA_CERTS değişkeni kaldırılacaktır.',
+        confirmarDesactivar:
+          'WolfCore Dev tarafından eklenen NODE_EXTRA_CA_CERTS değişkeni kaldırılacaktır.',
       },
       python: {
         titulo: 'Python',
@@ -3886,8 +3866,7 @@ export const tr: Textos = {
         avisoFuera: (lista: string) =>
           `Bu profiller Firefox klasörünün dışındadır ve işaretlemediğiniz sürece dokunulmaz: ${lista}.`,
         incluirFuera: 'Firefox klasörü dışındaki profilleri de değiştir',
-        resultadoFuera: (n: number) =>
-          `Firefox klasörü dışındaki ${n} profile dokunulmadı.`,
+        resultadoFuera: (n: number) => `Firefox klasörü dışındaki ${n} profile dokunulmadı.`,
         activar: 'Firefox içinde etkinleştir',
         quitar: 'Firefox içinden kaldır',
         confirmarActivar:
@@ -3897,8 +3876,7 @@ export const tr: Textos = {
         resultadoOk: (n: number) => `${n} profilde tamamlandı.`,
         resultadoAbiertos: (n: number) =>
           `Firefox açık olduğu için ${n} profil atlandı. Kapatıp tekrar deneyin.`,
-        resultadoError: (n: number) =>
-          `${n} profil değiştirilemedi.`,
+        resultadoError: (n: number) => `${n} profil değiştirilemedi.`,
       },
       confirmar: 'Onayla',
       cancelar: 'İptal',
@@ -3970,7 +3948,8 @@ export const tr: Textos = {
     version: (v: string) => `v${v}`,
     versionDesconocida: 'Bilinmeyen sürüm',
     verVersion: 'Sürümü gör',
-    verVersionAyuda: 'Programı --version ile çalıştırır (ekran açıldığında kendiliğinden yapılmaz).',
+    verVersionAyuda:
+      'Programı --version ile çalıştırır (ekran açıldığında kendiliğinden yapılmaz).',
     origen: {
       propio: 'WolfCore Dev tarafından yüklendi',
       'npm-usuario': 'Kullanıcının genel npm kurulumu',
@@ -3994,7 +3973,8 @@ export const tr: Textos = {
       titulo: (nombre: string) => `${nombre} yüklensin mi?`,
       texto: (paquete: string) =>
         `${paquete} paketinin yayımlanan en son sürümü registry.npmjs.org üzerinden, WolfCore Dev içindeki Node ile kendi veri klasörüne yüklenir.`,
-      aislado: 'npm yapılandırmanızı kullanmaz ve genel npm kurulumunuza dokunmaz. Birkaç dakika sürebilir.',
+      aislado:
+        'npm yapılandırmanızı kullanmaz ve genel npm kurulumunuza dokunmaz. Birkaç dakika sürebilir.',
       aceptar: 'Yükle',
       hecho: (nombre: string) => `${nombre} yüklendi.`,
     },
@@ -4254,13 +4234,11 @@ export const tr: Textos = {
       pasoVolcados: 'her veritabanı mevcut sürümle dışa aktarılır;',
       pasoCopia: 'örnek durdurulur ve tüm veri klasörü kopyalanır (soğuk yedek);',
       pasoArrancar: 'yeni sürümle başlatılır ve yanıt verdiği doğrulanır;',
-      pasoVuelta:
-        'başlamazsa önceki sürüme ve verilerine geri dönülür, yedek saklanır.',
+      pasoVuelta: 'başlamazsa önceki sürüme ve verilerine geri dönülür, yedek saklanır.',
       datos: 'Veriler:',
       respaldo: 'Yedek konumu:',
       espacio: 'Alan:',
-      espacioLibre: (libres: string, necesarios: string) =>
-        `${libres} boş; ${necesarios} gerekli`,
+      espacioLibre: (libres: string, necesarios: string) => `${libres} boş; ${necesarios} gerekli`,
       datosQuedan:
         'Önceki veriler asla silinmez: yedek ve dökümler siz silene kadar Güncelleme yedekleri bölümünde kalır.',
       sinEspacio: 'Yedek için yeterli alan yok: yer açıp tekrar deneyin.',
@@ -4295,7 +4273,8 @@ export const tr: Textos = {
       bloqueada: 'Seçilemez',
       marcadas: (n: number, tam: string) => `${n} sürüm · ${tam}`,
       destinoTitulo: 'Bunlarla ne yapılsın',
-      papelera: 'Çöp kutusuna taşı: 7 gün saklanır ve o zamana kadar diskte yer kaplamaya devam eder',
+      papelera:
+        'Çöp kutusuna taşı: 7 gün saklanır ve o zamana kadar diskte yer kaplamaya devam eder',
       definitivo: 'Kalıcı olarak sil: alanı hemen boşaltır ve geri alınamaz',
       avisoDefinitivo:
         'Kalıcı silme: bu sürümlere tekrar sahip olmak için yeniden indirmeniz gerekir.',
@@ -4362,8 +4341,7 @@ export const tr: Textos = {
       devolver: (sello: string, tam: string) =>
         `${sello} yedeğini geri yükle (${tam}); mevcut klasör kenara ayrılır, silinmez`,
       usarActual: 'Mevcut veri klasörünü olduğu gibi kullan',
-      notaActual:
-        'Yalnızca mevcut klasörde eksiksiz veriler varsa seçin; yoksa bir yedeği seçin.',
+      notaActual: 'Yalnızca mevcut klasörde eksiksiz veriler varsa seçin; yoksa bir yedeği seçin.',
       notaDevolver: 'Yedek kopyalanır, doğrulanır ve ancak ondan sonra yerine konur.',
       escriba: (id: string) => `Onaylamak için ${id} yazın`,
       elegirVersion:
@@ -4425,7 +4403,26 @@ export const tr: Textos = {
     tema: 'Tema',
     temas: { sistema: 'Sistem', claro: 'Açık', oscuro: 'Koyu' },
     idioma: 'Dil',
-    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語', ko: '한국어', hi: 'हिन्दी', tr: 'Türkçe', id: 'Bahasa Indonesia', pl: 'Polski', nl: 'Nederlands', uk: 'Українська' },
+    idiomas: {
+      es: 'Español',
+      en: 'English',
+      pt: 'Português',
+      fr: 'Français',
+      de: 'Deutsch',
+      it: 'Italiano',
+      ru: 'Русский',
+      zh: '中文 简体',
+      ja: '日本語',
+      ko: '한국어',
+      hi: 'हिन्दी',
+      tr: 'Türkçe',
+      id: 'Bahasa Indonesia',
+      pl: 'Polski',
+      nl: 'Nederlands',
+      uk: 'Українська',
+    },
+    /** Aviso junto a los idiomas que no son es, en, pt ni fr (la traducción es automática y revisada). */
+    traduccionAutomatica: 'Makine çevirisi, gözden geçirildi',
     acento: 'Vurgu rengi',
     acentos: {
       indigo: 'Çivit',
@@ -4437,10 +4434,6 @@ export const tr: Textos = {
     },
     acentoPropio: (color: string) => `Özel (${color})`,
     errorGuardar: 'Tercih kaydedilemedi',
-    asistente: 'İlk kullanım sihirbazı',
-    asistenteAyuda:
-      'Başlangıç adımlarını yeniden gözden geçirin: proje klasörü, temel araçlar, CA, GitHub ve izlenen klasör.',
-    asistenteAbrir: 'Sihirbazı aç',
   },
   paleta: {
     titulo: 'Komut paleti',
@@ -4470,7 +4463,6 @@ export const tr: Textos = {
     nuevoProyecto: 'Yeni proje oluştur',
     tema: (tema: string) => `Tema: ${tema}`,
     idioma: (idioma: string) => `Dil: ${idioma}`,
-    asistente: 'İlk kullanım sihirbazını aç',
   },
   nuevoProyecto: {
     titulo: 'Yeni proje',
@@ -4518,8 +4510,7 @@ export const tr: Textos = {
       sinBase: 'Veritabanı olmadan',
       instancia: 'Veritabanı sunucusu',
       apagada: 'kapalı',
-      apagadaAyuda:
-        'Bu sunucu kapalı: projeyi oluşturmadan önce Hizmetler bölümünden başlatın.',
+      apagadaAyuda: 'Bu sunucu kapalı: projeyi oluşturmadan önce Hizmetler bölümünden başlatın.',
       sinMotores: 'Bu proje türü için yüklü bir veritabanı sunucusu yok.',
       nombreBase: 'Veritabanı adı',
       starterKit: 'Başlangıç kiti',
@@ -4560,7 +4551,8 @@ export const tr: Textos = {
       sinCarpeta: 'Projenin üst klasörünü seçin.',
       sinPhp: 'Bir PHP sürümü seçin (yoksa Hizmetler bölümünden yükleyin).',
       sinPython: 'Bir Python sürümü seçin (yoksa Hizmetler bölümünden yükleyin).',
-      sinInstancia: 'Veritabanının oluşturulacağı sunucuyu seçin veya veritabanı seçeneğini kaldırın.',
+      sinInstancia:
+        'Veritabanının oluşturulacağı sunucuyu seçin veya veritabanı seçeneğini kaldırın.',
       baseInvalida: 'Veritabanı adı bu motor için geçerli değil.',
       motorNoVale: 'WordPress için MySQL veya MariaDB gerekir.',
       pgvectorMotor: 'pgvector için PostgreSQL gerekir.',
@@ -4645,7 +4637,8 @@ export const tr: Textos = {
       puerto: 'Kaynak sunucu bağlantı noktası',
       usuario: 'Kullanıcı',
       clave: 'Parola',
-      claveAyuda: 'Kullanıcının parolası yoksa boş bırakın (Laragon veya XAMPP içindeki root gibi).',
+      claveAyuda:
+        'Kullanıcının parolası yoksa boş bırakın (Laragon veya XAMPP içindeki root gibi).',
       existe: 'hedefte zaten var',
       reemplazar: 'Değiştir (öncesinde yedek alınır)',
       noSeToca: 'İşaretlemezseniz dokunulmaz.',
@@ -4664,12 +4657,12 @@ export const tr: Textos = {
         `${n} site mevcut klasöründe bağlanacaktır. Hiçbir dosya taşınmaz, kopyalanmaz veya değiştirilmez.`,
       sinConfianza:
         'İçe aktarılan hiçbir site siz «Bu depoya güveniyorum» seçeneğini işaretleyene kadar tarif çalıştırmaz.',
-      hosts:
-        'Nginx ve hosts dosyası güncellenecektir (Windows yönetici izni isteyebilir).',
+      hosts: 'Nginx ve hosts dosyası güncellenecektir (Windows yönetici izni isteyebilir).',
       basesNuevas: (nombres: string) => `Kopyalanacak veritabanları: ${nombres}.`,
       basesReemplazo: (nombres: string) =>
         `Zaten var olan bu veritabanları değiştirilecektir: ${nombres}. Öncesinde her birinin yedeği kaydedilir.`,
-      basesSinTocar: (nombres: string) => `Zaten var olan bu veritabanlarına dokunulmayacaktır: ${nombres}.`,
+      basesSinTocar: (nombres: string) =>
+        `Zaten var olan bu veritabanlarına dokunulmayacaktır: ${nombres}.`,
       origen: (puerto: number, usuario: string) =>
         `Diğer programın sunucusundan aktarılacaktır (127.0.0.1:${puerto}, kullanıcı ${usuario}). Değiştirilmeden okunur.`,
       sinBases: 'Hiçbir veritabanı içe aktarılmayacak.',
@@ -4689,8 +4682,7 @@ export const tr: Textos = {
       phpDistinto: (v: string) => `PHP ${v} kullanıldı (özgün sürüm yüklü değildi).`,
       sinAplicar:
         'Nginx veya hosts dosyası tam güncellenmedi: Projeler bölümündeki uyarıyı inceleyip yeniden deneyin.',
-      resumen: (s: number, b: number) =>
-        `${s} site içe aktarıldı, ${b} veritabanı içe aktarıldı.`,
+      resumen: (s: number, b: number) => `${s} site içe aktarıldı, ${b} veritabanı içe aktarıldı.`,
       errorImportar: 'İçe aktarılamadı',
     },
   },
@@ -4730,8 +4722,7 @@ export const tr: Textos = {
       titulo: 'Şablonlarım',
       ayuda:
         'Mevcut bir projenizin tarifi, ayarları ve şemasıyla (veri olmadan) yeni bir proje başlatın.',
-      vacia:
-        'Henüz şablon yok. Bir projeyi kart menüsünden şablon olarak kaydedin.',
+      vacia: 'Henüz şablon yok. Bir projeyi kart menüsünden şablon olarak kaydedin.',
       conArchivosEtiqueta: 'dosyalarla',
       soloEsquema: 'tarif ve şema',
       conBase: (motor: string) => `verisiz ${motor} veritabanı`,
@@ -4855,57 +4846,9 @@ export const tr: Textos = {
     guardadoConCopia: '.env kaydedildi; önceki sürüm yedek olarak saklandı.',
   },
   asistenteInicio: {
-    titulo: 'WolfCore Dev hoş geldiniz',
-    subtitulo:
-      'Ortamınızı hazırlamak için beş adım. Siz ilgili adımın düğmesine basana kadar hiçbir şey yüklenmez veya değiştirilmez.',
     paso: (n: number, total: number) => `Adım ${n} / ${total}`,
     anterior: 'Önceki',
     siguiente: 'Sonraki',
-    omitirTodo: 'Sihirbazı atla',
-    terminar: 'Bitir',
-    hecho: 'Tamamlandı',
-    reabrir: 'Ayarlar bölümünden tekrar açabilirsiniz.',
-    pasos: {
-      carpeta: {
-        titulo: 'Proje klasörü',
-        texto:
-          'Projelerinizi sakladığınız yer. Yeni depolar buraya klonlanır ve son adımda izlenen klasör burasıdır.',
-        elegir: 'Klasör seç',
-        actual: (ruta: string) => `Seçilen klasör: ${ruta}`,
-        guardada: (ruta: string) => `Mevcut klasör: ${ruta}`,
-        ninguna: 'Seçilmedi: varsa C:\\Proyectos kullanılır.',
-      },
-      basicos: {
-        titulo: 'Temel araçları yükle',
-        texto:
-          'Resmi kaynaklarından doğrulanmış özetle Nginx, PHP 8.4, Composer ve Node LTS. Her biri yalnızca kendi düğmesine bastığınızda yüklenir.',
-        instalado: 'Yüklü',
-        instalar: (version: string) => `${version} yükle`,
-        sinVersion: 'Katalogda sürüm yok',
-        cargando: 'Sürümler aranıyor…',
-        nombres: { nginx: 'Nginx', php: 'PHP 8.4', composer: 'Composer', node: 'Node LTS' },
-      },
-      ca: {
-        titulo: 'Yerel sertifika yetkilisine güven',
-        texto:
-          '.test sitelerinin HTTPS üzerinden uyarı vermeden açılması için Windows, WolfCore Dev yetkilisine güvenmelidir. Windows sizden onay isteyecektir.',
-        confiar: 'CA yetkilisine güven',
-        confiada: 'Windows yerel yetkiliye zaten güveniyor.',
-      },
-      github: {
-        titulo: 'GitHub bağla',
-        texto:
-          'Depolarınızı görmek ve tek tıklamayla klonlamak için. GitHub CLI oturumunu veya bu bilgisayarda şifreli saklanan kişisel bir belirteci kullanın.',
-      },
-      vigilar: {
-        titulo: 'Klasörü izle',
-        texto:
-          'WolfCore Dev, proje klasöründe beliren her yeni klasörü site olarak kurmanızı önerir. Onayınız olmadan hiçbir şey kurulmaz.',
-        activar: 'Bu klasörü izle',
-        activa: (ruta: string) => `${ruta} izleniyor`,
-        sinCarpeta: 'Önce proje klasörünü seçin (adım 1).',
-      },
-    },
   },
   /** Bir profili içe veya dışa aktarma sonucu (D26). */
   perfiles: {
@@ -4941,7 +4884,8 @@ export const tr: Textos = {
         exportar: 'Profili dışa aktar…',
         nota: 'Profil asla anahtar, belirteç veya parola içermez; anlık görüntüler, çöp kutusu, yedekler ve data klasörü de dahil edilmez.',
         listo: 'Profil dışa aktarıldı',
-        guardado: (archivo: string, tamano: string) => `${archivo} konumuna kaydedildi (${tamano}).`,
+        guardado: (archivo: string, tamano: string) =>
+          `${archivo} konumuna kaydedildi (${tamano}).`,
       },
       importar: {
         titulo: 'Profil içe aktar',
@@ -5000,7 +4944,8 @@ export const tr: Textos = {
         leyendo: 'Profil okunuyor…',
         error: 'Profil okunamadı',
       },
-      origen: (fecha: string, sistema: string) => `${fecha} tarihinde ${sistema} üzerinde oluşturuldu.`,
+      origen: (fecha: string, sistema: string) =>
+        `${fecha} tarihinde ${sistema} üzerinde oluşturuldu.`,
       ignoradas: (n: number) => `Dosyadaki ${n} girdi profile ait değil ve yok sayılıyor.`,
       reemplaza: {
         titulo: 'Değiştirilecek öğeler',
@@ -5032,7 +4977,8 @@ export const tr: Textos = {
       instancias: {
         titulo: 'Veritabanı örnekleri',
         existente: 'Zaten var: bağlantı noktası ve sürümüyle korunur',
-        nueva: (puerto: number) => `${puerto} bağlantı noktasında yeni kimlik bilgileriyle oluşturulur`,
+        nueva: (puerto: number) =>
+          `${puerto} bağlantı noktasında yeni kimlik bilgileriyle oluşturulur`,
         reasignada: (de: number, a: number) => `${de} bağlantı noktası meşgul: ${a} kullanılacak`,
       },
       bases: {
@@ -5073,7 +5019,8 @@ export const tr: Textos = {
         huella: 'Profil CA SHA-256 özeti',
         comparar: 'Kabul etmeden önce kaynak bilgisayarınızdaki özetle karşılaştırın.',
         importar: 'Profil CA yetkilisini içe aktar',
-        noImportar: 'İçe aktarmazsanız bu bilgisayar mevcut CA yetkilisini kullanır veya yeni bir tane oluşturur.',
+        noImportar:
+          'İçe aktarmazsanız bu bilgisayar mevcut CA yetkilisini kullanır veya yeni bir tane oluşturur.',
         ajena:
           'Bu CA, WolfCore Dev kısıtlamalarıyla eşleşmeyen ad kısıtlamalarına sahip: içe aktarılamaz.',
         sinRestricciones:
@@ -5086,7 +5033,8 @@ export const tr: Textos = {
       },
       frase: {
         titulo: 'Profil parola cümlesi',
-        texto: 'Profil şifreli veritabanları veya CA içeriyor. Dışa aktarırken seçtiğiniz parola cümlesini yazın.',
+        texto:
+          'Profil şifreli veritabanları veya CA içeriyor. Dışa aktarırken seçtiğiniz parola cümlesini yazın.',
         campo: 'Parola cümlesi',
         omitirBases: 'Veritabanları olmadan aktar',
         nota: 'Parola cümlesi yalnızca bu pencerede kullanılır: kaydedilmez ve bitince veya pencere kapanınca silinir.',
@@ -5109,10 +5057,12 @@ export const tr: Textos = {
           frase_requerida: 'Profil parola cümlesini yazın veya veritabanları olmadan aktarın.',
           ca_ajena: 'Profil CA yetkilisi içe aktarılamaz.',
           ca_sin_restricciones: 'Kısıtlamasız bir CA içe aktarmak istediğinizi ayrıca onaylayın.',
-          reemplazar_ca: 'Bu bilgisayarın CA yetkilisini değiştirmek istediğinizi ayrıca onaylayın.',
+          reemplazar_ca:
+            'Bu bilgisayarın CA yetkilisini değiştirmek istediğinizi ayrıca onaylayın.',
         },
       },
-      progreso: 'Profil içe aktarılıyor… Pencereyi kapatmayın: veritabanları veya indirmelerle zaman alabilir.',
+      progreso:
+        'Profil içe aktarılıyor… Pencereyi kapatmayın: veritabanları veya indirmelerle zaman alabilir.',
       fases: {
         copia: 'Değiştirilecek öğeler yedekleniyor',
         versiones: 'Sürümler yükleniyor',
@@ -5182,8 +5132,7 @@ export const tr: Textos = {
       tunel_con_nombre: 'Adlandırılmış tüneli taşınmaz: hızlı tünele döner.',
       php_ini: 'Bazı php.ini ayarları içe aktarılmadı.',
       xdebug: 'Xdebug ayarı geçersizdi ve kaldırıldı.',
-      nginx_desactivado:
-        'Nginx kuralları kaydedildi ancak uygulanmadı: düzenleyicide inceleyin.',
+      nginx_desactivado: 'Nginx kuralları kaydedildi ancak uygulanmadı: düzenleyicide inceleyin.',
       carpeta_no_existe: 'Klasörü bu bilgisayarda yok: konumunu bulun.',
       correo_sin_proveedor: 'SMTP sağlayıcısı içe aktarılmadı: e-posta yakalayıcıyı kullanır.',
       sitio_invalido: 'Site geçerli değil.',
@@ -5211,10 +5160,10 @@ export const tr: Textos = {
         'Bu bilgisayarın önceki CA yetkilisi hâlâ sistem güven deposunda duruyor ve artık kullanılmıyor. Buradan kaldırabilirsiniz.',
       base_no_incluida: '{base} veritabanı ({instancia}) dahil edilmedi.',
       sin_ca: 'Bu bilgisayarda CA yok: profil onsuz dışa aktarılıyor.',
-      ca_no_importada: 'Profil CA yetkilisi içe aktarılmadı: bu bilgisayarın CA yetkilisi veya yeni bir tane kullanılıyor.',
+      ca_no_importada:
+        'Profil CA yetkilisi içe aktarılmadı: bu bilgisayarın CA yetkilisi veya yeni bir tane kullanılıyor.',
       certificados: 'Sertifikalar hazırlanamadı: {detalle}',
-      aplicar:
-        'İçe aktarılan siteler tam olarak uygulanamadı (Nginx: {nginx}; hosts: {hosts}).',
+      aplicar: 'İçe aktarılan siteler tam olarak uygulanamadı (Nginx: {nginx}; hosts: {hosts}).',
     },
     quitado: {
       ia: 'Yapay zeka sağlayıcısı {id}: özel bir URL kullanıyor.',

@@ -5744,7 +5744,26 @@ export const es = {
     tema: 'Tema',
     temas: { sistema: 'Sistema', claro: 'Claro', oscuro: 'Oscuro' },
     idioma: 'Idioma',
-    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語', ko: '한국어', hi: 'हिन्दी', tr: 'Türkçe', id: 'Bahasa Indonesia', pl: 'Polski', nl: 'Nederlands', uk: 'Українська' },
+    idiomas: {
+      es: 'Español',
+      en: 'English',
+      pt: 'Português',
+      fr: 'Français',
+      de: 'Deutsch',
+      it: 'Italiano',
+      ru: 'Русский',
+      zh: '中文 简体',
+      ja: '日本語',
+      ko: '한국어',
+      hi: 'हिन्दी',
+      tr: 'Türkçe',
+      id: 'Bahasa Indonesia',
+      pl: 'Polski',
+      nl: 'Nederlands',
+      uk: 'Українська',
+    },
+    /** Aviso junto a los idiomas que no son es, en, pt ni fr (la traducción es automática y revisada). */
+    traduccionAutomatica: 'Traducción automática revisada',
     acento: 'Color de acento',
     acentos: {
       indigo: 'Índigo',
@@ -6754,3 +6773,15 @@ export const es = {
 };
 
 export type Textos = typeof es;
+
+/** Un nodo del diccionario con todo opcional: los idiomas sin traducción completa lo usan. */
+export type ParcialProfundo<T> = T extends (...args: never[]) => unknown
+  ? T
+  : T extends readonly unknown[]
+    ? T
+    : T extends object
+      ? { [K in keyof T]?: ParcialProfundo<T[K]> }
+      : T;
+
+/** Diccionario que puede dejar claves sin traducir: lo que falte sale en inglés (ver `index.ts`). */
+export type TextosParciales = ParcialProfundo<Textos>;

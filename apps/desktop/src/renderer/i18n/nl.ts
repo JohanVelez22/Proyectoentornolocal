@@ -3,14 +3,14 @@
  * Vaste woordenlijst: dienst, instantie, site, tunnel, back-up, melding; Doctor en
  * WolfCore Dev worden niet vertaald. Formele aanspreekvorm (u); buiten Git altijd 'versie'.
  */
-import type { Textos } from './es';
+import type { TextosParciales } from './es';
 
-const plural = (n: number, een: string, meerdere: string): string => `${n} ${n === 1 ? een : meerdere}`;
+const plural = (n: number, een: string, meerdere: string): string =>
+  `${n} ${n === 1 ? een : meerdere}`;
 
-export const nl: Textos = {
+export const nl: TextosParciales = {
   app: {
     nombre: 'WolfCore Dev',
-    lema: 'PHP en Nginx zonder gedoe',
     version: 'Versie',
   },
   nav: {
@@ -92,7 +92,8 @@ export const nl: Textos = {
         'De branch is afgeweken van de remote (er zijn verschillende lokale en remote commits): los dit handmatig op. Er is niets gewijzigd.',
       'git.sin_upstream':
         'De huidige branch volgt geen remote branch: er is niets om wijzigingen van op te halen.',
-      'git.sin_rama': 'De repository staat op een losse commit (zonder branch): er is niets gewijzigd.',
+      'git.sin_rama':
+        'De repository staat op een losse commit (zonder branch): er is niets gewijzigd.',
       'git.no_repositorio': 'De map is geen git-repository.',
       'git.destino_no_vacio': 'De doelmap is niet leeg.',
       'git.destino_es_archivo': 'Het doel is een bestand, geen map.',
@@ -147,7 +148,8 @@ export const nl: Textos = {
       'instancias.ultima': '{id} is de enige instantie: deze kan niet worden verwijderd.',
       'instancias.sin_puerto_libre': 'Er is geen vrije poort gevonden voor de instantie.',
       'instancias.confirmacion': 'Typ "{id}" om door te gaan.',
-      'instancias.sin_datos': '{id} heeft geen gegevens in de map: kies een back-up om te herstellen.',
+      'instancias.sin_datos':
+        '{id} heeft geen gegevens in de map: kies een back-up om te herstellen.',
       'instancias.respaldo_no_existe': 'Die back-up van {id} bestaat niet.',
       'instancias.respaldo_en_uso':
         'Die kopie is nodig voor {id}, die geblokkeerd is: los dat eerst op.',
@@ -181,7 +183,8 @@ export const nl: Textos = {
         'Gebruiker {usuario} bestaat, maar kan niet aanmelden (rol zonder LOGIN of toegangsregel van de server). Er is niets gewijzigd.',
       'bd.usuario_clave_distinta':
         'Gebruiker {usuario} bestaat al met een ander wachtwoord. Gebruik het huidige wachtwoord: het wordt niet gewijzigd om andere projecten niet zonder verbinding te zetten.',
-      'bd.mongosh_faltante': 'mongosh ontbreekt: installeer het via Diensten om MongoDB te beheren.',
+      'bd.mongosh_faltante':
+        'mongosh ontbreekt: installeer het via Diensten om MongoDB te beheren.',
       'tuneles.sitio_no_encontrado': 'Het project is niet gevonden.',
       'tuneles.confirmacion_requerida':
         'Het publiceren van {dominio} op internet vereist bevestiging in WolfCore Dev.',
@@ -190,8 +193,7 @@ export const nl: Textos = {
       'tuneles.cloudflared_no_instalado':
         'cloudflared is niet geïnstalleerd. Installeer het via Diensten.',
       'tuneles.proveedor_no_disponible': 'De tunnelprovider {proveedor} is niet beschikbaar.',
-      'tuneles.cloudflare_sin_cuenta':
-        'Koppel eerst uw Cloudflare-account in de tunnelopties.',
+      'tuneles.cloudflare_sin_cuenta': 'Koppel eerst uw Cloudflare-account in de tunnelopties.',
       'tuneles.cloudflare_sin_credencial':
         'Deze tunnel heeft geen opgeslagen inloggegevens: maak deze opnieuw aan in de tunnelopties.',
       'tuneles.cloudflare_datos_invalidos':
@@ -203,7 +205,8 @@ export const nl: Textos = {
         'Tunnel {nombre} heeft actieve verbindingen (cloudflared vereist -f om deze te verwijderen). Sluit de tunnel af op alle apparaten waarop deze openstaat en probeer het opnieuw, of gebruik "Alleen hier vergeten".',
       'tuneles.nombre_en_uso': 'Tunnel {nombre} wordt al gebruikt door een andere site.',
       'tuneles.dominio_en_uso': 'Domein {dominio} wordt al gebruikt door een andere site.',
-      'tuneles.confirmacion_olvidar': 'Het vergeten of opnieuw aanmaken van tunnel {nombre} vereist bevestiging.',
+      'tuneles.confirmacion_olvidar':
+        'Het vergeten of opnieuw aanmaken van tunnel {nombre} vereist bevestiging.',
       'tuneles.cloudflare_fallo': 'cloudflared kon de bewerking niet voltooien: {detalle}',
       'tuneles.credencial_no_protegida':
         'De inloggegevens konden niet worden beperkt tot de gebruiker en zijn daarom niet gebruikt.',
@@ -274,12 +277,14 @@ export const nl: Textos = {
         'De reguliere expressie duurt te lang: vereenvoudig deze of gebruik letterlijke tekst.',
       'buscar.demasiadas': 'Er zijn al {maximo} zoekopdrachten actief: annuleer er een of wacht.',
       'terminal.no_abrio': 'De terminal kon niet worden geopend.',
-      'terminal.no_instalada': '{nombre} is niet geïnstalleerd. Kies een andere terminal in Instellingen.',
+      'terminal.no_instalada':
+        '{nombre} is niet geïnstalleerd. Kies een andere terminal in Instellingen.',
       'terminal.invalida': 'Die terminal is ongeldig.',
       'terminal.powershell_restringido':
         'PowerShell staat op dit systeem in de beperkte taalmodus (organisatiebeleid of AppLocker): WolfCore Dev kan de terminal niet openen. Open deze zelf in de projectmap.',
       'proyectos.no_existe': 'Het project bestaat niet.',
-      'proyectos.no_confiado': 'Vink "Ik vertrouw deze repository" aan om het recept uit te voeren.',
+      'proyectos.no_confiado':
+        'Vink "Ik vertrouw deze repository" aan om het recept uit te voeren.',
       'proyectos.receta_en_curso': 'Er wordt al een recept uitgevoerd voor dit project.',
       'proyectos.paso_no_omitible': 'De stap "Site aanmaken" kan niet worden overgeslagen.',
       'workspaces.no_existe': 'Die workspace bestaat niet.',
@@ -314,8 +319,7 @@ export const nl: Textos = {
       'cli.formato_no_admitido': 'Het verzoek heeft niet het formaat dat de CLI accepteert.',
       'cli.plazo':
         'De opdracht duurde te lang: deze is mogelijk nog actief. Controleer de status in WolfCore Dev.',
-      'cli.ocupado':
-        'WolfCore Dev verwerkt te veel CLI-opdrachten: wacht een ogenblik.',
+      'cli.ocupado': 'WolfCore Dev verwerkt te veel CLI-opdrachten: wacht een ogenblik.',
       'cli.requiere_confirmacion':
         'Deze opdracht publiceert of wijzigt iets en vereist bevestiging (--si) op {sitio}.',
       'cli.requiere_confirmacion_datos_reales':
@@ -326,7 +330,8 @@ export const nl: Textos = {
         'De bevestiging in het WolfCore Dev-venster is geweigerd of was niet beschikbaar: er is niets uitgevoerd.',
       'cli.confirmacion_vencida':
         'Niemand heeft op tijd bevestigd in het WolfCore Dev-venster: er is niets uitgevoerd.',
-      'cli.tunel_fallo': 'De tunnel kon niet worden geopend. Controleer het logboek in WolfCore Dev.',
+      'cli.tunel_fallo':
+        'De tunnel kon niet worden geopend. Controleer het logboek in WolfCore Dev.',
       'cli.inicio_fallo':
         'Niet alles wat werd aangevraagd kon worden gestart. Controleer de logboeken in WolfCore Dev.',
       'cli.parada_fallo':
@@ -353,7 +358,8 @@ export const nl: Textos = {
       'cli.ruta_invalida': 'Het pad van WolfCore Dev bevat tekens die wolf.cmd niet ondersteunt.',
       'cli.path_aislado':
         'Met een map voor testgegevens (WOLFCORE_DATOS) wordt het gebruikers-PATH niet gewijzigd.',
-      'cli.sin_cliente': 'Deze versie van WolfCore Dev bevat de wolf-client niet (moet nog worden gecompileerd).',
+      'cli.sin_cliente':
+        'Deze versie van WolfCore Dev bevat de wolf-client niet (moet nog worden gecompileerd).',
       'cli.demasiados_dialogos':
         'Te veel bevestigingen in de afgelopen minuut: wacht een ogenblik en probeer het opnieuw.',
       'cli.error': 'De opdracht kon niet worden voltooid: {detalle}',
@@ -364,11 +370,13 @@ export const nl: Textos = {
       'proyectos.clave_bd_falta':
         'Het opgeslagen wachtwoord van gebruiker {usuario} ontbreekt: er is niets geschreven. In de .env-beheerder genereert "Eigen gebruiker gebruiken" een nieuw wachtwoord.',
       'env.archivo_grande': 'Het variabelenbestand is te groot (maximaal {maximo}).',
-      'env.no_regular': 'Het .env-bestand is geen regulier bestand: het wordt niet gelezen of gewijzigd.',
+      'env.no_regular':
+        'Het .env-bestand is geen regulier bestand: het wordt niet gelezen of gewijzigd.',
       'env.clave_inexistente': 'Variabele {clave} bestaat niet.',
       'env.cambio_invalido': 'Een wijziging in het .env-bestand is ongeldig.',
       'env.variable_invalida': 'De wijziging van variabele {clave} is ongeldig.',
-      'env.solo_lectura': 'Variabele {clave} beslaat meerdere regels: bewerk deze handmatig in het bestand.',
+      'env.solo_lectura':
+        'Variabele {clave} beslaat meerdere regels: bewerk deze handmatig in het bestand.',
       'env.usuario_compartido':
         'Database {base} wordt ook gebruikt door project {proyecto}: bevestig of u de gebruiker wilt delen.',
       'env.cambio_externo':
@@ -382,7 +390,8 @@ export const nl: Textos = {
       'env.sin_base': 'Het .env-bestand van dit project bevat geen verbinding met een database.',
       'env.base_no_resuelta':
         'De database van dit project hoort niet bij een lokale server van WolfCore Dev: er is niets gewijzigd.',
-      'env.motor_no_soportado': 'Voorlopig werkt "Eigen gebruiker gebruiken" alleen met MySQL en MariaDB.',
+      'env.motor_no_soportado':
+        'Voorlopig werkt "Eigen gebruiker gebruiken" alleen met MySQL en MariaDB.',
       'env.ya_usa_usuario_propio': 'Dit project gebruikt al een eigen gebruiker.',
       'plantillas.id_invalido': 'De id van de sjabloon is ongeldig.',
       'plantillas.no_existe': 'De sjabloon bestaat niet.',
@@ -394,8 +403,7 @@ export const nl: Textos = {
         'Het project is te groot om als sjabloon op te slaan (tot {maximo}). Sluit grote mappen uit.',
       'plantillas.exclusion_invalida':
         'Een van de uitsluitingen is ongeldig (gebruik namen of relatieve paden, zonder "..").',
-      'plantillas.nombre_invalido':
-        'De naam van de sjabloon is ongeldig (1 tot 60 tekens).',
+      'plantillas.nombre_invalido': 'De naam van de sjabloon is ongeldig (1 tot 60 tekens).',
       'plantillas.esquema_fallo':
         'Het databaseschema van het project kon niet worden gelezen: controleer of de bijbehorende dienst is ingeschakeld.',
       'plantillas.base_no_resuelta':
@@ -410,12 +418,14 @@ export const nl: Textos = {
         'Het schema bevat een instructie die niet voor de structuur is bedoeld en er is niets uitgevoerd: {sentencia}',
       'bd.extension_no_permitida':
         'Het schema vraagt om extensie {nombre}, die niet op de toegestane lijst staat: er is niets hersteld.',
-      'bd.esquema_fallo': 'Het volledige schema kon niet worden hersteld: er is niets half achtergelaten.',
+      'bd.esquema_fallo':
+        'Het volledige schema kon niet worden hersteld: er is niets half achtergelaten.',
       'bd.datos_no_permitidos':
         'De gegevensdump bevat iets anders dan gegevens (alleen INSERT, LOCK TABLES en SET zijn toegestaan): er is niets geïmporteerd.',
       'bd.datos_fallo':
         'De gegevens konden niet worden geïmporteerd: de database is ongewijzigd gebleven, zonder halve wijzigingen.',
-      'perfiles.destino_invalido': 'Kies waar u het profiel wilt opslaan (een .wolfperfil-bestand).',
+      'perfiles.destino_invalido':
+        'Kies waar u het profiel wilt opslaan (een .wolfperfil-bestand).',
       'perfiles.frase_debil': 'De wachtwoordzin van de CA moet minstens {minimo} tekens bevatten.',
       'perfiles.frase_incorrecta': 'De wachtwoordzin is onjuist: er is niets geïmporteerd.',
       'perfiles.certificados_sin_ca':
@@ -437,12 +447,15 @@ export const nl: Textos = {
       'herramientas.imagen_grande': 'De afbeelding is te groot (maximaal {maximo}).',
       'herramientas.imagen_dimensiones':
         'De afbeelding is te groot ({ancho}×{alto} px; maximaal {maximo} px per zijde) en wordt om veiligheidsredenen niet geopend.',
-      'herramientas.zip_sin_archivos': 'Er zijn geen bestanden om te comprimeren (koppelingen worden niet gevolgd).',
-      'herramientas.zip_demasiados': 'Er zijn te veel bestanden om te comprimeren (maximaal {maximo}).',
+      'herramientas.zip_sin_archivos':
+        'Er zijn geen bestanden om te comprimeren (koppelingen worden niet gevolgd).',
+      'herramientas.zip_demasiados':
+        'Er zijn te veel bestanden om te comprimeren (maximaal {maximo}).',
       'herramientas.zip_grande': 'Wat u wilt comprimeren is te groot (maximaal {maximo}).',
       'herramientas.pdf_invalido': 'Het bestand is geen PDF die geoptimaliseerd kan worden.',
       'herramientas.pdf_grande': 'De PDF is te groot (maximaal {maximo}).',
-      'herramientas.pdf_cifrado': 'De PDF is beveiligd met een wachtwoord en kan niet worden geoptimaliseerd.',
+      'herramientas.pdf_cifrado':
+        'De PDF is beveiligd met een wachtwoord en kan niet worden geoptimaliseerd.',
       'herramientas.pdf_plazo': 'De PDF duurde langer dan {segundos} s en is geannuleerd.',
       'herramientas.salida_ocupada': 'Er is geen vrije naam gevonden voor het nieuwe bestand.',
       'conversor.formato': 'Die conversie is niet beschikbaar.',
@@ -453,19 +466,22 @@ export const nl: Textos = {
         'Het bestand lijkt op een ZIP-bom of is gemanipuleerd (te veel inhoud, XML-entiteiten of ongeldige namen) en wordt om veiligheidsredenen niet geopend.',
       'conversor.limite_filas': 'De tabel heeft te veel rijen (maximaal {maximo}).',
       'conversor.limite_columnas': 'De tabel heeft te veel kolommen (maximaal {maximo}).',
-      'conversor.limite_paginas': 'De PDF heeft te veel pagina\'s (maximaal {maximo}).',
-      'conversor.pdf_cifrado': 'De PDF is beveiligd met een wachtwoord en kan niet worden geconverteerd.',
+      'conversor.limite_paginas': "De PDF heeft te veel pagina's (maximaal {maximo}).",
+      'conversor.pdf_cifrado':
+        'De PDF is beveiligd met een wachtwoord en kan niet worden geconverteerd.',
       'conversor.plazo': 'De conversie duurde langer dan {segundos} s en is geannuleerd.',
       'conversor.cancelado': 'Conversie geannuleerd.',
       'conversor.libreoffice_ausente':
         'Voor die conversie is LibreOffice nodig en dat is niet geïnstalleerd op deze computer (WolfCore Dev installeert het niet).',
       'conversor.libreoffice_fallo': 'LibreOffice kon het document niet converteren.',
       'conversor.limite_celdas': 'De tabel heeft te veel cellen (maximaal {maximo}).',
-      'conversor.memoria': 'Het bestand vereist te veel geheugen (meer dan {maximo}) en is geannuleerd.',
+      'conversor.memoria':
+        'Het bestand vereist te veel geheugen (meer dan {maximo}) en is geannuleerd.',
       'conversor.pdf_no_disponible': 'Afdrukken naar PDF is op dit moment niet beschikbaar.',
       'herramientas.imagen_pixeles':
         'De afbeelding heeft in totaal te veel pixels ({ancho}×{alto} px; maximaal {maximo}) en wordt om veiligheidsredenen niet geopend.',
-      'herramientas.zip_cambio': 'Een bestand is gewijzigd tijdens het comprimeren: probeer het opnieuw.',
+      'herramientas.zip_cambio':
+        'Een bestand is gewijzigd tijdens het comprimeren: probeer het opnieuw.',
       'herramientas.pdf_demasiado_complejo':
         'De PDF is te complex (zou meer geheugen innemen dan toegestaan) en is geannuleerd.',
       'herramientas.salida_denegada':
@@ -486,19 +502,21 @@ export const nl: Textos = {
       'importar.origen_apagado':
         'Kan geen verbinding maken met de databaseserver van het andere programma: start deze vanuit dat programma en probeer het opnieuw. De sites zijn wel geïmporteerd.',
       'importar.origen_no_local': 'De bronserver moet zich op deze computer bevinden (127.0.0.1).',
-      'importar.origen_rechazado': 'De bronserver heeft de gebruikersnaam of het wachtwoord geweigerd.',
+      'importar.origen_rechazado':
+        'De bronserver heeft de gebruikersnaam of het wachtwoord geweigerd.',
       'importar.origen_version':
         'De versie van de bronserver kan niet worden geïmporteerd met wat er in WolfCore Dev is geïnstalleerd.',
       'importar.volcado_enorme':
         'De databasegegevens zijn groter dan {maximo} MB: ze worden niet in één keer geïmporteerd.',
       'importar.motor_no_soportado':
-        'Er worden alleen MySQL- en MariaDB-databases uit andere programma\'s geïmporteerd.',
+        "Er worden alleen MySQL- en MariaDB-databases uit andere programma's geïmporteerd.",
       'importar.ruta_fuera':
         'Een map of bestand dat buiten de installatie of naar een systeemmap verwijst, is overgeslagen.',
       'importar.carpeta_invalida': 'Een map die niet meer bestaat of geen map is, is overgeslagen.',
       'importar.archivo_grande':
         'Een configuratiebestand is groter dan {maximo} KB en is niet gelezen.',
-      'importar.archivo_ilegible': 'Een configuratiebestand is geen tekstbestand of kon niet worden gelezen.',
+      'importar.archivo_ilegible':
+        'Een configuratiebestand is geen tekstbestand of kon niet worden gelezen.',
       'importar.demasiados':
         'Er zijn te veel sites of configuratiebestanden: alleen de eerste zijn gelezen.',
       'importar.candidato_desconocido':
@@ -540,12 +558,15 @@ export const nl: Textos = {
       'proyectos.paso_base_no_omitible':
         'De stap "Database aanmaken" van een nieuw project kan niet worden overgeslagen.',
       'proyectos.sin_php': 'PHP is niet geïnstalleerd: installeer het via Diensten.',
-      'proyectos.php_no_instalado': 'PHP {version} is niet geïnstalleerd: installeer deze via Diensten.',
+      'proyectos.php_no_instalado':
+        'PHP {version} is niet geïnstalleerd: installeer deze via Diensten.',
       'proyectos.python_no_instalado':
         'Python {version} is niet geïnstalleerd: installeer deze via Diensten.',
       'mcp.token_invalido': 'Het token van de MCP-server is ongeldig.',
-      'mcp.solicitud_cancelada': 'De MCP-client heeft het verzoek geannuleerd: de actie is niet uitgevoerd.',
-      'doctor.puerto_ocupado': 'Poort {puerto} van {servicio} wordt gebruikt door een ander programma ({proceso}).',
+      'mcp.solicitud_cancelada':
+        'De MCP-client heeft het verzoek geannuleerd: de actie is niet uitgevoerd.',
+      'doctor.puerto_ocupado':
+        'Poort {puerto} van {servicio} wordt gebruikt door een ander programma ({proceso}).',
       'doctor.puerto_iis': 'IIS ({programa}) gebruikt poort {puerto} van {servicio}.',
       'doctor.puerto_http_sys':
         'Een Windows-dienst ({programa}) gebruikt poort {puerto} van {servicio}.',
@@ -555,7 +576,8 @@ export const nl: Textos = {
       'doctor.puerto_skype': '{programa} gebruikt poort {puerto} van {servicio}.',
       'doctor.puerto_reservado':
         'Poort {puerto} van {servicio} ligt in een door Windows gereserveerd bereik ({desde}-{hasta}: Hyper-V, WSL of Docker).',
-      'doctor.ca_por_vencer': 'De certificeringsinstantie van WolfCore Dev verloopt over {dias} dagen.',
+      'doctor.ca_por_vencer':
+        'De certificeringsinstantie van WolfCore Dev verloopt over {dias} dagen.',
       'doctor.ca_vencida': 'De certificeringsinstantie van WolfCore Dev is verlopen.',
       'doctor.certificado_por_vencer': 'Het certificaat van {dominio} verloopt over {dias} dagen.',
       'doctor.certificado_vencido': 'Het certificaat van {dominio} is verlopen.',
@@ -577,24 +599,27 @@ export const nl: Textos = {
       'doctor.vcredist_ausente':
         'Microsoft Visual C++ 2015-2022 (x64) ontbreekt: PHP en andere diensten starten zonder dit pakket niet.',
       'doctor.enlazador_msvc_ausente':
-        'Rust is geïnstalleerd, maar de C++-hulpprogramma\'s van Visual Studio Build Tools (MSVC-linker) ontbreken: cargo kan de programma\'s niet linken.',
+        "Rust is geïnstalleerd, maar de C++-hulpprogramma's van Visual Studio Build Tools (MSVC-linker) ontbreken: cargo kan de programma's niet linken.",
       'doctor.antivirus_sin_exclusion':
         'De antivirusscanner controleert de gegevensmap van WolfCore Dev: PHP en de diensten kunnen traag opstarten.',
       'doctor.firewall_reglas':
-        'Windows laat binnenkomend netwerkverkeer toe via {cantidad} regel(s) voor programma\'s van WolfCore Dev (nginx, PHP of databases) in de profielen {perfiles}: die programma\'s staan open voor het netwerk.',
+        "Windows laat binnenkomend netwerkverkeer toe via {cantidad} regel(s) voor programma's van WolfCore Dev (nginx, PHP of databases) in de profielen {perfiles}: die programma's staan open voor het netwerk.",
       'doctor.firewall_no_comprobado':
         'De Windows-firewall kon niet worden gecontroleerd (mogelijk zijn administratorrechten vereist).',
       'doctor.firewall_reglas_ajenas':
-        'Er zijn {cantidad} binnenkomende regel(s) van andere programma\'s (FlyEnv, Laragon, XAMPP of andere) met nginx, PHP of databases in de profielen {perfiles}. Deze zijn niet van WolfCore Dev: ze worden alleen getoond en nooit vanaf hier verwijderd.',
+        "Er zijn {cantidad} binnenkomende regel(s) van andere programma's (FlyEnv, Laragon, XAMPP of andere) met nginx, PHP of databases in de profielen {perfiles}. Deze zijn niet van WolfCore Dev: ze worden alleen getoond en nooit vanaf hier verwijderd.",
       'doctor.servicio_en_error': '{servicio} bevindt zich in een foutstatus.',
       'doctor.revision_fallida': 'De controle {revision} kon niet worden voltooid.',
       'doctor.confirmacion_requerida': 'Bevestig de reparatie voordat u deze toepast.',
-      'doctor.hallazgo_desconocido': 'Die bevinding bestaat niet meer: voer de controle opnieuw uit.',
+      'doctor.hallazgo_desconocido':
+        'Die bevinding bestaat niet meer: voer de controle opnieuw uit.',
       'doctor.solo_informa':
         'Deze bevinding heeft geen automatische reparatie: volg de aanwijzingen.',
       'doctor.reparacion_fallida': 'De reparatie kon niet worden toegepast.',
-      'doctor.reparacion_cancelada': 'De administratorrechten zijn geannuleerd: er is niets gewijzigd.',
-      'doctor.reparacion_denegada': 'Windows of een antivirusprogramma heeft de toegang geweigerd: er is niets gewijzigd.',
+      'doctor.reparacion_cancelada':
+        'De administratorrechten zijn geannuleerd: er is niets gewijzigd.',
+      'doctor.reparacion_denegada':
+        'Windows of een antivirusprogramma heeft de toegang geweigerd: er is niets gewijzigd.',
       'doctor.ya_resuelto': 'Het probleem bestond niet meer: er hoefde niets te worden gewijzigd.',
       'doctor.ca_vieja_sin_quitar':
         'De nieuwe certificeringsinstantie is al in gebruik, maar de vorige kon niet uit het Windows-certificaatarchief worden verwijderd. U kunt deze verwijderen via de sectie HTTPS.',
@@ -610,24 +635,26 @@ export const nl: Textos = {
         'U heeft al een eigen NODE_EXTRA_CA_CERTS: WolfCore Dev vervangt deze niet.',
       'confianza.variable_fallida': 'De gebruikersvariabele kon niet worden gewijzigd.',
       'firefox.abierto': 'Firefox is geopend: sluit het af en probeer het opnieuw.',
-      'firefox.error': 'De user.js van dat profiel kon niet worden gewijzigd; deze is ongewijzigd gebleven.',
+      'firefox.error':
+        'De user.js van dat profiel kon niet worden gewijzigd; deze is ongewijzigd gebleven.',
       'firefox.fuera':
         'Er zijn profielen buiten de Firefox-map: schakel ze in via CA-vertrouwen, met uw afzonderlijke bevestiging.',
       'confianza.node_variable_cambiada':
         'NODE_EXTRA_CA_CERTS verwijst niet meer naar de certificeringsinstantie van WolfCore Dev (handmatig gewijzigd): deze is niet verwijderd.',
-      'ia.clave_invalida': 'De provider heeft de sleutel geweigerd: controleer deze of genereer een nieuwe.',
+      'ia.clave_invalida':
+        'De provider heeft de sleutel geweigerd: controleer deze of genereer een nieuwe.',
       'ia.sin_saldo': 'Het account bij de provider heeft geen saldo of quotum beschikbaar.',
       'ia.limite': 'De provider heeft de verzoeken beperkt: wacht even en probeer het opnieuw.',
       'ia.region': 'De provider biedt geen dienstverlening vanuit uw land of regio.',
-      'ia.sin_red': 'Kan geen verbinding maken met de provider: controleer het netwerk of de basis-URL.',
+      'ia.sin_red':
+        'Kan geen verbinding maken met de provider: controleer het netwerk of de basis-URL.',
       'ia.url_invalida':
         'De basis-URL is ongeldig: gebruik https:// (of http:// alleen naar 127.0.0.1 of [::1]), zonder gebruikersnaam of wachtwoord.',
       'ia.plazo': 'De provider heeft niet binnen {segundos} s gereageerd.',
       'ia.respuesta_rara': 'De provider gaf een onverwacht antwoord.',
       'ia.cancelado': 'Het verzoek aan de provider is geannuleerd.',
       'ia.sin_clave': 'Deze provider heeft een sleutel nodig: sla deze eerst op.',
-      'ia.clave_mal_formada':
-        'De sleutel heeft geen geldig formaat (geen spaties of regeleinden).',
+      'ia.clave_mal_formada': 'De sleutel heeft geen geldig formaat (geen spaties of regeleinden).',
       'ia.modelo_invalido': 'De modelnaam is ongeldig.',
       'ia.modelo_no_disponible': 'Het model bestaat niet of uw account heeft er geen toegang toe.',
       'ia.proveedor_invalido': 'De configuratie van de provider is ongeldig.',
@@ -648,7 +675,8 @@ export const nl: Textos = {
         'De opgeslagen sleutel van de provider kon niet worden gelezen: verwijder deze en sla deze opnieuw op.',
       'ia.argumento_invalido': 'Ongeldig gegeven ({campo}).',
       'correo.auth': 'De provider heeft de gebruikersnaam of het wachtwoord geweigerd.',
-      'correo.conexion': 'Kan geen verbinding maken met de SMTP-server: controleer de host en de poort.',
+      'correo.conexion':
+        'Kan geen verbinding maken met de SMTP-server: controleer de host en de poort.',
       'correo.tls':
         'Er kon geen geldige versleutelde verbinding met de server tot stand worden gebracht (certificaat, naam of STARTTLS). Er is niets verzonden.',
       'correo.rechazado':
@@ -666,8 +694,7 @@ export const nl: Textos = {
         'De opgeslagen sleutel van de provider kon niet worden gelezen: verwijder deze en sla deze opnieuw op.',
       'correo.cambia_con_clave':
         'De provider heeft een opgeslagen sleutel: bevestig dat u deze naar de nieuwe server wilt verzenden.',
-      'correo.env_sin_confirmar':
-        'Bevestig dat u de e-mailvariabelen naar de .env wilt schrijven.',
+      'correo.env_sin_confirmar': 'Bevestig dat u de e-mailvariabelen naar de .env wilt schrijven.',
       'correo.ocupado': 'Er is al een testverzending bezig.',
       'correo.limite': 'Wacht {segundos} s vóór een volgende testverzending.',
       'correo.clave_mal_formada':
@@ -685,7 +712,8 @@ export const nl: Textos = {
       'instalador.zip_demasiado_grande':
         'Het gedownloade pakket is te groot of bevat te veel bestanden: het wordt niet geïnstalleerd.',
       'rust.rustup_init_fallo': 'rustup-init is niet goed afgesloten (code {codigo}): {detalle}',
-      'rust.toolchain_fallo': 'Rust {version} kon niet worden geïnstalleerd (code {codigo}): {detalle}',
+      'rust.toolchain_fallo':
+        'Rust {version} kon niet worden geïnstalleerd (code {codigo}): {detalle}',
       'rust.desinstalar_fallo': 'Rust {version} kon niet worden verwijderd: {detalle}',
       'rust.descarga_fallo': 'rustup kon niet worden gedownload (HTTP {estado}).',
       'agentes.instalacion_fallo': 'De agent kon niet worden geïnstalleerd: {detalle}',
@@ -697,14 +725,16 @@ export const nl: Textos = {
       'agentes.config_en_uso':
         '{archivo} is gewijzigd terwijl WolfCore Dev het bewerkte: sluit de agent en probeer het opnieuw. Het bestand is niet gewijzigd.',
       'agentes.proveedor_incompatible': '{agente} kan die AI-provider niet gebruiken.',
-      'agentes.sin_cambios_preparados': 'Er zijn geen voorbereide wijzigingen (git add) om te beschrijven.',
+      'agentes.sin_cambios_preparados':
+        'Er zijn geen voorbereide wijzigingen (git add) om te beschrijven.',
       'agentes.argumento_invalido': 'Ongeldig gegeven ({campo}).',
       'git.commit_fallo': 'De commit kon niet worden uitgevoerd: {detalle}',
       'git.mensaje_invalido': 'Het commitbericht is leeg of ongeldig.',
       'php.rama_no_instalada': 'PHP {rama} is niet geïnstalleerd.',
       'php.argumento_invalido': 'Ongeldig gegeven ({campo}).',
       'php.valor_invalido': 'De waarde van {clave} is ongeldig.',
-      'php.ini_invalido': 'PHP start niet met die php.ini; er is niets opgeslagen. Uitvoer: {salida}',
+      'php.ini_invalido':
+        'PHP start niet met die php.ini; er is niets opgeslagen. Uitvoer: {salida}',
       'php.no_arranco':
         'PHP {rama} startte niet opnieuw na de wijziging; de vorige configuratie is hersteld en reageert weer als voorheen.',
       'php.caido_tras_restaurar':
@@ -715,7 +745,8 @@ export const nl: Textos = {
         'De extensie {nombre} staat niet in de catalogus voor deze versie.',
       'php.variante_desconocida': 'Er kon niet worden bepaald hoe deze PHP-versie is gecompileerd.',
       'php.sin_variante': 'De catalogus bevat {nombre} niet voor de compilatie {variante}.',
-      'php.huella_distinta': 'De download komt niet overeen met de gepubliceerde vingerafdruk; er is niets geïnstalleerd.',
+      'php.huella_distinta':
+        'De download komt niet overeen met de gepubliceerde vingerafdruk; er is niets geïnstalleerd.',
       'php.descarga_fallida': 'De extensie kon niet worden gedownload: {detalle}',
       'php.extension_en_uso':
         'De DLL van {nombre} is in gebruik. Stop PHP {rama} en probeer het opnieuw.',
@@ -724,15 +755,15 @@ export const nl: Textos = {
       'php.sitio_sin_php': 'Die site gebruikt geen PHP.',
       'php.sitio_no_arranco':
         'De eigen PHP-instantie van {sitio} reageerde niet na de wijziging; de vorige configuratie is hersteld.',
-      'php.sin_puertos_sitio': 'Er zijn geen vrije poorten meer voor de eigen PHP-instanties van de sites.',
+      'php.sin_puertos_sitio':
+        'Er zijn geen vrije poorten meer voor de eigen PHP-instanties van de sites.',
       'xdebug.launch_invalido':
         'De .vscode/launch.json van het project kan niet worden geïnterpreteerd; er is niets gewijzigd.',
       'xdebug.launch_no_seguro':
         'De map .vscode of het bestand launch.json is een koppeling of iets anders: daar wordt niet in geschreven.',
       'xdebug.sin_configurar': 'Configureer Xdebug op de site voordat u de launch.json genereert.',
       'nginx.sitio_no_existe': 'Die site bestaat niet meer.',
-      'nginx.texto_invalido':
-        'De vhost-tekst is te lang, is leeg of bevat besturingstekens.',
+      'nginx.texto_invalido': 'De vhost-tekst is te lang, is leeg of bevat besturingstekens.',
       'nginx.sintaxis': 'Regel {linea}: {detalle}. Er is niets gewijzigd.',
       'nginx.directiva_prohibida':
         'Regel {linea}: "{directiva}" is niet toegestaan in de vhost van een site (dit kan andere sites of bestanden buiten het project beïnvloeden). Er is niets gewijzigd.',
@@ -753,7 +784,8 @@ export const nl: Textos = {
       'depuracion.puerto_ocupado':
         'Poort {puerto} is al in gebruik: de dumpopname kan niet luisteren. Sluit het programma dat deze gebruikt (bijv. een server:dump van Symfony).',
       'depuracion.no_iniciado': 'De dumpopname is uitgeschakeld.',
-      'depuracion.tipo_no_soportado': 'Het vastleggen van dumps is alleen voor PHP- en FastAPI-sites.',
+      'depuracion.tipo_no_soportado':
+        'Het vastleggen van dumps is alleen voor PHP- en FastAPI-sites.',
       'depuracion.confirmacion': 'Bevestig het vastleggen van dumps in het dialoogvenster.',
       'depuracion.argumento_invalido': 'Ongeldig argument: {campo}',
       'depuracion.archivo_fuera_del_sitio':
@@ -777,8 +809,10 @@ export const nl: Textos = {
         '{servicio} {version} heeft geen gepubliceerd controlegetal: bevestig de installatie in het dialoogvenster.',
       'catalogo.huella_debil':
         '{servicio} {version} heeft alleen een zwak controlegetal (MD5 of SHA-1): bevestig de installatie in het dialoogvenster.',
-      'catalogo.huella_no_coincide': 'De download komt niet overeen met het gepubliceerde controlegetal.',
-      'catalogo.redireccion_ajena': 'De download probeerde door te verwijzen naar een niet-toegestane site ({host}).',
+      'catalogo.huella_no_coincide':
+        'De download komt niet overeen met het gepubliceerde controlegetal.',
+      'catalogo.redireccion_ajena':
+        'De download probeerde door te verwijzen naar een niet-toegestane site ({host}).',
       'catalogo.demasiadas_redirecciones':
         'De download heeft te veel doorverwijzingen gemaakt (meer dan {maximo}).',
       'catalogo.respuesta_grande': 'Het antwoord van de server is te groot.',
@@ -818,13 +852,15 @@ export const nl: Textos = {
       'auditoria.sin_confirmar': 'Bevestig dat u dit wachtwoord opnieuw wilt instellen.',
       'auditoria.respaldo_previo_fallo':
         'Er kon geen back-up van de database worden opgeslagen vóór het opnieuw instellen: er is niets gewijzigd.',
-      'auditoria.copia_fallo': 'Er kon geen kopie van de rij worden opgeslagen: er is niets gewijzigd.',
+      'auditoria.copia_fallo':
+        'Er kon geen kopie van de rij worden opgeslagen: er is niets gewijzigd.',
       'auditoria.motor_no_soportado':
         'De wachtwoordaudit is beschikbaar voor MySQL, MariaDB en PostgreSQL.',
       'auditoria.cancelada': 'Audit geannuleerd.',
       'auditoria.usuario_invalido': 'De gebruikersnaam moet tussen 1 en 256 tekens lang zijn.',
       'auditoria.en_curso': 'Er loopt al een audit: wacht tot deze is voltooid of annuleer deze.',
-      'auditoria.base_sistema': 'Een systeemdatabase wordt niet geaudit: kies de database van een project.',
+      'auditoria.base_sistema':
+        'Een systeemdatabase wordt niet geaudit: kies de database van een project.',
       'auditoria.esquema_invalido': 'Het schema bestaat niet in die database.',
       'auditoria.fila_cambio':
         'Het account is intussen gewijzigd: het wachtwoord is niet opnieuw ingesteld. Probeer het opnieuw.',
@@ -835,17 +871,21 @@ export const nl: Textos = {
       'auditoria.datos_reales_sin_confirmar':
         'Deze database bevat echte klantgegevens: voor het opnieuw instellen van een wachtwoord is de versterkte bevestiging vereist.',
       'instantaneas.id_invalido': 'De momentopname is ongeldig.',
-      'instantaneas.no_encontrada': 'De momentopname is niet gevonden; mogelijk is deze al verwijderd.',
-      'instantaneas.otra_base': 'Deze momentopname hoort bij een andere database en kan hier niet op worden toegepast.',
+      'instantaneas.no_encontrada':
+        'De momentopname is niet gevonden; mogelijk is deze al verwijderd.',
+      'instantaneas.otra_base':
+        'Deze momentopname hoort bij een andere database en kan hier niet op worden toegepast.',
       'instantaneas.sin_confirmar': 'Bevestig dat u wilt terugkeren naar deze momentopname.',
-      'instantaneas.motor_no_soportado': 'Momentopnamen zijn beschikbaar voor MySQL, MariaDB en PostgreSQL.',
+      'instantaneas.motor_no_soportado':
+        'Momentopnamen zijn beschikbaar voor MySQL, MariaDB en PostgreSQL.',
       'instantaneas.demasiado_grande':
         'De database is groter dan {maximo} MB, het maximum dat een momentopname kan opslaan.',
       'instantaneas.sin_espacio':
         'Er is onvoldoende vrije ruimte voor de momentopname: er is {necesarios} MB nodig en er is {libres} MB beschikbaar.',
       'instantaneas.limite':
         'Er zijn al {maximo} momentopnamen van deze database: verwijder er een om een nieuwe te maken.',
-      'instantaneas.tomar_fallo': 'De momentopname kon niet worden gemaakt. De database is niet gewijzigd.',
+      'instantaneas.tomar_fallo':
+        'De momentopname kon niet worden gemaakt. De database is niet gewijzigd.',
       'instantaneas.huella_no_coincide':
         'Het bestand van de momentopname is gewijzigd of beschadigd: er is niets hersteld.',
       'instantaneas.respaldo_previo_fallo':
@@ -890,7 +930,8 @@ export const nl: Textos = {
     borrarSi: 'Naar prullenbak verplaatsen',
     notaAutomatica: (fecha: string) =>
       `Vorige status, opgeslagen vóór het terugkeren naar de momentopname van ${fecha}`,
-    notaAutomaticaSinOrigen: 'Vorige status, opgeslagen vóór het terugkeren naar een andere momentopname',
+    notaAutomaticaSinOrigen:
+      'Vorige status, opgeslagen vóór het terugkeren naar een andere momentopname',
     extensionesAviso: (lista: string) =>
       `Bevat PostgreSQL-extensies (${lista}) die alleen worden hersteld met het controlegetalregister van dit apparaat.`,
     limites:
@@ -910,12 +951,15 @@ export const nl: Textos = {
         `De database ${base} wordt volledig vervangen door deze momentopname: alles wat sindsdien is gewijzigd, gaat verloren uit de database. Vooraf wordt automatisch een momentopname van de huidige status opgeslagen; als er iets misgaat, keert de database automatisch terug naar die status.`,
       pedir: (base: string) => `Typ ${base} om te bevestigen`,
       confirmar: 'Terugkeren naar deze momentopname',
-      trabajando: (base: string) => `${base} herstellen… Sluit het programma niet af voordat dit is voltooid.`,
+      trabajando: (base: string) =>
+        `${base} herstellen… Sluit het programma niet af voordat dit is voltooid.`,
       hecho: (base: string) => `De database ${base} is teruggezet naar de momentopname`,
       respaldoPrevio: 'De vorige status is opgeslagen in de automatische momentopname van',
       advertencias: 'Het herstel is voltooid met meldingen:',
-      hechoConAvisos: (base: string) => `De database ${base} is teruggezet naar de momentopname, met meldingen`,
-      baseVacia: 'De database bestaat niet of is leeg: er is niets om op te slaan vóór het terugkeren.',
+      hechoConAvisos: (base: string) =>
+        `De database ${base} is teruggezet naar de momentopname, met meldingen`,
+      baseVacia:
+        'De database bestaat niet of is leeg: er is niets om op te slaan vóór het terugkeren.',
       sinGuardarTitulo: 'De huidige status kon niet worden opgeslagen',
       sinGuardarTexto:
         'WolfCore Dev kon de huidige status van de database niet opslaan vóór het terugkeren. Als u doorgaat ZONDER deze op te slaan en het herstel mislukt, gaan de huidige gegevens van de database verloren.',
@@ -971,7 +1015,8 @@ export const nl: Textos = {
         'Het project is niet als vertrouwd gemarkeerd: schakel "Ik vertrouw deze repository" in om het uit te voeren.',
       receta_cambio:
         'Het recept van het project is gewijzigd sinds u het vertrouwde: bekijk het opnieuw en schakel "Ik vertrouw deze repository" weer in.',
-      sin_confirmar: 'De opdracht moet nog worden bevestigd: deze wordt pas uitgevoerd nadat u deze hebt gecontroleerd en bevestigd.',
+      sin_confirmar:
+        'De opdracht moet nog worden bevestigd: deze wordt pas uitgevoerd nadat u deze hebt gecontroleerd en bevestigd.',
       comando_invalido: 'De opdracht is niet toegestaan (alleen php, node, npm run en python).',
       cron_invalida: 'Het schema is geen geldige cron-expressie.',
       carpeta: 'De projectmap bestaat niet.',
@@ -1064,7 +1109,8 @@ export const nl: Textos = {
       comillasSinCerrar: 'Er zijn niet-gesloten aanhalingstekens.',
       tiempo: 'Maximale duur',
       minutos: 'minuten',
-      tiempoAyuda: 'Als de taak langer duurt, wordt deze automatisch gestopt (alleen dat proces en wat het heeft gestart).',
+      tiempoAyuda:
+        'Als de taak langer duurt, wordt deze automatisch gestopt (alleen dat proces en wat het heeft gestart).',
       activa: 'Actief (draait automatisch zolang de toepassing geopend is)',
       advertencia:
         'Door akkoord te gaan geeft u toestemming voor exact deze opdracht: deze wordt automatisch uitgevoerd in de map van dit project telkens wanneer deze aan de beurt is. Als u de opdracht wijzigt, moet u deze opnieuw bevestigen.',
@@ -1116,7 +1162,8 @@ export const nl: Textos = {
       },
       sinOpciones: 'Er is hier niets om te kiezen.',
       captadorUnico: 'Slechts één e-mailvanger tegelijk: een andere kiezen vervangt de vorige.',
-      yaNoExisten: (lista: string) => `Bestaan niet meer en worden bij het opslaan verwijderd: ${lista}`,
+      yaNoExisten: (lista: string) =>
+        `Bestaan niet meer en worden bij het opslaan verwijderd: ${lista}`,
       guardar: 'Opslaan',
       guardado: (n: string) => `Workspace "${n}" opgeslagen.`,
     },
@@ -1163,7 +1210,8 @@ export const nl: Textos = {
       duplicados:
         'Deze domeinen staan al in hosts buiten het blok van WolfCore Dev (ze blijven behouden):',
       motivos: {
-        cancelado: 'De beheerdersmachtiging is geannuleerd. Het hosts-bestand is ongewijzigd gebleven.',
+        cancelado:
+          'De beheerdersmachtiging is geannuleerd. Het hosts-bestand is ongewijzigd gebleven.',
         tiempo:
           'Niemand heeft op tijd gereageerd op de beheerdersmachtiging. De site is opgeslagen; het hosts-bestand is ongewijzigd gebleven. Als u de melding van Windows nog ziet, annuleer deze dan (deze doet niets meer). Pas de openstaande wijzigingen toe zodra het schikt (één machtiging voor alle wijzigingen).',
         denegado:
@@ -1187,14 +1235,14 @@ export const nl: Textos = {
   servicios: {
     titulo: 'Diensten',
     descripcion:
-      'Start en stop de webserver, PHP, databases en hulpprogramma\'s. De status wordt automatisch bijgewerkt.',
+      "Start en stop de webserver, PHP, databases en hulpprogramma's. De status wordt automatisch bijgewerkt.",
     grupos: {
       web: 'Web',
       php: 'PHP',
       bd: 'Databases',
       correo: 'E-mail',
       ia: 'AI',
-      herramientas: 'Hulpprogramma\'s',
+      herramientas: "Hulpprogramma's",
     },
     gruposAyuda: {
       web: 'Server die de .test-domeinen afhandelt.',
@@ -1213,7 +1261,8 @@ export const nl: Textos = {
     puertoCambiado: (nombre: string, p: number) => `${nombre} gebruikt nu poort ${p}`,
     conflicto: 'Poort bezet',
     autoIniciar: 'Starten bij het opstarten van WolfCore Dev',
-    autoIniciarActivado: (nombre: string) => `${nombre} wordt gestart bij het opstarten van WolfCore Dev`,
+    autoIniciarActivado: (nombre: string) =>
+      `${nombre} wordt gestart bij het opstarten van WolfCore Dev`,
     autoIniciarDesactivado: (nombre: string) =>
       `${nombre} wordt niet meer gestart bij het opstarten van WolfCore Dev`,
     dialogoPuerto: {
@@ -1253,8 +1302,6 @@ export const nl: Textos = {
     ftp: {
       interruptor: 'FTP-server',
       redLocal: 'Verbindingen vanuit het lokale netwerk toestaan',
-      redLocalAyuda:
-        'Indien uitgeschakeld kan alleen deze computer verbinding maken (127.0.0.1). Elke site schakelt zijn eigen toegang in onder Sites.',
       avisoTitulo: 'FTP openstellen voor het lokale netwerk',
       avisoTexto:
         'FTP verzendt gebruikersnamen, wachtwoorden en bestanden onversleuteld. Elke computer in uw netwerk kan proberen verbinding te maken. Gebruik dit alleen in een vertrouwd netwerk.',
@@ -1270,7 +1317,8 @@ export const nl: Textos = {
       sinVersion: 'niet geïnstalleerd',
       uso: 'Gebruik',
       usoTexto: 'composer',
-      ayuda: 'Gebruik "Terminal" in een project, of voeg WolfCore Dev toe aan het PATH in Instellingen.',
+      ayuda:
+        'Gebruik "Terminal" in een project, of voeg WolfCore Dev toe aan het PATH in Instellingen.',
       instaladoOk: 'Composer geïnstalleerd',
       sinPhp: 'Installeer eerst PHP',
       actualizado: (v: string) => `Composer bijgewerkt: ${v}`,
@@ -1526,7 +1574,8 @@ export const nl: Textos = {
       ocultar: 'Wachtwoord verbergen',
       copiarDato: (dato: string) => `${dato} kopiëren`,
       env: 'Blok voor het .env-bestand',
-      envAyuda: 'Plak dit in het .env-bestand van uw project. WolfCore Dev schrijft niet in uw projecten.',
+      envAyuda:
+        'Plak dit in het .env-bestand van uw project. WolfCore Dev schrijft niet in uw projecten.',
       copiarEnv: 'Blok kopiëren',
       cargando: 'Verbindingsgegevens lezen…',
     },
@@ -1679,7 +1728,8 @@ export const nl: Textos = {
     cambiarCarpeta: 'Wijzigen',
     detectando: 'Project analyseren…',
     detectado: (tipo: string) => `Gedetecteerd: ${tipo}`,
-    sinDeteccionAlEditar: 'Automatische detectie geldt alleen bij het aanmaken; controleer type en PHP.',
+    sinDeteccionAlEditar:
+      'Automatische detectie geldt alleen bij het aanmaken; controleer type en PHP.',
     nombre: 'Naam',
     nombreAyuda: 'Alleen om de site in de lijst te herkennen.',
     nombreCopia: (nombre: string) => `${nombre} (kopie)`,
@@ -1764,7 +1814,8 @@ export const nl: Textos = {
     opcionesDe: (dominio: string) => `Tunnelopties voor ${dominio}`,
     proveedor: 'Provider',
     proveedorRapido: 'Snel (zonder account)',
-    proveedorRapidoAyuda: 'Een link van trycloudflare.com die telkens verandert wanneer u de tunnel opent.',
+    proveedorRapidoAyuda:
+      'Een link van trycloudflare.com die telkens verandert wanneer u de tunnel opent.',
     proveedorNombre: 'Met naam (uw domein)',
     proveedorNombreAyuda:
       'Een vaste link op een eigen domein bij Cloudflare. Hiervoor hebt u een Cloudflare-account nodig.',
@@ -1820,14 +1871,16 @@ export const nl: Textos = {
     guardarToken: 'Token opslaan',
     borrarToken: 'Token verwijderen',
     usarProveedor: 'Deze provider gebruiken',
-    guardadoProveedor: 'Provider opgeslagen. Bij het openen van de tunnel wordt om bevestiging gevraagd.',
+    guardadoProveedor:
+      'Provider opgeslagen. Bij het openen van de tunnel wordt om bevestiging gevraagd.',
     ngrokAyudaInstalacion:
       'ngrok moet al op deze computer geïnstalleerd zijn (WolfCore Dev downloadt het niet omdat ngrok geen verifieerbare download publiceert). Uw globale configuratie blijft ongewijzigd.',
     exposeAyudaInstalacion:
       'Expose moet al geïnstalleerd zijn of het bestand expose.phar moet in de map bin/expose van de gegevens van WolfCore Dev staan (op Windows werkt het alleen met de phar; er is geen download met vingerafdruk). De verzoekinspector blijft zichtbaar op het hele lokale netwerk; daarom wordt dit niet gebruikt voor sites met echte gegevens. Uw globale configuratie blijft ongewijzigd.',
     tailscaleAlcance: 'Bereik',
     tailscaleServe: 'Serve: alleen uw tailnet',
-    tailscaleServeAyuda: 'Alleen de apparaten in uw Tailscale-netwerk. Niet bereikbaar via internet.',
+    tailscaleServeAyuda:
+      'Alleen de apparaten in uw Tailscale-netwerk. Niet bereikbaar via internet.',
     tailscaleFunnel: 'Funnel: het hele internet',
     tailscaleFunnelAyuda: 'Iedereen met de link heeft toegang, ook buiten uw tailnet.',
     tailscaleFunnelAviso:
@@ -1853,7 +1906,6 @@ export const nl: Textos = {
     columnas: { sitio: 'Site', estado: 'Status', url: 'Link', acciones: 'Acties' },
     vacioTitulo: 'Er zijn geen geopende tunnels',
     vacio: 'Schakel de tunnelschakelaar van een site in om een openbare link te verkrijgen.',
-    irASitios: 'Naar Sites',
     sinNombre: 'Verwijderde site',
   },
   ajustes: {
@@ -1861,7 +1913,8 @@ export const nl: Textos = {
     descripcion: 'Voorkeuren voor de omgeving.',
     general: 'Algemeen',
     carpetaDatos: 'Gegevensmap',
-    carpetaDatosAyuda: 'Uitvoerbare bestanden, configuratie en logboeken. Kan worden geopend, niet gewijzigd.',
+    carpetaDatosAyuda:
+      'Uitvoerbare bestanden, configuratie en logboeken. Kan worden geopend, niet gewijzigd.',
     servicios: 'Diensten',
     puertoNginx: 'Nginx-poort',
     puertoNginxAyuda:
@@ -1926,7 +1979,8 @@ export const nl: Textos = {
         'Meestal 443. Als een ander programma deze poort gebruikt, kies dan een poort tussen 1024 en 65535; URL’s bevatten dan het poortnummer.',
       puertoRango: 'Gebruik 443 of een nummer tussen 1024 en 65535',
       puertoGuardado: (p: number) => `HTTPS gebruikt nu poort ${p}`,
-      puertoAplicarFallo: 'Poort opgeslagen, maar Nginx heeft de nieuwe configuratie niet geaccepteerd',
+      puertoAplicarFallo:
+        'Poort opgeslagen, maar Nginx heeft de nieuwe configuratie niet geaccepteerd',
       firefox:
         'Firefox gebruikt een eigen certificaatopslag. Om de autoriteit te vertrouwen, opent u about:config en schakelt u in',
     },
@@ -1946,7 +2000,8 @@ export const nl: Textos = {
       pathAgregar: 'Toevoegen aan gebruikers-PATH',
       pathQuitar: 'Verwijderen uit PATH',
       pathTitulo: 'PATH bijgewerkt',
-      pathAviso: 'Open een nieuwe terminal om de wijziging te zien: reeds geopende terminals zien deze niet.',
+      pathAviso:
+        'Open een nieuwe terminal om de wijziging te zien: reeds geopende terminals zien deze niet.',
       pathQuitarTitulo: 'WolfCore Dev uit PATH verwijderen?',
       pathQuitarTexto:
         'php en composer van WolfCore Dev zijn niet langer beschikbaar in nieuwe terminals. Reeds geopende terminals veranderen niet.',
@@ -1987,9 +2042,11 @@ export const nl: Textos = {
   formSitioHttps: {
     titulo: 'HTTPS',
     https: 'Ook via HTTPS aanbieden',
-    httpsAyuda: 'Met een eigen certificaat voor het domein en de aliassen, ondertekend door WolfCore Dev.',
+    httpsAyuda:
+      'Met een eigen certificaat voor het domein en de aliassen, ondertekend door WolfCore Dev.',
     redirigir: 'Doorsturen naar HTTPS',
-    redirigirAyuda: 'Bezoeken via http worden doorgestuurd naar https. Openbare tunnels worden niet beïnvloed.',
+    redirigirAyuda:
+      'Bezoeken via http worden doorgestuurd naar https. Openbare tunnels worden niet beïnvloed.',
     redirigirDeshabilitado: 'Schakel eerst HTTPS in',
     sinAutoridadTitulo: 'De HTTPS-autoriteit is niet geïnstalleerd',
     sinAutoridadTexto:
@@ -2079,7 +2136,8 @@ export const nl: Textos = {
     launchActualizado: (respaldo: string) => `launch.json bijgewerkt. Vorige back-up: ${respaldo}`,
     phpStorm: 'Configuratie voor PhpStorm',
     copiarPhpStorm: 'PhpStorm-configuratie kopiëren',
-    errorNginx: (salida: string) => `Nginx heeft de wijziging niet geaccepteerd; de vorige status is hersteld. ${salida}`,
+    errorNginx: (salida: string) =>
+      `Nginx heeft de wijziging niet geaccepteerd; de vorige status is hersteld. ${salida}`,
   },
   nginxEditor: {
     etiqueta: 'Nginx',
@@ -2236,7 +2294,8 @@ export const nl: Textos = {
       'Het huidige wachtwoord werkt niet meer en geopende verbindingen van deze site worden gesloten. U moet het in uw FTP-client bijwerken.',
     regenerada: 'FTP-wachtwoord opnieuw gegenereerd',
     soloLectura: 'Alleen-lezen',
-    soloLecturaAyuda: 'Downloaden is mogelijk, maar bestanden uploaden, wijzigen of verwijderen niet.',
+    soloLecturaAyuda:
+      'Downloaden is mogelijk, maar bestanden uploaden, wijzigen of verwijderen niet.',
     soloLecturaActivado: 'De FTP van deze site is nu alleen-lezen',
     soloLecturaDesactivado: 'De FTP van deze site staat nu schrijven toe',
     activado: 'FTP-toegang ingeschakeld',
@@ -2248,7 +2307,8 @@ export const nl: Textos = {
     redLocalAviso:
       'FTP accepteert verbindingen vanuit het lokale netwerk en verzendt het wachtwoord en de bestanden onversleuteld. Gebruik dit alleen in een vertrouwd netwerk.',
     redLocalHost: 'of het IP-adres van deze computer in uw netwerk',
-    servidorApagado: 'De FTP-server is uitgeschakeld: niemand kan verbinding maken totdat u deze inschakelt.',
+    servidorApagado:
+      'De FTP-server is uitgeschakeld: niemand kan verbinding maken totdat u deze inschakelt.',
     encender: 'FTP inschakelen',
     urlEtiqueta: 'Adres',
     urlAyuda: 'Het adres bevat niet het wachtwoord: dit wordt gevraagd bij het verbinden.',
@@ -2291,8 +2351,10 @@ export const nl: Textos = {
         probando: 'Verzenden…',
         probarAyuda:
           'Verzendt één echte e-mail naar dat adres, via een geverifieerde versleutelde verbinding. Maximaal één per 15 s.',
-        sinClaveParaProbar: 'Sla het wachtwoord van de provider op om de verzending te kunnen testen.',
-        hostLocal: 'De naam van deze server verwijst naar deze computer of naar het lokale netwerk.',
+        sinClaveParaProbar:
+          'Sla het wachtwoord van de provider op om de verzending te kunnen testen.',
+        hostLocal:
+          'De naam van deze server verwijst naar deze computer of naar het lokale netwerk.',
         confirmarRed: 'Lokaal netwerk bevestigen',
         enviado: (para: string) => `E-mail verzonden naar ${para}. Controleer uw postvak.`,
         fallos: {
@@ -2326,7 +2388,8 @@ export const nl: Textos = {
         starttls: 'STARTTLS (poort 587)',
         usuario: 'Gebruiker',
         usuarioObligatorio: 'Voer de gebruiker in.',
-        usuarioFijoAyuda: 'Deze provider gebruikt altijd deze gebruiker; het wachtwoord is dat van uw account.',
+        usuarioFijoAyuda:
+          'Deze provider gebruikt altijd deze gebruiker; het wachtwoord is dat van uw account.',
         clave: 'SMTP-wachtwoord',
         claveGuardada: (f: string) => `Opgeslagen: ••••${f}`,
         claveNueva: 'Voer het wachtwoord in om het op te slaan',
@@ -2339,7 +2402,8 @@ export const nl: Textos = {
           'Plak het wachtwoord precies zoals de provider het opgeeft: interne spaties blijven behouden.',
         borrarClave: 'Wachtwoord verwijderen',
         borrarClaveTitulo: (n: string) => `Het wachtwoord van ${n} verwijderen?`,
-        borrarClaveTexto: 'Het opgeslagen wachtwoord wordt verwijderd. De provider blijft in de lijst staan.',
+        borrarClaveTexto:
+          'Het opgeslagen wachtwoord wordt verwijderd. De provider blijft in de lijst staan.',
         claveBorrada: 'Wachtwoord verwijderd',
         guardar: 'Opslaan',
         guardado: (n: string) => `${n} opgeslagen`,
@@ -2361,7 +2425,8 @@ export const nl: Textos = {
         volvio: (n: string) =>
           `${n} verzendt weer naar de lokale e-mailvanger, maar het .env-bestand is niet gewijzigd: het behoudt de MAIL_*-variabelen van de provider (en het wachtwoord, als u dat hebt ingevuld). Herschrijf het e-mailblok.`,
         incluirClave: 'Ook het wachtwoord in het .env-bestand schrijven',
-        incluirClaveAyuda: 'Niet aangevinkt: het blok bevat geen MAIL_PASSWORD en u voegt dit handmatig toe.',
+        incluirClaveAyuda:
+          'Niet aangevinkt: het blok bevat geen MAIL_PASSWORD en u voegt dit handmatig toe.',
         sinClaveGuardada: 'De provider heeft geen opgeslagen wachtwoord.',
         vista: 'Wijzigingen in .env (het wachtwoord is gemaskeerd)',
         textoPlano:
@@ -2490,7 +2555,8 @@ export const nl: Textos = {
       documentacion: 'Documentatie bekijken',
       nombre: 'Naam',
       urlBase: 'Basis-URL',
-      urlAyuda: 'Leeg = de officiële URL. Alleen https://, of http:// naar 127.0.0.1 of [::1] (LM Studio).',
+      urlAyuda:
+        'Leeg = de officiële URL. Alleen https://, of http:// naar 127.0.0.1 of [::1] (LM Studio).',
       urlObligatoria: 'Voer de basis-URL van de compatibele provider in.',
       modelo: 'Standaardmodel (optioneel)',
       modeloAyuda: 'Wordt gebruikt in het .env-blok (AI_MODEL) en in het testbericht.',
@@ -2538,7 +2604,8 @@ export const nl: Textos = {
         'De sleutel komt in platte tekst in het .env-bestand van het project te staan. Iedereen met toegang tot die map kan haar lezen.',
       copiaPrevia:
         'Van het huidige .env-bestand wordt eerst een back-up gemaakt, buiten het project (in de gegevensmap van WolfCore Dev).',
-      sinClave: 'Deze provider vereist een sleutel: sla er een op voordat u deze in een project gebruikt.',
+      sinClave:
+        'Deze provider vereist een sleutel: sla er een op voordat u deze in een project gebruikt.',
       gitignoreFalta: 'De .gitignore van het project negeert .env niet.',
       gitignoreNoExiste: 'Het project heeft geen .gitignore.',
       gitignoreOk: 'De .gitignore negeert .env al.',
@@ -2577,7 +2644,8 @@ export const nl: Textos = {
     descripcion:
       'Taalmodellen die op uw computer draaien met Ollama. Gebruik ze vanuit uw projecten zonder gegevens naar het internet te verzenden.',
     sinInstalarTitulo: 'Ollama is niet geïnstalleerd',
-    sinInstalar: 'Installeer Ollama via Diensten om modellen op uw computer te downloaden en te gebruiken.',
+    sinInstalar:
+      'Installeer Ollama via Diensten om modellen op uw computer te downloaden en te gebruiken.',
     irAServicios: 'Naar Diensten',
     apagadoTitulo: 'Ollama is uitgeschakeld',
     apagado: 'Schakel Ollama in om modellen te bekijken, te downloaden en te testen.',
@@ -2614,8 +2682,6 @@ export const nl: Textos = {
       yaInstalado: 'Dat model is al geïnstalleerd',
       enCurso: 'Dat model wordt al gedownload',
       confirmarTitulo: (modelo: string) => `${modelo} downloaden?`,
-      confirmarTexto:
-        'Modellen zijn doorgaans meerdere GB groot (van 1 tot meer dan 40 GB, afhankelijk van de grootte). Ollama meldt de grootte niet vooraf: u ziet deze in de voortgangsbalk en u kunt op elk moment annuleren.',
       confirmar: 'Downloaden',
     },
     progreso: {
@@ -2685,7 +2751,8 @@ export const nl: Textos = {
         'sitio-crear': 'De site aanmaken',
         comando: 'Projectopdracht',
       } as Record<string, string>,
-      sitioCrear: (dominio: string) => (dominio ? `De site ${dominio} aanmaken` : 'De site aanmaken'),
+      sitioCrear: (dominio: string) =>
+        dominio ? `De site ${dominio} aanmaken` : 'De site aanmaken',
       bdRestaurar: (archivo: string | null) =>
         archivo ? `De back-up ${archivo} terugzetten` : 'Een back-up terugzetten',
       migrar: 'De database migreren',
@@ -2723,7 +2790,8 @@ export const nl: Textos = {
       errorClonar: 'Kan de repository niet klonen',
       sinCancelar:
         'Het klonen kan hiervandaan niet worden onderbroken: wacht tot het klaar is (dit kan enkele minuten duren).',
-      sinGit: 'Git is niet geïnstalleerd. Installeer Git (git-scm.com) en open dit dialoogvenster opnieuw.',
+      sinGit:
+        'Git is niet geïnstalleerd. Installeer Git (git-scm.com) en open dit dialoogvenster opnieuw.',
     },
     github: {
       estadoGh: (usuario?: string) =>
@@ -2816,7 +2884,8 @@ export const nl: Textos = {
       detectado: (v: string) => `Gedetecteerd: ${v}`,
       nodeInstalar: 'Node is niet geïnstalleerd: installeer het bij Diensten.',
       pythonInstalar: 'Python is niet geïnstalleerd: installeer het bij Diensten.',
-      lenguajeInstalar: (nombre: string) => `${nombre} is niet geïnstalleerd: installeer het bij Diensten.`,
+      lenguajeInstalar: (nombre: string) =>
+        `${nombre} is niet geïnstalleerd: installeer het bij Diensten.`,
       dominio: 'Domein',
       puertoProxy: 'Lokale poort',
       puertoPlaceholder: '8000',
@@ -2835,7 +2904,7 @@ export const nl: Textos = {
         'Geen database: kies een database-engine bij Diensten om er een aan te maken of een back-up te herstellen.',
       confio: 'Ik vertrouw deze repository: de installatiestappen uitvoeren',
       confioAyuda:
-        'De stappen voeren programma\'s van het project (composer, npm, pip, migraties) uit op uw apparaat. Vink dit alleen aan als u de code kent.',
+        "De stappen voeren programma's van het project (composer, npm, pip, migraties) uit op uw apparaat. Vink dit alleen aan als u de code kent.",
       montar: 'Project opzetten',
       montando: 'Project wordt opgezet…',
       reintentar: 'Opnieuw proberen',
@@ -2848,7 +2917,8 @@ export const nl: Textos = {
       verRegistro: 'Logboek bekijken',
       ocultarRegistro: 'Logboek verbergen',
       listo: 'Het project is klaar.',
-      fallo: (paso: string) => `Mislukt: ${paso}. Probeer opnieuw, sla over of annuleer; niets is ongedaan gemaakt.`,
+      fallo: (paso: string) =>
+        `Mislukt: ${paso}. Probeer opnieuw, sla over of annuleer; niets is ongedaan gemaakt.`,
       cancelada: 'De voorbereiding is geannuleerd. U kunt deze hervatten vanaf de projectkaart.',
       incompleta: 'Er zijn nog stappen die niet zijn uitgevoerd.',
       errorCrear: 'Kan het project niet aanmaken',
@@ -2885,7 +2955,8 @@ export const nl: Textos = {
       baseDatosAyuda: (base: string) =>
         `De database "${base}" al aangemeld openen (Adminer of phpMyAdmin)`,
       baseDatosSinDetectar: 'De database van het project openen (Adminer of phpMyAdmin)',
-      sinBase: 'Het .env-bestand van het project vermeldt geen MySQL-, MariaDB- of PostgreSQL-database.',
+      sinBase:
+        'Het .env-bestand van het project vermeldt geen MySQL-, MariaDB- of PostgreSQL-database.',
       adminerNoListo: 'Adminer is niet gereed',
       entradaAutomatica: 'U wordt automatisch aangemeld, zonder wachtwoord in te voeren.',
       elegirBd: 'Adminer of phpMyAdmin kiezen',
@@ -2911,11 +2982,13 @@ export const nl: Textos = {
       atras: (n: number) => `${n} op te halen`,
       adelante: (n: number) => `${n} te pushen`,
       traer: 'Wijzigingen ophalen',
-      traerAyuda: 'git pull zonder samenvoegen: bij lokale wijzigingen of uiteenlopende branches wordt niets gewijzigd.',
+      traerAyuda:
+        'git pull zonder samenvoegen: bij lokale wijzigingen of uiteenlopende branches wordt niets gewijzigd.',
       alDia: 'Was al up-to-date.',
       actualizado: 'Wijzigingen opgehaald',
       sugeridosTitulo: 'Wijzigingen opgehaald',
-      sugeridosTexto: 'Op basis van wat er is gewijzigd, is het raadzaam deze stappen uit te voeren:',
+      sugeridosTexto:
+        'Op basis van wat er is gewijzigd, is het raadzaam deze stappen uit te voeren:',
       sugeridosNinguno: 'Er hoeven geen stappen te worden uitgevoerd.',
       migracionesNuevas: (n: number) => plural(n, 'nieuwe migratie', 'nieuwe migraties'),
       ejecutarSugeridos: 'Stappen uitvoeren',
@@ -2937,7 +3010,8 @@ export const nl: Textos = {
         sugerir: 'Bericht voorstellen',
         mensaje: 'Bericht (u kunt het bewerken)',
         commit: 'Commit uitvoeren',
-        commitAyuda: 'Alleen klaargezette wijzigingen (git add): voegt geen bestanden toe en pusht niet.',
+        commitAyuda:
+          'Alleen klaargezette wijzigingen (git add): voegt geen bestanden toe en pusht niet.',
         hecho: 'Commit uitgevoerd met de klaargezette wijzigingen.',
       },
     },
@@ -2965,7 +3039,8 @@ export const nl: Textos = {
       nombrePlaceholder: 'Vite',
       comando: 'Commando',
       comandoPlaceholder: 'npm run dev',
-      comandoAyuda: 'Programma en argumenten, zonder shell. Gebruik aanhalingstekens voor argumenten met spaties.',
+      comandoAyuda:
+        'Programma en argumenten, zonder shell. Gebruik aanhalingstekens voor argumenten met spaties.',
       cwd: 'Map',
       cwdPlaceholder: 'root',
       cwdAyuda: 'root of een submap van het project (bijvoorbeeld frontend).',
@@ -2977,7 +3052,8 @@ export const nl: Textos = {
       esProxy: 'Doel van Nginx-proxy',
       requiereReinicio:
         'Het proces is actief: wijzigingen in commando, map of poort worden toegepast na herstarten.',
-      reinicieAhora: 'Opgeslagen. Stop en start het proces opnieuw om de wijzigingen toe te passen.',
+      reinicieAhora:
+        'Opgeslagen. Stop en start het proces opnieuw om de wijzigingen toe te passen.',
       guardado: 'Proces opgeslagen',
       errores: {
         comando: 'Voer het commando in',
@@ -3066,7 +3142,7 @@ export const nl: Textos = {
         `${nombre} (PID ${pid}) wordt afgesloten zonder openstaande gegevens op te slaan. Gebruik dit alleen als u zeker weet dat dit programma niet nodig is.`,
       finalizado: (nombre: string) => `${nombre} beëindigd`,
       verPuertos: 'Poorten bekijken',
-      errorPuertos: 'Kan niet controleren welke programma\'s de poorten gebruiken.',
+      errorPuertos: "Kan niet controleren welke programma's de poorten gebruiken.",
     },
     procesos: {
       titulo: 'Diensten en processen',
@@ -3230,10 +3306,14 @@ export const nl: Textos = {
     copiar: 'Kopiëren',
     copiado: 'Gekopieerd naar het klembord',
     limpiar: 'Wissen',
-    pendienteApi: 'In behandeling: de kern stelt deze informatie nog niet beschikbaar aan de interface.',
+    pendienteApi:
+      'In behandeling: de kern stelt deze informatie nog niet beschikbaar aan de interface.',
     lista: {
       qr: { nombre: 'QR-generator', descripcion: 'Van een tekst of de link van een tunnel; PNG.' },
-      json: { nombre: 'JSON', descripcion: 'Formatteren, valideren en minimaliseren, met boomstructuur.' },
+      json: {
+        nombre: 'JSON',
+        descripcion: 'Formatteren, valideren en minimaliseren, met boomstructuur.',
+      },
       regex: {
         nombre: 'Reguliere expressies',
         descripcion: 'Tester met overeenkomsten, groepen en referentie.',
@@ -3247,7 +3327,10 @@ export const nl: Textos = {
         nombre: 'Poorten en processen',
         descripcion: 'Wat op elke poort luistert en het proces beëindigen.',
       },
-      bom: { nombre: 'UTF-8 BOM opschonen', descripcion: 'Verwijdert de BOM uit bestanden of mappen.' },
+      bom: {
+        nombre: 'UTF-8 BOM opschonen',
+        descripcion: 'Verwijdert de BOM uit bestanden of mappen.',
+      },
       certificados: {
         nombre: 'Certificaten',
         descripcion: 'Uitgeven met de CA van WolfCore Dev voor elke naam.',
@@ -3266,7 +3349,10 @@ export const nl: Textos = {
         nombre: 'Bestandsinformatie',
         descripcion: 'Grootte, type en hashes van een bestand.',
       },
-      websocket: { nombre: 'WebSocket-client', descripcion: 'Verbinden, verzenden en berichten bekijken.' },
+      websocket: {
+        nombre: 'WebSocket-client',
+        descripcion: 'Verbinden, verzenden en berichten bekijken.',
+      },
       contrasenas: {
         nombre: 'Wachtwoorden',
         descripcion: 'Een wachtwoord testen en zwakke accounts in uw databases controleren.',
@@ -3285,7 +3371,8 @@ export const nl: Textos = {
       },
       conversor: {
         nombre: 'Documentconverter',
-        descripcion: 'Word, Excel, PDF, CSV en Markdown converteren zonder dit apparaat te verlaten.',
+        descripcion:
+          'Word, Excel, PDF, CSV en Markdown converteren zonder dit apparaat te verlaten.',
       },
     },
     errores: {
@@ -3293,7 +3380,6 @@ export const nl: Textos = {
       jsonInvalido: (linea: number, columna: number) =>
         `Ongeldige JSON: controleer regel ${linea}, kolom ${columna}.`,
       banderas: 'Ongeldige vlaggen: gebruik alleen d, g, i, m, s, u, v of y, zonder herhaling.',
-      regex: (detalle: string) => `Ongeldige expressie (${detalle}).`,
       trabajador: 'Kan de bewerking op de achtergrond niet uitvoeren.',
       diffLento: 'De teksten verschillen te veel om op tijd te vergelijken.',
       base64: 'Ongeldige Base64.',
@@ -3310,7 +3396,8 @@ export const nl: Textos = {
     },
     qr: {
       texto: 'Tekst of URL',
-      textoAyuda: 'De QR-code wordt op dit apparaat gegenereerd; er wordt niets over het netwerk verzonden.',
+      textoAyuda:
+        'De QR-code wordt op dit apparaat gegenereerd; er wordt niets over het netwerk verzonden.',
       tunel: 'Tunnellink van een project',
       sinTuneles: 'Geen actieve tunnels',
       descargar: 'PNG downloaden',
@@ -3398,7 +3485,8 @@ export const nl: Textos = {
       propio: 'WolfCore Dev',
       sistema: 'Systeem',
       finalizar: 'Beëindigen',
-      noFinalizable: 'Systeemprocessen en processen van WolfCore Dev kunnen hier niet worden beëindigd.',
+      noFinalizable:
+        'Systeemprocessen en processen van WolfCore Dev kunnen hier niet worden beëindigd.',
       confirmarTitulo: 'Proces beëindigen',
       confirmarTexto: (nombre: string, pid: number) =>
         `"${nombre}" (PID ${pid}) wordt afgesloten zonder op te slaan. Typ ter bevestiging de naam van het proces:`,
@@ -3417,7 +3505,8 @@ export const nl: Textos = {
         `De BOM wordt verwijderd uit ${n} ${n === 1 ? 'bestand' : 'bestanden'} (met kopie). Doorgaan?`,
       conBom: (n: number) => `${n} ${n === 1 ? 'bestand met BOM' : 'bestanden met BOM'}`,
       sinBom: 'Geen enkel bestand heeft een BOM.',
-      limpiados: (n: number) => `${n} ${n === 1 ? 'bestand opgeschoond' : 'bestanden opgeschoond'}.`,
+      limpiados: (n: number) =>
+        `${n} ${n === 1 ? 'bestand opgeschoond' : 'bestanden opgeschoond'}.`,
       copia: 'Kopie',
     },
     certificados: {
@@ -3510,8 +3599,7 @@ export const nl: Textos = {
       modoAmbos: 'Beide',
       regex: 'Reguliere expressie',
       mayusculas: 'Hoofdlettergevoelig',
-      incluir: 'Alleen bestanden (gescheiden door komma\'s, bijv. *.php)',
-      excluir: 'Overslaan (gescheiden door komma\'s)',
+      incluir: "Alleen bestanden (gescheiden door komma's, bijv. *.php)",
       buscar: 'Zoeken',
       cancelar: 'Annuleren',
       buscando: 'Zoeken…',
@@ -3596,7 +3684,8 @@ export const nl: Textos = {
       guardar: 'Opslaan als…',
       antes: 'Voor',
       despues: 'Na',
-      sinMejora: 'Het resultaat is niet kleiner dan het origineel: probeer een andere kwaliteit of indeling.',
+      sinMejora:
+        'Het resultaat is niet kleiner dan het origineel: probeer een andere kwaliteit of indeling.',
       errorAbrir: 'De afbeelding kon niet op dit apparaat worden geopend.',
       errorProcesar: 'De afbeelding kon niet worden verwerkt.',
       sufijoConvertida: '-geconverteerd',
@@ -3664,7 +3753,8 @@ export const nl: Textos = {
       fortaleza: {
         etiqueta: 'Te testen wachtwoord',
         marcador: 'Voer een wachtwoord in',
-        privacidad: 'Wordt direct hier gemeten: er verlaat niets uw apparaat en er wordt niets opgeslagen.',
+        privacidad:
+          'Wordt direct hier gemeten: er verlaat niets uw apparaat en er wordt niets opgeslagen.',
         mostrar: 'Tonen',
         ocultar: 'Verbergen',
         niveles: ['Zeer zwak', 'Zwak', 'Matig', 'Sterk', 'Zeer sterk'],
@@ -3718,7 +3808,8 @@ export const nl: Textos = {
         revisando: 'Controleren…',
         resumen: (r: number, d: number) =>
           `${r} ${r === 1 ? 'gecontroleerd account' : 'gecontroleerde accounts'} · ${d} zwak`,
-        sinDebiles: 'Geen enkel gecontroleerd account komt overeen met een veelgebruikt wachtwoord.',
+        sinDebiles:
+          'Geen enkel gecontroleerd account komt overeen met een veelgebruikt wachtwoord.',
         noRevisables: (n: number) =>
           `${n} ${n === 1 ? 'account kon niet worden gecontroleerd' : 'accounts konden niet worden gecontroleerd'}:`,
         truncado:
@@ -3777,7 +3868,8 @@ export const nl: Textos = {
         copiaFila: 'Kopie van de rij (identificatie en vorige hash, 30 dagen bewaard):',
         instantanea: 'Voorafgaande momentopname van de database:',
         instantaneaAyuda: 'U kunt hiernaar terugkeren via Databases › Momentopnamen.',
-        aBcrypt: 'Omzetten naar bcrypt: alleen als de applicatie password_verify of iets gelijkwaardigs gebruikt',
+        aBcrypt:
+          'Omzetten naar bcrypt: alleen als de applicatie password_verify of iets gelijkwaardigs gebruikt',
         avisoLegado:
           'Deze hash is md5 of sha1 zonder salt en blijft in die indeling behouden. Als de applicatie de salt apart opslaat (in een andere kolom of in een constante), kan de hash niet worden gereproduceerd en werkt het nieuwe wachtwoord niet om in te loggen.',
         datosReales: {
@@ -3837,14 +3929,16 @@ export const nl: Textos = {
       servicios: 'Diensten',
     },
     reparaciones: {
-      cambiar_puerto: 'De poort van WolfCore Dev wijzigen naar een vrije poort. Het andere programma blijft ongemoeid.',
+      cambiar_puerto:
+        'De poort van WolfCore Dev wijzigen naar een vrije poort. Het andere programma blijft ongemoeid.',
       puerto_manual:
         'De poort van WolfCore Dev buiten het gereserveerde bereik verplaatsen. Het vrijgeven van het bereik beslist u zelf met het getoonde commando.',
       detener_iis:
         'De IIS-dienst (W3SVC) stoppen om de poort vrij te maken. Deze wordt niet uitgeschakeld: bij het opnieuw opstarten van Windows start deze weer op.',
       regenerar_ca:
         'Een nieuwe certificeringsinstantie aanmaken, vertrouwen in Windows (u krijgt een bevestigingsvraag), de certificaten opnieuw uitgeven en de vorige verwijderen. Vooraf wordt een kopie opgeslagen.',
-      regenerar_certificados: 'De certificaten van de sites opnieuw uitgeven en Nginx opnieuw laden.',
+      regenerar_certificados:
+        'De certificaten van de sites opnieuw uitgeven en Nginx opnieuw laden.',
       hosts_reescribir:
         'Het WolfCore Dev-blok in het hosts-bestand herschrijven in UTF-8, met een voorafgaande kopie. Andere regels blijven ongewijzigd.',
       hosts_solo_lectura: 'Het alleen-lezen kenmerk van het hosts-bestand verwijderen.',
@@ -3858,8 +3952,6 @@ export const nl: Textos = {
         'Installeer de Build Tools voor Visual Studio (met de C++-hulpmiddelen) met het getoonde commando: ze zijn enkele GB groot en vereisen administratorrechten, dus u beslist zelf.',
       antivirus:
         'Het toevoegen van de gegevensmap aan de uitzonderingen van de antivirus beslist u zelf, met het getoonde commando.',
-      firewall:
-        'Het verwijderen van die regels beslist u zelf, met het getoonde commando, in een administratorconsole. WolfCore Dev wijzigt de firewall nooit.',
       reintentar_servicio: 'De dienst opnieuw starten.',
       firefox_confianza:
         'Voeg aan de user.js van elk Firefox-profiel de voorkeur toe die de Windows-autoriteit vertrouwt, met een voorafgaande kopie. prefs.js wordt niet aangeraakt en geopende profielen worden overgeslagen.',
@@ -3875,9 +3967,9 @@ export const nl: Textos = {
         proyectos:
           'Projectprocessen en de Terminal ontvangen NODE_EXTRA_CA_CERTS met de autoriteit.',
         ajena: 'U hebt al uw eigen NODE_EXTRA_CA_CERTS: WolfCore Dev vervangt deze niet.',
-        global: 'Ook als gebruikersvariabele (voor andere terminals en programma\'s)',
+        global: "Ook als gebruikersvariabele (voor andere terminals en programma's)",
         confirmarActivar:
-          'NODE_EXTRA_CA_CERTS wordt ingesteld als gebruikersvariabele. Dit geldt voor programma\'s die u hierna opent; de variabele wordt verwijderd wanneer u deze optie uitschakelt.',
+          "NODE_EXTRA_CA_CERTS wordt ingesteld als gebruikersvariabele. Dit geldt voor programma's die u hierna opent; de variabele wordt verwijderd wanneer u deze optie uitschakelt.",
         confirmarDesactivar:
           'De variabele NODE_EXTRA_CA_CERTS die door WolfCore Dev is ingesteld, wordt verwijderd.',
       },
@@ -3922,7 +4014,8 @@ export const nl: Textos = {
     irServicios: 'Ga naar Diensten',
     pestanas: { ini: 'php.ini', extensiones: 'Extensies' },
     rapidosTitulo: 'Snelle waarden',
-    rapidosAyuda: 'Worden toegepast op de onderstaande tekst; niets wordt opgeslagen totdat u de diff bevestigt.',
+    rapidosAyuda:
+      'Worden toegepast op de onderstaande tekst; niets wordt opgeslagen totdat u de diff bevestigt.',
     aplicarRapidos: 'Toepassen op tekst',
     sinValor: 'niet ingesteld',
     rapidos: {
@@ -3980,7 +4073,8 @@ export const nl: Textos = {
     version: (v: string) => `v${v}`,
     versionDesconocida: 'Onbekende versie',
     verVersion: 'Versie bekijken',
-    verVersionAyuda: 'Voert het programma uit met --version (gebeurt niet automatisch bij het openen van het scherm).',
+    verVersionAyuda:
+      'Voert het programma uit met --version (gebeurt niet automatisch bij het openen van het scherm).',
     origen: {
       propio: 'Geïnstalleerd door WolfCore Dev',
       'npm-usuario': 'Globale npm van gebruiker',
@@ -4004,7 +4098,8 @@ export const nl: Textos = {
       titulo: (nombre: string) => `${nombre} installeren?`,
       texto: (paquete: string) =>
         `De nieuwste gepubliceerde versie van ${paquete} wordt geïnstalleerd vanaf registry.npmjs.org, met de Node van WolfCore Dev en in de bijbehorende gegevensmap.`,
-      aislado: 'Gebruikt uw npm-configuratie niet en raakt uw globale npm niet aan. Dit kan enkele minuten duren.',
+      aislado:
+        'Gebruikt uw npm-configuratie niet en raakt uw globale npm niet aan. Dit kan enkele minuten duren.',
       aceptar: 'Installeren',
       hecho: (nombre: string) => `${nombre} is geïnstalleerd.`,
     },
@@ -4017,7 +4112,8 @@ export const nl: Textos = {
     },
     confirmarQuitar: {
       titulo: (nombre: string) => `MCP verwijderen uit ${nombre}?`,
-      texto: 'Alleen de vermelding "wolfcore" wordt uit dit bestand verwijderd; de rest blijft ongewijzigd:',
+      texto:
+        'Alleen de vermelding "wolfcore" wordt uit dit bestand verwijderd; de rest blijft ongewijzigd:',
       aceptar: 'Verwijderen',
       hecho: (nombre: string) => `MCP verwijderd uit ${nombre}.`,
     },
@@ -4151,7 +4247,8 @@ export const nl: Textos = {
     },
     registroTitulo: (n: string) => `Logboeken van "${n}"`,
     registroEsperando: 'Wachten op regels…',
-    registroFin: 'Het logboek is beëindigd (de container is gestopt of de engine heeft de verbinding verbroken).',
+    registroFin:
+      'Het logboek is beëindigd (de container is gestopt of de engine heeft de verbinding verbroken).',
     cerrar: 'Sluiten',
   },
   versiones: {
@@ -4201,7 +4298,8 @@ export const nl: Textos = {
     mostrarTodas: 'Alles tonen',
     origen: {
       vivo: 'Online',
-      cache: (h: number) => (h < 1 ? 'Cache van minder dan 1 uur geleden' : `Cache van ${h} uur geleden`),
+      cache: (h: number) =>
+        h < 1 ? 'Cache van minder dan 1 uur geleden' : `Cache van ${h} uur geleden`,
       fija: 'Offline lijst',
     },
     actualizarLista: 'Lijst bijwerken',
@@ -4259,8 +4357,10 @@ export const nl: Textos = {
       titulo: (n: string) => `${n} bijwerken`,
       tituloRama: (v: string) => `Nieuwe versie: ${v}`,
       ninguna: 'geen',
-      instancia: (id: string) => `Instantie ${id} wordt bijgewerkt. Voordat er iets wordt gewijzigd:`,
-      pasoInstalar: (v: string) => `wordt ${v} naast de huidige versie geïnstalleerd (deze wordt niet verwijderd);`,
+      instancia: (id: string) =>
+        `Instantie ${id} wordt bijgewerkt. Voordat er iets wordt gewijzigd:`,
+      pasoInstalar: (v: string) =>
+        `wordt ${v} naast de huidige versie geïnstalleerd (deze wordt niet verwijderd);`,
       pasoVolcados: 'wordt van elke database een dump gemaakt met de huidige versie;',
       pasoCopia: 'wordt de volledige gegevensmap gestopt en gekopieerd (koude kopie);',
       pasoArrancar: 'wordt de nieuwe versie gestart en gecontroleerd of deze reageert;',
@@ -4269,11 +4369,11 @@ export const nl: Textos = {
       datos: 'Gegevens:',
       respaldo: 'Kopie in:',
       espacio: 'Ruimte:',
-      espacioLibre: (libres: string, necesarios: string) =>
-        `${libres} vrij; ${necesarios} nodig`,
+      espacioLibre: (libres: string, necesarios: string) => `${libres} vrij; ${necesarios} nodig`,
       datosQuedan:
         'De vorige gegevens worden nooit verwijderd: de kopie en de dumps blijven in Update-back-ups staan totdat u ze verwijdert.',
-      sinEspacio: 'Onvoldoende schijfruimte voor de kopie: maak ruimte vrij en probeer het opnieuw.',
+      sinEspacio:
+        'Onvoldoende schijfruimte voor de kopie: maak ruimte vrij en probeer het opnieuw.',
       alLado: (v: string) =>
         `${v} wordt geïnstalleerd. Overige geïnstalleerde versies worden niet aangeraakt; projecten die een andere versie vastleggen blijven die gebruiken.`,
       ramaExplicacion:
@@ -4296,7 +4396,7 @@ export const nl: Textos = {
       boton: 'Ongebruikte versies opschonen…',
       titulo: 'Ongebruikte versies opschonen',
       intro:
-        'Alleen de programma\'s van versies die nergens worden gebruikt worden verwijderd (de map bin). Databasegegevens, instanties en uw projecten worden nooit aangeraakt.',
+        "Alleen de programma's van versies die nergens worden gebruikt worden verwijderd (de map bin). Databasegegevens, instanties en uw projecten worden nooit aangeraakt.",
       cargando: 'Versies zoeken…',
       vacia: 'Geen geïnstalleerde versies.',
       sinLibres: 'Alle geïnstalleerde versies zijn in gebruik: er is niets om op te schonen.',
@@ -4305,8 +4405,10 @@ export const nl: Textos = {
       bloqueada: 'Kan niet worden geselecteerd',
       marcadas: (n: number, tam: string) => `${n} ${n === 1 ? 'versie' : 'versies'} · ${tam}`,
       destinoTitulo: 'Wat ermee te doen',
-      papelera: 'Verplaatsen naar de prullenbak: worden 7 dagen bewaard en blijven tot die tijd schijfruimte innemen',
-      definitivo: 'Definitief verwijderen: maakt de ruimte direct vrij en kan niet ongedaan worden gemaakt',
+      papelera:
+        'Verplaatsen naar de prullenbak: worden 7 dagen bewaard en blijven tot die tijd schijfruimte innemen',
+      definitivo:
+        'Definitief verwijderen: maakt de ruimte direct vrij en kan niet ongedaan worden gemaakt',
       avisoDefinitivo:
         'Definitief verwijderen: om deze versies weer te gebruiken moet u ze opnieuw downloaden.',
       instantanea:
@@ -4328,7 +4430,8 @@ export const nl: Textos = {
       },
       resultadoTitulo: 'Resultaat',
       liberadas: (tam: string) => `${tam} vrijgemaakt.`,
-      enPapelera: (tam: string) => `${tam} staan in de prullenbak (worden na 7 dagen definitief verwijderd).`,
+      enPapelera: (tam: string) =>
+        `${tam} staan in de prullenbak (worden na 7 dagen definitief verwijderd).`,
       saltada: (v: string, motivo: string) => `${v}: ${motivo}`,
       pendientes: (n: number) =>
         `${n} ${n === 1 ? 'versie is al uit bin verwijderd, maar er zijn resten achtergebleven' : 'versies zijn al uit bin verwijderd, maar er zijn resten achtergebleven'} die bij het openen van de applicatie opnieuw worden geprobeerd.`,
@@ -4336,7 +4439,8 @@ export const nl: Textos = {
       ajeno: (lista: string) =>
         `Bevat wat u daarin hebt geïnstalleerd: ${lista}. Bij het verwijderen gaat dit verloren.`,
       incluirAjeno: 'Toch verwijderen, ook al gaat dit verloren',
-      sinCatalogo: 'Staat niet meer in de catalogus: als u deze verwijdert, kunt u deze niet opnieuw downloaden.',
+      sinCatalogo:
+        'Staat niet meer in de catalogus: als u deze verwijdert, kunt u deze niet opnieuw downloaden.',
       papeleraTitulo: 'In de prullenbak',
       recuperar: 'Herstellen',
       recuperada: (v: string) => `${v} hersteld.`,
@@ -4345,7 +4449,7 @@ export const nl: Textos = {
     },
     dialogoDesinstalar: {
       titulo: (v: string) => `${v} verwijderen`,
-      binario: 'Alleen de programma\'s van deze versie worden verwijderd.',
+      binario: "Alleen de programma's van deze versie worden verwijderd.",
       instancia: (id: string) =>
         `Wordt gebruikt door instantie ${id}: deze wordt gestopt en uit de lijst met instanties verwijderd.`,
       datosQuedan:
@@ -4374,7 +4478,8 @@ export const nl: Textos = {
       usarActual: 'De huidige gegevensmap gebruiken zoals deze is',
       notaActual:
         'Alleen als de huidige map volledige gegevens bevat; zo niet, kies dan een back-up.',
-      notaDevolver: 'De back-up wordt gekopieerd, gecontroleerd en pas daarna op zijn plaats gezet.',
+      notaDevolver:
+        'De back-up wordt gekopieerd, gecontroleerd en pas daarna op zijn plaats gezet.',
       escriba: (id: string) => `Typ ${id} om te bevestigen`,
       elegirVersion:
         'De vergrendelingsmarkering kon niet worden gelezen: kies met welke versie de gegevens worden geopend (die van vóór de update).',
@@ -4435,7 +4540,26 @@ export const nl: Textos = {
     tema: 'Thema',
     temas: { sistema: 'Systeem', claro: 'Licht', oscuro: 'Donker' },
     idioma: 'Taal',
-    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語', ko: '한국어', hi: 'हिन्दी', tr: 'Türkçe', id: 'Bahasa Indonesia', pl: 'Polski', nl: 'Nederlands', uk: 'Українська' },
+    idiomas: {
+      es: 'Español',
+      en: 'English',
+      pt: 'Português',
+      fr: 'Français',
+      de: 'Deutsch',
+      it: 'Italiano',
+      ru: 'Русский',
+      zh: '中文 简体',
+      ja: '日本語',
+      ko: '한국어',
+      hi: 'हिन्दी',
+      tr: 'Türkçe',
+      id: 'Bahasa Indonesia',
+      pl: 'Polski',
+      nl: 'Nederlands',
+      uk: 'Українська',
+    },
+    /** Aviso junto a los idiomas que no son es, en, pt ni fr (la traducción es automática y revisada). */
+    traduccionAutomatica: 'Automatische vertaling, nagekeken',
     acento: 'Accentkleur',
     acentos: {
       indigo: 'Indigo',
@@ -4447,10 +4571,6 @@ export const nl: Textos = {
     },
     acentoPropio: (color: string) => `Aangepast (${color})`,
     errorGuardar: 'De voorkeur kon niet worden opgeslagen',
-    asistente: 'Installatie-assistent',
-    asistenteAyuda:
-      'Doorloop de eerste stappen opnieuw: projectmap, basisonderdelen, CA, GitHub en bewaakte map.',
-    asistenteAbrir: 'Assistent openen',
   },
   paleta: {
     titulo: 'Opdrachtenpalet',
@@ -4480,7 +4600,6 @@ export const nl: Textos = {
     nuevoProyecto: 'Een nieuw project aanmaken',
     tema: (tema: string) => `Thema: ${tema}`,
     idioma: (idioma: string) => `Taal: ${idioma}`,
-    asistente: 'Installatie-assistent openen',
   },
   nuevoProyecto: {
     titulo: 'Nieuw project',
@@ -4493,7 +4612,10 @@ export const nl: Textos = {
         nombre: 'Laravel',
         descripcion: 'Met Composer; applicatiesleutel, database en migraties.',
       },
-      codeigniter4: { nombre: 'CodeIgniter 4', descripcion: 'Officiële appstarter met eigen .env.' },
+      codeigniter4: {
+        nombre: 'CodeIgniter 4',
+        descripcion: 'Officiële appstarter met eigen .env.',
+      },
       codeigniter3: {
         nombre: 'CodeIgniter 3',
         descripcion: 'Klassiek framework met geconfigureerde database.php.',
@@ -4506,7 +4628,10 @@ export const nl: Textos = {
         nombre: 'FastAPI',
         descripcion: 'Virtuele omgeving, requirements.txt en uvicorn-proces.',
       },
-      wordpress: { nombre: 'WordPress', descripcion: 'Officiële download met kant-en-klare wp-config.php.' },
+      wordpress: {
+        nombre: 'WordPress',
+        descripcion: 'Officiële download met kant-en-klare wp-config.php.',
+      },
       estatico: {
         nombre: 'Statische site',
         descripcion: 'HTML en CSS geserveerd door Nginx, zonder database.',
@@ -4515,7 +4640,8 @@ export const nl: Textos = {
     campos: {
       nombre: 'Projectnaam',
       nombrePlaceholder: 'mijn-winkel',
-      nombreAyuda: (dominio: string) => `Wordt ${dominio}: kleine letters, cijfers en koppeltekens.`,
+      nombreAyuda: (dominio: string) =>
+        `Wordt ${dominio}: kleine letters, cijfers en koppeltekens.`,
       carpeta: 'Bovenliggende map',
       elegirCarpeta: 'Map kiezen…',
       cambiarCarpeta: 'Map wijzigen…',
@@ -4528,8 +4654,7 @@ export const nl: Textos = {
       sinBase: 'Zonder database',
       instancia: 'Databaseserver',
       apagada: 'gestopt',
-      apagadaAyuda:
-        'Deze server staat uit: start deze in Diensten voordat u het project aanmaakt.',
+      apagadaAyuda: 'Deze server staat uit: start deze in Diensten voordat u het project aanmaakt.',
       sinMotores: 'Er is geen databaseserver geïnstalleerd voor dit type project.',
       nombreBase: 'Databasenaam',
       starterKit: 'Starter kit',
@@ -4635,13 +4760,15 @@ export const nl: Textos = {
       sin_dominio: 'Heeft geen domein in het andere programma: er wordt er een voorgesteld.',
       dominio_invalido: 'Het domein is ongeldig: er wordt er een voorgesteld.',
       sin_vhost: 'Heeft geen eigen virtual host: er wordt een domein voorgesteld.',
-      php_desconocido: 'Onbekend welke PHP-versie wordt gebruikt: er wordt een geïnstalleerde versie gekozen.',
+      php_desconocido:
+        'Onbekend welke PHP-versie wordt gebruikt: er wordt een geïnstalleerde versie gekozen.',
       base_no_local: 'De database staat op een andere server: wordt niet geïmporteerd.',
       base_nombre_invalido: 'De databasenaam is ongeldig: wordt niet geïmporteerd.',
       motor_no_soportado: 'De database is geen MySQL of MariaDB: wordt niet geïmporteerd.',
     },
     problemas: {
-      titulo: (n: number) => `${plural(n, 'item', 'items')} overgeslagen of konden niet worden gelezen`,
+      titulo: (n: number) =>
+        `${plural(n, 'item', 'items')} overgeslagen of konden niet worden gelezen`,
     },
     bases: {
       titulo: 'Databases',
@@ -4655,7 +4782,8 @@ export const nl: Textos = {
       puerto: 'Poort van de bronserver',
       usuario: 'Gebruiker',
       clave: 'Wachtwoord',
-      claveAyuda: 'Laat dit leeg als de gebruiker geen wachtwoord heeft (zoals root in Laragon of XAMPP).',
+      claveAyuda:
+        'Laat dit leeg als de gebruiker geen wachtwoord heeft (zoals root in Laragon of XAMPP).',
       existe: 'bestaat al op de bestemming',
       reemplazar: 'Vervangen (er wordt vooraf een kopie gemaakt)',
       noSeToca: 'Wordt niet aangeraakt als u dit niet aanvinkt.',
@@ -4679,7 +4807,8 @@ export const nl: Textos = {
       basesNuevas: (nombres: string) => `Deze databases worden gekopieerd: ${nombres}.`,
       basesReemplazo: (nombres: string) =>
         `Deze reeds bestaande databases worden vervangen: ${nombres}. Vooraf wordt van elk een kopie opgeslagen.`,
-      basesSinTocar: (nombres: string) => `Deze reeds bestaande databases worden niet aangeraakt: ${nombres}.`,
+      basesSinTocar: (nombres: string) =>
+        `Deze reeds bestaande databases worden niet aangeraakt: ${nombres}.`,
       origen: (puerto: number, usuario: string) =>
         `Worden gedumpt vanaf de server van het andere programma (127.0.0.1:${puerto}, gebruiker ${usuario}). Alleen lezen, zonder wijzigingen.`,
       sinBases: 'Er wordt geen enkele database geïmporteerd.',
@@ -4690,13 +4819,15 @@ export const nl: Textos = {
       titulo: 'Importresultaat',
       importando: 'Importeren…',
       cancelar: 'Import annuleren',
-      restaurada: 'De oorspronkelijke database is automatisch teruggezet vanuit de kopie: alles bleef zoals het was.',
+      restaurada:
+        'De oorspronkelijke database is automatisch teruggezet vanuit de kopie: alles bleef zoals het was.',
       sitioOk: 'Geïmporteerd',
       sitioFallo: 'Niet geïmporteerd',
       baseOk: (n: string) => `Database ${n} geïmporteerd`,
       baseFallo: (n: string) => `Database ${n} niet geïmporteerd`,
       copiaPrevia: (ruta: string) => `Kopie van de vorige database: ${ruta}`,
-      phpDistinto: (v: string) => `PHP ${v} gebruikt (de oorspronkelijke versie was niet geïnstalleerd).`,
+      phpDistinto: (v: string) =>
+        `PHP ${v} gebruikt (de oorspronkelijke versie was niet geïnstalleerd).`,
       sinAplicar:
         'Nginx of het hosts-bestand zijn niet bijgewerkt: bekijk de melding in Projecten en probeer opnieuw.',
       resumen: (s: number, b: number) =>
@@ -4713,7 +4844,8 @@ export const nl: Textos = {
       nombre: 'Naam van de sjabloon',
       nombrePlaceholder: 'Mijn basisproject',
       conArchivos: 'Ook de projectbestanden opnemen',
-      conArchivosAyuda: 'Zonder dit worden alleen het recept, de instellingen en het schema opgeslagen.',
+      conArchivosAyuda:
+        'Zonder dit worden alleen het recept, de instellingen en het schema opgeslagen.',
       siempre: 'Wordt altijd uitgesloten',
       siempreLista:
         '.env en .env.*, vendor, node_modules, .git, .venv, logboeken, dumps en bestandsdatabases (*.sql, *.dump, *.sqlite), sleutels en certificaten (*.pem, *.key, *.crt…), wp-config.php en wolfcore.yml. Een bestand dat een sleutel of wachtwoord bevat wordt ook uitgesloten.',
@@ -4721,13 +4853,16 @@ export const nl: Textos = {
       extraAyuda: 'Namen of paden relatief aan het project, bijvoorbeeld uploads of public/build.',
       vista: 'Wat wordt opgeslagen',
       calculando: 'Berekenen…',
-      resumen: (archivos: number, tamano: string) => `${plural(archivos, 'bestand', 'bestanden')} · ${tamano}`,
+      resumen: (archivos: number, tamano: string) =>
+        `${plural(archivos, 'bestand', 'bestanden')} · ${tamano}`,
       fuera: (n: number) => `${n} uitgesloten`,
-      sinArchivos: 'Alleen het recept, de instellingen en het schema worden opgeslagen; geen bestanden.',
+      sinArchivos:
+        'Alleen het recept, de instellingen en het schema worden opgeslagen; geen bestanden.',
       baseVolcado: (nombre: string, servidor: string) =>
         `Alleen de structuur van database ${nombre} (server ${servidor}) wordt opgeslagen, zonder rijen.`,
       sinBase: 'Het project declareert geen database: er wordt geen schema opgeslagen.',
-      avisoMongodb: 'Dit project gebruikt MongoDB: het schema (collecties en indexen) wordt niet opgeslagen.',
+      avisoMongodb:
+        'Dit project gebruikt MongoDB: het schema (collecties en indexen) wordt niet opgeslagen.',
       incluirDeTodosModos: 'Toch opnemen',
       avisoIncluir: 'Als dat bestand een echte sleutel bevat, wordt deze in de sjabloon opgenomen.',
       guardar: 'Sjabloon opslaan',
@@ -4740,8 +4875,7 @@ export const nl: Textos = {
       titulo: 'Mijn sjablonen',
       ayuda:
         'Start een nieuw project met het recept, de instellingen en het schema (zonder gegevens) van een bestaand project.',
-      vacia:
-        'Nog geen sjablonen. Sla een project op als sjabloon via het menu op de projectkaart.',
+      vacia: 'Nog geen sjablonen. Sla een project op als sjabloon via het menu op de projectkaart.',
       conArchivosEtiqueta: 'met bestanden',
       soloEsquema: 'recept en schema',
       conBase: (motor: string) => `${motor}-database zonder gegevens`,
@@ -4838,12 +4972,14 @@ export const nl: Textos = {
       hecho: 'Teruggezet naar de kopie.',
       error: 'Kon niet terugzetten naar de kopie',
     },
-    cambiosPendientes: (n: number) => `${plural(n, 'niet-opgeslagen wijziging', 'niet-opgeslagen wijzigingen')}`,
+    cambiosPendientes: (n: number) =>
+      `${plural(n, 'niet-opgeslagen wijziging', 'niet-opgeslagen wijzigingen')}`,
     descartar: 'Wijzigingen negeren',
     guardar: 'Controleren en opslaan…',
     cerrar: 'Sluiten',
     cerrarTitulo: 'Sluiten zonder op te slaan?',
-    cerrarTexto: (n: number) => `Er zijn ${plural(n, 'niet-opgeslagen wijziging', 'niet-opgeslagen wijzigingen')}. Als u sluit, gaan deze verloren.`,
+    cerrarTexto: (n: number) =>
+      `Er zijn ${plural(n, 'niet-opgeslagen wijziging', 'niet-opgeslagen wijzigingen')}. Als u sluit, gaan deze verloren.`,
     cerrarDescartar: 'Sluiten en negeren',
     seguirEditando: 'Doorgaan met bewerken',
     confirmar: {
@@ -4865,57 +5001,9 @@ export const nl: Textos = {
     guardadoConCopia: 'De .env is opgeslagen; de vorige versie is als kopie bewaard.',
   },
   asistenteInicio: {
-    titulo: 'Welkom bij WolfCore Dev',
-    subtitulo:
-      'Vijf stappen om uw omgeving klaar te zetten. Er wordt niets geïnstalleerd of gewijzigd totdat u op de knop bij elke stap klikt.',
     paso: (n: number, total: number) => `Stap ${n} van ${total}`,
     anterior: 'Vorige',
     siguiente: 'Volgende',
-    omitirTodo: 'Assistent overslaan',
-    terminar: 'Voltooien',
-    hecho: 'Klaar',
-    reabrir: 'U kunt deze opnieuw openen via Instellingen.',
-    pasos: {
-      carpeta: {
-        titulo: 'Projectmap',
-        texto:
-          'Waar u uw projecten bewaart. Nieuwe repositories worden hier gekloond en dit is de map die in de laatste stap wordt bewaakt.',
-        elegir: 'Map kiezen',
-        actual: (ruta: string) => `Gekozen map: ${ruta}`,
-        guardada: (ruta: string) => `Huidige map: ${ruta}`,
-        ninguna: 'Niet gekozen: C:\\Proyectos wordt gebruikt indien aanwezig.',
-      },
-      basicos: {
-        titulo: 'Basisonderdelen installeren',
-        texto:
-          'Nginx, PHP 8.4, Composer en Node LTS vanaf hun officiële bronnen, met geverifieerd controlegetal. Elk onderdeel wordt pas geïnstalleerd wanneer u op de knop klikt.',
-        instalado: 'Geïnstalleerd',
-        instalar: (version: string) => `${version} installeren`,
-        sinVersion: 'Geen versie in de catalogus',
-        cargando: 'Versies zoeken…',
-        nombres: { nginx: 'Nginx', php: 'PHP 8.4', composer: 'Composer', node: 'Node LTS' },
-      },
-      ca: {
-        titulo: 'Lokale autoriteit vertrouwen',
-        texto:
-          'Om .test-sites via HTTPS zonder meldingen te openen, moet Windows de autoriteit van WolfCore Dev vertrouwen. Windows vraagt u om bevestiging.',
-        confiar: 'CA vertrouwen',
-        confiada: 'Windows vertrouwt de lokale autoriteit al.',
-      },
-      github: {
-        titulo: 'GitHub verbinden',
-        texto:
-          'Om uw repository\'s te bekijken en met één klik te klonen. Gebruik de sessie van GitHub CLI of een persoonlijk token, dat versleuteld op deze computer wordt opgeslagen.',
-      },
-      vigilar: {
-        titulo: 'De map bewaken',
-        texto:
-          'WolfCore Dev stelt voor om elke nieuwe map die in de projectmap verschijnt te koppelen. Er wordt niets gekoppeld zonder uw bevestiging.',
-        activar: 'Deze map bewaken',
-        activa: (ruta: string) => `Bewaking actief op ${ruta}`,
-        sinCarpeta: 'Kies eerst de projectmap (stap 1).',
-      },
-    },
   },
   /** Resultaat van het importeren of exporteren van een profiel (D26). */
   perfiles: {
@@ -4936,7 +5024,8 @@ export const nl: Textos = {
         basesAyuda:
           'De volledige dumps (met gegevens van uw klanten) worden versleuteld met de wachtwoordzin opgeslagen.',
         ca: 'Certificaatautoriteit (CA) opnemen',
-        caAyuda: 'Wordt versleuteld met de wachtwoordzin opgeslagen. Importeer deze alleen op een eigen computer.',
+        caAyuda:
+          'Wordt versleuteld met de wachtwoordzin opgeslagen. Importeer deze alleen op een eigen computer.',
         certificados: 'Certificaten van de sites opnemen',
         certificadosAyuda: 'Worden alleen samen met de CA en versleuteld ermee opgeslagen.',
         frase: 'Wachtwoordzin',
@@ -4944,7 +5033,8 @@ export const nl: Textos = {
         fraseAyuda: (minimo: number) =>
           `Minimaal ${minimo} tekens. Zonder deze wachtwoordzin kunnen de databases en de CA niet worden hersteld, en deze wordt nergens opgeslagen.`,
         problemas: {
-          frase_corta: (minimo: number) => `De wachtwoordzin moet minimaal ${minimo} tekens bevatten.`,
+          frase_corta: (minimo: number) =>
+            `De wachtwoordzin moet minimaal ${minimo} tekens bevatten.`,
           frase_distinta: 'De twee wachtwoordzinnen komen niet overeen.',
           certificados_sin_ca: 'Certificaten worden alleen samen met de CA opgenomen.',
         },
@@ -5011,10 +5101,12 @@ export const nl: Textos = {
         error: 'Het profiel kon niet worden gelezen',
       },
       origen: (fecha: string, sistema: string) => `Aangemaakt op ${fecha} op ${sistema}.`,
-      ignoradas: (n: number) => `${n} items in het bestand horen niet bij een profiel en worden genegeerd.`,
+      ignoradas: (n: number) =>
+        `${n} items in het bestand horen niet bij een profiel en worden genegeerd.`,
       reemplaza: {
         titulo: 'Wat wordt vervangen',
-        ninguno: 'Er staan geen gegevens in deze map: er wordt geïmporteerd over een schone installatie.',
+        ninguno:
+          'Er staan geen gegevens in deze map: er wordt geïmporteerd over een schone installatie.',
         copia:
           'Vóór het vervangen wordt een kopie opgeslagen in respaldos/pre-perfil-… en wordt een momentopname van de omgeving gemaakt; elke database die wordt vervangen krijgt een eigen momentopname. De map data wordt nooit verwijderd.',
         config: 'De configuratie (config.json)',
@@ -5083,7 +5175,8 @@ export const nl: Textos = {
         huella: 'SHA-256-vingerafdruk van de CA uit het profiel',
         comparar: 'Vergelijk deze met die van uw broncomputer voordat u deze accepteert.',
         importar: 'De CA uit het profiel importeren',
-        noImportar: 'Zonder deze te importeren gebruikt deze computer de huidige CA of maakt een nieuwe aan.',
+        noImportar:
+          'Zonder deze te importeren gebruikt deze computer de huidige CA of maakt een nieuwe aan.',
         ajena:
           'Deze CA heeft naambeperkingen die niet van WolfCore Dev zijn: deze kan niet worden geïmporteerd.',
         sinRestricciones:
@@ -5092,11 +5185,13 @@ export const nl: Textos = {
         reemplazaLocal:
           'Deze computer heeft al een CA. Het importeren van die uit het profiel vervangt deze (er blijft een kopie in de voorafgaande back-up).',
         reemplazar: 'De CA van deze computer vervangen',
-        noSeInstala: 'De CA wordt niet automatisch geïnstalleerd in het certificaatarchief van het systeem.',
+        noSeInstala:
+          'De CA wordt niet automatisch geïnstalleerd in het certificaatarchief van het systeem.',
       },
       frase: {
         titulo: 'Wachtwoordzin van het profiel',
-        texto: 'Het profiel bevat versleutelde databases of een CA. Voer de wachtwoordzin in die u bij het exporteren hebt gekozen.',
+        texto:
+          'Het profiel bevat versleutelde databases of een CA. Voer de wachtwoordzin in die u bij het exporteren hebt gekozen.',
         campo: 'Wachtwoordzin',
         omitirBases: 'Importeren zonder databases',
         nota: 'De wachtwoordzin wordt alleen in dit venster gebruikt: deze wordt niet opgeslagen en wordt gewist bij voltooiing of sluiten.',
@@ -5116,13 +5211,15 @@ export const nl: Textos = {
         bloqueos: {
           sitios_sin_carpeta:
             'Kies de map van elke site of markeer deze om als in behandeling te importeren.',
-          frase_requerida: 'Voer de wachtwoordzin van het profiel in of importeer zonder databases.',
+          frase_requerida:
+            'Voer de wachtwoordzin van het profiel in of importeer zonder databases.',
           ca_ajena: 'De CA uit het profiel kan niet worden geïmporteerd.',
           ca_sin_restricciones: 'Bevestig apart dat u een CA zonder beperkingen wilt importeren.',
           reemplazar_ca: 'Bevestig apart dat u de CA van deze computer wilt vervangen.',
         },
       },
-      progreso: 'Profiel wordt geïmporteerd… Sluit het venster niet: met databases of downloads kan dit even duren.',
+      progreso:
+        'Profiel wordt geïmporteerd… Sluit het venster niet: met databases of downloads kan dit even duren.',
       fases: {
         copia: 'Kopiëren van wat wordt vervangen',
         versiones: 'Versies installeren',
@@ -5186,10 +5283,12 @@ export const nl: Textos = {
     caSinRestricciones:
       'Deze CA kan elke website ondertekenen; importeer deze alleen als het uw eigen CA is en vergelijk de vingerafdruk.',
     motivos: {
-      procesos_quitados: 'Uw processen (opdrachten van een andere computer) zijn niet geïmporteerd.',
+      procesos_quitados:
+        'Uw processen (opdrachten van een andere computer) zijn niet geïmporteerd.',
       tareas_quitadas:
         'Uw geplande taken (opdrachten van een andere computer) zijn niet geïmporteerd. Maak ze opnieuw aan of neem ze over uit wolfcore.yml.',
-      tunel_con_nombre: 'Uw benoemde tunnel wordt niet meegenomen: keert terug naar de snelle tunnel.',
+      tunel_con_nombre:
+        'Uw benoemde tunnel wordt niet meegenomen: keert terug naar de snelle tunnel.',
       php_ini: 'Sommige instellingen van php.ini zijn niet geïmporteerd.',
       xdebug: 'Uw Xdebug-instelling was ongeldig en is verwijderd.',
       nginx_desactivado:
@@ -5202,7 +5301,8 @@ export const nl: Textos = {
       dominio_en_uso: 'Een andere site op deze computer gebruikt dat domein al.',
       sitio_repetido: 'De site komt dubbel voor in het profiel.',
       no_disponible: 'Die versie staat niet meer in de catalogus.',
-      huella_debil: 'Die versie heeft geen sterke vingerafdruk: installeer deze handmatig via Versies.',
+      huella_debil:
+        'Die versie heeft geen sterke vingerafdruk: installeer deze handmatig via Versies.',
       tope_descargas:
         'Niet gedownload om niet te veel downloads tegelijk uit te voeren: installeer deze via Versies.',
       instancia_pendiente: 'Uw instantie is in behandeling gebleven.',
@@ -5211,7 +5311,8 @@ export const nl: Textos = {
       danada: 'Uw bestanden in het profiel zijn beschadigd.',
       bases_omitidas: 'Geïmporteerd zonder databases.',
       instancia_apagada: 'Uw instantie kon niet worden gestart.',
-      sin_copia_previa: 'De voorafgaande momentopname kon niet worden gemaakt: de database is niet vervangen.',
+      sin_copia_previa:
+        'De voorafgaande momentopname kon niet worden gemaakt: de database is niet vervangen.',
       sin_base: 'Uw .env verwijst niet naar een lokale database.',
       base_no_resuelta: 'Er kon niet worden vastgesteld bij welke instantie uw database hoort.',
       error_inesperado: 'Er is iets misgegaan.',
@@ -5221,7 +5322,8 @@ export const nl: Textos = {
         'De vorige CA van deze computer staat nog in het vertrouwde archief van het systeem en wordt niet meer gebruikt. U kunt deze hier verwijderen.',
       base_no_incluida: 'De database {base} ({instancia}) is niet opgenomen.',
       sin_ca: 'Er is geen CA op deze computer: het profiel wordt zonder CA opgeslagen.',
-      ca_no_importada: 'De CA uit het profiel is niet geïmporteerd: de CA van deze computer of een nieuwe wordt gebruikt.',
+      ca_no_importada:
+        'De CA uit het profiel is niet geïmporteerd: de CA van deze computer of een nieuwe wordt gebruikt.',
       certificados: 'De certificaten konden niet worden voorbereid: {detalle}',
       aplicar:
         'De geïmporteerde sites zijn niet volledig toegepast (Nginx: {nginx}; hosts: {hosts}).',

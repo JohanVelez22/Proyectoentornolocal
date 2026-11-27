@@ -3,14 +3,13 @@
  * निश्चित शब्दावली: सेवा, इंस्टेंस, साइट, टनल, बैकअप, सूचना; Doctor और WolfCore Dev का
  * अनुवाद न करें। औपचारिक 'आप' शैली; Git के बाहर 'शाखा' नहीं, 'संस्करण' लिखें।
  */
-import type { Textos } from './es';
+import type { TextosParciales } from './es';
 
 const plural = (n: number, ek: string, anek: string): string => `${n} ${n === 1 ? ek : anek}`;
 
-export const hi: Textos = {
+export const hi: TextosParciales = {
   app: {
     nombre: 'WolfCore Dev',
-    lema: 'PHP और Nginx बिना झंझट के',
     version: 'संस्करण',
   },
   nav: {
@@ -123,8 +122,7 @@ export const hi: Textos = {
         'संस्करण {version} शुरू नहीं हो सका; {nombre} वापस {anterior} पर लौट आया। बैकअप सुरक्षित है।',
       'servicios.restauracion_fallo':
         'नया संस्करण शुरू नहीं हुआ और {nombre} का डेटा वापस नहीं लाया जा सका। कुछ भी चालू नहीं किया गया: प्रभावित डेटा {fallida} में और बैकअप {respaldo} में है।',
-      'servicios.otra_rama':
-        '{nombre} {version} एक अलग मुख्य संस्करण है: इसे एक नए इंस्टेंस के रूप में बनाएँ।',
+      'servicios.otra_rama': '{nombre} {version} एक अलग मुख्य संस्करण है: इसे एक नए इंस्टेंस के रूप में बनाएँ।',
       'servicios.misma_version': '{id} पहले से संस्करण {version} का उपयोग कर रहा है।',
       'servicios.instancia_bloqueada':
         '{nombre} अवरुद्ध है: एक अपडेट इसका डेटा वापस नहीं कर सका। प्रभावित डेटा {fallida} में और बैकअप {respaldo} में है। इसे चालू करने से पहले सेवाएँ → संस्करण में हल करें।',
@@ -149,8 +147,7 @@ export const hi: Textos = {
       'instancias.confirmacion': 'जारी रखने के लिए "{id}" लिखें।',
       'instancias.sin_datos': '{id} के फ़ोल्डर में कोई डेटा नहीं है: वापस लाने के लिए एक बैकअप चुनें।',
       'instancias.respaldo_no_existe': '{id} का वह बैकअप मौजूद नहीं है।',
-      'instancias.respaldo_en_uso':
-        'उस कॉपी की आवश्यकता {id} को है, जो अवरुद्ध है: पहले उसे हल करें।',
+      'instancias.respaldo_en_uso': 'उस कॉपी की आवश्यकता {id} को है, जो अवरुद्ध है: पहले उसे हल करें।',
       'instancias.version_requerida':
         'यह ज्ञात नहीं है कि {id} को किस संस्करण पर वापस लाया जाए: उसी मुख्य संस्करण का एक इंस्टॉल किया गया संस्करण चुनें।',
       'instalador.version_en_uso':
@@ -185,13 +182,10 @@ export const hi: Textos = {
       'tuneles.sitio_no_encontrado': 'प्रोजेक्ट नहीं मिला।',
       'tuneles.confirmacion_requerida':
         '{dominio} को इंटरनेट पर प्रकाशित करने के लिए WolfCore Dev में पुष्टि आवश्यक है।',
-      'tuneles.confirmacion_obsoleta':
-        'पुष्टि के बाद {dominio} का टनल बदल गया है: कृपया फिर से पुष्टि करें।',
-      'tuneles.cloudflared_no_instalado':
-        'cloudflared इंस्टॉल नहीं है। इसे सेवाएँ से इंस्टॉल करें।',
+      'tuneles.confirmacion_obsoleta': 'पुष्टि के बाद {dominio} का टनल बदल गया है: कृपया फिर से पुष्टि करें।',
+      'tuneles.cloudflared_no_instalado': 'cloudflared इंस्टॉल नहीं है। इसे सेवाएँ से इंस्टॉल करें।',
       'tuneles.proveedor_no_disponible': 'टनल प्रदाता {proveedor} उपलब्ध नहीं है।',
-      'tuneles.cloudflare_sin_cuenta':
-        'पहले टनल विकल्पों में अपना Cloudflare खाता जोड़ें।',
+      'tuneles.cloudflare_sin_cuenta': 'पहले टनल विकल्पों में अपना Cloudflare खाता जोड़ें।',
       'tuneles.cloudflare_sin_credencial':
         'इस टनल के लिए कोई सहेजा गया क्रेडेंशियल नहीं है: इसे टनल विकल्पों में फिर से बनाएँ।',
       'tuneles.cloudflare_datos_invalidos':
@@ -207,8 +201,7 @@ export const hi: Textos = {
       'tuneles.cloudflare_fallo': 'cloudflared संचालन पूरा नहीं कर सका: {detalle}',
       'tuneles.credencial_no_protegida':
         'क्रेडेंशियल को केवल वर्तमान उपयोगकर्ता तक सीमित नहीं किया जा सका, इसलिए इसका उपयोग नहीं किया गया।',
-      'tuneles.sin_cifrado':
-        'सिस्टम एन्क्रिप्शन उपलब्ध नहीं है: क्रेडेंशियल सहेजे नहीं जा सकते।',
+      'tuneles.sin_cifrado': 'सिस्टम एन्क्रिप्शन उपलब्ध नहीं है: क्रेडेंशियल सहेजे नहीं जा सकते।',
       'tuneles.token_invalido':
         'टोकन अमान्य है: केवल अक्षर, अंक और _ . - (8 से 200 वर्ण)। इसे टनल विकल्पों में फिर से सहेजें।',
       'tuneles.ngrok_no_instalado':
@@ -226,8 +219,7 @@ export const hi: Textos = {
         '{dominio} को स्थानीय नेटवर्क पर साझा करने के लिए WolfCore Dev में पुष्टि आवश्यक है।',
       'lan.datos_reales':
         '{dominio} में वास्तविक डेटा है: पुष्टि के साथ भी इसे स्थानीय नेटवर्क पर साझा नहीं किया जाता। ग्राहक डेटा के बिना एक प्रति का उपयोग करें।',
-      'lan.sin_red':
-        'कोई स्थानीय नेटवर्क (Wi-Fi या ईथरनेट) कनेक्ट नहीं है। नेटवर्क से जुड़ें और पुनः प्रयास करें।',
+      'lan.sin_red': 'कोई स्थानीय नेटवर्क (Wi-Fi या ईथरनेट) कनेक्ट नहीं है। नेटवर्क से जुड़ें और पुनः प्रयास करें।',
       'lan.ip_no_valida':
         'पता {ip} अब आपके स्थानीय नेटवर्क का नहीं है। संवाद फिर से खोलें और दोबारा पुष्टि करें।',
       'lan.requiere_https': '{dominio} HTTPS पर रीडायरेक्ट करता है: इसे HTTPS विकल्प के साथ साझा करें।',
@@ -258,20 +250,17 @@ export const hi: Textos = {
       'herramientas.proceso_inexistente': 'प्रक्रिया {pid} अब मौजूद नहीं है।',
       'herramientas.sin_editor':
         'कोई कोड संपादक नहीं मिला। एक इंस्टॉल करें (VS Code, Cursor, PhpStorm, Sublime Text…)।',
-      'herramientas.editor_no_instalado':
-        '{nombre} इंस्टॉल नहीं है। सेटिंग्स में कोई अन्य संपादक चुनें।',
+      'herramientas.editor_no_instalado': '{nombre} इंस्टॉल नहीं है। सेटिंग्स में कोई अन्य संपादक चुनें।',
       'herramientas.editor_invalido': 'वह संपादक अमान्य है।',
       'herramientas.carpeta_sitio_inexistente': 'प्रोजेक्ट फ़ोल्डर मौजूद नहीं है।',
       'herramientas.ruta_no_absoluta': 'पथ पूर्ण (absolute) होना चाहिए।',
       'herramientas.sin_seleccion': 'कम से कम एक आइटम चुनें।',
       'herramientas.dominio_invalido': 'एक अमान्य डोमेन या IP है।',
-      'herramientas.demasiados_dominios':
-        'एक प्रमाणपत्र अधिकतम {maximo} डोमेन या IP स्वीकार करता है।',
+      'herramientas.demasiados_dominios': 'एक प्रमाणपत्र अधिकतम {maximo} डोमेन या IP स्वीकार करता है।',
       'buscar.consulta_invalida': 'लिखें कि क्या खोजना है (अधिकतम 500 वर्ण)।',
       'buscar.raiz_invalida': 'फ़ोल्डर या फ़ाइल मौजूद नहीं है या अमान्य है।',
       'buscar.regex_invalida': 'रेगुलर एक्सप्रेशन अमान्य है।',
-      'buscar.regex_lenta':
-        'रेगुलर एक्सप्रेशन में बहुत समय लग रहा है: इसे सरल बनाएँ या सामान्य पाठ उपयोग करें।',
+      'buscar.regex_lenta': 'रेगुलर एक्सप्रेशन में बहुत समय लग रहा है: इसे सरल बनाएँ या सामान्य पाठ उपयोग करें।',
       'buscar.demasiadas': 'पहले से {maximo} खोजें चल रही हैं: किसी एक को रद्द करें या प्रतीक्षा करें।',
       'terminal.no_abrio': 'टर्मिनल खोला नहीं जा सका।',
       'terminal.no_instalada': '{nombre} इंस्टॉल नहीं है। सेटिंग्स में दूसरा टर्मिनल चुनें।',
@@ -284,10 +273,8 @@ export const hi: Textos = {
       'proyectos.paso_no_omitible': '"साइट बनाएँ" चरण को छोड़ा नहीं जा सकता।',
       'workspaces.no_existe': 'वह वर्कस्पेस मौजूद नहीं है।',
       'workspaces.invalido': 'वर्कस्पेस अमान्य है: इसका नाम और आइटम जाँचें।',
-      'workspaces.captadores_exclusivos':
-        'दो ईमेल कैप्चरर एक साथ चालू नहीं हो सकते: केवल एक चलता है।',
-      'workspaces.elemento_fallo':
-        '{elemento} के साथ संचालन पूरा नहीं हो सका। सेवाएँ और उनके लॉग जाँचें।',
+      'workspaces.captadores_exclusivos': 'दो ईमेल कैप्चरर एक साथ चालू नहीं हो सकते: केवल एक चलता है।',
+      'workspaces.elemento_fallo': '{elemento} के साथ संचालन पूरा नहीं हो सका। सेवाएँ और उनके लॉग जाँचें।',
       'workspaces.base_no_responde':
         '{elemento} शुरू नहीं हुआ क्योंकि उस प्रोजेक्ट का डेटाबेस प्रतिक्रिया नहीं दे रहा है।',
       'tareas.cron_invalida':
@@ -306,50 +293,38 @@ export const hi: Textos = {
       'tareas.carpeta': 'प्रोजेक्ट फ़ोल्डर मौजूद नहीं है: कार्य नहीं चलाया जा सकता।',
       'tareas.en_curso': 'कार्य पहले से चल रहा है।',
       'tareas.demasiadas': 'इस प्रोजेक्ट में बहुत अधिक कार्य हैं (अधिकतम {maximo})।',
-      'cli.no_autorizado':
-        'CLI कमांड अधिकृत नहीं है: WolfCore Dev ऐप खुले होने पर इसे फिर से चलाएँ।',
+      'cli.no_autorizado': 'CLI कमांड अधिकृत नहीं है: WolfCore Dev ऐप खुले होने पर इसे फिर से चलाएँ।',
       'cli.orden_desconocida': 'WolfCore Dev उस CLI कमांड को नहीं जानता।',
       'cli.argumentos_invalidos': 'कमांड के तर्क अमान्य हैं।',
       'cli.solicitud_grande': 'अनुरोध बहुत बड़ा है (अधिकतम {maximo} बाइट्स)।',
       'cli.formato_no_admitido': 'अनुरोध CLI द्वारा स्वीकार किए गए प्रारूप में नहीं है।',
-      'cli.plazo':
-        'कमांड में बहुत अधिक समय लगा: यह अभी भी चल सकता है। WolfCore Dev में स्थिति जाँचें।',
-      'cli.ocupado':
-        'WolfCore Dev बहुत सारे CLI कमांड संसाधित कर रहा है: कृपया एक क्षण प्रतीक्षा करें।',
+      'cli.plazo': 'कमांड में बहुत अधिक समय लगा: यह अभी भी चल सकता है। WolfCore Dev में स्थिति जाँचें।',
+      'cli.ocupado': 'WolfCore Dev बहुत सारे CLI कमांड संसाधित कर रहा है: कृपया एक क्षण प्रतीक्षा करें।',
       'cli.requiere_confirmacion':
         'यह कमांड कुछ प्रकाशित या परिवर्तित करता है और {sitio} पर पुष्टि (--si) की आवश्यकता है।',
       'cli.requiere_confirmacion_datos_reales':
         '{sitio} में वास्तविक डेटा है: कमांड के वास्तविक डेटा विकल्प (साइट का डोमेन) से भी पुष्टि करें।',
-      'cli.requiere_confirmacion_global':
-        'सभी टर्मिनलों का PHP बदलने के लिए पुष्टि (--si) आवश्यक है।',
+      'cli.requiere_confirmacion_global': 'सभी टर्मिनलों का PHP बदलने के लिए पुष्टि (--si) आवश्यक है।',
       'cli.confirmacion_rechazada':
         'WolfCore Dev विंडो में पुष्टि अस्वीकार कर दी गई या उपलब्ध नहीं थी: कुछ नहीं किया गया।',
-      'cli.confirmacion_vencida':
-        'समय पर WolfCore Dev विंडो में किसी ने पुष्टि नहीं की: कुछ नहीं किया गया।',
+      'cli.confirmacion_vencida': 'समय पर WolfCore Dev विंडो में किसी ने पुष्टि नहीं की: कुछ नहीं किया गया।',
       'cli.tunel_fallo': 'टनल खोला नहीं जा सका। WolfCore Dev में इसका लॉग जाँचें।',
-      'cli.inicio_fallo':
-        'अनुरोधित सभी चीजें शुरू नहीं हो सकीं। WolfCore Dev में लॉग जाँचें।',
-      'cli.parada_fallo':
-        'अनुरोधित सभी चीजें रोकी नहीं जा सकीं। WolfCore Dev में लॉग जाँचें।',
+      'cli.inicio_fallo': 'अनुरोधित सभी चीजें शुरू नहीं हो सकीं। WolfCore Dev में लॉग जाँचें।',
+      'cli.parada_fallo': 'अनुरोधित सभी चीजें रोकी नहीं जा सकीं। WolfCore Dev में लॉग जाँचें।',
       'cli.interno': 'आंतरिक CLI सर्वर त्रुटि।',
       'cli.proveedor_distinto':
         'यह साइट किसी अन्य टनल प्रदाता ({proveedor}) का उपयोग करती है। जाँचें और फिर से पुष्टि करें।',
       'cli.sitio_no_encontrado': 'साइट {sitio} मौजूद नहीं है।',
-      'cli.carpeta_invalida':
-        'फ़ोल्डर मौजूद नहीं है, सिस्टम फ़ोल्डर है या WolfCore Dev डेटा फ़ोल्डर है।',
-      'cli.carpeta_sin_sitio':
-        'वह फ़ोल्डर किसी WolfCore Dev साइट से संबंधित नहीं है: पहले इसे लिंक करें।',
+      'cli.carpeta_invalida': 'फ़ोल्डर मौजूद नहीं है, सिस्टम फ़ोल्डर है या WolfCore Dev डेटा फ़ोल्डर है।',
+      'cli.carpeta_sin_sitio': 'वह फ़ोल्डर किसी WolfCore Dev साइट से संबंधित नहीं है: पहले इसे लिंक करें।',
       'cli.ya_vinculada': 'वह फ़ोल्डर पहले से साइट {sitio} है।',
-      'cli.tipo_no_soportado':
-        '{tipo} प्रकार के प्रोजेक्ट WolfCore Dev इंटरफ़ेस से बनाए जाते हैं।',
+      'cli.tipo_no_soportado': '{tipo} प्रकार के प्रोजेक्ट WolfCore Dev इंटरफ़ेस से बनाए जाते हैं।',
       'cli.sitio_sin_php': 'साइट {sitio} PHP का उपयोग नहीं करती है।',
-      'cli.version_no_instalada':
-        '{servicio} {version} इंस्टॉल नहीं है। इसे सेवाएँ से इंस्टॉल करें।',
+      'cli.version_no_instalada': '{servicio} {version} इंस्टॉल नहीं है। इसे सेवाएँ से इंस्टॉल करें।',
       'cli.fuente_no_existe': 'वह लॉग अभी मौजूद नहीं है।',
       'cli.token_no_protegido':
         'टोकन फ़ाइल को वर्तमान उपयोगकर्ता तक सीमित नहीं किया जा सका: CLI सक्षम नहीं की गई।',
-      'cli.carpeta_ajena':
-        'डेटा फ़ोल्डर का run/ फ़ोल्डर किसी अन्य उपयोगकर्ता का है: CLI सक्षम नहीं की गई।',
+      'cli.carpeta_ajena': 'डेटा फ़ोल्डर का run/ फ़ोल्डर किसी अन्य उपयोगकर्ता का है: CLI सक्षम नहीं की गई।',
       'cli.ruta_invalida': 'WolfCore Dev पथ में ऐसे वर्ण हैं जिन्हें wolf.cmd स्वीकार नहीं करता।',
       'cli.path_aislado':
         'परीक्षण डेटा फ़ोल्डर (WOLFCORE_DATOS) के साथ उपयोगकर्ता का PATH नहीं बदला जाता।',
@@ -357,8 +332,7 @@ export const hi: Textos = {
       'cli.demasiados_dialogos':
         'पिछले एक मिनट में बहुत अधिक पुष्टियाँ हुईं: एक क्षण प्रतीक्षा करें और पुनः प्रयास करें।',
       'cli.error': 'कमांड पूरा नहीं हो सका: {detalle}',
-      'proyectos.carpeta_no_vacia':
-        'प्रोजेक्ट फ़ोल्डर में पहले से फ़ाइलें हैं: कोई अन्य चुनें या इसे खाली करें।',
+      'proyectos.carpeta_no_vacia': 'प्रोजेक्ट फ़ोल्डर में पहले से फ़ाइलें हैं: कोई अन्य चुनें या इसे खाली करें।',
       'secretos.sin_cifrado':
         'सिस्टम एन्क्रिप्शन उपलब्ध नहीं है: समर्पित उपयोगकर्ता का पासवर्ड सहेजा नहीं जा सकता। कुछ नहीं बदला गया।',
       'proyectos.clave_bd_falta':
@@ -371,8 +345,7 @@ export const hi: Textos = {
       'env.solo_lectura': 'वेरिएबल {clave} कई पंक्तियों में फैला है: इसे फ़ाइल में स्वयं संपादित करें।',
       'env.usuario_compartido':
         'डेटाबेस {base} का उपयोग प्रोजेक्ट {proyecto} भी करता है: पुष्टि करें कि क्या आप इसका उपयोगकर्ता साझा करना चाहते हैं।',
-      'env.cambio_externo':
-        'पूर्वावलोकन दिखाए जाने के बाद .env बदल गया है: सहेजने से पहले इसे फिर से जाँचें।',
+      'env.cambio_externo': 'पूर्वावलोकन दिखाए जाने के बाद .env बदल गया है: सहेजने से पहले इसे फिर से जाँचें।',
       'env.sin_confirmar': 'पुष्टि करें कि आप .env के परिवर्तन सहेजना चाहते हैं।',
       'env.versionado':
         'Git पहले से इस प्रोजेक्ट के .env को ट्रैक कर रहा है: अगला commit इसके मान अपलोड कर देगा। जारी रखने के लिए अलग से पुष्टि करें।',
@@ -382,7 +355,8 @@ export const hi: Textos = {
       'env.sin_base': 'इस प्रोजेक्ट के .env में कोई डेटाबेस कनेक्शन नहीं है।',
       'env.base_no_resuelta':
         'इस प्रोजेक्ट का डेटाबेस किसी स्थानीय WolfCore Dev सर्वर का नहीं है: कुछ नहीं बदला गया।',
-      'env.motor_no_soportado': 'फ़िलहाल "स्वयं का उपयोगकर्ता उपयोग करें" MySQL और MariaDB के साथ काम करता है।',
+      'env.motor_no_soportado':
+        'फ़िलहाल "स्वयं का उपयोगकर्ता उपयोग करें" MySQL और MariaDB के साथ काम करता है।',
       'env.ya_usa_usuario_propio': 'यह प्रोजेक्ट पहले से एक समर्पित उपयोगकर्ता का उपयोग करता है।',
       'plantillas.id_invalido': 'टेम्पलेट पहचानकर्ता अमान्य है।',
       'plantillas.no_existe': 'टेम्पलेट मौजूद नहीं है।',
@@ -394,10 +368,8 @@ export const hi: Textos = {
         'टेम्पलेट के रूप में सहेजने के लिए प्रोजेक्ट बहुत बड़ा है (अधिकतम {maximo})। बड़े फ़ोल्डर बाहर करें।',
       'plantillas.exclusion_invalida':
         'बहिष्करणों में से एक अमान्य है (".." के बिना नाम या सापेक्ष पथ उपयोग करें)।',
-      'plantillas.nombre_invalido':
-        'टेम्पलेट का नाम अमान्य है (1 से 60 वर्ण)।',
-      'plantillas.esquema_fallo':
-        'प्रोजेक्ट डेटाबेस की स्कीमा पढ़ी नहीं जा सकी: जाँचें कि उसकी सेवा चालू है।',
+      'plantillas.nombre_invalido': 'टेम्पलेट का नाम अमान्य है (1 से 60 वर्ण)।',
+      'plantillas.esquema_fallo': 'प्रोजेक्ट डेटाबेस की स्कीमा पढ़ी नहीं जा सकी: जाँचें कि उसकी सेवा चालू है।',
       'plantillas.base_no_resuelta':
         'टेम्पलेट सहेजा नहीं जा सकता: डेटाबेस सर्वर रिमोट है या कोई भी स्थानीय सेवा उस पोर्ट का उपयोग नहीं करती।',
       'plantillas.sin_generador_base':
@@ -413,8 +385,7 @@ export const hi: Textos = {
       'bd.esquema_fallo': 'पूरी स्कीमा पुनर्स्थापित नहीं की जा सकी: कुछ भी अधूरा नहीं छोड़ा गया।',
       'bd.datos_no_permitidos':
         'डेटा डंप में ऐसी सामग्री है जो डेटा नहीं है (केवल INSERT, LOCK TABLES और SET स्वीकार किए जाते हैं): कुछ भी आयात नहीं किया गया।',
-      'bd.datos_fallo':
-        'डेटा आयात नहीं किया जा सका: डेटाबेस पहले जैसा ही रहा, कुछ भी अधूरा नहीं छोड़ा गया।',
+      'bd.datos_fallo': 'डेटा आयात नहीं किया जा सका: डेटाबेस पहले जैसा ही रहा, कुछ भी अधूरा नहीं छोड़ा गया।',
       'perfiles.destino_invalido': 'प्रोफ़ाइल सहेजने के लिए स्थान चुनें (एक .wolfperfil फ़ाइल)।',
       'perfiles.frase_debil': 'CA का पासफ़्रेज़ कम से कम {minimo} वर्णों का होना चाहिए।',
       'perfiles.frase_incorrecta': 'पासफ़्रेज़ सही नहीं है: कुछ भी आयात नहीं किया गया।',
@@ -437,7 +408,8 @@ export const hi: Textos = {
       'herramientas.imagen_grande': 'छवि का आकार बहुत बड़ा है (अधिकतम {maximo})।',
       'herramientas.imagen_dimensiones':
         'छवि बहुत बड़ी है ({ancho}×{alto} px; प्रति भुजा अधिकतम {maximo} px) और सुरक्षा के कारण इसे नहीं खोला जाएगा।',
-      'herramientas.zip_sin_archivos': 'संपीड़ित करने के लिए कोई फ़ाइल नहीं है (लिंक का अनुसरण नहीं किया जाता)।',
+      'herramientas.zip_sin_archivos':
+        'संपीड़ित करने के लिए कोई फ़ाइल नहीं है (लिंक का अनुसरण नहीं किया जाता)।',
       'herramientas.zip_demasiados': 'संपीड़ित करने के लिए बहुत अधिक फ़ाइलें हैं (अधिकतम {maximo})।',
       'herramientas.zip_grande': 'आप जिसे संपीड़ित करना चाहते हैं उसका आकार बहुत बड़ा है (अधिकतम {maximo})।',
       'herramientas.pdf_invalido': 'यह फ़ाइल ऐसा PDF नहीं है जिसे ऑप्टिमाइज़ किया जा सके।',
@@ -446,8 +418,7 @@ export const hi: Textos = {
       'herramientas.pdf_plazo': 'PDF में {segundos} सेकंड से अधिक समय लगा और इसे रद्द कर दिया गया।',
       'herramientas.salida_ocupada': 'नई फ़ाइल के लिए कोई खाली नाम नहीं मिला।',
       'conversor.formato': 'यह रूपांतरण उपलब्ध नहीं है।',
-      'conversor.archivo_invalido':
-        'फ़ाइल क्षतिग्रस्त है या इसके एक्सटेंशन के अनुसार सही प्रकार की नहीं है।',
+      'conversor.archivo_invalido': 'फ़ाइल क्षतिग्रस्त है या इसके एक्सटेंशन के अनुसार सही प्रकार की नहीं है।',
       'conversor.archivo_grande': 'फ़ाइल का आकार बहुत बड़ा है (अधिकतम {maximo})।',
       'conversor.archivo_peligroso':
         'फ़ाइल एक ZIP बॉम्ब जैसी लगती है या इसके साथ छेड़छाड़ की गई है (अत्यधिक सामग्री, XML एंटिटीज़ या अमान्य नाम) और सुरक्षा के कारण इसे नहीं खोला जाएगा।',
@@ -461,7 +432,8 @@ export const hi: Textos = {
         'इस रूपांतरण के लिए LibreOffice आवश्यक है और यह इस कंप्यूटर पर इंस्टॉल नहीं है (WolfCore Dev इसे इंस्टॉल नहीं करता)।',
       'conversor.libreoffice_fallo': 'LibreOffice दस्तावेज़ को रूपांतरित नहीं कर सका।',
       'conversor.limite_celdas': 'तालिका में बहुत अधिक सेल हैं (अधिकतम {maximo})।',
-      'conversor.memoria': 'फ़ाइल को बहुत अधिक मेमोरी की आवश्यकता है ({maximo} से अधिक) और इसे रद्द कर दिया गया।',
+      'conversor.memoria':
+        'फ़ाइल को बहुत अधिक मेमोरी की आवश्यकता है ({maximo} से अधिक) और इसे रद्द कर दिया गया।',
       'conversor.pdf_no_disponible': 'इस समय PDF में प्रिंट करने की सुविधा उपलब्ध नहीं है।',
       'herramientas.imagen_pixeles':
         'छवि में कुल मिलाकर बहुत अधिक पिक्सेल हैं ({ancho}×{alto} px; अधिकतम {maximo}) और सुरक्षा के कारण इसे नहीं खोला जाएगा।',
@@ -491,21 +463,17 @@ export const hi: Textos = {
         'स्रोत सर्वर का यह संस्करण WolfCore Dev में इंस्टॉल किए गए घटकों के साथ आयात नहीं किया जा सकता।',
       'importar.volcado_enorme':
         'डेटाबेस डेटा का आकार {maximo} MB से अधिक है: इसे एक बार में आयात नहीं किया जाता।',
-      'importar.motor_no_soportado':
-        'अन्य प्रोग्राम से केवल MySQL और MariaDB डेटाबेस ही आयात किए जाते हैं।',
+      'importar.motor_no_soportado': 'अन्य प्रोग्राम से केवल MySQL और MariaDB डेटाबेस ही आयात किए जाते हैं।',
       'importar.ruta_fuera':
         'एक ऐसा फ़ोल्डर या फ़ाइल छोड़ दी गई जो इंस्टॉलेशन के बाहर या किसी सिस्टम फ़ोल्डर की ओर इशारा करती है।',
       'importar.carpeta_invalida': 'एक ऐसा फ़ोल्डर छोड़ दिया गया जो अब मौजूद नहीं है या फ़ोल्डर नहीं है।',
       'importar.archivo_grande':
         'एक कॉन्फ़िगरेशन फ़ाइल का आकार {maximo} KB से अधिक है और इसे पढ़ा नहीं गया।',
       'importar.archivo_ilegible': 'एक कॉन्फ़िगरेशन फ़ाइल टेक्स्ट फ़ाइल नहीं है या इसे पढ़ा नहीं जा सका।',
-      'importar.demasiados':
-        'बहुत अधिक साइटें या कॉन्फ़िगरेशन फ़ाइलें हैं: केवल शुरुआती फ़ाइलें ही पढ़ी गईं।',
-      'importar.candidato_desconocido':
-        'वह साइट अब स्रोत प्रोग्राम में दिखाई नहीं दे रही है: फिर से खोजें।',
+      'importar.demasiados': 'बहुत अधिक साइटें या कॉन्फ़िगरेशन फ़ाइलें हैं: केवल शुरुआती फ़ाइलें ही पढ़ी गईं।',
+      'importar.candidato_desconocido': 'वह साइट अब स्रोत प्रोग्राम में दिखाई नहीं दे रही है: फिर से खोजें।',
       'importar.ya_vinculado': 'वह फ़ोल्डर पहले से ही WolfCore Dev की एक साइट है।',
-      'importar.dominio_existe':
-        '{dominio} डोमेन वाली एक साइट पहले से मौजूद है: आयात करने से पहले इसे बदलें।',
+      'importar.dominio_existe': '{dominio} डोमेन वाली एक साइट पहले से मौजूद है: आयात करने से पहले इसे बदलें।',
       'importar.sin_php':
         'इस साइट के लिए PHP आवश्यक है और कोई भी संस्करण इंस्टॉल नहीं है: इसे सेवाएँ से इंस्टॉल करें।',
       'importar.base_existe':
@@ -513,8 +481,7 @@ export const hi: Textos = {
       'importar.base_fallo':
         'डेटाबेस {nombre} आयात नहीं किया जा सका: यह पहले जैसा ही रहा, कुछ भी अधूरा नहीं छोड़ा गया।',
       'importar.sitio_fallo': 'साइट नहीं बनाई जा सकी।',
-      'importar.origen_invalido':
-        'स्रोत सर्वर का विवरण अमान्य है (उपयोगकर्ता नाम, पासवर्ड या पोर्ट)।',
+      'importar.origen_invalido': 'स्रोत सर्वर का विवरण अमान्य है (उपयोगकर्ता नाम, पासवर्ड या पोर्ट)।',
       'importar.sin_seleccion': 'आयात करने के लिए कम से कम एक साइट चुनें।',
       'importar.en_curso': 'एक आयात पहले से चल रहा है: इसके पूरा होने की प्रतीक्षा करें।',
       'importar.cancelado': 'आयात रद्द कर दिया गया: जो कुछ आयात किया जा रहा था वह पहले जैसा ही रहा।',
@@ -537,15 +504,14 @@ export const hi: Textos = {
       'proyectos.sin_python': 'Python इंस्टॉल नहीं है: इसे सेवाएँ से इंस्टॉल करें।',
       'proyectos.venv_ajeno':
         'प्रोजेक्ट में अपना खुद का .venv है और WolfCore Dev किसी बाहरी रिपॉजिटरी का Python नहीं चलाता: इसे हटाएं और वातावरण फिर से बनाएं।',
-      'proyectos.paso_base_no_omitible':
-        'नए प्रोजेक्ट के लिए "डेटाबेस बनाएं" चरण को छोड़ा नहीं जा सकता।',
+      'proyectos.paso_base_no_omitible': 'नए प्रोजेक्ट के लिए "डेटाबेस बनाएं" चरण को छोड़ा नहीं जा सकता।',
       'proyectos.sin_php': 'PHP इंस्टॉल नहीं है: इसे सेवाएँ से इंस्टॉल करें।',
       'proyectos.php_no_instalado': 'PHP {version} इंस्टॉल नहीं है: इसे सेवाएँ से इंस्टॉल करें।',
-      'proyectos.python_no_instalado':
-        'Python {version} इंस्टॉल नहीं है: इसे सेवाएँ से इंस्टॉल करें।',
+      'proyectos.python_no_instalado': 'Python {version} इंस्टॉल नहीं है: इसे सेवाएँ से इंस्टॉल करें।',
       'mcp.token_invalido': 'MCP सर्वर टोकन अमान्य है।',
       'mcp.solicitud_cancelada': 'MCP क्लाइंट ने अनुरोध रद्द कर दिया: कोई कार्रवाई नहीं की गई।',
-      'doctor.puerto_ocupado': '{servicio} का पोर्ट {puerto} किसी अन्य प्रोग्राम ({proceso}) द्वारा उपयोग में है।',
+      'doctor.puerto_ocupado':
+        '{servicio} का पोर्ट {puerto} किसी अन्य प्रोग्राम ({proceso}) द्वारा उपयोग में है।',
       'doctor.puerto_iis': 'IIS ({programa}), {servicio} के पोर्ट {puerto} का उपयोग कर रहा है।',
       'doctor.puerto_http_sys':
         'एक Windows सेवा ({programa}), {servicio} के पोर्ट {puerto} का उपयोग कर रही है।',
@@ -566,8 +532,7 @@ export const hi: Textos = {
         'hosts फ़ाइल में WolfCore Dev के {bloques} ब्लॉक हैं; केवल एक ही होना चाहिए।',
       'doctor.hosts_bloque_sin_cierre':
         'hosts फ़ाइल में WolfCore Dev का एक ब्लॉक अपने समापन चिह्न के बिना रह गया है।',
-      'doctor.hosts_dominios_faltantes':
-        'hosts फ़ाइल में आपकी साइटों के {cantidad} डोमेन अनुपस्थित हैं।',
+      'doctor.hosts_dominios_faltantes': 'hosts फ़ाइल में आपकी साइटों के {cantidad} डोमेन अनुपस्थित हैं।',
       'doctor.hosts_solo_lectura':
         'hosts फ़ाइल केवल-पढ़ने योग्य है (आमतौर पर एंटीवायरस इसे सेट करता है)। WolfCore Dev फिर भी व्यवस्थापक अनुमति के साथ इसमें लिख सकता है।',
       'doctor.path_duplicados':
@@ -590,11 +555,11 @@ export const hi: Textos = {
       'doctor.revision_fallida': 'जांच {revision} पूरी नहीं की जा सकी।',
       'doctor.confirmacion_requerida': 'इसे लागू करने से पहले सुधार की पुष्टि करें।',
       'doctor.hallazgo_desconocido': 'वह समस्या अब मौजूद नहीं है: फिर से जांचें।',
-      'doctor.solo_informa':
-        'इस समस्या के लिए कोई स्वचालित सुधार नहीं है: दिए गए निर्देशों का पालन करें।',
+      'doctor.solo_informa': 'इस समस्या के लिए कोई स्वचालित सुधार नहीं है: दिए गए निर्देशों का पालन करें।',
       'doctor.reparacion_fallida': 'सुधार लागू नहीं किया जा सका।',
       'doctor.reparacion_cancelada': 'व्यवस्थापक अनुमति रद्द कर दी गई: कुछ भी नहीं बदला गया।',
-      'doctor.reparacion_denegada': 'Windows या किसी एंटीवायरस ने पहुंच अस्वीकार कर दी: कुछ भी नहीं बदला गया।',
+      'doctor.reparacion_denegada':
+        'Windows या किसी एंटीवायरस ने पहुंच अस्वीकार कर दी: कुछ भी नहीं बदला गया।',
       'doctor.ya_resuelto': 'समस्या पहले ही समाप्त हो चुकी थी: कुछ भी बदलने की आवश्यकता नहीं पड़ी।',
       'doctor.ca_vieja_sin_quitar':
         'नया प्रमाणपत्र प्राधिकरण अब उपयोग में है, लेकिन पिछला प्राधिकरण Windows स्टोर से हटाया नहीं जा सका। आप इसे HTTPS अनुभाग से हटा सकते हैं।',
@@ -633,8 +598,7 @@ export const hi: Textos = {
       'ia.proveedor_invalido': 'प्रदाता का कॉन्फ़िगरेशन अमान्य है।',
       'ia.env_conflicto':
         '.env पहले से ही किसी अन्य मान के साथ {claves} को परिभाषित करता है: पुष्टि करें कि आप इसे बदलना चाहते हैं।',
-      'ia.env_sin_confirmar':
-        'पुष्टि करें कि आप .env में कुंजी लिखना चाहते हैं (यह सादे टेक्स्ट में सहेजी जाएगी)।',
+      'ia.env_sin_confirmar': 'पुष्टि करें कि आप .env में कुंजी लिखना चाहते हैं (यह सादे टेक्स्ट में सहेजी जाएगी)।',
       'ia.env_versionado':
         'Git पहले से ही इस प्रोजेक्ट की .env फ़ाइल को ट्रैक कर रहा है: अगला कमिट कुंजी को अपलोड कर देगा, भले ही वह .gitignore में हो। इसे git rm --cached .env से इंडेक्स से हटाएं।',
       'ia.env_versionado_desconocido':
@@ -642,10 +606,8 @@ export const hi: Textos = {
       'ia.proveedor_no_existe': 'AI प्रदाता अब मौजूद नहीं है।',
       'ia.url_cambia_con_clave':
         'प्रदाता के पास एक सहेजी गई कुंजी है: पुष्टि करें कि आप इसे नए URL पर भेजना चाहते हैं।',
-      'ia.mensaje_sin_confirmar':
-        'परीक्षण संदेश भेजने की पुष्टि करें (इससे आपके खाते के टोकन खर्च होते हैं)।',
-      'ia.clave_ilegible':
-        'प्रदाता की सहेजी गई कुंजी पढ़ी नहीं जा सकी: इसे हटाएं और फिर से सहेजें।',
+      'ia.mensaje_sin_confirmar': 'परीक्षण संदेश भेजने की पुष्टि करें (इससे आपके खाते के टोकन खर्च होते हैं)।',
+      'ia.clave_ilegible': 'प्रदाता की सहेजी गई कुंजी पढ़ी नहीं जा सकी: इसे हटाएं और फिर से सहेजें।',
       'ia.argumento_invalido': 'अमान्य डेटा ({campo})।',
       'correo.auth': 'प्रदाता ने उपयोगकर्ता नाम या पासवर्ड अस्वीकार कर दिया।',
       'correo.conexion': 'SMTP सर्वर से कनेक्ट नहीं किया जा सका: होस्ट और पोर्ट की जांच करें।',
@@ -654,20 +616,17 @@ export const hi: Textos = {
       'correo.rechazado':
         'सर्वर ने संदेश या किसी पते को अस्वीकार कर दिया। प्रेषक की जांच करें: कई प्रदाता केवल सत्यापित प्रेषक या डोमेन को ही स्वीकार करते हैं।',
       'correo.plazo': 'सर्वर ने समय पर प्रतिक्रिया नहीं दी (20 सेकंड)।',
-      'correo.host_invalido':
-        'SMTP सर्वर एक होस्टनाम या IP होना चाहिए, जिसमें स्कीम, पोर्ट या पथ न हो।',
+      'correo.host_invalido': 'SMTP सर्वर एक होस्टनाम या IP होना चाहिए, जिसमें स्कीम, पोर्ट या पथ न हो।',
       'correo.host_local':
         'वह सर्वर इसी कंप्यूटर या स्थानीय नेटवर्क की ओर इशारा करता है: इसका उपयोग करने के लिए पुष्टि करें।',
       'correo.destinatario_invalido': 'प्राप्तकर्ता का पता अमान्य है।',
       'correo.proveedor_invalido': 'प्रदाता का विवरण अमान्य है।',
       'correo.proveedor_no_existe': 'ईमेल प्रदाता अब मौजूद नहीं है।',
       'correo.sin_clave': 'प्रदाता के पास कोई सहेजा गया पासवर्ड नहीं है।',
-      'correo.clave_ilegible':
-        'प्रदाता का सहेजा गया पासवर्ड पढ़ा नहीं जा सका: इसे हटाएं और फिर से सहेजें।',
+      'correo.clave_ilegible': 'प्रदाता का सहेजा गया पासवर्ड पढ़ा नहीं जा सका: इसे हटाएं और फिर से सहेजें।',
       'correo.cambia_con_clave':
         'प्रदाता के पास एक सहेजा गया पासवर्ड है: पुष्टि करें कि आप इसे नए सर्वर पर भेजना चाहते हैं।',
-      'correo.env_sin_confirmar':
-        'पुष्टि करें कि आप ईमेल वेरिएबल को .env में लिखना चाहते हैं।',
+      'correo.env_sin_confirmar': 'पुष्टि करें कि आप ईमेल वेरिएबल को .env में लिखना चाहते हैं।',
       'correo.ocupado': 'एक परीक्षण ईमेल भेजने की प्रक्रिया पहले से चल रही है।',
       'correo.limite': 'एक और परीक्षण ईमेल भेजने से पहले {segundos} सेकंड प्रतीक्षा करें।',
       'correo.clave_mal_formada':
@@ -704,21 +663,20 @@ export const hi: Textos = {
       'php.rama_no_instalada': 'PHP {rama} इंस्टॉल नहीं है।',
       'php.argumento_invalido': 'अमान्य डेटा ({campo})।',
       'php.valor_invalido': '{clave} का मान अमान्य है।',
-      'php.ini_invalido': 'उस php.ini के साथ PHP प्रारंभ नहीं होता; कुछ भी सहेजा नहीं गया। आउटपुट: {salida}',
+      'php.ini_invalido':
+        'उस php.ini के साथ PHP प्रारंभ नहीं होता; कुछ भी सहेजा नहीं गया। आउटपुट: {salida}',
       'php.no_arranco':
         'इस बदलाव के साथ PHP {rama} फिर से प्रारंभ नहीं हुआ; पिछली स्थिति बहाल कर दी गई और यह पहले की तरह प्रतिक्रिया दे रहा है।',
       'php.caido_tras_restaurar':
         'PHP {rama} फिर से प्रारंभ नहीं हुआ; पिछली स्थिति बहाल कर दी गई, लेकिन यह अभी भी प्रतिक्रिया नहीं दे रहा है। सेवाएँ और PHP लॉग जांचें।',
       'php.respaldo_no_existe': 'php.ini का वह बैकअप मौजूद नहीं है।',
       'php.extension_no_existe': 'इस संस्करण के ext फ़ोल्डर में एक्सटेंशन {nombre} मौजूद नहीं है।',
-      'php.extension_no_catalogo':
-        'इस संस्करण के कैटलॉग में एक्सटेंशन {nombre} मौजूद नहीं है।',
+      'php.extension_no_catalogo': 'इस संस्करण के कैटलॉग में एक्सटेंशन {nombre} मौजूद नहीं है।',
       'php.variante_desconocida': 'यह पता नहीं चल सका कि यह PHP कैसे कंपाइल किया गया है।',
       'php.sin_variante': 'कैटलॉग में {variante} बिल्ड के लिए {nombre} उपलब्ध नहीं है।',
       'php.huella_distinta': 'डाउनलोड प्रकाशित फ़िंगरप्रिंट से मेल नहीं खाता; कुछ भी इंस्टॉल नहीं किया गया।',
       'php.descarga_fallida': 'एक्सटेंशन डाउनलोड नहीं किया जा सका: {detalle}',
-      'php.extension_en_uso':
-        '{nombre} की DLL उपयोग में है। PHP {rama} को रोकें और पुनः प्रयास करें।',
+      'php.extension_en_uso': '{nombre} की DLL उपयोग में है। PHP {rama} को रोकें और पुनः प्रयास करें।',
       'php.extension_sin_dll':
         '{nombre} की DLL बदली नहीं जा सकी और PHP {rama} का ext फ़ोल्डर इसके बिना रह गया। PHP {rama} को रोकें और पुनः प्रयास करें: प्रारंभ होने पर पिछली DLL वापस अपने स्थान पर आ जाएगी।',
       'php.sitio_sin_php': 'यह साइट PHP का उपयोग नहीं करती।',
@@ -731,8 +689,7 @@ export const hi: Textos = {
         '.vscode फ़ोल्डर या इसकी launch.json फ़ाइल एक लिंक या कुछ और है: यहाँ नहीं लिखा जाएगा।',
       'xdebug.sin_configurar': 'launch.json बनाने से पहले साइट पर Xdebug कॉन्फ़िगर करें।',
       'nginx.sitio_no_existe': 'वह साइट अब मौजूद नहीं है।',
-      'nginx.texto_invalido':
-        'vhost टेक्स्ट बहुत लंबा है, खाली है या इसमें नियंत्रण वर्ण हैं।',
+      'nginx.texto_invalido': 'vhost टेक्स्ट बहुत लंबा है, खाली है या इसमें नियंत्रण वर्ण हैं।',
       'nginx.sintaxis': 'पंक्ति {linea}: {detalle}। कुछ भी नहीं बदला गया।',
       'nginx.directiva_prohibida':
         'पंक्ति {linea}: साइट के vhost में "{directiva}" की अनुमति नहीं है (यह अन्य साइटों या प्रोजेक्ट के बाहर की फ़ाइलों को प्रभावित कर सकता है)। कुछ भी नहीं बदला गया।',
@@ -779,11 +736,9 @@ export const hi: Textos = {
         '{servicio} {version} में केवल कमज़ोर चेकसम (MD5 या SHA-1) है: डायलॉग में इंस्टॉलेशन की पुष्टि करें।',
       'catalogo.huella_no_coincide': 'डाउनलोड की गई फ़ाइल प्रकाशित चेकसम से मेल नहीं खाती।',
       'catalogo.redireccion_ajena': 'डाउनलोड ने किसी अस्वीकृत साइट ({host}) पर जाने का प्रयास किया।',
-      'catalogo.demasiadas_redirecciones':
-        'डाउनलोड में बहुत अधिक रीडायरेक्ट हुए ({maximo} से अधिक)।',
+      'catalogo.demasiadas_redirecciones': 'डाउनलोड में बहुत अधिक रीडायरेक्ट हुए ({maximo} से अधिक)।',
       'catalogo.respuesta_grande': 'सर्वर की प्रतिक्रिया बहुत बड़ी है।',
-      'catalogo.version_no_encontrada':
-        '{servicio} का संस्करण {version} कैटलॉग में नहीं है।',
+      'catalogo.version_no_encontrada': '{servicio} का संस्करण {version} कैटलॉग में नहीं है।',
       'catalogo.huella_no_disponible':
         '{servicio} {version} का चेकसम प्राप्त नहीं किया जा सका (इंटरनेट कनेक्शन नहीं है या स्रोत ने प्रतिक्रिया नहीं दी)। पुनः प्रयास करें।',
       'catalogo.firma_invalida':
@@ -802,8 +757,7 @@ export const hi: Textos = {
         'phpMyAdmin केवल MySQL और MariaDB डेटाबेस खोलता है; PostgreSQL के लिए Adminer का उपयोग करें।',
       'acceso_bd.servidor_no_resuelto':
         'इस प्रोजेक्ट का डेटाबेस WolfCore Dev के किसी स्थानीय सर्वर का नहीं है।',
-      'acceso_bd.no_listo':
-        'टूल तैयार नहीं है: इसे सेवाएँ से इंस्टॉल करें और PHP चालू करें।',
+      'acceso_bd.no_listo': 'टूल तैयार नहीं है: इसे सेवाएँ से इंस्टॉल करें और PHP चालू करें।',
       'auditoria.tabla_invalida': 'वह तालिका उस डेटाबेस में मौजूद नहीं है।',
       'auditoria.columna_invalida':
         'वह कॉलम उस तालिका में मौजूद नहीं है (और उपयोगकर्ता तथा हैश के कॉलम अलग-अलग होने चाहिए)।',
@@ -819,15 +773,13 @@ export const hi: Textos = {
       'auditoria.respaldo_previo_fallo':
         'रीसेट करने से पहले डेटाबेस का बैकअप सहेजा नहीं जा सका: कोई बदलाव नहीं किया गया।',
       'auditoria.copia_fallo': 'पंक्ति की प्रति सहेजी नहीं जा सकी: कोई बदलाव नहीं किया गया।',
-      'auditoria.motor_no_soportado':
-        'पासवर्ड ऑडिट MySQL, MariaDB और PostgreSQL के लिए है।',
+      'auditoria.motor_no_soportado': 'पासवर्ड ऑडिट MySQL, MariaDB और PostgreSQL के लिए है।',
       'auditoria.cancelada': 'ऑडिट रद्द किया गया।',
       'auditoria.usuario_invalido': 'उपयोगकर्ता नाम 1 से 256 वर्णों के बीच होना चाहिए।',
       'auditoria.en_curso': 'एक ऑडिट पहले से चल रहा है: उसके पूरा होने की प्रतीक्षा करें या उसे रद्द करें।',
       'auditoria.base_sistema': 'सिस्टम डेटाबेस का ऑडिट नहीं किया जा सकता: किसी प्रोजेक्ट का डेटाबेस चुनें।',
       'auditoria.esquema_invalido': 'वह स्कीमा उस डेटाबेस में मौजूद नहीं है।',
-      'auditoria.fila_cambio':
-        'इस बीच खाता बदल गया: रीसेट नहीं किया गया। पुनः प्रयास करें।',
+      'auditoria.fila_cambio': 'इस बीच खाता बदल गया: रीसेट नहीं किया गया। पुनः प्रयास करें।',
       'auditoria.verificacion_fallo':
         'डेटाबेस ने पासवर्ड को अपेक्षित रूप से नहीं सहेजा: बदलाव वापस ले लिया गया।',
       'auditoria.columna_corta':
@@ -843,8 +795,7 @@ export const hi: Textos = {
         'डेटाबेस का आकार {maximo} MB से अधिक है, जो एक स्नैपशॉट की अधिकतम सीमा है।',
       'instantaneas.sin_espacio':
         'स्नैपशॉट के लिए पर्याप्त खाली स्थान नहीं है: {necesarios} MB आवश्यक है और {libres} MB उपलब्ध है।',
-      'instantaneas.limite':
-        'इस डेटाबेस के पहले से ही {maximo} स्नैपशॉट हैं: नया लेने के लिए कोई पुराना हटाएँ।',
+      'instantaneas.limite': 'इस डेटाबेस के पहले से ही {maximo} स्नैपशॉट हैं: नया लेने के लिए कोई पुराना हटाएँ।',
       'instantaneas.tomar_fallo': 'स्नैपशॉट नहीं लिया जा सका। डेटाबेस में कोई बदलाव नहीं किया गया।',
       'instantaneas.huella_no_coincide':
         'स्नैपशॉट फ़ाइल बदल गई है या क्षतिग्रस्त है: कुछ भी रीस्टोर नहीं किया गया।',
@@ -878,8 +829,7 @@ export const hi: Textos = {
     volver: 'इस स्नैपशॉट पर वापस जाएँ',
     borrar: 'हटाएँ',
     borrada: 'स्नैपशॉट ट्रैश में ले जाया गया',
-    papelera:
-      'हटाए गए स्नैपशॉट को 7 दिनों तक WolfCore Dev के ट्रैश से पुनर्प्राप्त किया जा सकता है।',
+    papelera: 'हटाए गए स्नैपशॉट को 7 दिनों तक WolfCore Dev के ट्रैश से पुनर्प्राप्त किया जा सकता है।',
     cerrar: 'बंद करें',
     papeleraTitulo: 'ट्रैश',
     papeleraVacia: 'ट्रैश में कोई स्नैपशॉट नहीं है।',
@@ -888,8 +838,7 @@ export const hi: Textos = {
     borradaEl: (fecha: string) => `${fecha} को हटाया गया`,
     borrarPregunta: 'क्या इस स्नैपशॉट को ट्रैश में ले जाएँ?',
     borrarSi: 'ट्रैश में ले जाएँ',
-    notaAutomatica: (fecha: string) =>
-      `पिछली स्थिति, ${fecha} के स्नैपशॉट पर वापस जाने से पहले सहेजी गई`,
+    notaAutomatica: (fecha: string) => `पिछली स्थिति, ${fecha} के स्नैपशॉट पर वापस जाने से पहले सहेजी गई`,
     notaAutomaticaSinOrigen: 'पिछली स्थिति, किसी अन्य स्नैपशॉट पर वापस जाने से पहले सहेजी गई',
     extensionesAviso: (lista: string) =>
       `इसमें PostgreSQL एक्सटेंशन (${lista}) शामिल हैं जो केवल इस कंप्यूटर के चेकसम रिकॉर्ड के साथ रीस्टोर होते हैं।`,
@@ -1064,7 +1013,8 @@ export const hi: Textos = {
       comillasSinCerrar: 'उद्धरण चिह्न बंद नहीं किए गए हैं।',
       tiempo: 'अधिकतम समय',
       minutos: 'मिनट',
-      tiempoAyuda: 'अधिक समय लगने पर यह अपने आप रुक जाता है (केवल वह प्रक्रिया और उसके द्वारा शुरू की गई प्रक्रियाएँ)।',
+      tiempoAyuda:
+        'अधिक समय लगने पर यह अपने आप रुक जाता है (केवल वह प्रक्रिया और उसके द्वारा शुरू की गई प्रक्रियाएँ)।',
       activa: 'सक्रिय (ऐप खुला रहने पर अपने आप चलता है)',
       advertencia:
         'स्वीकार करके आप इसी सटीक कमांड को अधिकृत करते हैं: यह हर निर्धारित समय पर इस प्रोजेक्ट के फ़ोल्डर में अपने आप चलेगा। यदि आप इसे बदलते हैं, तो आपको फिर से पुष्टि करनी होगी।',
@@ -1079,8 +1029,7 @@ export const hi: Textos = {
   },
   workspaces: {
     titulo: 'वर्कस्पेस',
-    descripcion:
-      'डेटाबेस, सेवाओं और प्रक्रियाओं के नामित समूह जिन्हें एक साथ चालू और बंद किया जाता है।',
+    descripcion: 'डेटाबेस, सेवाओं और प्रक्रियाओं के नामित समूह जिन्हें एक साथ चालू और बंद किया जाता है।',
     nuevo: 'नया वर्कस्पेस',
     vacio:
       'अभी कोई वर्कस्पेस नहीं है। एक बनाएँ, उदाहरण के लिए PostgreSQL, Redis, Ollama और आपके प्रोजेक्ट की प्रक्रिया के साथ “Bot FastAPI”।',
@@ -1096,8 +1045,7 @@ export const hi: Textos = {
     },
     borrar: {
       titulo: (n: string) => `क्या “${n}” को हटाएँ?`,
-      texto:
-        'वर्कस्पेस हटाने से कुछ भी बंद या डिलीट नहीं होता: केवल समूह हटता है। जो चालू है वह चालू ही रहेगा।',
+      texto: 'वर्कस्पेस हटाने से कुछ भी बंद या डिलीट नहीं होता: केवल समूह हटता है। जो चालू है वह चालू ही रहेगा।',
       confirmar: 'हटाएँ',
       hecho: (n: string) => `वर्कस्पेस “${n}” हटाया गया।`,
     },
@@ -1160,8 +1108,7 @@ export const hi: Textos = {
       corregido: 'hosts फ़ाइल अपडेट की गई',
       fallo: 'hosts फ़ाइल अपडेट नहीं की जा सकी',
       verInstrucciones: 'निर्देश देखें',
-      duplicados:
-        'ये डोमेन पहले से ही WolfCore Dev ब्लॉक के बाहर hosts में मौजूद हैं (इन्हें सुरक्षित रखा जाएगा):',
+      duplicados: 'ये डोमेन पहले से ही WolfCore Dev ब्लॉक के बाहर hosts में मौजूद हैं (इन्हें सुरक्षित रखा जाएगा):',
       motivos: {
         cancelado: 'एडमिनिस्ट्रेटर अनुमति रद्द कर दी गई। hosts फ़ाइल अपरिवर्तित रही।',
         tiempo:
@@ -1186,8 +1133,7 @@ export const hi: Textos = {
   },
   servicios: {
     titulo: 'सेवाएँ',
-    descripcion:
-      'वेब सर्वर, PHP, डेटाबेस और टूल चालू और बंद करें। स्थिति अपने आप अपडेट होती है।',
+    descripcion: 'वेब सर्वर, PHP, डेटाबेस और टूल चालू और बंद करें। स्थिति अपने आप अपडेट होती है।',
     grupos: {
       web: 'वेब',
       php: 'PHP',
@@ -1214,8 +1160,7 @@ export const hi: Textos = {
     conflicto: 'पोर्ट व्यस्त है',
     autoIniciar: 'WolfCore Dev शुरू होने पर चालू करें',
     autoIniciarActivado: (nombre: string) => `WolfCore Dev शुरू होने पर ${nombre} चालू हो जाएगा`,
-    autoIniciarDesactivado: (nombre: string) =>
-      `WolfCore Dev शुरू होने पर ${nombre} अब चालू नहीं होगा`,
+    autoIniciarDesactivado: (nombre: string) => `WolfCore Dev शुरू होने पर ${nombre} अब चालू नहीं होगा`,
     dialogoPuerto: {
       titulo: (nombre: string) => `${nombre} का पोर्ट`,
       etiqueta: 'नया पोर्ट',
@@ -1253,8 +1198,6 @@ export const hi: Textos = {
     ftp: {
       interruptor: 'FTP सर्वर',
       redLocal: 'स्थानीय नेटवर्क से कनेक्शन की अनुमति दें',
-      redLocalAyuda:
-        'बंद होने पर, केवल यही कंप्यूटर कनेक्ट कर सकता है (127.0.0.1)। प्रत्येक साइट अपनी एक्सेस “साइटें” में सक्रिय करती है।',
       avisoTitulo: 'स्थानीय नेटवर्क के लिए FTP खोलें',
       avisoTexto:
         'FTP उपयोगकर्ता नाम, पासवर्ड और फ़ाइलें बिना एन्क्रिप्शन के भेजता है। आपके नेटवर्क का कोई भी कंप्यूटर कनेक्ट करने का प्रयास कर सकता है। इसका उपयोग केवल विश्वसनीय नेटवर्क पर ही करें।',
@@ -1309,13 +1252,11 @@ export const hi: Textos = {
     externo: 'WolfCore Dev के बाहर प्रबंधित',
     verDetalle: 'त्रुटि का विवरण देखें',
     vacioTitulo: 'अभी कोई सेवा नहीं है',
-    vacio:
-      'अभी कोई सेवा इंस्टॉल नहीं है। अपनी साइटों के लिए Nginx और PHP, या किसी डेटाबेस से शुरुआत करें।',
+    vacio: 'अभी कोई सेवा इंस्टॉल नहीं है। अपनी साइटों के लिए Nginx और PHP, या किसी डेटाबेस से शुरुआत करें।',
     irAInstalar: 'इंस्टॉल करने जाएँ',
   },
   bd: {
-    descripcion:
-      'अपने प्रोजेक्ट के डेटाबेस बनाएँ, बैकअप लें और पुनर्स्थापित करें। सर्वर केवल 127.0.0.1 पर सुनते हैं।',
+    descripcion: 'अपने प्रोजेक्ट के डेटाबेस बनाएँ, बैकअप लें और पुनर्स्थापित करें। सर्वर केवल 127.0.0.1 पर सुनते हैं।',
     motores: {
       mysql: 'MySQL',
       mariadb: 'MariaDB',
@@ -1331,8 +1272,7 @@ export const hi: Textos = {
     cargando: 'डेटाबेस लोड हो रहे हैं…',
     recargar: 'सूची पुनः लोड करें',
     vacioTitulo: 'कोई डेटाबेस सर्वर इंस्टॉल नहीं है',
-    vacio:
-      'अपने डेटाबेस प्रबंधित करने के लिए सेवाओं से MySQL, MariaDB, PostgreSQL या MongoDB इंस्टॉल करें।',
+    vacio: 'अपने डेटाबेस प्रबंधित करने के लिए सेवाओं से MySQL, MariaDB, PostgreSQL या MongoDB इंस्टॉल करें।',
     irAServicios: 'सेवाओं पर जाएँ',
     apagado: {
       titulo: (motor: string) => `${motor} बंद है`,
@@ -1369,8 +1309,7 @@ export const hi: Textos = {
     } as Record<string, string>,
     formatoDesconocido:
       'फ़ॉर्मैट पहचाना नहीं जा सका। यदि यह संपीड़ित फ़ाइल है, तो इसे अनज़िप करें और इसके अंदर की .sql या .dump फ़ाइल चुनें।',
-    formatoIncompatible:
-      'यह फ़ाइल PostgreSQL बैकअप है: इसे PostgreSQL टैब में पुनर्स्थापित करें।',
+    formatoIncompatible: 'यह फ़ाइल PostgreSQL बैकअप है: इसे PostgreSQL टैब में पुनर्स्थापित करें।',
     nombre: {
       etiqueta: 'डेटाबेस का नाम',
       vacio: 'कोई नाम लिखें',
@@ -1430,8 +1369,7 @@ export const hi: Textos = {
     },
     dialogoRestaurar: {
       titulo: (motor: string) => `${motor} में बैकअप पुनर्स्थापित करें`,
-      confianza:
-        'केवल विश्वसनीय बैकअप ही पुनर्स्थापित करें: कोई बैकअप सर्वर पर कमांड या क्रियाएँ चला सकता है।',
+      confianza: 'केवल विश्वसनीय बैकअप ही पुनर्स्थापित करें: कोई बैकअप सर्वर पर कमांड या क्रियाएँ चला सकता है।',
       archivo: 'बैकअप फ़ाइल',
       elegir: 'फ़ाइल चुनें…',
       cambiar: 'बदलें',
@@ -1475,8 +1413,7 @@ export const hi: Textos = {
         mongodb: 'UTF-8',
       } as Record<string, string>,
       usuarioPropio: 'इस डेटाबेस के लिए अलग उपयोगकर्ता बनाएँ',
-      usuarioPropioAyuda:
-        'वैकल्पिक। अन्यथा, आपके प्रोजेक्ट सर्वर के व्यवस्थापक उपयोगकर्ता का उपयोग करते हैं।',
+      usuarioPropioAyuda: 'वैकल्पिक। अन्यथा, आपके प्रोजेक्ट सर्वर के व्यवस्थापक उपयोगकर्ता का उपयोग करते हैं।',
       usuario: 'उपयोगकर्ता',
       clave: 'पासवर्ड',
       faltaClave: 'पासवर्ड लिखें',
@@ -1563,8 +1500,7 @@ export const hi: Textos = {
   },
   instalar: {
     titulo: 'इंस्टॉल करें',
-    descripcion:
-      'आधिकारिक संस्करण डाउनलोड करें। उपयोग से पहले प्रत्येक फ़ाइल की SHA-256 जाँच की जाती है।',
+    descripcion: 'आधिकारिक संस्करण डाउनलोड करें। उपयोग से पहले प्रत्येक फ़ाइल की SHA-256 जाँच की जाती है।',
     servicios: {
       nginx: { nombre: 'Nginx', detalle: 'वेब सर्वर (nginx.org)' },
       php: { nombre: 'PHP', detalle: 'NTS x64 (windows.php.net)' },
@@ -1794,8 +1730,7 @@ export const hi: Textos = {
     nombreTunel: 'टनल का नाम',
     nombreTunelAyuda: 'छोटे अक्षर, संख्याएँ और हाइफ़न।',
     dominioPublico: 'सार्वजनिक डोमेन',
-    dominioPublicoAyuda:
-      'Cloudflare में आपके किसी डोमेन का सबडोमेन, जैसे demo.example.com।',
+    dominioPublicoAyuda: 'Cloudflare में आपके किसी डोमेन का सबडोमेन, जैसे demo.example.com।',
     crear: 'बनाएँ और रूट करें',
     guardadoNombre: 'नामित टनल तैयार है। इसे खोलने पर पुष्टि माँगी जाएगी।',
     guardadoRapido: 'यह साइट अब फिर से त्वरित टनल का उपयोग कर रही है।',
@@ -1829,7 +1764,8 @@ export const hi: Textos = {
     tailscaleServe: 'Serve: केवल आपका tailnet',
     tailscaleServeAyuda: 'केवल आपके Tailscale नेटवर्क के उपकरण। इंटरनेट पर उपलब्ध नहीं होता।',
     tailscaleFunnel: 'Funnel: पूरा इंटरनेट',
-    tailscaleFunnelAyuda: 'लिंक रखने वाला कोई भी व्यक्ति इस तक पहुँच सकता है, चाहे वह आपके tailnet में हो या नहीं।',
+    tailscaleFunnelAyuda:
+      'लिंक रखने वाला कोई भी व्यक्ति इस तक पहुँच सकता है, चाहे वह आपके tailnet में हो या नहीं।',
     tailscaleFunnelAviso:
       'Funnel इस साइट को इंटरनेट पर प्रकाशित करता है: जब तक यह खुला रहेगा, लिंक रखने वाला कोई भी व्यक्ति इस तक पहुँच सकेगा।',
     tailscaleAyudaInstalacion:
@@ -1853,7 +1789,6 @@ export const hi: Textos = {
     columnas: { sitio: 'साइट', estado: 'स्थिति', url: 'लिंक', acciones: 'क्रियाएँ' },
     vacioTitulo: 'कोई टनल खुला नहीं है',
     vacio: 'सार्वजनिक लिंक प्राप्त करने के लिए किसी साइट का टनल स्विच चालू करें।',
-    irASitios: 'साइटों पर जाएँ',
     sinNombre: 'हटाई गई साइट',
   },
   ajustes: {
@@ -1992,8 +1927,7 @@ export const hi: Textos = {
     redirigirAyuda: 'http के अनुरोध https पर भेजे जाते हैं। सार्वजनिक टनल इससे प्रभावित नहीं होते।',
     redirigirDeshabilitado: 'पहले HTTPS सक्षम करें',
     sinAutoridadTitulo: 'HTTPS प्राधिकरण इंस्टॉल नहीं है',
-    sinAutoridadTexto:
-      'इसके बिना ब्राउज़र सुरक्षा सूचना दिखाएगा। Windows आपसे इंस्टॉलेशन की पुष्टि माँगेगा।',
+    sinAutoridadTexto: 'इसके बिना ब्राउज़र सुरक्षा सूचना दिखाएगा। Windows आपसे इंस्टॉलेशन की पुष्टि माँगेगा।',
     instalar: 'प्राधिकरण इंस्टॉल करें',
     instalada: 'HTTPS प्राधिकरण इंस्टॉल हो गया',
     cancelado: 'Windows की पुष्टि रद्द कर दी गई। कोई बदलाव नहीं हुआ।',
@@ -2023,8 +1957,7 @@ export const hi: Textos = {
     mostrar: 'PHP सेटिंग्स',
     ocultar: 'PHP सेटिंग्स छिपाएँ',
     cargando: 'PHP सेटिंग्स पढ़ी जा रही हैं…',
-    apagadoRama: (rama: string) =>
-      `PHP ${rama} बंद है: इस साइट का अपना PHP उसी के साथ शुरू होता है।`,
+    apagadoRama: (rama: string) => `PHP ${rama} बंद है: इस साइट का अपना PHP उसी के साथ शुरू होता है।`,
     ajustesTitulo: 'अपना php.ini',
     ajustesAyuda: (rama: string) =>
       `ये केवल इस साइट के लिए PHP ${rama} के php.ini में जुड़ते हैं। किसी सेटिंग (या Xdebug) के साथ साइट 1 या 2 प्रक्रियाओं वाला अपना PHP उपयोग करती है; अन्य साइटों में कोई बदलाव नहीं होता।`,
@@ -2079,7 +2012,8 @@ export const hi: Textos = {
     launchActualizado: (respaldo: string) => `launch.json अपडेट हो गया। पिछला बैकअप: ${respaldo}`,
     phpStorm: 'PhpStorm के लिए कॉन्फ़िगरेशन',
     copiarPhpStorm: 'PhpStorm कॉन्फ़िगरेशन कॉपी करें',
-    errorNginx: (salida: string) => `Nginx ने बदलाव स्वीकार नहीं किया; पिछली स्थिति बहाल कर दी गई। ${salida}`,
+    errorNginx: (salida: string) =>
+      `Nginx ने बदलाव स्वीकार नहीं किया; पिछली स्थिति बहाल कर दी गई। ${salida}`,
   },
   nginxEditor: {
     etiqueta: 'Nginx',
@@ -2298,8 +2232,7 @@ export const hi: Textos = {
         fallos: {
           'correo.auth': 'प्रदाता ने उपयोगकर्ता नाम या पासवर्ड अस्वीकार कर दिया।',
           'correo.conexion': 'कनेक्ट नहीं हो सका: होस्ट और पोर्ट जाँचें।',
-          'correo.tls':
-            'एन्क्रिप्टेड कनेक्शन मान्य नहीं है (प्रमाणपत्र, नाम या STARTTLS)। कुछ भी नहीं भेजा गया।',
+          'correo.tls': 'एन्क्रिप्टेड कनेक्शन मान्य नहीं है (प्रमाणपत्र, नाम या STARTTLS)। कुछ भी नहीं भेजा गया।',
           'correo.rechazado':
             'सर्वर ने संदेश या किसी पते को अस्वीकार कर दिया। प्रेषक (sender) जाँचें: कई प्रदाता केवल सत्यापित प्रेषक या डोमेन को ही स्वीकार करते हैं।',
           'correo.plazo': 'सर्वर ने समय पर (20 s) उत्तर नहीं दिया।',
@@ -2326,7 +2259,8 @@ export const hi: Textos = {
         starttls: 'STARTTLS (पोर्ट 587)',
         usuario: 'उपयोगकर्ता',
         usuarioObligatorio: 'उपयोगकर्ता नाम दर्ज करें।',
-        usuarioFijoAyuda: 'यह प्रदाता हमेशा इसी उपयोगकर्ता नाम का उपयोग करता है; पासवर्ड आपके खाते का होता है।',
+        usuarioFijoAyuda:
+          'यह प्रदाता हमेशा इसी उपयोगकर्ता नाम का उपयोग करता है; पासवर्ड आपके खाते का होता है।',
         clave: 'SMTP पासवर्ड',
         claveGuardada: (f: string) => `सहेजा गया: ••••${f}`,
         claveNueva: 'सहेजने के लिए पासवर्ड दर्ज करें',
@@ -2335,8 +2269,7 @@ export const hi: Textos = {
         remitente: 'परीक्षण प्रेषक (वैकल्पिक)',
         remitenteAyuda:
           'कई प्रदाता केवल सत्यापित प्रेषक या डोमेन से ही ईमेल भेजते हैं। यदि आप इसे खाली छोड़ते हैं, तो गंतव्य पता ही प्रेषक होगा।',
-        claveSinEspacios:
-          'पासवर्ड ठीक वैसे ही पेस्ट करें जैसा प्रदाता ने दिया है: बीच के स्पेस सुरक्षित रखे जाते हैं।',
+        claveSinEspacios: 'पासवर्ड ठीक वैसे ही पेस्ट करें जैसा प्रदाता ने दिया है: बीच के स्पेस सुरक्षित रखे जाते हैं।',
         borrarClave: 'पासवर्ड हटाएँ',
         borrarClaveTitulo: (n: string) => `क्या ${n} का पासवर्ड हटाएँ?`,
         borrarClaveTexto: 'सहेजा गया पासवर्ड हटा दिया जाता है। प्रदाता सूची में बना रहता है।',
@@ -2379,7 +2312,8 @@ export const hi: Textos = {
         versionadoTexto:
           'अगला commit इसके मान अपलोड कर देगा। इसे git rm --cached .env के साथ इंडेक्स से हटाएँ।',
         desconocidoTitulo: 'Git की जाँच नहीं की जा सकी',
-        desconocidoTexto: 'यह पता नहीं लगाया जा सका कि Git इस प्रोजेक्ट की .env फ़ाइल को ट्रैक कर रहा है या नहीं।',
+        desconocidoTexto:
+          'यह पता नहीं लगाया जा सका कि Git इस प्रोजेक्ट की .env फ़ाइल को ट्रैक कर रहा है या नहीं।',
         aceptarVersionado: 'फिर भी लिखें',
         aceptarTitulo: 'ट्रैक की गई .env फ़ाइल में लिखें',
         aceptarTexto:
@@ -2467,8 +2401,7 @@ export const hi: Textos = {
       sinModelo: 'कोई मॉडल चुनने के लिए कनेक्शन जाँचें या डिफ़ॉल्ट मॉडल सेट करें।',
       enviando: 'भेजा जा रहा है…',
       respuesta: (ms: number) => `${ms} ms में उत्तर`,
-      tokens: (entrada: number, salida: number) =>
-        `${entrada} इनपुट टोकन, ${salida} आउटपुट टोकन`,
+      tokens: (entrada: number, salida: number) => `${entrada} इनपुट टोकन, ${salida} आउटपुट टोकन`,
       usar: 'प्रोजेक्ट में उपयोग करें',
       editar: 'संपादित करें',
       borrar: 'हटाएँ',
@@ -2614,8 +2547,6 @@ export const hi: Textos = {
       yaInstalado: 'यह मॉडल पहले से इंस्टॉल है',
       enCurso: 'यह मॉडल पहले से डाउनलोड हो रहा है',
       confirmarTitulo: (modelo: string) => `क्या ${modelo} डाउनलोड करें?`,
-      confirmarTexto:
-        'मॉडल आमतौर पर कई GB के होते हैं (आकार के अनुसार 1 से 40 GB से अधिक तक)। Ollama शुरू करने से पहले आकार नहीं बताता: आप इसे प्रगति बार में देखेंगे और किसी भी समय रद्द कर सकते हैं।',
       confirmar: 'डाउनलोड करें',
     },
     progreso: {
@@ -2652,13 +2583,11 @@ export const hi: Textos = {
       base: 'Ollama बेस URL',
       openai: 'OpenAI-संगत एंडपॉइंट',
       env: '.env फ़ाइल के लिए ब्लॉक',
-      envAyuda:
-        'Laravel या FastAPI बॉट के लिए उपयोगी। WolfCore Dev आपके प्रोजेक्ट में कुछ नहीं लिखता।',
+      envAyuda: 'Laravel या FastAPI बॉट के लिए उपयोगी। WolfCore Dev आपके प्रोजेक्ट में कुछ नहीं लिखता।',
       copiarEnv: 'ब्लॉक कॉपी करें',
       copiarDato: (dato: string) => `${dato} कॉपी करें`,
     },
-    etapaB:
-      'चरण B में Hermes Agent, Claude Code और Codex एक क्लिक से इन मॉडल से कनेक्ट हो सकेंगे।',
+    etapaB: 'चरण B में Hermes Agent, Claude Code और Codex एक क्लिक से इन मॉडल से कनेक्ट हो सकेंगे।',
   },
   proyectos: {
     titulo: 'प्रोजेक्ट',
@@ -2736,8 +2665,7 @@ export const hi: Textos = {
       instalandoGh: 'GitHub CLI इंस्टॉल हो रहा है…',
       ghInstalado: 'GitHub CLI इंस्टॉल हो गया। अब साइन इन करें।',
       iniciarSesion: 'साइन इन करें',
-      sesionAbierta:
-        'साइन इन करने के लिए एक विंडो खुली है। पूरा होने पर, "फिर से जांचें" दबाएं।',
+      sesionAbierta: 'साइन इन करने के लिए एक विंडो खुली है। पूरा होने पर, "फिर से जांचें" दबाएं।',
       comprobar: 'फिर से जांचें',
       usarToken: 'टोकन का उपयोग करें',
       token: 'GitHub व्यक्तिगत टोकन',
@@ -2831,8 +2759,7 @@ export const hi: Textos = {
       quitarRespaldo: 'बैकअप हटाएं',
       sobrescribir: 'यदि डेटाबेस में पहले से टेबल हैं तो उन्हें ओवरराइट करें',
       semilla: 'परीक्षण डेटा लोड करें (--seed)',
-      sinMotor:
-        'कोई डेटाबेस नहीं: डेटाबेस बनाने या बैकअप पुनर्स्थापित करने के लिए सेवाएं में एक इंजन चुनें।',
+      sinMotor: 'कोई डेटाबेस नहीं: डेटाबेस बनाने या बैकअप पुनर्स्थापित करने के लिए सेवाएं में एक इंजन चुनें।',
       confio: 'मुझे इस रिपॉजिटरी पर भरोसा है: इसके इंस्टॉलेशन चरण चलाएं',
       confioAyuda:
         'ये चरण आपके कंप्यूटर पर प्रोजेक्ट के प्रोग्राम (composer, npm, pip, माइग्रेशन) चलाते हैं। इसे तभी चुनें जब आप कोड को जानते हों।',
@@ -2848,7 +2775,8 @@ export const hi: Textos = {
       verRegistro: 'लॉग देखें',
       ocultarRegistro: 'लॉग छिपाएं',
       listo: 'प्रोजेक्ट तैयार है।',
-      fallo: (paso: string) => `विफल: ${paso}। पुनः प्रयास करें, इसे छोड़ें या रद्द करें; कुछ भी वापस नहीं किया गया।`,
+      fallo: (paso: string) =>
+        `विफल: ${paso}। पुनः प्रयास करें, इसे छोड़ें या रद्द करें; कुछ भी वापस नहीं किया गया।`,
       cancelada: 'तैयारी रद्द कर दी गई। आप इसे प्रोजेक्ट कार्ड से फिर से शुरू कर सकते हैं।',
       incompleta: 'कुछ चरण अभी चलाए जाने बाकी हैं।',
       errorCrear: 'प्रोजेक्ट नहीं बनाया जा सका',
@@ -2857,15 +2785,13 @@ export const hi: Textos = {
         'जब से आपने इस पर भरोसा किया, प्रोजेक्ट की रेसिपी (wolfcore.yml) बदल गई है। पुनः प्रयास करने पर पिछली बार सहेजी गई रेसिपी चलेगी।',
       recargar: 'नई रेसिपी की समीक्षा करें',
       seguirGuardada: 'सहेजी गई के साथ जारी रखें',
-      soloLectura:
-        'प्रकार, PHP, डोमेन, संस्करण और पोर्ट प्रोजेक्ट की सेटिंग्स हैं: उन्हें संपादित करें से बदलें।',
+      soloLectura: 'प्रकार, PHP, डोमेन, संस्करण और पोर्ट प्रोजेक्ट की सेटिंग्स हैं: उन्हें संपादित करें से बदलें।',
     },
     tarjeta: {
       receta: 'तैयारी',
       reinstalar: 'डिपेंडेंसी फिर से इंस्टॉल करें',
       reinstalarTitulo: (nombre: string) => `क्या ${nombre} की रेसिपी चलाएं?`,
-      reinstalarTexto:
-        'पिछली तैयारी के चरण दोहराए जाएंगे (जिन्हें आपने असिस्टेंट में जांचा था):',
+      reinstalarTexto: 'पिछली तैयारी के चरण दोहराए जाएंगे (जिन्हें आपने असिस्टेंट में जांचा था):',
       noRestaura: 'दोबारा पुनर्स्थापित नहीं किया जाएगा',
       recetaCambio:
         'जब से आपने इस पर भरोसा किया, प्रोजेक्ट की रेसिपी (wolfcore.yml) बदल गई है। फिर से इंस्टॉल करने पर सहेजी गई रेसिपी चलेगी; नई रेसिपी जांचने के लिए "रेसिपी की समीक्षा करें" का उपयोग करें।',
@@ -2873,8 +2799,7 @@ export const hi: Textos = {
       preparar: 'तैयार करें…',
       ejecutar: 'चलाएं',
       verPreparacion: 'तैयारी देखें',
-      sinConfianza:
-        'इसे चलाने के लिए असिस्टेंट में रेसिपी की समीक्षा करें और "मुझे इस रिपॉजिटरी पर भरोसा है" चुनें।',
+      sinConfianza: 'इसे चलाने के लिए असिस्टेंट में रेसिपी की समीक्षा करें और "मुझे इस रिपॉजिटरी पर भरोसा है" चुनें।',
       runtimes: 'संस्करण सूचनाएं',
       verRegistros: 'लॉग देखें',
       abrirAgente: 'AI एजेंट खोलें',
@@ -2911,7 +2836,8 @@ export const hi: Textos = {
       atras: (n: number) => `${n} लाने के लिए`,
       adelante: (n: number) => `${n} भेजने के लिए`,
       traer: 'बदलाव लाएं',
-      traerAyuda: 'मर्ज किए बिना git pull: यदि स्थानीय बदलाव हैं या शाखाएं अलग हो गई हैं, तो कुछ नहीं बदला जाएगा।',
+      traerAyuda:
+        'मर्ज किए बिना git pull: यदि स्थानीय बदलाव हैं या शाखाएं अलग हो गई हैं, तो कुछ नहीं बदला जाएगा।',
       alDia: 'पहले से अप-टू-डेट है।',
       actualizado: 'बदलाव लाए गए',
       sugeridosTitulo: 'बदलाव लाए गए',
@@ -2930,8 +2856,7 @@ export const hi: Textos = {
         titulo: 'सुझाए गए संदेश के साथ कमिट',
         proveedor: 'AI प्रदाता',
         modelo: 'मॉडल',
-        sinProveedores:
-          'संदेश सुझाने के लिए क्लाउड AI प्रदाता (AI स्क्रीन) कॉन्फ़िगर करें।',
+        sinProveedores: 'संदेश सुझाने के लिए क्लाउड AI प्रदाता (AI स्क्रीन) कॉन्फ़िगर करें।',
         privacidad:
           'प्रदाता को केवल स्टेज किए गए बदलावों का diff भेजा जाता है — .env, कुंजियां, प्रमाणपत्र, क्रेडेंशियल फ़ाइलें या बाइनरी नहीं भेजे जाते, और अधिकतम 20,000 वर्ण भेजे जाते हैं। इसमें बहुत कम टोकन खर्च होते हैं।',
         sugerir: 'संदेश सुझाएं',
@@ -2975,8 +2900,7 @@ export const hi: Textos = {
       autoIniciar: 'WolfCore Dev शुरू होने पर चालू करें',
       reiniciar: 'क्रैश होने पर रीस्टार्ट करें',
       esProxy: 'Nginx प्रॉक्सी गंतव्य',
-      requiereReinicio:
-        'प्रक्रिया चल रही है: कमांड, फ़ोल्डर या पोर्ट में बदलाव इसे रीस्टार्ट करने पर लागू होंगे।',
+      requiereReinicio: 'प्रक्रिया चल रही है: कमांड, फ़ोल्डर या पोर्ट में बदलाव इसे रीस्टार्ट करने पर लागू होंगे।',
       reinicieAhora: 'सहेजा गया। बदलाव लागू करने के लिए प्रक्रिया को बंद करके फिर चालू करें।',
       guardado: 'प्रक्रिया सहेजी गई',
       errores: {
@@ -3087,8 +3011,7 @@ export const hi: Textos = {
   },
   registros: {
     titulo: 'लॉग',
-    descripcion:
-      'Nginx, PHP, सेवाओं, साइटों, प्रोजेक्ट प्रक्रियाओं और टनल के लॉग लाइव देखें।',
+    descripcion: 'Nginx, PHP, सेवाओं, साइटों, प्रोजेक्ट प्रक्रियाओं और टनल के लॉग लाइव देखें।',
     fuente: 'स्रोत',
     elegirFuente: 'लॉग चुनें',
     sinFuentes:
@@ -3097,8 +3020,7 @@ export const hi: Textos = {
     niveles: { error: 'ERROR', warning: 'WARNING', info: 'INFO' } as Record<string, string>,
     pausar: 'विराम दें',
     reanudar: 'फिर शुरू करें',
-    pausadoNuevas: (n: number) =>
-      n === 1 ? 'विराम में 1 नई पंक्ति' : `विराम में ${n} नई पंक्तियां`,
+    pausadoNuevas: (n: number) => (n === 1 ? 'विराम में 1 नई पंक्ति' : `विराम में ${n} नई पंक्तियां`),
     copiar: 'दृश्यमान भाग कॉपी करें',
     copiadas: (n: number) => (n === 1 ? '1 पंक्ति कॉपी की गई' : `${n} पंक्तियां कॉपी की गईं`),
     limpiar: 'साफ़ करें',
@@ -3137,8 +3059,7 @@ export const hi: Textos = {
     },
   },
   cli: {
-    avisoTerminalNueva:
-      'बदलाव देखने के लिए नया टर्मिनल खोलें: पहले से खुले टर्मिनल इसे नहीं देख पाएंगे।',
+    avisoTerminalNueva: 'बदलाव देखने के लिए नया टर्मिनल खोलें: पहले से खुले टर्मिनल इसे नहीं देख पाएंगे।',
     enPathSinCliente: 'PATH में है, लेकिन कमांड गायब है',
     reparar: 'सुधारें',
     repararTitulo: 'क्या wolf कमांड सुधारें?',
@@ -3204,8 +3125,7 @@ export const hi: Textos = {
         n === 1
           ? 'और 1 अन्य जो फिट नहीं हो सका (अपने आप समाप्त हो जाएगा)'
           : `और ${n} अन्य जो फिट नहीं हो सके (अपने आप समाप्त हो जाएंगे)`,
-      falloRespuesta: (detalle: string) =>
-        `उत्तर नहीं भेजा जा सका; अनुरोध अभी भी लंबित है। ${detalle}`,
+      falloRespuesta: (detalle: string) => `उत्तर नहीं भेजा जा सका; अनुरोध अभी भी लंबित है। ${detalle}`,
       si: 'हां',
       no: 'नहीं',
       campos: {
@@ -3293,7 +3213,6 @@ export const hi: Textos = {
       jsonInvalido: (linea: number, columna: number) =>
         `अमान्य JSON: पंक्ति ${linea}, कॉलम ${columna} जांचें।`,
       banderas: 'अमान्य फ़्लैग: बिना दोहराए केवल d, g, i, m, s, u, v या y का उपयोग करें।',
-      regex: (detalle: string) => `अमान्य एक्सप्रेशन (${detalle})।`,
       trabajador: 'पृष्ठभूमि में यह संचालन नहीं चलाया जा सका।',
       diffLento: 'समय पर तुलना करने के लिए दोनों टेक्स्ट बहुत अधिक भिन्न हैं।',
       base64: 'अमान्य Base64।',
@@ -3511,7 +3430,6 @@ export const hi: Textos = {
       regex: 'रेगुलर एक्सप्रेशन',
       mayusculas: 'अक्षर केस का ध्यान रखें',
       incluir: 'केवल ये फ़ाइलें (कॉमा से अलग करें, जैसे *.php)',
-      excluir: 'छोड़ें (कॉमा से अलग करें)',
       buscar: 'खोजें',
       cancelar: 'रद्द करें',
       buscando: 'खोजा जा रहा है…',
@@ -3545,8 +3463,7 @@ export const hi: Textos = {
       conectado: 'कनेक्टेड',
       desconectado: 'डिस्कनेक्टेड',
       error: 'कनेक्शन त्रुटि',
-      cerrado: (codigo: number, motivo: string) =>
-        `बंद (${codigo}${motivo ? `: ${motivo}` : ''})`,
+      cerrado: (codigo: number, motivo: string) => `बंद (${codigo}${motivo ? `: ${motivo}` : ''})`,
       enviado: 'भेजा गया',
       recibido: 'प्राप्त',
       binario: (n: number) => `[बाइनरी, ${n} बाइट्स]`,
@@ -3721,8 +3638,7 @@ export const hi: Textos = {
         sinDebiles: 'जांचे गए किसी भी खाते का पासवर्ड बहुत आम पासवर्ड से मेल नहीं खाता।',
         noRevisables: (n: number) =>
           `${n} ${n === 1 ? 'खाता जांचा नहीं जा सका' : 'खाते जांचे नहीं जा सके'}:`,
-        truncado:
-          '10 000 पंक्तियों या 60 सेकंड की सीमा के कारण जांच रोक दी गई: कुछ खाते जांचे बिना रह गए।',
+        truncado: '10 000 पंक्तियों या 60 सेकंड की सीमा के कारण जांच रोक दी गई: कुछ खाते जांचे बिना रह गए।',
         usuario: 'उपयोगकर्ता',
         motivo: 'कारण',
         accion: 'क्रिया',
@@ -3856,10 +3772,7 @@ export const hi: Textos = {
         'winget से Visual C++ 2015+ x64 इंस्टॉल करें। Microsoft का इंस्टॉलर अपनी अलग अनुमति माँगेगा।',
       instalar_build_tools:
         'दिखाए गए कमांड से Visual Studio के Build Tools (C++ टूल के साथ) इंस्टॉल करें: इनका आकार कई GB होता है और इनमें एडमिनिस्ट्रेटर अनुमति लगती है, इसलिए यह निर्णय आपका है।',
-      antivirus:
-        'डेटा फ़ोल्डर को एंटीवायरस अपवादों में जोड़ने का निर्णय दिखाए गए कमांड से आप स्वयं लें।',
-      firewall:
-        'एडमिनिस्ट्रेटर कंसोल में दिखाए गए कमांड से उन नियमों को हटाने का निर्णय आप स्वयं लें। WolfCore Dev कभी फ़ायरवॉल नहीं बदलता।',
+      antivirus: 'डेटा फ़ोल्डर को एंटीवायरस अपवादों में जोड़ने का निर्णय दिखाए गए कमांड से आप स्वयं लें।',
       reintentar_servicio: 'सेवा को फिर से शुरू करें।',
       firefox_confianza:
         'प्रत्येक Firefox प्रोफ़ाइल की user.js फ़ाइल में Windows प्रमाणपत्र प्राधिकरण पर भरोसा करने की प्राथमिकता जोड़ें, पहले एक बैकअप कॉपी बनाकर। prefs.js को नहीं छुआ जाता और खुले हुए प्रोफ़ाइल छोड़ दिए जाते हैं।',
@@ -3868,16 +3781,17 @@ export const hi: Textos = {
       titulo: 'CA का भरोसा',
       texto:
         'Windows पहले से ही WolfCore Dev के प्राधिकरण पर भरोसा करता है; Node, Python और Firefox अपना स्वयं का प्रमाणपत्र भंडार उपयोग करते हैं।',
-      sinCa: 'अभी तक कोई प्रमाणपत्र प्राधिकरण (CA) नहीं है। इस अनुभाग का उपयोग करने के लिए इसे HTTPS से बनाएँ।',
+      sinCa:
+        'अभी तक कोई प्रमाणपत्र प्राधिकरण (CA) नहीं है। इस अनुभाग का उपयोग करने के लिए इसे HTTPS से बनाएँ।',
       node: {
         titulo: 'Node',
-        proyectos:
-          'प्रोजेक्ट प्रक्रियाओं और टर्मिनल को प्राधिकरण के साथ NODE_EXTRA_CA_CERTS प्राप्त होता है।',
+        proyectos: 'प्रोजेक्ट प्रक्रियाओं और टर्मिनल को प्राधिकरण के साथ NODE_EXTRA_CA_CERTS प्राप्त होता है।',
         ajena: 'आपके पास पहले से अपना NODE_EXTRA_CA_CERTS है: WolfCore Dev इसे नहीं बदलता।',
         global: 'उपयोगकर्ता वेरिएबल के रूप में भी (अन्य टर्मिनल और प्रोग्राम के लिए)',
         confirmarActivar:
           'NODE_EXTRA_CA_CERTS को आपके उपयोगकर्ता वेरिएबल के रूप में सेट किया जाएगा। यह इसके बाद खुलने वाले प्रोग्राम पर लागू होगा; इस विकल्प को बंद करने पर यह हट जाएगा।',
-        confirmarDesactivar: 'WolfCore Dev द्वारा जोड़ा गया NODE_EXTRA_CA_CERTS वेरिएबल हटा दिया जाएगा।',
+        confirmarDesactivar:
+          'WolfCore Dev द्वारा जोड़ा गया NODE_EXTRA_CA_CERTS वेरिएबल हटा दिया जाएगा।',
       },
       python: {
         titulo: 'Python',
@@ -4002,14 +3916,14 @@ export const hi: Textos = {
       titulo: (nombre: string) => `क्या ${nombre} स्थापित करें?`,
       texto: (paquete: string) =>
         `WolfCore Dev के Node का उपयोग करके और इसके डेटा फ़ोल्डर में registry.npmjs.org से ${paquete} का नवीनतम प्रकाशित संस्करण स्थापित किया जाएगा।`,
-      aislado: 'यह आपके npm कॉन्फ़िगरेशन का उपयोग नहीं करता और आपके ग्लोबल npm को नहीं छूता। इसमें कुछ मिनट लग सकते हैं।',
+      aislado:
+        'यह आपके npm कॉन्फ़िगरेशन का उपयोग नहीं करता और आपके ग्लोबल npm को नहीं छूता। इसमें कुछ मिनट लग सकते हैं।',
       aceptar: 'स्थापित करें',
       hecho: (nombre: string) => `${nombre} स्थापित हो गया।`,
     },
     confirmarRegistrar: {
       titulo: (nombre: string) => `क्या ${nombre} में MCP पंजीकृत करें?`,
-      texto:
-        'इस फ़ाइल में केवल “wolfcore” प्रविष्टि जोड़ी (या अपडेट की) जाएगी; बाकी सब वैसा ही रहेगा:',
+      texto: 'इस फ़ाइल में केवल “wolfcore” प्रविष्टि जोड़ी (या अपडेट की) जाएगी; बाकी सब वैसा ही रहेगा:',
       aceptar: 'पंजीकृत करें',
       hecho: (nombre: string) => `${nombre} में MCP पंजीकृत किया गया।`,
     },
@@ -4258,7 +4172,8 @@ export const hi: Textos = {
       tituloRama: (v: string) => `नया संस्करण: ${v}`,
       ninguna: 'कोई नहीं',
       instancia: (id: string) => `इंस्टेंस ${id} अपडेट किया जाएगा। कुछ भी बदलने से पहले:`,
-      pasoInstalar: (v: string) => `वर्तमान संस्करण (जिसे हटाया नहीं जाता) के साथ ${v} स्थापित किया जाता है;`,
+      pasoInstalar: (v: string) =>
+        `वर्तमान संस्करण (जिसे हटाया नहीं जाता) के साथ ${v} स्थापित किया जाता है;`,
       pasoVolcados: 'वर्तमान संस्करण से प्रत्येक डेटाबेस का डंप बनाया जाता है;',
       pasoCopia: 'इंस्टेंस को रोककर पूरा डेटा फ़ोल्डर कॉपी किया जाता है (कोल्ड बैकअप);',
       pasoArrancar: 'नए संस्करण से शुरू करके जाँचा जाता है कि वह प्रतिक्रिया दे रहा है या नहीं;',
@@ -4267,8 +4182,7 @@ export const hi: Textos = {
       datos: 'डेटा:',
       respaldo: 'बैकअप स्थान:',
       espacio: 'स्थान:',
-      espacioLibre: (libres: string, necesarios: string) =>
-        `${libres} उपलब्ध; ${necesarios} आवश्यक`,
+      espacioLibre: (libres: string, necesarios: string) => `${libres} उपलब्ध; ${necesarios} आवश्यक`,
       datosQuedan:
         'पिछला डेटा कभी नहीं हटाया जाता: बैकअप कॉपी और डंप अपडेट बैकअप में तब तक रहते हैं जब तक आप उन्हें हटा न दें।',
       sinEspacio: 'बैकअप के लिए पर्याप्त स्थान नहीं है: थोड़ा स्थान खाली करें और फिर से प्रयास करें।',
@@ -4277,11 +4191,9 @@ export const hi: Textos = {
       ramaExplicacion:
         'नया मुख्य संस्करण पिछले संस्करण को नहीं बदलता: इसके अपने डेटा फ़ोल्डर और पोर्ट के साथ एक नया इंस्टेंस बनता है। वर्तमान इंस्टेंस वैसा ही रहता है।',
       copiarDesdeTitulo: 'नए इंस्टेंस का डेटा',
-      copiarDesde: (id: string) =>
-        `${id} से डेटा कॉपी करें (डंप और पुनर्स्थापना द्वारा; मूल को नहीं छुआ जाता)`,
+      copiarDesde: (id: string) => `${id} से डेटा कॉपी करें (डंप और पुनर्स्थापना द्वारा; मूल को नहीं छुआ जाता)`,
       vacia: 'खाली शुरू करें',
-      ramaNota:
-        'डेटाबेस उपयोगकर्ता कॉपी नहीं किए जाते; प्रोजेक्ट को नए इंस्टेंस के पोर्ट की ओर इंगित करना होगा।',
+      ramaNota: 'डेटाबेस उपयोगकर्ता कॉपी नहीं किए जाते; प्रोजेक्ट को नए इंस्टेंस के पोर्ट की ओर इंगित करना होगा।',
       crearInstancia: 'नया इंस्टेंस बनाएँ',
       confirmar: 'बैकअप के साथ अपडेट करें',
       hecho: (v: string) => `${v} अपडेट हो गया।`,
@@ -4305,8 +4217,7 @@ export const hi: Textos = {
       destinoTitulo: 'इनके साथ क्या करें',
       papelera: 'रीसायकल बिन में भेजें: 7 दिनों तक सुरक्षित रहते हैं और तब तक डिस्क स्थान घेरे रखते हैं',
       definitivo: 'स्थायी रूप से हटाएँ: स्थान अभी खाली होता है और इसे पूर्ववत नहीं किया जा सकता',
-      avisoDefinitivo:
-        'स्थायी विलोपन: इन संस्करणों को दोबारा पाने के लिए इन्हें फिर से डाउनलोड करना होगा।',
+      avisoDefinitivo: 'स्थायी विलोपन: इन संस्करणों को दोबारा पाने के लिए इन्हें फिर से डाउनलोड करना होगा।',
       instantanea:
         'यदि आप स्थायी विलोपन चुनते हैं, तो पहले पर्यावरण कॉन्फ़िगरेशन की एक कॉपी सहेजी जाती है; रीसायकल बिन से इन्हें पुनर्प्राप्त किया जा सकता है।',
       entiendo: 'मुझे पता है कि इसे पूर्ववत नहीं किया जा सकता',
@@ -4370,8 +4281,7 @@ export const hi: Textos = {
       devolver: (sello: string, tam: string) =>
         `बैकअप ${sello} (${tam}) वापस लाएं; वर्तमान फ़ोल्डर अलग रखा जाता है, मिटाया नहीं जाता`,
       usarActual: 'वर्तमान डेटा फ़ोल्डर को जैसा है वैसा ही उपयोग करें',
-      notaActual:
-        'केवल तभी जब वर्तमान फ़ोल्डर में पूरा डेटा हो; यदि नहीं है, तो एक बैकअप चुनें।',
+      notaActual: 'केवल तभी जब वर्तमान फ़ोल्डर में पूरा डेटा हो; यदि नहीं है, तो एक बैकअप चुनें।',
       notaDevolver:
         'बैकअप की कॉपी बनाई जाती है, उसकी जांच की जाती है और उसके बाद ही उसे उसकी जगह पर रखा जाता है।',
       escriba: (id: string) => `पुष्टि के लिए ${id} लिखें`,
@@ -4434,7 +4344,26 @@ export const hi: Textos = {
     tema: 'थीम',
     temas: { sistema: 'सिस्टम', claro: 'लाइट', oscuro: 'डार्क' },
     idioma: 'भाषा',
-    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語', ko: '한국어', hi: 'हिन्दी', tr: 'Türkçe', id: 'Bahasa Indonesia', pl: 'Polski', nl: 'Nederlands', uk: 'Українська' },
+    idiomas: {
+      es: 'Español',
+      en: 'English',
+      pt: 'Português',
+      fr: 'Français',
+      de: 'Deutsch',
+      it: 'Italiano',
+      ru: 'Русский',
+      zh: '中文 简体',
+      ja: '日本語',
+      ko: '한국어',
+      hi: 'हिन्दी',
+      tr: 'Türkçe',
+      id: 'Bahasa Indonesia',
+      pl: 'Polski',
+      nl: 'Nederlands',
+      uk: 'Українська',
+    },
+    /** Aviso junto a los idiomas que no son es, en, pt ni fr (la traducción es automática y revisada). */
+    traduccionAutomatica: 'मशीनी अनुवाद, समीक्षित',
     acento: 'एक्सेंट रंग',
     acentos: {
       indigo: 'इंडिगो',
@@ -4446,10 +4375,6 @@ export const hi: Textos = {
     },
     acentoPropio: (color: string) => `कस्टम (${color})`,
     errorGuardar: 'वरीयता सहेजी नहीं जा सकी',
-    asistente: 'प्रथम उपयोग सहायक',
-    asistenteAyuda:
-      'प्रारंभिक चरणों को फिर से देखें: प्रोजेक्ट फ़ोल्डर, बुनियादी चीज़ें, CA, GitHub और निगरानी वाला फ़ोल्डर।',
-    asistenteAbrir: 'सहायक खोलें',
   },
   paleta: {
     titulo: 'कमांड पैलेट',
@@ -4479,13 +4404,11 @@ export const hi: Textos = {
     nuevoProyecto: 'नया प्रोजेक्ट बनाएं',
     tema: (tema: string) => `थीम: ${tema}`,
     idioma: (idioma: string) => `भाषा: ${idioma}`,
-    asistente: 'प्रथम उपयोग सहायक खोलें',
   },
   nuevoProyecto: {
     titulo: 'नया प्रोजेक्ट',
     boton: 'नया प्रोजेक्ट',
-    descripcion:
-      'शुरू से नया प्रोजेक्ट बनाएं: फ़ोल्डर, HTTPS वाली साइट, डेटाबेस और उसका कनेक्शन।',
+    descripcion: 'शुरू से नया प्रोजेक्ट बनाएं: फ़ोल्डर, HTTPS वाली साइट, डेटाबेस और उसका कनेक्शन।',
     pasos: { tipo: 'प्रकार', datos: 'विवरण', resumen: 'सारांश', crear: 'बनाया जा रहा है' },
     tipos: {
       laravel: {
@@ -4533,8 +4456,7 @@ export const hi: Textos = {
       sinBase: 'बिना डेटाबेस के',
       instancia: 'डेटाबेस सर्वर',
       apagada: 'बंद',
-      apagadaAyuda:
-        'वह सर्वर बंद है: प्रोजेक्ट बनाने से पहले इसे सेवाएं में चालू करें।',
+      apagadaAyuda: 'वह सर्वर बंद है: प्रोजेक्ट बनाने से पहले इसे सेवाएं में चालू करें।',
       sinMotores: 'इस प्रकार के प्रोजेक्ट के लिए कोई डेटाबेस सर्वर इंस्टॉल नहीं है।',
       nombreBase: 'डेटाबेस का नाम',
       starterKit: 'स्टार्टर किट',
@@ -4656,8 +4578,7 @@ export const hi: Textos = {
         'आगे बढ़ने से पहले दूसरे प्रोग्राम का डेटाबेस सर्वर चालू करें: WolfCore Dev बाहरी प्रोग्राम को चालू या बंद नहीं करता। पासवर्ड केवल इस आयात में उपयोग होता है और सहेजा नहीं जाता।',
       destino: 'लक्ष्य सर्वर',
       apagada: 'बंद',
-      sinMotores:
-        'MySQL या MariaDB इंस्टॉल नहीं हैं: डेटाबेस आयात करने के लिए उन्हें सेवाएं से इंस्टॉल करें।',
+      sinMotores: 'MySQL या MariaDB इंस्टॉल नहीं हैं: डेटाबेस आयात करने के लिए उन्हें सेवाएं से इंस्टॉल करें।',
       puerto: 'स्रोत सर्वर का पोर्ट',
       usuario: 'उपयोगकर्ता',
       clave: 'पासवर्ड',
@@ -4681,13 +4602,11 @@ export const hi: Textos = {
         `${n} ${n === 1 ? 'साइट' : 'साइटें'} उनके वर्तमान फ़ोल्डर में लिंक की जाएंगी। कोई भी फ़ाइल स्थानांतरित, कॉपी या संशोधित नहीं की जाती है।`,
       sinConfianza:
         'कोई भी आयातित साइट तब तक रेसिपी नहीं चलाती जब तक आप «इस रिपॉजिटरी पर भरोसा करें» चिह्नित नहीं करते।',
-      hosts:
-        'Nginx और hosts फ़ाइल अपडेट की जाएंगी (Windows एडमिनिस्ट्रेटर अनुमति मांग सकता है)।',
+      hosts: 'Nginx और hosts फ़ाइल अपडेट की जाएंगी (Windows एडमिनिस्ट्रेटर अनुमति मांग सकता है)।',
       basesNuevas: (nombres: string) => `ये डेटाबेस कॉपी किए जाएंगे: ${nombres}।`,
       basesReemplazo: (nombres: string) =>
         `ये डेटाबेस, जो पहले से मौजूद हैं, बदल दिए जाएंगे: ${nombres}। पहले प्रत्येक की एक प्रति सहेजी जाती है।`,
-      basesSinTocar: (nombres: string) =>
-        `इन डेटाबेस को, जो पहले से मौजूद हैं, छुआ नहीं जाएगा: ${nombres}।`,
+      basesSinTocar: (nombres: string) => `इन डेटाबेस को, जो पहले से मौजूद हैं, छुआ नहीं जाएगा: ${nombres}।`,
       origen: (puerto: number, usuario: string) =>
         `इन्हें दूसरे प्रोग्राम के सर्वर (127.0.0.1:${puerto}, उपयोगकर्ता ${usuario}) से डंप किया जाएगा। इसे बिना बदले केवल पढ़ा जाता है।`,
       sinBases: 'कोई भी डेटाबेस आयात नहीं किया जाएगा।',
@@ -4705,8 +4624,7 @@ export const hi: Textos = {
       baseFallo: (n: string) => `डेटाबेस ${n} आयात नहीं हुआ`,
       copiaPrevia: (ruta: string) => `पिछले डेटाबेस की प्रति: ${ruta}`,
       phpDistinto: (v: string) => `PHP ${v} का उपयोग किया गया (मूल संस्करण इंस्टॉल नहीं था)।`,
-      sinAplicar:
-        'Nginx या hosts फ़ाइल अपडेट नहीं हो सकीं: प्रोजेक्ट में सूचना देखें और पुनः प्रयास करें।',
+      sinAplicar: 'Nginx या hosts फ़ाइल अपडेट नहीं हो सकीं: प्रोजेक्ट में सूचना देखें और पुनः प्रयास करें।',
       resumen: (s: number, b: number) =>
         `${s} ${s === 1 ? 'साइट आयात हुई' : 'साइटें आयात हुईं'}, ${b} ${b === 1 ? 'डेटाबेस आयात हुआ' : 'डेटाबेस आयात हुए'}।`,
       errorImportar: 'आयात नहीं किया जा सका',
@@ -4735,8 +4653,7 @@ export const hi: Textos = {
       baseVolcado: (nombre: string, servidor: string) =>
         `केवल डेटाबेस ${nombre} (सर्वर ${servidor}) की संरचना सहेजी जाएगी, बिना किसी पंक्ति के।`,
       sinBase: 'प्रोजेक्ट किसी डेटाबेस को घोषित नहीं करता: कोई स्कीमा सहेजा नहीं जाएगा।',
-      avisoMongodb:
-        'यह प्रोजेक्ट MongoDB का उपयोग करता है: इसका स्कीमा (कलेक्शन और इंडेक्स) सहेजा नहीं जाता।',
+      avisoMongodb: 'यह प्रोजेक्ट MongoDB का उपयोग करता है: इसका स्कीमा (कलेक्शन और इंडेक्स) सहेजा नहीं जाता।',
       incluirDeTodosModos: 'फिर भी शामिल करें',
       avisoIncluir: 'यदि उस फ़ाइल में असली कुंजी है, तो वह टेम्प्लेट के अंदर रह जाएगी।',
       guardar: 'टेम्प्लेट सहेजें',
@@ -4747,17 +4664,14 @@ export const hi: Textos = {
     },
     lista: {
       titulo: 'मेरे टेम्प्लेट',
-      ayuda:
-        'अपने किसी मौजूदा प्रोजेक्ट की रेसिपी, सेटिंग्स और स्कीमा (बिना डेटा के) के साथ नया प्रोजेक्ट शुरू करें।',
-      vacia:
-        'अभी तक कोई टेम्प्लेट नहीं है। किसी प्रोजेक्ट के कार्ड मेनू से उसे टेम्प्लेट के रूप में सहेजें।',
+      ayuda: 'अपने किसी मौजूदा प्रोजेक्ट की रेसिपी, सेटिंग्स और स्कीमा (बिना डेटा के) के साथ नया प्रोजेक्ट शुरू करें।',
+      vacia: 'अभी तक कोई टेम्प्लेट नहीं है। किसी प्रोजेक्ट के कार्ड मेनू से उसे टेम्प्लेट के रूप में सहेजें।',
       conArchivosEtiqueta: 'फ़ाइलों सहित',
       soloEsquema: 'रेसिपी और स्कीमा',
       conBase: (motor: string) => `${motor} डेटाबेस बिना डेटा के`,
       borrarEtiqueta: (nombre: string) => `टेम्प्लेट ${nombre} मिटाएं`,
       borrarTitulo: (nombre: string) => `क्या टेम्प्लेट ${nombre} को मिटाएं?`,
-      borrarTexto:
-        'केवल टेम्प्लेट मिटाया जाता है। इससे बनाए गए प्रोजेक्ट और मूल प्रोजेक्ट को छुआ नहीं जाता।',
+      borrarTexto: 'केवल टेम्प्लेट मिटाया जाता है। इससे बनाए गए प्रोजेक्ट और मूल प्रोजेक्ट को छुआ नहीं जाता।',
       borrada: 'टेम्प्लेट मिटा दिया गया।',
       errorBorrar: 'टेम्प्लेट मिटाया नहीं जा सका',
       errorLista: 'टेम्प्लेट पढ़े नहीं जा सके',
@@ -4779,8 +4693,7 @@ export const hi: Textos = {
     sinVariables: '.env में कोई वेरिएबल नहीं है।',
     secretaEtiqueta: 'गुप्त',
     duplicadaEtiqueta: 'दोहराया गया',
-    duplicadaAyuda:
-      'यह वेरिएबल .env में एक से अधिक बार आया है: अंतिम वाला दिखाया और बदला जाता है।',
+    duplicadaAyuda: 'यह वेरिएबल .env में एक से अधिक बार आया है: अंतिम वाला दिखाया और बदला जाता है।',
     soloLecturaEtiqueta: 'बहु-पंक्ति',
     soloLecturaAyuda: 'यह कई पंक्तियों में है: इसे फ़ाइल में स्वयं संपादित करें।',
     seQuitara: 'सहेजने पर हटा दिया जाएगा',
@@ -4874,57 +4787,9 @@ export const hi: Textos = {
     guardadoConCopia: '.env सहेजा गया; पिछला संस्करण प्रति के रूप में रखा गया।',
   },
   asistenteInicio: {
-    titulo: 'WolfCore Dev में आपका स्वागत है',
-    subtitulo:
-      'परिवेश को तैयार करने के लिए पांच चरण। जब तक आप प्रत्येक चरण का बटन नहीं दबाते, कुछ भी इंस्टॉल या परिवर्तित नहीं होता।',
     paso: (n: number, total: number) => `${total} में से चरण ${n}`,
     anterior: 'पिछला',
     siguiente: 'अगला',
-    omitirTodo: 'सहायक छोड़ें',
-    terminar: 'समाप्त करें',
-    hecho: 'पूर्ण',
-    reabrir: 'आप इसे सेटिंग्स से फिर से खोल सकते हैं।',
-    pasos: {
-      carpeta: {
-        titulo: 'प्रोजेक्ट फ़ोल्डर',
-        texto:
-          'जहां आप अपने प्रोजेक्ट सहेजते हैं। नई रिपॉजिटरी यहीं क्लोन की जाती हैं और अंतिम चरण में इसी फ़ोल्डर की निगरानी की जाती है।',
-        elegir: 'फ़ोल्डर चुनें',
-        actual: (ruta: string) => `चुना गया फ़ोल्डर: ${ruta}`,
-        guardada: (ruta: string) => `वर्तमान फ़ोल्डर: ${ruta}`,
-        ninguna: 'कोई चयन नहीं: यदि मौजूद हो तो C:\\Proyectos का उपयोग होता है।',
-      },
-      basicos: {
-        titulo: 'बुनियादी चीज़ें इंस्टॉल करें',
-        texto:
-          'सत्यापित फ़िंगरप्रिंट के साथ उनके आधिकारिक स्रोतों से Nginx, PHP 8.4, Composer और Node LTS। प्रत्येक केवल उसका बटन दबाने पर ही इंस्टॉल होता है।',
-        instalado: 'इंस्टॉल किया गया',
-        instalar: (version: string) => `${version} इंस्टॉल करें`,
-        sinVersion: 'कैटलॉग में कोई संस्करण नहीं',
-        cargando: 'संस्करण खोजे जा रहे हैं…',
-        nombres: { nginx: 'Nginx', php: 'PHP 8.4', composer: 'Composer', node: 'Node LTS' },
-      },
-      ca: {
-        titulo: 'स्थानीय प्रमाणपत्र प्राधिकरण पर भरोसा करें',
-        texto:
-          'ताकि .test साइटें बिना किसी चेतावनी के HTTPS पर खुलें, Windows को WolfCore Dev के प्राधिकरण पर भरोसा करना होगा। Windows आपसे पुष्टि माँगेगा।',
-        confiar: 'CA पर भरोसा करें',
-        confiada: 'Windows पहले से स्थानीय प्राधिकरण पर भरोसा करता है।',
-      },
-      github: {
-        titulo: 'GitHub कनेक्ट करें',
-        texto:
-          'अपनी रिपॉज़िटरी देखने और एक क्लिक में क्लोन करने के लिए। GitHub CLI सत्र या व्यक्तिगत टोकन का उपयोग करें, जो इस कंप्यूटर पर एन्क्रिप्ट होकर सहेजा जाता है।',
-      },
-      vigilar: {
-        titulo: 'फ़ोल्डर की निगरानी करें',
-        texto:
-          'WolfCore Dev प्रोजेक्ट फ़ोल्डर में आने वाले हर नए फ़ोल्डर को माउंट करने का सुझाव देगा। आपकी पुष्टि के बिना कुछ भी माउंट नहीं किया जाता।',
-        activar: 'इस फ़ोल्डर की निगरानी करें',
-        activa: (ruta: string) => `${ruta} की निगरानी हो रही है`,
-        sinCarpeta: 'पहले प्रोजेक्ट फ़ोल्डर चुनें (चरण 1)।',
-      },
-    },
   },
   /** प्रोफ़ाइल आयात या निर्यात करने का परिणाम (D26)। */
   perfiles: {
@@ -4939,11 +4804,9 @@ export const hi: Textos = {
       },
       exportar: {
         titulo: 'परिवेश निर्यात करें',
-        texto:
-          'आपकी साइटों, संस्करणों, इंस्टेंस, टेम्पलेट और सेटिंग्स के साथ एक .wolfperfil फ़ाइल सहेजता है।',
+        texto: 'आपकी साइटों, संस्करणों, इंस्टेंस, टेम्पलेट और सेटिंग्स के साथ एक .wolfperfil फ़ाइल सहेजता है।',
         bases: 'डेटाबेस शामिल करें',
-        basesAyuda:
-          'पूर्ण डंप (आपके ग्राहकों के डेटा सहित) वाक्यांश से एन्क्रिप्ट होकर जाते हैं।',
+        basesAyuda: 'पूर्ण डंप (आपके ग्राहकों के डेटा सहित) वाक्यांश से एन्क्रिप्ट होकर जाते हैं।',
         ca: 'प्रमाणपत्र प्राधिकरण (CA) शामिल करें',
         caAyuda: 'यह वाक्यांश से एन्क्रिप्ट होता है। इसे केवल अपने ही कंप्यूटर पर आयात करें।',
         certificados: 'साइट प्रमाणपत्र शामिल करें',
@@ -5077,8 +4940,7 @@ export const hi: Textos = {
       },
       quitado: {
         titulo: 'कॉन्फ़िगरेशन से क्या नहीं लिया जाता',
-        texto:
-          'यह डेटा फ़ोल्डर साफ़ है: प्रोफ़ाइल से वह कुछ नहीं लिया जाता जो इस कंप्यूटर के बाहर संकेत करता हो।',
+        texto: 'यह डेटा फ़ोल्डर साफ़ है: प्रोफ़ाइल से वह कुछ नहीं लिया जाता जो इस कंप्यूटर के बाहर संकेत करता हो।',
       },
       puertos: {
         titulo: 'व्यस्त पोर्ट',
@@ -5093,8 +4955,7 @@ export const hi: Textos = {
         comparar: 'इसे स्वीकार करने से पहले अपने मूल कंप्यूटर के हैश से मिलान करें।',
         importar: 'प्रोफ़ाइल का CA आयात करें',
         noImportar: 'इसे आयात न करने पर, यह कंप्यूटर अपने वर्तमान CA का उपयोग करेगा या एक नया बनाएगा।',
-        ajena:
-          'इस CA में नाम प्रतिबंध हैं जो WolfCore Dev के नहीं हैं: इसे आयात नहीं किया जा सकता।',
+        ajena: 'इस CA में नाम प्रतिबंध हैं जो WolfCore Dev के नहीं हैं: इसे आयात नहीं किया जा सकता।',
         sinRestricciones:
           'इस CA में कोई नाम प्रतिबंध नहीं है: यह बैंकों और ईमेल सहित किसी भी वेबसाइट के लिए प्रमाणपत्र हस्ताक्षरित कर सकता है। इसे केवल तभी आयात करें जब यह आपका हो और हैश मेल खाता हो।',
         aceptarSin: 'मैं जोखिम समझता हूँ: यह मेरा CA है और हैश मेल खाता है',
@@ -5123,8 +4984,7 @@ export const hi: Textos = {
         revisar: 'समीक्षा करें',
         volver: 'वापस',
         bloqueos: {
-          sitios_sin_carpeta:
-            'प्रत्येक साइट का फ़ोल्डर चुनें या उसे लंबित के रूप में आयात करने के लिए चिह्नित करें।',
+          sitios_sin_carpeta: 'प्रत्येक साइट का फ़ोल्डर चुनें या उसे लंबित के रूप में आयात करने के लिए चिह्नित करें।',
           frase_requerida: 'प्रोफ़ाइल का वाक्यांश लिखें या डेटाबेस के बिना आयात करें।',
           ca_ajena: 'प्रोफ़ाइल का CA आयात नहीं किया जा सकता।',
           ca_sin_restricciones: 'अलग से पुष्टि करें कि आप बिना प्रतिबंध वाला CA आयात करना चाहते हैं।',
@@ -5201,8 +5061,7 @@ export const hi: Textos = {
       tunel_con_nombre: 'इसका नामित टनल नहीं जाता: यह त्वरित टनल पर लौट जाता है।',
       php_ini: 'php.ini की कुछ सेटिंग्स आयात नहीं की गईं।',
       xdebug: 'इसकी Xdebug सेटिंग अमान्य थी और हटा दी गई।',
-      nginx_desactivado:
-        'इसके Nginx नियम सहेजे गए हैं लेकिन लागू नहीं हुए: संपादक में उनकी समीक्षा करें।',
+      nginx_desactivado: 'इसके Nginx नियम सहेजे गए हैं लेकिन लागू नहीं हुए: संपादक में उनकी समीक्षा करें।',
       carpeta_no_existe: 'इसका फ़ोल्डर इस कंप्यूटर पर मौजूद नहीं है: इसे खोजें।',
       correo_sin_proveedor: 'इसका SMTP प्रदाता आयात नहीं हुआ: यह ईमेल कैप्चरर का उपयोग करता है।',
       sitio_invalido: 'साइट अमान्य है।',
@@ -5232,8 +5091,7 @@ export const hi: Textos = {
       sin_ca: 'इस कंप्यूटर पर कोई CA नहीं है: प्रोफ़ाइल इसके बिना जा रही है।',
       ca_no_importada: 'प्रोफ़ाइल का CA आयात नहीं किया गया: इस कंप्यूटर का CA या एक नया CA उपयोग होता है।',
       certificados: 'प्रमाणपत्र तैयार नहीं किए जा सके: {detalle}',
-      aplicar:
-        'आयात की गई साइटें पूरी तरह लागू नहीं हो सकीं (Nginx: {nginx}; hosts: {hosts})।',
+      aplicar: 'आयात की गई साइटें पूरी तरह लागू नहीं हो सकीं (Nginx: {nginx}; hosts: {hosts})।',
     },
     quitado: {
       ia: 'AI प्रदाता {id}: कस्टम URL का उपयोग करता है।',

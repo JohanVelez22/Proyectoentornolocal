@@ -24,7 +24,14 @@ export interface TextoMetodo {
   ejemplo: string;
 }
 
-type PorIdioma<T> = Partial<Record<IdiomaUi, T>> & { en: T };
+/**
+ * Textos por idioma: solo `en` es obligatorio; en los demás se cae al inglés. `Excluido` saca un
+ * idioma cuya clave choca con otro campo del mismo objeto (ver `TemaGit`: su `id` es el
+ * identificador del tema, así que el indonesio, que también es `id`, no puede viajar ahí).
+ */
+type PorIdioma<T, Excluido extends IdiomaUi = never> = Partial<
+  Record<Exclude<IdiomaUi, Excluido>, T>
+> & { en: T };
 
 export interface Codigo extends PorIdioma<TextoCodigo> {
   codigo: number;
@@ -57,7 +64,7 @@ export interface TextoTema {
 export type GrupoGit = 'basico' | 'ramas' | 'deshacer' | 'remotos' | 'github';
 export const GRUPOS_GIT: readonly GrupoGit[] = ['basico', 'ramas', 'deshacer', 'remotos', 'github'];
 
-export interface TemaGit extends PorIdioma<TextoTema> {
+export interface TemaGit extends PorIdioma<TextoTema, 'id'> {
   id: string;
   grupo: GrupoGit;
   /** Comando o concepto, igual en todos los idiomas. */
@@ -67,7 +74,8 @@ export interface TemaGit extends PorIdioma<TextoTema> {
 
 export const contenidoGit = gitJson as unknown as { temas: TemaGit[] };
 
-const TUNELES: Record<IdiomaUi, string> = {
+/** Solo hay guía de túneles en los cuatro idiomas base: los demás leen la inglesa. */
+const TUNELES: Partial<Record<IdiomaUi, string>> = {
   es: tunelesEs,
   en: tunelesEn,
   pt: tunelesPt,
@@ -105,9 +113,15 @@ export function partesGuia(md: string): ParteGuia[] {
 }
 
 /** Texto de una entrada en el idioma pedido, o en inglés si no está traducida. */
-export function textoEn<T>(e: PorIdioma<T>, idioma: IdiomaUi): { texto: T; traducido: boolean } {
-  const t = e[idioma];
-  return t !== undefined ? { texto: t, traducido: true } : { texto: e.en, traducido: false };
+export function textoEn<T extends object>(
+  e: PorIdioma<T, 'id'>,
+  idioma: IdiomaUi,
+): { texto: T; traducido: boolean } {
+  // Se lee como objeto: en un tema de Git `e.id` es una cadena (el identificador), no un texto.
+  const t = (e as Partial<Record<IdiomaUi, unknown>>)[idioma];
+  return t !== null && typeof t === 'object'
+    ? { texto: t as T, traducido: true }
+    : { texto: e.en, traducido: false };
 }
 
 const normalizar = (s: string): string => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();

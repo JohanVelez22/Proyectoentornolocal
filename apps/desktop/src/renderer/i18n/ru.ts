@@ -3,7 +3,7 @@
  * Глоссарий: служба, экземпляр, сайт, туннель, резервная копия, уведомление; Doctor и
  * WolfCore Dev не переводятся. Обращение на «вы»; вне Git всегда «версия», не «ветка».
  */
-import type { Textos } from './es';
+import type { TextosParciales } from './es';
 
 const prRu = new Intl.PluralRules('ru');
 const plural = (n: number, one: string, few: string, many: string): string => {
@@ -11,10 +11,9 @@ const plural = (n: number, one: string, few: string, many: string): string => {
   return `${n} ${cat === 'one' ? one : cat === 'few' ? few : many}`;
 };
 
-export const ru: Textos = {
+export const ru: TextosParciales = {
   app: {
     nombre: 'WolfCore Dev',
-    lema: 'PHP и Nginx без лишних сложностей',
     version: 'Версия',
   },
   nav: {
@@ -97,7 +96,8 @@ export const ru: Textos = {
         'Ветка разошлась с удалённой (есть разные локальные и удалённые коммиты): разрешите конфликт вручную. Ничего не изменено.',
       'git.sin_upstream':
         'Текущая ветка не отслеживает удалённую ветку: неоткуда загрузить изменения.',
-      'git.sin_rama': 'Репозиторий находится на отсоединённом коммите (без ветки): ничего не изменено.',
+      'git.sin_rama':
+        'Репозиторий находится на отсоединённом коммите (без ветки): ничего не изменено.',
       'git.no_repositorio': 'Эта папка не является репозиторием git.',
       'git.destino_no_vacio': 'Целевая папка не пуста.',
       'git.destino_es_archivo': 'Целевой путь указывает на файл, а не на папку.',
@@ -152,7 +152,8 @@ export const ru: Textos = {
       'instancias.ultima': '{id} — единственный экземпляр: его нельзя удалить.',
       'instancias.sin_puerto_libre': 'Не найден свободный порт для экземпляра.',
       'instancias.confirmacion': 'Чтобы продолжить, введите "{id}".',
-      'instancias.sin_datos': 'В папке {id} нет данных: выберите резервную копию для восстановления.',
+      'instancias.sin_datos':
+        'В папке {id} нет данных: выберите резервную копию для восстановления.',
       'instancias.respaldo_no_existe': 'Такой резервной копии для {id} не существует.',
       'instancias.respaldo_en_uso':
         'Эта копия нужна заблокированному экземпляру {id}: сначала разблокируйте его.',
@@ -186,7 +187,8 @@ export const ru: Textos = {
         'Пользователь {usuario} существует, но не может войти (роль без LOGIN или правило доступа сервера). Ничего не изменено.',
       'bd.usuario_clave_distinta':
         'Пользователь {usuario} уже существует с другим паролем. Используйте его текущий пароль: он не меняется, чтобы не отключить другие проекты.',
-      'bd.mongosh_faltante': 'Отсутствует mongosh: установите его в разделе Службы для управления MongoDB.',
+      'bd.mongosh_faltante':
+        'Отсутствует mongosh: установите его в разделе Службы для управления MongoDB.',
       'tuneles.sitio_no_encontrado': 'Проект не найден.',
       'tuneles.confirmacion_requerida':
         'Публикация {dominio} в интернете требует подтверждения в WolfCore Dev.',
@@ -208,7 +210,8 @@ export const ru: Textos = {
         'У туннеля {nombre} есть активные подключения (cloudflared требует -f для удаления). Закройте его на всех компьютерах и повторите попытку или используйте «Забыть только здесь».',
       'tuneles.nombre_en_uso': 'Туннель {nombre} уже используется другим сайтом.',
       'tuneles.dominio_en_uso': 'Домен {dominio} уже используется другим сайтом.',
-      'tuneles.confirmacion_olvidar': 'Забывание или пересоздание туннеля {nombre} требует подтверждения.',
+      'tuneles.confirmacion_olvidar':
+        'Забывание или пересоздание туннеля {nombre} требует подтверждения.',
       'tuneles.cloudflare_fallo': 'cloudflared не смог выполнить операцию: {detalle}',
       'tuneles.credencial_no_protegida':
         'Не удалось ограничить доступ к учётным данным текущим пользователем, поэтому они не использованы.',
@@ -235,7 +238,8 @@ export const ru: Textos = {
         'Нет подключения к локальной сети (Wi-Fi или Ethernet). Подключитесь к сети и повторите попытку.',
       'lan.ip_no_valida':
         'Адрес {ip} больше не относится к вашей локальной сети. Откройте диалог снова и подтвердите заново.',
-      'lan.requiere_https': '{dominio} перенаправляет на HTTPS: откройте доступ с параметром HTTPS.',
+      'lan.requiere_https':
+        '{dominio} перенаправляет на HTTPS: откройте доступ с параметром HTTPS.',
       'lan.sin_puertos':
         'Нет свободных портов от 8100 до 8199 для локальной сети (этот диапазон используют открытые сайты и ссылка CA). Закройте доступ к сайту или диалог CA и повторите попытку.',
       'tuneles.expose_no_instalado':
@@ -319,8 +323,7 @@ export const ru: Textos = {
       'cli.formato_no_admitido': 'Запрос имеет формат, не поддерживаемый CLI.',
       'cli.plazo':
         'Команда выполнялась слишком долго: возможно, она всё ещё работает. Проверьте статус в WolfCore Dev.',
-      'cli.ocupado':
-        'WolfCore Dev обрабатывает слишком много команд CLI: подождите немного.',
+      'cli.ocupado': 'WolfCore Dev обрабатывает слишком много команд CLI: подождите немного.',
       'cli.requiere_confirmacion':
         'Эта команда публикует или изменяет данные и требует подтверждения (--si) для {sitio}.',
       'cli.requiere_confirmacion_datos_reales':
@@ -332,8 +335,7 @@ export const ru: Textos = {
       'cli.confirmacion_vencida':
         'Подтверждение в окне WolfCore Dev не было получено вовремя: ничего не сделано.',
       'cli.tunel_fallo': 'Не удалось открыть туннель. Проверьте его журнал в WolfCore Dev.',
-      'cli.inicio_fallo':
-        'Не удалось запустить всё запрошенное. Проверьте журналы в WolfCore Dev.',
+      'cli.inicio_fallo': 'Не удалось запустить всё запрошенное. Проверьте журналы в WolfCore Dev.',
       'cli.parada_fallo':
         'Не удалось остановить всё запрошенное. Проверьте журналы в WolfCore Dev.',
       'cli.interno': 'Внутренняя ошибка сервера CLI.',
@@ -345,8 +347,7 @@ export const ru: Textos = {
       'cli.carpeta_sin_sitio':
         'Эта папка не относится ни к одному сайту WolfCore Dev: сначала привяжите её.',
       'cli.ya_vinculada': 'Эта папка уже является сайтом {sitio}.',
-      'cli.tipo_no_soportado':
-        'Проекты типа {tipo} создаются через интерфейс WolfCore Dev.',
+      'cli.tipo_no_soportado': 'Проекты типа {tipo} создаются через интерфейс WolfCore Dev.',
       'cli.sitio_sin_php': 'Сайт {sitio} не использует PHP.',
       'cli.version_no_instalada':
         '{servicio} {version} не установлен. Установите его в разделе Службы.',
@@ -373,7 +374,8 @@ export const ru: Textos = {
       'env.clave_inexistente': 'Переменная {clave} не существует.',
       'env.cambio_invalido': 'Изменение в .env недопустимо.',
       'env.variable_invalida': 'Изменение переменной {clave} недопустимо.',
-      'env.solo_lectura': 'Переменная {clave} занимает несколько строк: отредактируйте её вручную в файле.',
+      'env.solo_lectura':
+        'Переменная {clave} занимает несколько строк: отредактируйте её вручную в файле.',
       'env.usuario_compartido':
         'Базу {base} также использует проект {proyecto}: подтвердите совместное использование его пользователя.',
       'env.cambio_externo':
@@ -387,7 +389,8 @@ export const ru: Textos = {
       'env.sin_base': 'В .env этого проекта нет подключения к базе данных.',
       'env.base_no_resuelta':
         'База этого проекта не принадлежит локальному серверу WolfCore Dev: ничего не изменено.',
-      'env.motor_no_soportado': 'Пока «Использовать своего пользователя» работает с MySQL и MariaDB.',
+      'env.motor_no_soportado':
+        'Пока «Использовать своего пользователя» работает с MySQL и MariaDB.',
       'env.ya_usa_usuario_propio': 'Этот проект уже использует собственного пользователя.',
       'plantillas.id_invalido': 'Идентификатор шаблона недействителен.',
       'plantillas.no_existe': 'Шаблон не существует.',
@@ -399,8 +402,7 @@ export const ru: Textos = {
         'Проект слишком велик для сохранения в шаблон (до {maximo}). Исключите крупные папки.',
       'plantillas.exclusion_invalida':
         'Одно из исключений недопустимо (используйте имена или относительные пути без "..").',
-      'plantillas.nombre_invalido':
-        'Имя шаблона недопустимо (от 1 до 60 символов).',
+      'plantillas.nombre_invalido': 'Имя шаблона недопустимо (от 1 до 60 символов).',
       'plantillas.esquema_fallo':
         'Не удалось прочитать схему базы проекта: проверьте, что служба запущена.',
       'plantillas.base_no_resuelta':
@@ -418,8 +420,7 @@ export const ru: Textos = {
       'bd.esquema_fallo': 'Не удалось полностью восстановить схему: всё осталось без изменений.',
       'bd.datos_no_permitidos':
         'Дамп данных содержит недопустимые инструкции (разрешены только INSERT, LOCK TABLES и SET): ничего не импортировано.',
-      'bd.datos_fallo':
-        'Не удалось импортировать данные: база осталась в исходном состоянии.',
+      'bd.datos_fallo': 'Не удалось импортировать данные: база осталась в исходном состоянии.',
       'perfiles.destino_invalido': 'Выберите место сохранения профиля (файл .wolfperfil).',
       'perfiles.frase_debil': 'Кодовая фраза CA должна содержать не менее {minimo} символов.',
       'perfiles.frase_incorrecta': 'Неверная кодовая фраза: ничего не импортировано.',
@@ -451,8 +452,7 @@ export const ru: Textos = {
       'herramientas.pdf_plazo': 'Обработка PDF заняла больше {segundos} с и была отменена.',
       'herramientas.salida_ocupada': 'Не удалось подобрать свободное имя для нового файла.',
       'conversor.formato': 'Эта конвертация недоступна.',
-      'conversor.archivo_invalido':
-        'Файл повреждён или не соответствует типу своего расширения.',
+      'conversor.archivo_invalido': 'Файл повреждён или не соответствует типу своего расширения.',
       'conversor.archivo_grande': 'Файл слишком большой (до {maximo}).',
       'conversor.archivo_peligroso':
         'Файл похож на ZIP-бомбу или подделан (слишком большой объём, XML-сущности или недопустимые имена) и не открывается в целях безопасности.',
@@ -466,7 +466,8 @@ export const ru: Textos = {
         'Для этой конвертации нужен LibreOffice, но он не установлен на этом компьютере (WolfCore Dev не устанавливает его).',
       'conversor.libreoffice_fallo': 'LibreOffice не смог конвертировать документ.',
       'conversor.limite_celdas': 'В таблице слишком много ячеек (до {maximo}).',
-      'conversor.memoria': 'Файлу требуется слишком много памяти (более {maximo}), операция отменена.',
+      'conversor.memoria':
+        'Файлу требуется слишком много памяти (более {maximo}), операция отменена.',
       'conversor.pdf_no_disponible': 'Печать в PDF сейчас недоступна.',
       'herramientas.imagen_pixeles':
         'В изображении слишком много пикселей ({ancho}×{alto} px; максимум {maximo}), оно не открывается в целях безопасности.',
@@ -490,7 +491,8 @@ export const ru: Textos = {
       'perfiles.en_curso': 'Импорт профиля уже выполняется: дождитесь его завершения.',
       'importar.origen_apagado':
         'Не удалось подключиться к серверу баз данных другой программы: запустите его там и повторите попытку. Сайты при этом импортированы.',
-      'importar.origen_no_local': 'Исходный сервер должен находиться на этом компьютере (127.0.0.1).',
+      'importar.origen_no_local':
+        'Исходный сервер должен находиться на этом компьютере (127.0.0.1).',
       'importar.origen_rechazado': 'Исходный сервер отклонил имя пользователя или пароль.',
       'importar.origen_version':
         'Версия исходного сервера не может быть импортирована с установленными в WolfCore Dev компонентами.',
@@ -501,8 +503,7 @@ export const ru: Textos = {
       'importar.ruta_fuera':
         'Пропущена папка или файл, указывающие за пределы установки или на системную папку.',
       'importar.carpeta_invalida': 'Пропущена несуществующая или недопустимая папка.',
-      'importar.archivo_grande':
-        'Файл конфигурации превышает {maximo} KB и не был прочитан.',
+      'importar.archivo_grande': 'Файл конфигурации превышает {maximo} KB и не был прочитан.',
       'importar.archivo_ilegible': 'Файл конфигурации не является текстовым или не читается.',
       'importar.demasiados':
         'Слишком много сайтов или файлов конфигурации: прочитаны только первые.',
@@ -550,7 +551,8 @@ export const ru: Textos = {
         'Python {version} не установлен: установите его в разделе Службы.',
       'mcp.token_invalido': 'Недействительный токен MCP-сервера.',
       'mcp.solicitud_cancelada': 'MCP-клиент отменил запрос: действие не выполнено.',
-      'doctor.puerto_ocupado': 'Порт {puerto} службы {servicio} занят другой программой ({proceso}).',
+      'doctor.puerto_ocupado':
+        'Порт {puerto} службы {servicio} занят другой программой ({proceso}).',
       'doctor.puerto_iis': 'IIS ({programa}) занимает порт {puerto} службы {servicio}.',
       'doctor.puerto_http_sys':
         'Служба Windows ({programa}) занимает порт {puerto} службы {servicio}.',
@@ -560,9 +562,11 @@ export const ru: Textos = {
       'doctor.puerto_skype': '{programa} занимает порт {puerto} службы {servicio}.',
       'doctor.puerto_reservado':
         'Порт {puerto} службы {servicio} входит в зарезервированный Windows диапазон ({desde}-{hasta}: Hyper-V, WSL или Docker).',
-      'doctor.ca_por_vencer': 'Срок действия центра сертификации WolfCore Dev истекает через {dias} дн.',
+      'doctor.ca_por_vencer':
+        'Срок действия центра сертификации WolfCore Dev истекает через {dias} дн.',
       'doctor.ca_vencida': 'Срок действия центра сертификации WolfCore Dev истёк.',
-      'doctor.certificado_por_vencer': 'Срок действия сертификата {dominio} истекает через {dias} дн.',
+      'doctor.certificado_por_vencer':
+        'Срок действия сертификата {dominio} истекает через {dias} дн.',
       'doctor.certificado_vencido': 'Срок действия сертификата {dominio} истёк.',
       'doctor.hosts_ilegible': 'Не удалось прочитать файл hosts.',
       'doctor.hosts_utf16':
@@ -631,15 +635,13 @@ export const ru: Textos = {
       'ia.respuesta_rara': 'Провайдер вернул неожиданный ответ.',
       'ia.cancelado': 'Запрос к провайдеру отменён.',
       'ia.sin_clave': 'Этому провайдеру нужен ключ: сначала сохраните его.',
-      'ia.clave_mal_formada':
-        'Неверный формат ключа (без пробелов и переносов строк).',
+      'ia.clave_mal_formada': 'Неверный формат ключа (без пробелов и переносов строк).',
       'ia.modelo_invalido': 'Недопустимое имя модели.',
-      'ia.modelo_no_disponible': 'Модель не существует или у вашей учётной записи нет к ней доступа.',
+      'ia.modelo_no_disponible':
+        'Модель не существует или у вашей учётной записи нет к ней доступа.',
       'ia.proveedor_invalido': 'Настройки провайдера недействительны.',
-      'ia.env_conflicto':
-        'В .env уже заданы {claves} с другим значением: подтвердите замену.',
-      'ia.env_sin_confirmar':
-        'Подтвердите запись ключа в .env (он сохранится в открытом виде).',
+      'ia.env_conflicto': 'В .env уже заданы {claves} с другим значением: подтвердите замену.',
+      'ia.env_sin_confirmar': 'Подтвердите запись ключа в .env (он сохранится в открытом виде).',
       'ia.env_versionado':
         'Git уже отслеживает .env этого проекта: следующий коммит отправит ключ, даже если файл в .gitignore. Уберите его из индекса командой git rm --cached .env.',
       'ia.env_versionado_desconocido':
@@ -671,8 +673,7 @@ export const ru: Textos = {
         'Не удалось прочитать сохранённый ключ провайдера: удалите и сохраните его заново.',
       'correo.cambia_con_clave':
         'У провайдера есть сохранённый ключ: подтвердите его отправку на новый сервер.',
-      'correo.env_sin_confirmar':
-        'Подтвердите запись почтовых переменных в .env.',
+      'correo.env_sin_confirmar': 'Подтвердите запись почтовых переменных в .env.',
       'correo.ocupado': 'Тестовая отправка уже выполняется.',
       'correo.limite': 'Подождите {segundos} с перед следующей тестовой отправкой.',
       'correo.clave_mal_formada':
@@ -716,11 +717,11 @@ export const ru: Textos = {
         'PHP {rama} не перезапустился; восстановлен предыдущий файл, но служба всё ещё не отвечает. Проверьте Службы и журналы PHP.',
       'php.respaldo_no_existe': 'Такой резервной копии php.ini не существует.',
       'php.extension_no_existe': 'Расширение {nombre} отсутствует в папке ext этой версии.',
-      'php.extension_no_catalogo':
-        'Расширения {nombre} нет в каталоге для этой версии.',
+      'php.extension_no_catalogo': 'Расширения {nombre} нет в каталоге для этой версии.',
       'php.variante_desconocida': 'Не удалось определить вариант сборки этого PHP.',
       'php.sin_variante': 'В каталоге нет {nombre} для сборки {variante}.',
-      'php.huella_distinta': 'Скачанный файл не совпадает с опубликованным хэшем; ничего не установлено.',
+      'php.huella_distinta':
+        'Скачанный файл не совпадает с опубликованным хэшем; ничего не установлено.',
       'php.descarga_fallida': 'Не удалось скачать расширение: {detalle}',
       'php.extension_en_uso':
         'DLL-файл {nombre} используется. Остановите PHP {rama} и повторите попытку.',
@@ -782,7 +783,8 @@ export const ru: Textos = {
         'Для {servicio} {version} не опубликована контрольная сумма: подтвердите установку в диалоговом окне.',
       'catalogo.huella_debil':
         'Для {servicio} {version} доступна только слабая контрольная сумма (MD5 или SHA-1): подтвердите установку в диалоговом окне.',
-      'catalogo.huella_no_coincide': 'Загруженный файл не совпадает с опубликованной контрольной суммой.',
+      'catalogo.huella_no_coincide':
+        'Загруженный файл не совпадает с опубликованной контрольной суммой.',
       'catalogo.redireccion_ajena': 'Загрузка попыталась перейти на неразрешённый сайт ({host}).',
       'catalogo.demasiadas_redirecciones':
         'Слишком много перенаправлений при загрузке (больше {maximo}).',
@@ -841,7 +843,8 @@ export const ru: Textos = {
         'Эта база содержит реальные данные клиентов: для сброса пароля требуется усиленное подтверждение.',
       'instantaneas.id_invalido': 'Снимок недействителен.',
       'instantaneas.no_encontrada': 'Снимок не найден; возможно, он уже был удалён.',
-      'instantaneas.otra_base': 'Этот снимок относится к другой базе: его нельзя применить к текущей.',
+      'instantaneas.otra_base':
+        'Этот снимок относится к другой базе: его нельзя применить к текущей.',
       'instantaneas.sin_confirmar': 'Подтвердите, что хотите вернуться к этому снимку.',
       'instantaneas.motor_no_soportado': 'Снимки поддерживаются для MySQL, MariaDB и PostgreSQL.',
       'instantaneas.demasiado_grande':
@@ -883,8 +886,7 @@ export const ru: Textos = {
     volver: 'Вернуться к этому снимку',
     borrar: 'Удалить',
     borrada: 'Снимок перемещён в корзину',
-    papelera:
-      'Удалённые снимки можно восстановить в течение 7 дней из корзины WolfCore Dev.',
+    papelera: 'Удалённые снимки можно восстановить в течение 7 дней из корзины WolfCore Dev.',
     cerrar: 'Закрыть',
     papeleraTitulo: 'Корзина',
     papeleraVacia: 'В корзине нет снимков.',
@@ -915,7 +917,8 @@ export const ru: Textos = {
         `База ${base} будет полностью заменена этим снимком: все изменения, сделанные после него, будут потеряны. Предварительно создаётся автоматический снимок текущего состояния; в случае ошибки база автоматически вернётся к нему.`,
       pedir: (base: string) => `Для подтверждения введите ${base}`,
       confirmar: 'Вернуться к этому снимку',
-      trabajando: (base: string) => `Восстановление ${base}… Не закрывайте программу до завершения.`,
+      trabajando: (base: string) =>
+        `Восстановление ${base}… Не закрывайте программу до завершения.`,
       hecho: (base: string) => `База ${base} возвращена к снимку`,
       respaldoPrevio: 'Предыдущее состояние сохранено в автоматическом снимке от',
       advertencias: 'Восстановление завершилось с уведомлениями:',
@@ -977,12 +980,14 @@ export const ru: Textos = {
         'Проект не отмечен как доверенный: установите флажок «Я доверяю этому репозиторию», чтобы задача запускалась.',
       receta_cambio:
         'Конфигурация проекта изменилась с момента подтверждения доверия: проверьте её и снова отметьте «Я доверяю этому репозиторию».',
-      sin_confirmar: 'Команда не подтверждена: задача не запустится, пока вы её не проверите и не подтвердите.',
+      sin_confirmar:
+        'Команда не подтверждена: задача не запустится, пока вы её не проверите и не подтвердите.',
       comando_invalido: 'Команда не разрешена (допускаются только php, node, npm run и python).',
       cron_invalida: 'Расписание не является допустимым выражением cron.',
       carpeta: 'Папка проекта не существует.',
       solapada: 'Предыдущий запуск ещё не завершился: этот запуск пропущен.',
-      retraso: 'Запуск опоздал (приложение было приостановлено): пропущенные запуски не выполняются.',
+      retraso:
+        'Запуск опоздал (приложение было приостановлено): пропущенные запуски не выполняются.',
       error: 'Не удалось запустить программу.',
     },
     acciones: {
@@ -1070,7 +1075,8 @@ export const ru: Textos = {
       comillasSinCerrar: 'Не закрыты кавычки.',
       tiempo: 'Максимальное время',
       minutos: 'мин.',
-      tiempoAyuda: 'Если выполнение длится дольше, задача останавливается сама (только этот процесс и его дочерние процессы).',
+      tiempoAyuda:
+        'Если выполнение длится дольше, задача останавливается сама (только этот процесс и его дочерние процессы).',
       activa: 'Активна (выполняется автоматически, пока открыто приложение)',
       advertencia:
         'Нажимая «Подтвердить», вы разрешаете именно эту команду: она будет автоматически выполняться в папке проекта по расписанию. При изменении команды потребуется повторное подтверждение.',
@@ -1121,8 +1127,10 @@ export const ru: Textos = {
         procesos: 'Процессы проектов',
       },
       sinOpciones: 'Здесь нечего выбрать.',
-      captadorUnico: 'Одновременно может работать только один перехватчик почты: выбор другого заменит текущий.',
-      yaNoExisten: (lista: string) => `Больше не существуют и будут удалены при сохранении: ${lista}`,
+      captadorUnico:
+        'Одновременно может работать только один перехватчик почты: выбор другого заменит текущий.',
+      yaNoExisten: (lista: string) =>
+        `Больше не существуют и будут удалены при сохранении: ${lista}`,
       guardar: 'Сохранить',
       guardado: (n: string) => `Рабочее пространство «${n}» сохранено.`,
     },
@@ -1166,14 +1174,12 @@ export const ru: Textos = {
       corregido: 'Файл hosts обновлён',
       fallo: 'Не удалось обновить файл hosts',
       verInstrucciones: 'Показать инструкцию',
-      duplicados:
-        'Эти домены уже есть в файле hosts вне блока WolfCore Dev (они будут сохранены):',
+      duplicados: 'Эти домены уже есть в файле hosts вне блока WolfCore Dev (они будут сохранены):',
       motivos: {
         cancelado: 'Запрос прав администратора отменён. Файл hosts не изменился.',
         tiempo:
           'Никто не подтвердил права администратора вовремя. Сайт сохранён; файл hosts остался без изменений. Если вы всё ещё видите уведомление Windows, отмените его (оно уже ничего не сделает). Примените ожидающие записи позже (одного подтверждения хватит для всех).',
-        denegado:
-          'Windows не разрешила запись в файл hosts. Возможно, доступ блокирует антивирус.',
+        denegado: 'Windows не разрешила запись в файл hosts. Возможно, доступ блокирует антивирус.',
       } as Record<string, string>,
       modalTitulo: 'Исправить hosts вручную',
       modalTexto:
@@ -1260,8 +1266,6 @@ export const ru: Textos = {
     ftp: {
       interruptor: 'FTP-сервер',
       redLocal: 'Разрешить подключения из локальной сети',
-      redLocalAyuda:
-        'Когда выключено, подключаться может только этот компьютер (127.0.0.1). Доступ для каждого сайта включается в разделе «Сайты».',
       avisoTitulo: 'Открыть FTP для локальной сети',
       avisoTexto:
         'FTP передаёт имена пользователей, пароли и файлы в незашифрованном виде. Любой компьютер в вашей сети сможет попытаться подключиться. Используйте только в доверенной сети.',
@@ -1277,7 +1281,8 @@ export const ru: Textos = {
       sinVersion: 'не установлено',
       uso: 'Использование',
       usoTexto: 'composer',
-      ayuda: 'Используйте «Терминал» в проекте или добавьте WolfCore Dev в PATH в разделе «Настройки».',
+      ayuda:
+        'Используйте «Терминал» в проекте или добавьте WolfCore Dev в PATH в разделе «Настройки».',
       instaladoOk: 'Composer установлен',
       sinPhp: 'Сначала установите PHP',
       actualizado: (v: string) => `Composer обновлён: ${v}`,
@@ -1533,7 +1538,8 @@ export const ru: Textos = {
       ocultar: 'Скрыть пароль',
       copiarDato: (dato: string) => `Копировать: ${dato}`,
       env: 'Блок для файла .env',
-      envAyuda: 'Вставьте его в .env вашего проекта. WolfCore Dev не изменяет файлы ваших проектов.',
+      envAyuda:
+        'Вставьте его в .env вашего проекта. WolfCore Dev не изменяет файлы ваших проектов.',
       copiarEnv: 'Копировать блок',
       cargando: 'Чтение данных подключения…',
     },
@@ -1686,7 +1692,8 @@ export const ru: Textos = {
     cambiarCarpeta: 'Изменить',
     detectando: 'Анализ проекта…',
     detectado: (tipo: string) => `Определено: ${tipo}`,
-    sinDeteccionAlEditar: 'Автоопределение работает только при создании; проверьте тип и версию PHP.',
+    sinDeteccionAlEditar:
+      'Автоопределение работает только при создании; проверьте тип и версию PHP.',
     nombre: 'Имя',
     nombreAyuda: 'Только для отображения в списке.',
     nombreCopia: (nombre: string) => `${nombre} (копия)`,
@@ -1801,8 +1808,7 @@ export const ru: Textos = {
     nombreTunel: 'Имя туннеля',
     nombreTunelAyuda: 'Строчные буквы, цифры и дефисы.',
     dominioPublico: 'Публичный домен',
-    dominioPublicoAyuda:
-      'Поддомен вашего домена в Cloudflare, например demo.mydomain.com.',
+    dominioPublicoAyuda: 'Поддомен вашего домена в Cloudflare, например demo.mydomain.com.',
     crear: 'Создать и направить',
     guardadoNombre: 'Именованный туннель готов. При открытии потребуется подтверждение.',
     guardadoRapido: 'Этот сайт снова использует быстрый туннель.',
@@ -1860,7 +1866,6 @@ export const ru: Textos = {
     columnas: { sitio: 'Сайт', estado: 'Состояние', url: 'Ссылка', acciones: 'Действия' },
     vacioTitulo: 'Нет открытых туннелей',
     vacio: 'Включите переключатель туннеля у сайта, чтобы получить публичную ссылку.',
-    irASitios: 'Перейти к сайтам',
     sinNombre: 'Удалённый сайт',
   },
   ajustes: {
@@ -1953,7 +1958,8 @@ export const ru: Textos = {
       pathAgregar: 'Добавить в PATH пользователя',
       pathQuitar: 'Убрать из PATH',
       pathTitulo: 'PATH обновлён',
-      pathAviso: 'Откройте новый терминал, чтобы увидеть изменения: уже открытые терминалы их не увидят.',
+      pathAviso:
+        'Откройте новый терминал, чтобы увидеть изменения: уже открытые терминалы их не увидят.',
       pathQuitarTitulo: 'Убрать WolfCore Dev из PATH?',
       pathQuitarTexto:
         'php и composer из WolfCore Dev перестанут быть доступны в новых терминалах. Открытые терминалы не изменятся.',
@@ -1994,9 +2000,11 @@ export const ru: Textos = {
   formSitioHttps: {
     titulo: 'HTTPS',
     https: 'Также обслуживать по HTTPS',
-    httpsAyuda: 'С собственным сертификатом для домена и его псевдонимов, подписанным WolfCore Dev.',
+    httpsAyuda:
+      'С собственным сертификатом для домена и его псевдонимов, подписанным WolfCore Dev.',
     redirigir: 'Перенаправлять на HTTPS',
-    redirigirAyuda: 'Переходы по http перенаправляются на https. Публичные туннели не затрагиваются.',
+    redirigirAyuda:
+      'Переходы по http перенаправляются на https. Публичные туннели не затрагиваются.',
     redirigirDeshabilitado: 'Сначала включите HTTPS',
     sinAutoridadTitulo: 'HTTPS CA не установлен',
     sinAutoridadTexto:
@@ -2017,9 +2025,7 @@ export const ru: Textos = {
     elegir: 'Открыть с помощью…',
     predeterminada: 'по умолчанию',
     sustituido: (pred: string, usado: string) =>
-      '{pred} не установлен: открыто в {usado}.'
-        .replace('{pred}', pred)
-        .replace('{usado}', usado),
+      '{pred} не установлен: открыто в {usado}.'.replace('{pred}', pred).replace('{usado}', usado),
     error: 'Не удалось открыть редактор',
   },
   phpSitio: {
@@ -2086,7 +2092,8 @@ export const ru: Textos = {
     launchActualizado: (respaldo: string) => `launch.json обновлён. Предыдущая копия: ${respaldo}`,
     phpStorm: 'Конфигурация для PhpStorm',
     copiarPhpStorm: 'Копировать настройки PhpStorm',
-    errorNginx: (salida: string) => `Nginx не принял изменение; восстановлено прежнее состояние. ${salida}`,
+    errorNginx: (salida: string) =>
+      `Nginx не принял изменение; восстановлено прежнее состояние. ${salida}`,
   },
   nginxEditor: {
     etiqueta: 'Nginx',
@@ -2333,7 +2340,8 @@ export const ru: Textos = {
         starttls: 'STARTTLS (порт 587)',
         usuario: 'Пользователь',
         usuarioObligatorio: 'Введите имя пользователя.',
-        usuarioFijoAyuda: 'Этот провайдер всегда использует данного пользователя; пароль — от вашей учётной записи.',
+        usuarioFijoAyuda:
+          'Этот провайдер всегда использует данного пользователя; пароль — от вашей учётной записи.',
         clave: 'Пароль SMTP',
         claveGuardada: (f: string) => `Сохранён: ••••${f}`,
         claveNueva: 'Введите пароль для сохранения',
@@ -2368,7 +2376,8 @@ export const ru: Textos = {
         volvio: (n: string) =>
           `${n} снова отправляет почту на локальный перехватчик, но его .env не изменён: в нём остались переменные MAIL_* провайдера (и его пароль, если вы его записывали). Перезапишите блок почты.`,
         incluirClave: 'Также записать пароль в .env',
-        incluirClaveAyuda: 'Если не отмечено, блок не содержит MAIL_PASSWORD, и вы добавите его вручную.',
+        incluirClaveAyuda:
+          'Если не отмечено, блок не содержит MAIL_PASSWORD, и вы добавите его вручную.',
         sinClaveGuardada: 'У провайдера нет сохранённого пароля.',
         vista: 'Изменения в .env (пароль замаскирован)',
         textoPlano:
@@ -2499,7 +2508,8 @@ export const ru: Textos = {
       documentacion: 'Открыть документацию',
       nombre: 'Название',
       urlBase: 'Базовый URL',
-      urlAyuda: 'Пусто = официальный. Только https:// либо http:// для 127.0.0.1 или [::1] (LM Studio).',
+      urlAyuda:
+        'Пусто = официальный. Только https:// либо http:// для 127.0.0.1 или [::1] (LM Studio).',
       urlObligatoria: 'Введите базовый URL совместимого провайдера.',
       modelo: 'Модель по умолчанию (необязательно)',
       modeloAyuda: 'Используется в блоке .env (AI_MODEL) и для проверочного сообщения.',
@@ -2585,7 +2595,8 @@ export const ru: Textos = {
     descripcion:
       'Языковые модели, работающие на вашем компьютере через Ollama. Используйте их в своих проектах без отправки данных в интернет.',
     sinInstalarTitulo: 'Ollama не установлена',
-    sinInstalar: 'Установите её в разделе «Службы», чтобы скачивать и использовать модели на этом компьютере.',
+    sinInstalar:
+      'Установите её в разделе «Службы», чтобы скачивать и использовать модели на этом компьютере.',
     irAServicios: 'Перейти к службам',
     apagadoTitulo: 'Ollama выключена',
     apagado: 'Включите её, чтобы просматривать, скачивать и проверять модели.',
@@ -2610,7 +2621,8 @@ export const ru: Textos = {
       titulo: 'Скачать модель',
       campo: 'Название модели',
       placeholder: 'llama3.2, qwen2.5-coder:7b…',
-      ayuda: 'Введите название из каталога Ollama (ollama.com/library) или выберите вариант из подсказок.',
+      ayuda:
+        'Введите название из каталога Ollama (ollama.com/library) или выберите вариант из подсказок.',
       sugerenciaAyuda: {
         'llama3.2': 'Общий чат, лёгкая модель',
         'qwen2.5-coder': 'Программирование',
@@ -2622,8 +2634,6 @@ export const ru: Textos = {
       yaInstalado: 'Эта модель уже установлена',
       enCurso: 'Эта модель уже скачивается',
       confirmarTitulo: (modelo: string) => `Скачать ${modelo}?`,
-      confirmarTexto:
-        'Модели обычно занимают несколько ГБ (от 1 до более 40 ГБ в зависимости от размера). Ollama не сообщает размер до начала загрузки: вы увидите его на индикаторе прогресса и сможете отменить загрузку в любой момент.',
       confirmar: 'Скачать',
     },
     progreso: {
@@ -2651,7 +2661,8 @@ export const ru: Textos = {
       placeholder: 'Введите короткий вопрос и нажмите Enter',
       enviar: 'Отправить',
       respuesta: 'Ответ',
-      pensando: 'Модель отвечает… в первый раз это может занять больше времени, пока она загружается.',
+      pensando:
+        'Модель отвечает… в первый раз это может занять больше времени, пока она загружается.',
       vacia: '(Модель не вернула текст.)',
       sinModelos: 'Скачайте модель, чтобы проверить её.',
     },
@@ -2744,8 +2755,7 @@ export const ru: Textos = {
       instalandoGh: 'Установка GitHub CLI…',
       ghInstalado: 'GitHub CLI установлен. Теперь выполните вход.',
       iniciarSesion: 'Войти',
-      sesionAbierta:
-        'Открыто окно для входа. Когда закончите, нажмите «Проверить снова».',
+      sesionAbierta: 'Открыто окно для входа. Когда закончите, нажмите «Проверить снова».',
       comprobar: 'Проверить снова',
       usarToken: 'Использовать токен',
       token: 'Персональный токен GitHub',
@@ -2770,8 +2780,7 @@ export const ru: Textos = {
     url: {
       etiqueta: 'URL репозитория',
       placeholder: 'https://github.com/usuario/proyecto.git',
-      ayuda:
-        'https://…, git@host:ruta или usuario/proyecto (GitHub). Без логина и пароля в URL.',
+      ayuda: 'https://…, git@host:ruta или usuario/proyecto (GitHub). Без логина и пароля в URL.',
       invalida: 'Используйте https://…, git@host:ruta или usuario/proyecto',
     },
     carpeta: {
@@ -2824,13 +2833,13 @@ export const ru: Textos = {
       detectado: (v: string) => `Обнаружено: ${v}`,
       nodeInstalar: 'Node не установлен: установите его в разделе Службы.',
       pythonInstalar: 'Python не установлен: установите его в разделе Службы.',
-      lenguajeInstalar: (nombre: string) => `${nombre} не установлен: установите его в разделе Службы.`,
+      lenguajeInstalar: (nombre: string) =>
+        `${nombre} не установлен: установите его в разделе Службы.`,
       dominio: 'Домен',
       puertoProxy: 'Локальный порт',
       puertoPlaceholder: '8000',
       receta: 'Шаги',
-      recetaAyuda:
-        'Выполняются по порядку. Отключите ненужные; необязательные можно переставлять.',
+      recetaAyuda: 'Выполняются по порядку. Отключите ненужные; необязательные можно переставлять.',
       subir: 'Выше',
       bajar: 'Ниже',
       fijo: 'Этот шаг обязателен',
@@ -2856,7 +2865,8 @@ export const ru: Textos = {
       verRegistro: 'Показать журнал',
       ocultarRegistro: 'Скрыть журнал',
       listo: 'Проект готов.',
-      fallo: (paso: string) => `Сбой: ${paso}. Повторите, пропустите или отмените; ничего не откатывалось.`,
+      fallo: (paso: string) =>
+        `Сбой: ${paso}. Повторите, пропустите или отмените; ничего не откатывалось.`,
       cancelada: 'Подготовка отменена. Вы можете продолжить её с карточки проекта.',
       incompleta: 'Остались невыполненные шаги.',
       errorCrear: 'Не удалось создать проект',
@@ -2920,7 +2930,8 @@ export const ru: Textos = {
       atras: (n: number) => `${n} для получения`,
       adelante: (n: number) => `${n} для отправки`,
       traer: 'Получить изменения',
-      traerAyuda: 'git pull без слияния: при локальных изменениях или расхождении веток ничего не трогает.',
+      traerAyuda:
+        'git pull без слияния: при локальных изменениях или расхождении веток ничего не трогает.',
       alDia: 'Уже актуально.',
       actualizado: 'Изменения получены',
       sugeridosTitulo: 'Изменения получены',
@@ -2940,8 +2951,7 @@ export const ru: Textos = {
         titulo: 'Коммит с предложенным сообщением',
         proveedor: 'Провайдер ИИ',
         modelo: 'Модель',
-        sinProveedores:
-          'Настройте облачного провайдера ИИ (экран ИИ), чтобы предлагать сообщения.',
+        sinProveedores: 'Настройте облачного провайдера ИИ (экран ИИ), чтобы предлагать сообщения.',
         privacidad:
           'Провайдеру отправляется diff индексированных изменений без .env, ключей, сертификатов, файлов учётных данных и бинарных файлов, максимум 20 000 символов. Расходует мало токенов.',
         sugerir: 'Предложить сообщение',
@@ -2975,7 +2985,8 @@ export const ru: Textos = {
       nombrePlaceholder: 'Vite',
       comando: 'Команда',
       comandoPlaceholder: 'npm run dev',
-      comandoAyuda: 'Программа и аргументы без оболочки. Используйте кавычки для аргументов с пробелами.',
+      comandoAyuda:
+        'Программа и аргументы без оболочки. Используйте кавычки для аргументов с пробелами.',
       cwd: 'Папка',
       cwdPlaceholder: 'raiz',
       cwdAyuda: 'raiz или подпапка проекта (например, frontend).',
@@ -3265,7 +3276,10 @@ export const ru: Textos = {
         nombre: 'Крипто',
         descripcion: 'Хэш, Base64, URL, UUID, пароли и JWT.',
       },
-      markdown: { nombre: 'Предпросмотр Markdown', descripcion: 'Пишите и сразу смотрите результат.' },
+      markdown: {
+        nombre: 'Предпросмотр Markdown',
+        descripcion: 'Пишите и сразу смотрите результат.',
+      },
       entorno: { nombre: 'Среда системы', descripcion: 'PATH, версии и переменные.' },
       buscar: {
         nombre: 'Поиск',
@@ -3275,7 +3289,10 @@ export const ru: Textos = {
         nombre: 'Сведения о файле',
         descripcion: 'Размер, тип и хэши файла.',
       },
-      websocket: { nombre: 'Клиент WebSocket', descripcion: 'Подключение, отправка и просмотр сообщений.' },
+      websocket: {
+        nombre: 'Клиент WebSocket',
+        descripcion: 'Подключение, отправка и просмотр сообщений.',
+      },
       contrasenas: {
         nombre: 'Пароли',
         descripcion: 'Оценка надёжности пароля и поиск слабых учётных записей в базах.',
@@ -3302,7 +3319,6 @@ export const ru: Textos = {
       jsonInvalido: (linea: number, columna: number) =>
         `Недопустимый JSON: проверьте строку ${linea}, столбец ${columna}.`,
       banderas: 'Недопустимые флаги: используйте только d, g, i, m, s, u, v или y без повторов.',
-      regex: (detalle: string) => `Недопустимое выражение (${detalle}).`,
       trabajador: 'Не удалось выполнить операцию в фоновом потоке.',
       diffLento: 'Тексты слишком сильно различаются для своевременного сравнения.',
       base64: 'Недопустимый Base64.',
@@ -3315,7 +3331,8 @@ export const ru: Textos = {
       longitud: 'Длина должна быть от 4 до 256.',
       sinConjuntos: 'Выберите хотя бы один тип символов.',
       sinDominios: 'Введите хотя бы одно имя или IP-адрес.',
-      muchosDominios: (max: number) => `Максимум ${max} ${plural(max, 'имя', 'имени', 'имён')} на сертификат.`,
+      muchosDominios: (max: number) =>
+        `Максимум ${max} ${plural(max, 'имя', 'имени', 'имён')} на сертификат.`,
     },
     qr: {
       texto: 'Текст или URL',
@@ -3344,7 +3361,8 @@ export const ru: Textos = {
       coincidencias: (n: number, truncado: boolean) =>
         `${n} ${plural(n, 'совпадение', 'совпадения', 'совпадений')}${truncado ? ' (показаны первые)' : ''}`,
       sinCoincidencias: 'Совпадений нет.',
-      tiempo: 'Выражение выполнялось слишком долго и было остановлено (возможен катастрофический возврат).',
+      tiempo:
+        'Выражение выполнялось слишком долго и было остановлено (возможен катастрофический возврат).',
       grupo: (n: number) => `Группа ${n}`,
       referencia: 'Краткая справка',
       tabla: [
@@ -3361,7 +3379,10 @@ export const ru: Textos = {
         ['(?:…)', 'Незахватывающая группа'],
         ['(?=…) (?!…)', 'За которым следует / не следует'],
         ['a|b', 'Альтернатива'],
-        ['g i m s u y', 'Глобальный, без учёта регистра, многострочный, точка включает перенос, Unicode, привязка к позиции'],
+        [
+          'g i m s u y',
+          'Глобальный, без учёта регистра, многострочный, точка включает перенос, Unicode, привязка к позиции',
+        ],
       ] as [string, string][],
     },
     diff: {
@@ -3521,7 +3542,6 @@ export const ru: Textos = {
       regex: 'Регулярное выражение',
       mayusculas: 'Учитывать регистр',
       incluir: 'Только файлы (через запятую, например *.php)',
-      excluir: 'Пропустить (через запятую)',
       buscar: 'Искать',
       cancelar: 'Отмена',
       buscando: 'Поиск…',
@@ -3674,7 +3694,8 @@ export const ru: Textos = {
       fortaleza: {
         etiqueta: 'Пароль для проверки',
         marcador: 'Введите пароль',
-        privacidad: 'Проверка выполняется здесь же: ничего не покидает ваш компьютер и не сохраняется.',
+        privacidad:
+          'Проверка выполняется здесь же: ничего не покидает ваш компьютер и не сохраняется.',
         mostrar: 'Показать',
         ocultar: 'Скрыть',
         niveles: ['Очень слабый', 'Слабый', 'Средний', 'Надёжный', 'Очень надёжный'],
@@ -3702,7 +3723,8 @@ export const ru: Textos = {
           capitalization: 'Заглавная первая буква мало помогает.',
           associatedYears: 'Избегайте лет, связанных с вами.',
           repeated: 'Избегайте повторяющихся слов и символов.',
-          longerKeyboardPattern: 'Используйте более длинную клавиатурную комбинацию и меняйте направление.',
+          longerKeyboardPattern:
+            'Используйте более длинную клавиатурную комбинацию и меняйте направление.',
           anotherWord: 'Добавьте ещё одно-два слова; редкие слова усиливают пароль.',
           useWords: 'Несколько случайных слов образуют хороший пароль.',
           noNeed: 'Пароль может быть надёжным и без символов или цифр: главное — длина.',
@@ -3787,7 +3809,8 @@ export const ru: Textos = {
         copiaFila: 'Копия строки (идентификатор и прежний хеш, хранится 30 дней):',
         instantanea: 'Предыдущий снимок базы данных:',
         instantaneaAyuda: 'К нему можно вернуться в разделе «Базы данных › Снимки».',
-        aBcrypt: 'Перевести на bcrypt: только если приложение использует password_verify или аналог',
+        aBcrypt:
+          'Перевести на bcrypt: только если приложение использует password_verify или аналог',
         avisoLegado:
           'Этот хеш использует md5 или sha1 без соли и сохраняется в том же формате. Если приложение хранит соль отдельно (в другом столбце или константе), воспроизвести хеш невозможно и новый пароль не подойдёт для входа.',
         datosReales: {
@@ -3868,8 +3891,6 @@ export const ru: Textos = {
         'Установите Build Tools для Visual Studio (с инструментами C++) с помощью показанной команды: они занимают несколько ГБ и требуют прав администратора, поэтому решение за вами.',
       antivirus:
         'Добавить папку данных в исключения антивируса — решение за вами, с помощью показанной команды.',
-      firewall:
-        'Удалить эти правила — решение за вами, с помощью показанной команды в консоли администратора. WolfCore Dev никогда не изменяет брандмауэр.',
       reintentar_servicio: 'Запустить службу повторно.',
       firefox_confianza:
         'Добавить в user.js каждого профиля Firefox параметр доверия к центру сертификации Windows с предварительным созданием резервной копии. Файл prefs.js не изменяется, а открытые профили пропускаются.',
@@ -3878,16 +3899,19 @@ export const ru: Textos = {
       titulo: 'Доверие к ЦС',
       texto:
         'Windows уже доверяет центру сертификации WolfCore Dev; Node, Python и Firefox используют собственное хранилище.',
-      sinCa: 'Центр сертификации ещё не создан. Создайте его в разделе HTTPS, чтобы использовать этот раздел.',
+      sinCa:
+        'Центр сертификации ещё не создан. Создайте его в разделе HTTPS, чтобы использовать этот раздел.',
       node: {
         titulo: 'Node',
         proyectos:
           'Процессы проектов и Терминал получают переменную NODE_EXTRA_CA_CERTS с центром сертификации.',
-        ajena: 'У вас уже задана собственная переменная NODE_EXTRA_CA_CERTS: WolfCore Dev не перезаписывает её.',
+        ajena:
+          'У вас уже задана собственная переменная NODE_EXTRA_CA_CERTS: WolfCore Dev не перезаписывает её.',
         global: 'Также как переменную пользователя (для других терминалов и программ)',
         confirmarActivar:
           'Переменная NODE_EXTRA_CA_CERTS будет задана для вашего пользователя. Это повлияет на программы, запущенные после этого; переменная удаляется при отключении параметра.',
-        confirmarDesactivar: 'Переменная NODE_EXTRA_CA_CERTS, добавленная WolfCore Dev, будет удалена.',
+        confirmarDesactivar:
+          'Переменная NODE_EXTRA_CA_CERTS, добавленная WolfCore Dev, будет удалена.',
       },
       python: {
         titulo: 'Python',
@@ -3953,7 +3977,8 @@ export const ru: Textos = {
       'Будет сохранена резервная копия с датой, выполнена проверка через php -v и, если PHP запущен, он будет перезапущен.',
     guardar: 'Сохранить и применить',
     cancelar: 'Отмена',
-    guardado: (respaldo: string) => `Файл php.ini сохранён. Предыдущая резервная копия: ${respaldo}`,
+    guardado: (respaldo: string) =>
+      `Файл php.ini сохранён. Предыдущая резервная копия: ${respaldo}`,
     respaldosTitulo: 'Резервные копии с датой',
     sinRespaldos: 'Резервных копий пока нет.',
     restaurar: 'Восстановить',
@@ -3988,7 +4013,8 @@ export const ru: Textos = {
     version: (v: string) => `v${v}`,
     versionDesconocida: 'Неизвестная версия',
     verVersion: 'Показать версию',
-    verVersionAyuda: 'Запускает программу с флагом --version (не выполняется автоматически при открытии экрана).',
+    verVersionAyuda:
+      'Запускает программу с флагом --version (не выполняется автоматически при открытии экрана).',
     origen: {
       propio: 'Установлен через WolfCore Dev',
       'npm-usuario': 'Глобальный npm пользователя',
@@ -4012,7 +4038,8 @@ export const ru: Textos = {
       titulo: (nombre: string) => `Установить ${nombre}?`,
       texto: (paquete: string) =>
         `Будет установлена последняя опубликованная версия ${paquete} из registry.npmjs.org с использованием Node из WolfCore Dev и в его папке данных.`,
-      aislado: 'Не использует вашу конфигурацию npm и не затрагивает глобальный npm. Это может занять несколько минут.',
+      aislado:
+        'Не использует вашу конфигурацию npm и не затрагивает глобальный npm. Это может занять несколько минут.',
       aceptar: 'Установить',
       hecho: (nombre: string) => `${nombre} установлен.`,
     },
@@ -4025,7 +4052,8 @@ export const ru: Textos = {
     },
     confirmarQuitar: {
       titulo: (nombre: string) => `Удалить MCP из ${nombre}?`,
-      texto: 'Из этого файла удаляется только запись «wolfcore»; всё остальное остаётся без изменений:',
+      texto:
+        'Из этого файла удаляется только запись «wolfcore»; всё остальное остаётся без изменений:',
       aceptar: 'Удалить',
       hecho: (nombre: string) => `MCP удалён из ${nombre}.`,
     },
@@ -4268,7 +4296,8 @@ export const ru: Textos = {
       tituloRama: (v: string) => `Новая версия: ${v}`,
       ninguna: 'нет',
       instancia: (id: string) => `Обновляется экземпляр ${id}. Перед внесением изменений:`,
-      pasoInstalar: (v: string) => `устанавливается ${v} рядом с текущей версией (текущая не удаляется);`,
+      pasoInstalar: (v: string) =>
+        `устанавливается ${v} рядом с текущей версией (текущая не удаляется);`,
       pasoVolcados: 'создаётся дамп каждой базы данных текущей версией;',
       pasoCopia: 'служба останавливается и полностью копируется папка данных (холодная копия);',
       pasoArrancar: 'выполняется запуск с новой версией и проверка отклика;',
@@ -4313,7 +4342,8 @@ export const ru: Textos = {
       bloqueada: 'Невозможно выбрать',
       marcadas: (n: number, tam: string) => `${plural(n, 'версия', 'версии', 'версий')} · ${tam}`,
       destinoTitulo: 'Что с ними сделать',
-      papelera: 'Переместить в корзину: хранятся 7 дней и до тех пор продолжают занимать место на диске',
+      papelera:
+        'Переместить в корзину: хранятся 7 дней и до тех пор продолжают занимать место на диске',
       definitivo: 'Удалить навсегда: освобождает место сразу и не подлежит отмене',
       avisoDefinitivo:
         'Безвозвратное удаление: чтобы вернуть эти версии, их придётся загрузить заново.',
@@ -4344,7 +4374,8 @@ export const ru: Textos = {
       ajeno: (lista: string) =>
         `Содержит установленные вами компоненты: ${lista}. При удалении они будут потеряны.`,
       incluirAjeno: 'Удалить даже с потерей этих данных',
-      sinCatalogo: 'Этой версии больше нет в каталоге: после удаления её нельзя будет загрузить снова.',
+      sinCatalogo:
+        'Этой версии больше нет в каталоге: после удаления её нельзя будет загрузить снова.',
       papeleraTitulo: 'В корзине',
       recuperar: 'Восстановить',
       recuperada: (v: string) => `${v} восстановлена.`,
@@ -4380,8 +4411,7 @@ export const ru: Textos = {
       devolver: (sello: string, tam: string) =>
         `Восстановить резервную копию ${sello} (${tam}); текущая папка будет отложена, не удалена`,
       usarActual: 'Использовать текущую папку данных как есть',
-      notaActual:
-        'Только если в текущей папке полные данные; иначе выберите резервную копию.',
+      notaActual: 'Только если в текущей папке полные данные; иначе выберите резервную копию.',
       notaDevolver: 'Копия переносится, проверяется и только затем ставится на место.',
       escriba: (id: string) => `Введите ${id} для подтверждения`,
       elegirVersion:
@@ -4420,8 +4450,7 @@ export const ru: Textos = {
     campana: 'Уведомления',
     campanaConNuevos: (n: number) => `Уведомления: ${n} непрочит.`,
     titulo: 'Центр уведомлений',
-    vacio:
-      'Уведомлений нет. Здесь появятся сбои служб, занятые порты и истекающие сертификаты.',
+    vacio: 'Уведомлений нет. Здесь появятся сбои служб, занятые порты и истекающие сертификаты.',
     marcarTodos: 'Отметить всё прочитанным',
     limpiar: 'Очистить историю',
     ver: 'Открыть',
@@ -4443,7 +4472,26 @@ export const ru: Textos = {
     tema: 'Тема',
     temas: { sistema: 'Системная', claro: 'Светлая', oscuro: 'Тёмная' },
     idioma: 'Язык',
-    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語', ko: '한국어', hi: 'हिन्दी', tr: 'Türkçe', id: 'Bahasa Indonesia', pl: 'Polski', nl: 'Nederlands', uk: 'Українська' },
+    idiomas: {
+      es: 'Español',
+      en: 'English',
+      pt: 'Português',
+      fr: 'Français',
+      de: 'Deutsch',
+      it: 'Italiano',
+      ru: 'Русский',
+      zh: '中文 简体',
+      ja: '日本語',
+      ko: '한국어',
+      hi: 'हिन्दी',
+      tr: 'Türkçe',
+      id: 'Bahasa Indonesia',
+      pl: 'Polski',
+      nl: 'Nederlands',
+      uk: 'Українська',
+    },
+    /** Aviso junto a los idiomas que no son es, en, pt ni fr (la traducción es automática y revisada). */
+    traduccionAutomatica: 'Машинный перевод, проверен',
     acento: 'Акцентный цвет',
     acentos: {
       indigo: 'Индиго',
@@ -4455,10 +4503,6 @@ export const ru: Textos = {
     },
     acentoPropio: (color: string) => `Свой (${color})`,
     errorGuardar: 'Не удалось сохранить настройку',
-    asistente: 'Мастер первоначальной настройки',
-    asistenteAyuda:
-      'Повторно пройдите начальные шаги: папка проектов, базовые службы, CA, GitHub и отслеживаемая папка.',
-    asistenteAbrir: 'Открыть мастер',
   },
   paleta: {
     titulo: 'Палитра команд',
@@ -4488,13 +4532,11 @@ export const ru: Textos = {
     nuevoProyecto: 'Создать новый проект',
     tema: (tema: string) => `Тема: ${tema}`,
     idioma: (idioma: string) => `Язык: ${idioma}`,
-    asistente: 'Открыть мастер первоначальной настройки',
   },
   nuevoProyecto: {
     titulo: 'Новый проект',
     boton: 'Новый проект',
-    descripcion:
-      'Создайте проект с нуля: папку, сайт с HTTPS, базу данных и её подключение.',
+    descripcion: 'Создайте проект с нуля: папку, сайт с HTTPS, базу данных и её подключение.',
     pasos: { tipo: 'Тип', datos: 'Данные', resumen: 'Итог', crear: 'Создание' },
     tipos: {
       laravel: {
@@ -4514,7 +4556,10 @@ export const ru: Textos = {
         nombre: 'FastAPI',
         descripcion: 'Виртуальное окружение, requirements.txt и процесс uvicorn.',
       },
-      wordpress: { nombre: 'WordPress', descripcion: 'Официальная сборка с готовым wp-config.php.' },
+      wordpress: {
+        nombre: 'WordPress',
+        descripcion: 'Официальная сборка с готовым wp-config.php.',
+      },
       estatico: {
         nombre: 'Статический сайт',
         descripcion: 'HTML и CSS через Nginx, без базы данных.',
@@ -4664,7 +4709,8 @@ export const ru: Textos = {
       puerto: 'Порт исходного сервера',
       usuario: 'Пользователь',
       clave: 'Пароль',
-      claveAyuda: 'Оставьте пустым, если у пользователя нет пароля (как у root в Laragon или XAMPP).',
+      claveAyuda:
+        'Оставьте пустым, если у пользователя нет пароля (как у root в Laragon или XAMPP).',
       existe: 'уже существует на целевом сервере',
       reemplazar: 'Заменить (предварительно создаётся копия)',
       noSeToca: 'Не изменяется, если не отмечено.',
@@ -4683,8 +4729,7 @@ export const ru: Textos = {
         `Будет привязано ${plural(n, 'сайт', 'сайта', 'сайтов')} в текущей папке. Файлы не перемещаются, не копируются и не изменяются.`,
       sinConfianza:
         'Ни один импортированный сайт не запускает рецепты, пока вы не отметите «Я доверяю этому репозиторию».',
-      hosts:
-        'Будут обновлены Nginx и файл hosts (Windows может запросить права администратора).',
+      hosts: 'Будут обновлены Nginx и файл hosts (Windows может запросить права администратора).',
       basesNuevas: (nombres: string) => `Будут скопированы базы: ${nombres}.`,
       basesReemplazo: (nombres: string) =>
         `Будут заменены существующие базы: ${nombres}. Перед этим сохраняется резервная копия каждой.`,
@@ -4737,7 +4782,8 @@ export const ru: Textos = {
       baseVolcado: (nombre: string, servidor: string) =>
         `Будет сохранена только структура базы ${nombre} (сервер ${servidor}), без строк данных.`,
       sinBase: 'В проекте не указана база данных: схема сохраняться не будет.',
-      avisoMongodb: 'Этот проект использует MongoDB: его схема (коллекции и индексы) не сохраняется.',
+      avisoMongodb:
+        'Этот проект использует MongoDB: его схема (коллекции и индексы) не сохраняется.',
       incluirDeTodosModos: 'Всё равно включить',
       avisoIncluir: 'Если этот файл содержит реальный ключ, он попадёт в шаблон.',
       guardar: 'Сохранить шаблон',
@@ -4750,8 +4796,7 @@ export const ru: Textos = {
       titulo: 'Мои шаблоны',
       ayuda:
         'Начните новый проект с рецептом, настройками и схемой (без данных) уже существующего.',
-      vacia:
-        'Шаблонов пока нет. Сохраните проект как шаблон через меню на его карточке.',
+      vacia: 'Шаблонов пока нет. Сохраните проект как шаблон через меню на его карточке.',
       conArchivosEtiqueta: 'с файлами',
       soloEsquema: 'рецепт и схема',
       conBase: (motor: string) => `база ${motor} без данных`,
@@ -4877,57 +4922,9 @@ export const ru: Textos = {
     guardadoConCopia: 'Файл .env сохранён; предыдущая версия оставлена как копия.',
   },
   asistenteInicio: {
-    titulo: 'Добро пожаловать в WolfCore Dev',
-    subtitulo:
-      'Пять шагов для подготовки среды. Ничего не устанавливается и не меняется, пока вы не нажмёте кнопку на соответствующем шаге.',
     paso: (n: number, total: number) => `Шаг ${n} из ${total}`,
     anterior: 'Назад',
     siguiente: 'Далее',
-    omitirTodo: 'Пропустить мастер',
-    terminar: 'Готово',
-    hecho: 'Готово',
-    reabrir: 'Вы можете открыть его снова в Настройках.',
-    pasos: {
-      carpeta: {
-        titulo: 'Папка проектов',
-        texto:
-          'Где хранятся ваши проекты. Сюда клонируются новые репозитории, и эта папка отслеживается на последнем шаге.',
-        elegir: 'Выбрать папку',
-        actual: (ruta: string) => `Выбрана папка: ${ruta}`,
-        guardada: (ruta: string) => `Текущая папка: ${ruta}`,
-        ninguna: 'Не выбрана: используется C:\\Proyectos, если существует.',
-      },
-      basicos: {
-        titulo: 'Установить базовое',
-        texto:
-          'Nginx, PHP 8.4, Composer и Node LTS из официальных источников с проверкой хэша. Каждый компонент устанавливается только по нажатию кнопки.',
-        instalado: 'Установлено',
-        instalar: (version: string) => `Установить ${version}`,
-        sinVersion: 'Нет версии в каталоге',
-        cargando: 'Поиск версий…',
-        nombres: { nginx: 'Nginx', php: 'PHP 8.4', composer: 'Composer', node: 'Node LTS' },
-      },
-      ca: {
-        titulo: 'Доверять локальному центру сертификации',
-        texto:
-          'Чтобы сайты .test открывались по HTTPS без уведомлений, Windows должна доверять центру сертификации WolfCore Dev. Windows запросит ваше подтверждение.',
-        confiar: 'Доверять CA',
-        confiada: 'Windows уже доверяет локальному центру сертификации.',
-      },
-      github: {
-        titulo: 'Подключить GitHub',
-        texto:
-          'Чтобы просматривать ваши репозитории и клонировать их в один клик. Используйте сессию GitHub CLI или персональный токен, который хранится на этом компьютере в зашифрованном виде.',
-      },
-      vigilar: {
-        titulo: 'Отслеживать папку',
-        texto:
-          'WolfCore Dev будет предлагать подключить каждую новую папку, появившуюся в папке проектов. Ничего не подключается без вашего подтверждения.',
-        activar: 'Отслеживать эту папку',
-        activa: (ruta: string) => `Отслеживается ${ruta}`,
-        sinCarpeta: 'Сначала выберите папку проектов (шаг 1).',
-      },
-    },
   },
   /** Результат импорта или экспорта профиля (D26). */
   perfiles: {
@@ -5111,7 +5108,8 @@ export const ru: Textos = {
       },
       frase: {
         titulo: 'Фраза профиля',
-        texto: 'Профиль содержит зашифрованные базы данных или CA. Введите фразу, выбранную при экспорте.',
+        texto:
+          'Профиль содержит зашифрованные базы данных или CA. Введите фразу, выбранную при экспорте.',
         campo: 'Фраза',
         omitirBases: 'Импортировать без баз данных',
         nota: 'Фраза используется только в этом окне: она не сохраняется и стирается после завершения или закрытия.',
@@ -5133,11 +5131,13 @@ export const ru: Textos = {
             'Выберите папку для каждого сайта или отметьте его для импорта как отложенного.',
           frase_requerida: 'Введите фразу профиля или выполните импорт без баз данных.',
           ca_ajena: 'CA из профиля невозможно импортировать.',
-          ca_sin_restricciones: 'Подтвердите отдельно, что хотите импортировать CA без ограничений.',
+          ca_sin_restricciones:
+            'Подтвердите отдельно, что хотите импортировать CA без ограничений.',
           reemplazar_ca: 'Подтвердите отдельно, что хотите заменить CA этого компьютера.',
         },
       },
-      progreso: 'Импорт профиля… Не закрывайте окно: при наличии баз данных или загрузок это может занять время.',
+      progreso:
+        'Импорт профиля… Не закрывайте окно: при наличии баз данных или загрузок это может занять время.',
       fases: {
         copia: 'Копирование заменяемых данных',
         versiones: 'Установка версий',
@@ -5208,17 +5208,18 @@ export const ru: Textos = {
       tunel_con_nombre: 'Ваш именованный туннель не переносится: используется быстрый туннель.',
       php_ini: 'Некоторые настройки php.ini не были импортированы.',
       xdebug: 'Ваша настройка Xdebug была некорректной и была удалена.',
-      nginx_desactivado:
-        'Ваши правила Nginx сохранены, но не применены: проверьте их в редакторе.',
+      nginx_desactivado: 'Ваши правила Nginx сохранены, но не применены: проверьте их в редакторе.',
       carpeta_no_existe: 'Эта папка не существует на данном компьютере: укажите её расположение.',
-      correo_sin_proveedor: 'Ваш SMTP-провайдер не был импортирован: используется перехватчик почты.',
+      correo_sin_proveedor:
+        'Ваш SMTP-провайдер не был импортирован: используется перехватчик почты.',
       sitio_invalido: 'Сайт некорректен.',
       dominio_invalido: 'Домен некорректен (должен заканчиваться на .test).',
       ruta_protegida: 'Папка является системной или принадлежит WolfCore Dev: не импортируется.',
       dominio_en_uso: 'Другой сайт на этом компьютере уже использует этот домен.',
       sitio_repetido: 'Сайт дублируется в профиле.',
       no_disponible: 'Эта версия больше отсутствует в каталоге.',
-      huella_debil: 'У этой версии нет надёжного отпечатка: установите её вручную в разделе «Версии».',
+      huella_debil:
+        'У этой версии нет надёжного отпечатка: установите её вручную в разделе «Версии».',
       tope_descargas:
         'Загрузка не выполнена, чтобы не запускать слишком много загрузок одновременно: установите её в разделе «Версии».',
       instancia_pendiente: 'Экземпляр остался в ожидании.',
@@ -5237,7 +5238,8 @@ export const ru: Textos = {
         'Прежний CA этого компьютера всё ещё находится в системном хранилище доверенных сертификатов и больше не используется. Вы можете удалить его отсюда.',
       base_no_incluida: 'База данных {base} ({instancia}) не была включена.',
       sin_ca: 'На этом компьютере нет CA: профиль сохраняется без него.',
-      ca_no_importada: 'CA из профиля не был импортирован: используется CA этого компьютера или создаётся новый.',
+      ca_no_importada:
+        'CA из профиля не был импортирован: используется CA этого компьютера или создаётся новый.',
       certificados: 'Не удалось подготовить сертификаты: {detalle}',
       aplicar:
         'Импортированные сайты были применены не полностью (Nginx: {nginx}; hosts: {hosts}).',

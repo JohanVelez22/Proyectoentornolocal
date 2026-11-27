@@ -142,8 +142,15 @@ describe('idiomaDeLocale', () => {
     expect(idiomaDeLocale('es-419')).toBe('es');
     expect(idiomaDeLocale('ES_ar')).toBe('es');
   });
+  it('los idiomas automáticos se reconocen por su código (de-DE, ja-JP, zh-CN, uk…)', () => {
+    expect(idiomaDeLocale('de-DE')).toBe('de');
+    expect(idiomaDeLocale('ja-JP')).toBe('ja');
+    expect(idiomaDeLocale('zh-CN')).toBe('zh');
+    expect(idiomaDeLocale('UK_ua')).toBe('uk');
+    expect(idiomaDeLocale('hi-IN')).toBe('hi');
+  });
   it('cualquier otro locale cae al español', () => {
-    expect(idiomaDeLocale('de-DE')).toBe('es');
+    expect(idiomaDeLocale('vi-VN')).toBe('es');
     expect(idiomaDeLocale('estonian')).toBe('es');
     expect(idiomaDeLocale('')).toBe('es');
   });

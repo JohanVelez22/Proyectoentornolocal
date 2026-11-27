@@ -5,44 +5,86 @@
  * proxy, no una copia). Lo único que no se actualiza es un texto ya copiado a una variable; por
  * eso las vistas se vuelven a montar al cambiar de idioma (ver Marco.vue).
  */
-import type { IdiomaUi } from '@pel/core';
+import { IDIOMAS_UI, type IdiomaUi } from '@pel/core';
 import { computed, ref } from 'vue';
-import { IDIOMAS } from '../../shared/idiomas';
-import { en } from './en';
-import { es, type Textos } from './es';
-import { fr } from './fr';
-import { pt } from './pt';
-
+import { IDIOMAS, esIdiomaBase } from '../../shared/idiomas';
 import { de } from './de';
-
+import { en } from './en';
+import { es, type Textos, type TextosParciales } from './es';
+import { fr } from './fr';
+import { hi } from './hi';
+import { id } from './id';
 import { it } from './it';
-
+import { ja } from './ja';
+import { ko } from './ko';
+import { nl } from './nl';
+import { pl } from './pl';
+import { pt } from './pt';
 import { ru } from './ru';
-
+import { tr } from './tr';
+import { uk } from './uk';
 import { zh } from './zh';
 
-import { ja } from './ja';
+export type { Textos, TextosParciales } from './es';
 
-import { ko } from './ko';
-
-import { hi } from './hi';
-
-import { tr } from './tr';
-
-import { id } from './id';
-
-import { pl } from './pl';
-
-import { nl } from './nl';
-
-import { uk } from './uk';
-
-export type { Textos } from './es';
-
-export { IDIOMAS, idiomaDeLocale, type InfoIdioma } from '../../shared/idiomas';
+export {
+  IDIOMAS,
+  IDIOMAS_BASE,
+  esIdiomaBase,
+  idiomaDeLocale,
+  type InfoIdioma,
+} from '../../shared/idiomas';
 export type Idioma = IdiomaUi;
 
-export const diccionarios: Record<IdiomaUi, Textos> = { es, en, pt, fr, de, it, ru, zh, ja, ko, hi, tr, id, pl, nl, uk };
+const esObjeto = (v: unknown): v is Record<string, unknown> =>
+  v !== null && typeof v === 'object' && !Array.isArray(v);
+
+/**
+ * Diccionario completo a partir de uno parcial: cada clave que falte en `parcial` sale de `base`
+ * (el inglés). Las claves que `base` no conoce se descartan; los arreglos y las funciones se
+ * toman enteros, sin mezclar. Devuelve un objeto nuevo (no toca `parcial` ni `base`).
+ */
+export function completar<T extends object>(base: T, parcial: unknown): T {
+  const res: Record<string, unknown> = {};
+  const p = esObjeto(parcial) ? parcial : {};
+  for (const [k, vBase] of Object.entries(base)) {
+    const v = p[k];
+    if (esObjeto(vBase)) res[k] = completar(vBase, v);
+    else res[k] = v !== undefined && typeof v === typeof vBase ? v : vBase;
+  }
+  return res as T;
+}
+
+/**
+ * Diccionarios tal como se escribieron: es, en, pt y fr completos (el compilador lo exige) y los
+ * demás idiomas con `TextosParciales`, que pueden dejar claves sin traducir.
+ */
+export const fuentes: Record<IdiomaUi, TextosParciales> = {
+  es,
+  en,
+  pt,
+  fr,
+  de,
+  it,
+  ru,
+  zh,
+  ja,
+  ko,
+  hi,
+  tr,
+  id,
+  pl,
+  nl,
+  uk,
+};
+
+/**
+ * Diccionarios listos para usar. Los cuatro idiomas base se usan tal cual; los demás se completan
+ * una sola vez al cargar con el inglés, así una clave sin traducir muestra el texto en inglés.
+ */
+export const diccionarios: Record<IdiomaUi, Textos> = Object.fromEntries(
+  IDIOMAS_UI.map((i) => [i, esIdiomaBase(i) ? fuentes[i] : completar(en, fuentes[i])]),
+) as Record<IdiomaUi, Textos>;
 
 /** Idioma activo (lo fija la tienda de preferencias). */
 export const idioma = ref<Idioma>('es');

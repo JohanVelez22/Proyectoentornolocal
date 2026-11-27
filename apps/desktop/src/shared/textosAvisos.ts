@@ -2714,7 +2714,10 @@ const NL: Diccionario = {
       titulo: 'Een certificaat verloopt binnenkort',
       cuerpo: 'Open WolfCore Dev voor meer details.',
     },
-    'tunel-caido': { titulo: 'Een tunnel is verbroken', cuerpo: 'Open WolfCore Dev voor meer details.' },
+    'tunel-caido': {
+      titulo: 'Een tunnel is verbroken',
+      cuerpo: 'Open WolfCore Dev voor meer details.',
+    },
     'proceso-error': {
       titulo: 'Een proces is gestopt met een fout',
       cuerpo: 'Open WolfCore Dev voor meer details.',
@@ -2921,7 +2924,24 @@ const UK: Diccionario = {
   },
 };
 
-const DICCIONARIOS = { es: ES, en: EN, pt: PT, fr: FR, de: DE, it: IT, ru: RU, zh: ZH, ja: JA, ko: KO, hi: HI, tr: TR, id: ID, pl: PL, nl: NL, uk: UK } satisfies Record<IdiomaUi, Diccionario>;
+const DICCIONARIOS = {
+  es: ES,
+  en: EN,
+  pt: PT,
+  fr: FR,
+  de: DE,
+  it: IT,
+  ru: RU,
+  zh: ZH,
+  ja: JA,
+  ko: KO,
+  hi: HI,
+  tr: TR,
+  id: ID,
+  pl: PL,
+  nl: NL,
+  uk: UK,
+} satisfies Record<IdiomaUi, Diccionario>;
 
 export const CODIGOS_AVISO = Object.keys(ES.porCodigo);
 
@@ -2950,7 +2970,8 @@ export function textoAviso(
   a: Pick<Aviso, 'tipo' | 'codigo' | 'datos'>,
 ): TextoAviso {
   const dic = DICCIONARIOS[idioma ?? 'es'];
-  const plantilla = dic.porCodigo[a.codigo];
+  // Un aviso sin texto en ese idioma sale en inglés (los idiomas que no son es, en, pt ni fr pueden ir incompletos).
+  const plantilla = dic.porCodigo[a.codigo] ?? EN.porCodigo[a.codigo];
   if (plantilla) return plantilla(a.datos);
   return dic.porTipo[a.tipo] ?? { titulo: 'WolfCore Dev', cuerpo: '' };
 }

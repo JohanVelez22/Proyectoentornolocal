@@ -134,7 +134,8 @@ describe('textos del diálogo de WOLFCORE_DATOS', () => {
     expect(idiomaDeLocale('es-CO')).toBe('es');
     expect(idiomaDeLocale('pt-BR')).toBe('pt');
     expect(idiomaDeLocale('fr-FR')).toBe('fr');
-    expect(idiomaDeLocale('de-DE')).toBe('en');
+    expect(idiomaDeLocale('de-DE')).toBe('de');
+    expect(idiomaDeLocale('vi-VN')).toBe('en');
     for (const i of ['es', 'en', 'pt', 'fr'] as const) {
       expect(textosMain(i).carpetaDatosInvalida).toContain('WOLFCORE_DATOS');
       expect(textosMain(i).carpetaDatosAislada.length).toBeGreaterThan(10);
