@@ -83,7 +83,12 @@ export class ClienteOllama {
   }
 
   private validar(nombre: string): void {
-    if (!NOMBRE_VALIDO.test(nombre)) {
+    // Los tramos `.` y `..` no son nombres de modelo y, en la ruta del registro, la recorrerían.
+    const sinPuntos = nombre
+      .split(':')[0]!
+      .split('/')
+      .every((t) => t !== '.' && t !== '..');
+    if (!NOMBRE_VALIDO.test(nombre) || !sinPuntos) {
       throw new ErrorOllama(
         'Nombre de modelo no válido. Use letras, números y . _ : / - (por ejemplo llama3.2).',
       );
@@ -186,8 +191,9 @@ export class ClienteOllama {
     const dos = nombre.toLowerCase().split(':');
     const tramos = dos[0]!.split('/');
     if (dos.length > 2 || tramos.length > 2 || tramos.some((t) => t === '')) return null;
-    const ruta = tramos.length === 1 ? `library/${tramos[0]}` : tramos.join('/');
-    const url = `${(this.op.registro ?? (() => REGISTRO_POR_DEFECTO))()}/v2/${ruta}/manifests/${dos[1] || 'latest'}`;
+    const codificados = tramos.map((t) => encodeURIComponent(t));
+    const ruta = codificados.length === 1 ? `library/${codificados[0]}` : codificados.join('/');
+    const url = `${(this.op.registro ?? (() => REGISTRO_POR_DEFECTO))()}/v2/${ruta}/manifests/${encodeURIComponent(dos[1] || 'latest')}`;
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), MS_REGISTRO);
     try {

@@ -280,6 +280,36 @@ describe('ClienteOllama.infoDescarga (tamaño y espacio libre antes de descargar
     await expect(c.infoDescarga('../x')).rejects.toThrow('Nombre de modelo no válido');
   });
 
+  it('los tramos . y .. del nombre se rechazan sin consultar el registro (D39, M4)', async () => {
+    const urls: string[] = [];
+    const { c } = cliente(
+      async (url) => {
+        urls.push(url);
+        return json(manifiesto);
+      },
+      { registro: () => 'http://127.0.0.1:1', espacioLibre: async () => 1 },
+    );
+    for (const malo of ['a/..', 'a/.', './a', 'a/..:latest', 'a/../b']) {
+      await expect(c.infoDescarga(malo), malo).rejects.toThrow('Nombre de modelo no válido');
+    }
+    expect(urls).toEqual([]);
+  });
+
+  it('cada tramo de la ruta del registro va codificado', async () => {
+    const urls: string[] = [];
+    const { c } = cliente(
+      async (url) => {
+        urls.push(url);
+        return json(manifiesto);
+      },
+      { registro: () => 'http://127.0.0.1:1', espacioLibre: async () => 1 },
+    );
+    await c.infoDescarga('qwen/qwen2.5:0.5b');
+    expect(urls[0]).toBe(
+      `http://127.0.0.1:1/v2/${encodeURIComponent('qwen')}/${encodeURIComponent('qwen2.5')}/manifests/${encodeURIComponent('0.5b')}`,
+    );
+  });
+
   it('no llama a /api/pull ni descarga nada', async () => {
     const urls: string[] = [];
     const { c } = cliente(
