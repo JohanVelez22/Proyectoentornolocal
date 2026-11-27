@@ -35,6 +35,7 @@ export interface DepsHttps {
     | 'certificadoInstalado'
     | 'duenosDePuertos'
     | 'descendientes'
+    | 'rutaProceso'
   >;
   /** PID de nuestro nginx (si corre): un puerto suyo (o de sus workers) cuenta como libre. */
   pidNginx?: () => number | null;
@@ -297,25 +298,47 @@ export class GestorHttps {
     }
   }
 
-  /** Programa ajeno que ocupa el puerto HTTPS, o null si está libre o lo usa nuestro nginx. */
-  async ocupantePuerto(puerto: number): Promise<{ pid: number; nombre: string } | null> {
+  /**
+   * Quién tiene el puerto HTTPS: nadie (`libre`), nuestro nginx (`propio`: el maestro, un proceso
+   * cuyo ejecutable está bajo nuestro `bin/nginx` o un worker hijo del maestro), otro programa
+   * (`ajeno`) o `desconocido` (no se pudo averiguar de quién es: no se concluye «ajeno»).
+   */
+  async estadoPuerto(puerto: number): Promise<{
+    estado: 'libre' | 'propio' | 'ajeno' | 'desconocido';
+    dueno?: { pid: number; nombre: string };
+  }> {
     const dueno = (await this.d.plataforma.duenosDePuertos([puerto])).get(puerto);
-    if (!dueno) return null;
+    if (!dueno) return { estado: 'libre' };
     const maestro = this.d.pidNginx?.() ?? null;
-    if (maestro !== null) {
-      if (maestro === dueno.pid) return null;
-      // En Windows el socket que escucha suele figurar a nombre del worker (hijo del maestro):
-      // sin esto, al volver a aplicar, el 443 de nuestro propio nginx parecía ocupado por otro
-      // programa y los sitios quedaban en "HTTPS pendiente" (y volvían en la siguiente vez).
-      const hijos = this.d.plataforma.descendientes
-        ? ((await this.d.plataforma.descendientes([maestro]).catch(() => null))?.get(maestro) ?? [])
-        : [];
-      if (hijos.includes(dueno.pid)) return null;
+    if (maestro !== null && maestro === dueno.pid) return { estado: 'propio', dueno };
+    // Un nginx.exe de nuestra carpeta es nuestro, aunque la lista de hijos falle o esté vieja.
+    const ruta = this.d.plataforma.rutaProceso
+      ? await this.d.plataforma.rutaProceso(dueno.pid).catch(() => null)
+      : null;
+    if (ruta && this.esDeNuestroNginx(ruta)) return { estado: 'propio', dueno };
+    if (maestro !== null && this.d.plataforma.descendientes) {
+      // En Windows el socket que escucha suele figurar a nombre del worker (hijo del maestro).
+      const hijos = await this.d.plataforma.descendientes([maestro]).catch(() => null);
+      // Sin la lista no se sabe: es peor quitar el HTTPS de todos los sitios que dejarlo.
+      if (hijos === null) return { estado: 'desconocido', dueno };
+      if ((hijos.get(maestro) ?? []).includes(dueno.pid)) return { estado: 'propio', dueno };
     }
-    return { pid: dueno.pid, nombre: dueno.nombre };
+    return { estado: 'ajeno', dueno };
   }
 
-  /** El puerto HTTPS sirve si está libre o lo usa nuestro propio nginx. */
+  private esDeNuestroNginx(ruta: string): boolean {
+    const norm = (t: string): string => path.resolve(t).replaceAll('\\', '/').toLowerCase();
+    const raiz = norm(path.dirname(this.d.rutas.bin('nginx', 'x')));
+    return norm(ruta).startsWith(`${raiz}/`);
+  }
+
+  /** Programa ajeno que ocupa el puerto HTTPS, o null si está libre, lo usa nuestro nginx o no se sabe. */
+  async ocupantePuerto(puerto: number): Promise<{ pid: number; nombre: string } | null> {
+    const r = await this.estadoPuerto(puerto);
+    return r.estado === 'ajeno' && r.dueno ? { pid: r.dueno.pid, nombre: r.dueno.nombre } : null;
+  }
+
+  /** El puerto HTTPS sirve si está libre, lo usa nuestro nginx o no se pudo saber de quién es. */
   async puertoUsable(puerto: number): Promise<boolean> {
     return (await this.ocupantePuerto(puerto)) === null;
   }
