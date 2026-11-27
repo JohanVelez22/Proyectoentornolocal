@@ -34,6 +34,9 @@ El comportamiento al tener varias versiones instaladas depende del tipo de servi
 - **Pool propio por versión (PHP):** cada versión principal encendida corre su propio grupo de procesos `php-cgi`, así un proyecto puede usar PHP 8.3 y otro PHP 8.4 a la vez.
 - **Versión única activa (Nginx, captadores de correo, etc.):** puede instalar varias versiones, pero solo una permanece encendida a la vez.
 - **Lenguajes y herramientas por proyecto (Node.js, Python, Java, .NET, Go, Rust, Bun, Deno, Zig, Kotlin, Dart, Ruby, Maven, Gradle):** no se encienden como servicio; cada proyecto usa la versión que solicita o la marcada como predeterminada. Maven y Gradle se lanzan con un JDK de WolfCore Dev (instale Java desde la lista de servicios).
+  - **Maven y Gradle** se ejecutan con un JDK de WolfCore Dev: si todavía no hay ninguno, la pestaña le avisa (*Instale Java (Temurin) desde la lista de servicios*). Por seguridad, WolfCore Dev lanza Maven directamente y **no lee `.mvn/jvm.config` ni la variable `MAVEN_OPTS`**; si su proyecto las necesita, ejecute Maven desde una terminal.
+  - **Ruby** se instala sin Devkit (MSYS2), sin instalador y sin tocar el PATH ni el registro de Windows. Las gemas con extensiones nativas que no traen binario precompilado necesitan el Devkit, que es un paso manual: abra una terminal desde el proyecto y ejecute `ridk install` (instala MSYS2 y descarga de internet).
+  - Estos lenguajes solo entran al entorno de un proyecto cuando lo pide un archivo suyo (por ejemplo `pom.xml`, `build.gradle`, `.csproj`, `go.mod` o `.ruby-version`) o usted lo fija en la tarjeta del proyecto; no se suman al PATH de todos los proyectos.
 
 Para definir qué versión usarán los proyectos nuevos y las recetas:
 
