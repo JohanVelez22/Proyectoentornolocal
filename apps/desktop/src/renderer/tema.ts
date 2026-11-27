@@ -23,6 +23,21 @@ const objetivosDeClic = {
   Switch: { railHeightMedium: '24px', railWidthMedium: '44px' },
 } as const;
 
+/**
+ * Pasos en espera o terminados (Nuevo proyecto, D54a I13): Naive UI les da el color de «desactivado»
+ * (1,8:1); aquí usan el texto terciario del tema, que ya cumple AA.
+ */
+function pasosLegibles(texto: string): Record<string, string> {
+  return {
+    headerTextColorWait: texto,
+    headerTextColorFinish: texto,
+    descriptionTextColorWait: texto,
+    descriptionTextColorFinish: texto,
+    indicatorTextColorWait: texto,
+    indicatorBorderColorWait: texto,
+  };
+}
+
 /** Acentos que se ofrecen en Ajustes; `null` en la configuración es el índigo de siempre. */
 export const ACENTOS = [
   { id: 'indigo', claro: '#4f5bd5', oscuro: '#8b93ff' },
@@ -134,6 +149,7 @@ export function temaDe(oscuro: boolean, acento: string | null): GlobalThemeOverr
       Drawer: objetivosDeClic.Drawer,
       Dialog: objetivosDeClic.Dialog,
       Switch: objetivosDeClic.Switch,
+      Steps: pasosLegibles('rgba(255, 255, 255, 0.68)'),
     };
   }
   return {
@@ -176,6 +192,7 @@ export function temaDe(oscuro: boolean, acento: string | null): GlobalThemeOverr
     Drawer: objetivosDeClic.Drawer,
     Dialog: objetivosDeClic.Dialog,
     Switch: objetivosDeClic.Switch,
+    Steps: pasosLegibles('#59606a'),
   };
 }
 

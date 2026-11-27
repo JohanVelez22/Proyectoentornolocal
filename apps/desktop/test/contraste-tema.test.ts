@@ -72,6 +72,32 @@ describe('el tema da contraste AA (4.5:1) a los textos secundarios de Naive UI',
   });
 });
 
+describe('los pasos pendientes y hechos de Naive UI llegan a AA (D54a, I13)', () => {
+  const casos: [string, ReturnType<typeof temaDe>, string[]][] = [
+    ['claro', temaDe(false, null), ['#ffffff', '#f5f6f8', '#fbfbfc']],
+    ['oscuro', temaDe(true, null), ['#121317', '#1a1b21', '#2a2c34']],
+  ];
+  for (const [nombre, tema, fondos] of casos) {
+    it(`${nombre}: título, descripción e indicador de un paso en espera o terminado`, () => {
+      for (const clave of [
+        'headerTextColorWait',
+        'headerTextColorFinish',
+        'descriptionTextColorWait',
+        'descriptionTextColorFinish',
+        'indicatorTextColorWait',
+      ] as const) {
+        const c = String(tema.Steps![clave]);
+        for (const fondo of fondos) {
+          expect(
+            contraste(sobre(c, fondo), rgb(fondo)),
+            `${clave} ${c} sobre ${fondo}`,
+          ).toBeGreaterThanOrEqual(AA);
+        }
+      }
+    });
+  }
+});
+
 describe('el texto sobre el acento (botones principales) llega a AA con cada acento', () => {
   it.each(ACENTOS.flatMap((a) => [a.claro, a.oscuro]))('sobre %s', (fondo) => {
     expect(contrasteHex(textoSobre(fondo), fondo)).toBeGreaterThanOrEqual(AA);

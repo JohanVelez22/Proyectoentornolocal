@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { CheckmarkCircle } from '@vicons/ionicons5';
+import { NIcon } from 'naive-ui';
 import { textos } from '../i18n';
 import { TIPOS_PROYECTO } from '../utilidades/nuevoProyecto';
 import type { TipoGenerador } from '../../shared/api';
@@ -22,6 +24,9 @@ const t = textos.nuevoProyecto;
       :aria-checked="x.id === tipo"
       @click="emit('elegir', x.id)"
     >
+      <NIcon v-if="x.id === tipo" class="marca" :size="16" aria-hidden="true"
+        ><CheckmarkCircle
+      /></NIcon>
       <strong>{{ t.tipos[x.id].nombre }}</strong>
       <span>{{ t.tipos[x.id].descripcion }}</span>
     </button>
@@ -35,6 +40,7 @@ const t = textos.nuevoProyecto;
   gap: 10px;
 }
 .tipo {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -43,7 +49,7 @@ const t = textos.nuevoProyecto;
   font: inherit;
   color: inherit;
   cursor: pointer;
-  border-radius: 10px;
+  border-radius: var(--wc-radio-md);
   border: 1px solid rgba(128, 128, 128, 0.25);
   background: rgba(128, 128, 128, 0.045);
 }
@@ -51,18 +57,21 @@ const t = textos.nuevoProyecto;
   border-color: rgba(128, 128, 128, 0.5);
 }
 .tipo.activo {
-  border-color: var(--texto-ok, #16a34a);
-  box-shadow: 0 0 0 1px var(--texto-ok, #16a34a);
+  border-color: var(--acento);
+  box-shadow: 0 0 0 1px var(--acento);
+  background: rgba(var(--acento-rgb), 0.06);
 }
-.tipo:focus-visible {
-  outline: 2px solid var(--texto-ok, #16a34a);
-  outline-offset: 2px;
+.marca {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  color: var(--acento);
 }
 .tipo strong {
-  font-size: 13.5px;
+  font-size: var(--wc-texto-sm);
 }
 .tipo span {
-  font-size: 12px;
+  font-size: var(--wc-texto-xs);
   opacity: 0.76;
 }
 </style>
