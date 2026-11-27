@@ -9,7 +9,7 @@ import type { Rutas } from '../rutas';
 import { sitioPublicable } from '../sitios/confianza';
 import type { GestorSitios } from '../sitios/sitios';
 import type { UrlBase } from '../sitios/urlbase';
-import type { Config, EstadoTunel, Sitio } from '../tipos';
+import { SitioSchema, type Config, type EstadoTunel, type Sitio } from '../tipos';
 import { nombreEjecutable } from '../plataforma/sistema';
 import type { Ejecutor, Lanzador, PlataformaCompleta } from '../plataforma/tipos';
 import { enmascararSecretos } from '../patronesSecretos';
@@ -71,6 +71,18 @@ export interface OpcionesAbrirTunel {
   tunelConfirmado?: { proveedor: string; nombre?: string; dominio?: string; modo?: string };
 }
 const MSG_CERRADO = 'El túnel se cerró. Use Renovar.';
+/**
+ * Id del «sitio» de un túnel hacia un puerto cualquiera (Compartir, D52). Lleva un guion bajo, que
+ * un dominio no tiene: no choca con ningún sitio. Con el prefijo `tunel-`, `restaurar()` detiene
+ * como huérfano el proceso que una caída de la app deje vivo.
+ */
+const ID_EFIMERO = 'compartir_efimero';
+
+/** Un túnel abierto con `abrirPuerto`. */
+export interface TunelPuerto {
+  url: string;
+  cerrar(): Promise<void>;
+}
 
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -99,6 +111,9 @@ export class Tuneles {
   private readonly secretosVivos = new Map<string, string[]>();
   /** Cuenta y túneles de Cloudflare con nombre (solo si hay plataforma y ejecutor). */
   readonly cloudflareNombre: CloudflareNombre | null;
+
+  /** El túnel de Compartir (solo uno a la vez). */
+  private efimero: { cerrando: boolean; alCaer: () => void } | null = null;
 
   private secretos: (() => SecretosTunel | null) | undefined;
   private phpCli: (() => Promise<string | null>) | undefined;
@@ -148,6 +163,15 @@ export class Tuneles {
       this.proveedores.set('tailscale', this.tailscale);
     }
     d.supervisor.alSalir((id) => {
+      if (id === PREFIJO + ID_EFIMERO) {
+        const e = this.efimero;
+        if (e && !e.cerrando) {
+          this.efimero = null;
+          void this.limpiarProveedores(ID_EFIMERO);
+          e.alCaer();
+        }
+        return;
+      }
       void this.alSalirProceso(id);
     });
   }
@@ -182,6 +206,121 @@ export class Tuneles {
     });
     this.abriendo.set(sitioId, p);
     return p;
+  }
+
+  /**
+   * Abre un túnel hacia `127.0.0.1:puerto` que no es de ningún sitio (Compartir, D52), con
+   * Cloudflare rápido o ngrok. No toca sitios, `.env` ni el estado de los túneles de sitios. La
+   * confirmación de exposición la exige `Compartir` antes de llamar aquí. `alCaer` se llama si el
+   * proceso muere por su cuenta; `cerrar()` lo detiene y borra lo temporal (idempotente).
+   */
+  async abrirPuerto(
+    puerto: number,
+    idProveedor: 'cloudflare-rapido' | 'ngrok',
+    alCaer: () => void,
+  ): Promise<TunelPuerto> {
+    if (!Number.isInteger(puerto) || puerto < 1 || puerto > 65535) {
+      throw new ErrorWolf('compartir.fallo', 'Puerto no válido.');
+    }
+    if (this.efimero) throw new ErrorWolf('compartir.ocupado', 'Ya hay algo compartido.');
+    const proveedor = this.proveedores.get(idProveedor);
+    if (!proveedor) {
+      throw new ErrorWolf(
+        'tuneles.proveedor_no_disponible',
+        `El proveedor de túnel ${idProveedor} no está disponible.`,
+        { proveedor: idProveedor },
+      );
+    }
+    const sitio = SitioSchema.parse({
+      id: ID_EFIMERO,
+      nombre: 'Compartir',
+      dominio: '127.0.0.1',
+      carpeta: '.',
+      tipo: 'estatico',
+    });
+    const disp = await proveedor.disponible(sitio);
+    if (!disp.ok) {
+      throw new ErrorWolf(
+        (disp.codigo ?? 'tuneles.proveedor_no_disponible') as 'tuneles.proveedor_no_disponible',
+        `El túnel (${idProveedor}) no está disponible: ${disp.codigo ?? 'sin motivo'}.`,
+        { proveedor: idProveedor, ...disp.datos },
+      );
+    }
+    const cloudflared = proveedor.sinCloudflared ? '' : await this.rutaCloudflared();
+    const id = PREFIJO + ID_EFIMERO;
+    const logCloudflared = this.d.rutas.logs('tuneles', `${id}.log`);
+    const logSalida = this.d.rutas.logs('tuneles', `${id}.salida.log`);
+    mkdirSync(path.dirname(logCloudflared), { recursive: true });
+    rmSync(logCloudflared, { force: true });
+    rmSync(logSalida, { force: true });
+    if (this.efimero) throw new ErrorWolf('compartir.ocupado', 'Ya hay algo compartido.');
+    const estado = { cerrando: false, alCaer };
+    this.efimero = estado;
+    const detener = async (): Promise<void> => {
+      estado.cerrando = true;
+      try {
+        await this.d.supervisor.detener(id);
+      } finally {
+        if (this.efimero === estado) this.efimero = null;
+        await this.limpiarProveedores(ID_EFIMERO);
+      }
+    };
+    try {
+      const l = await proveedor.abrir(sitio, { cloudflared, puertoNginx: puerto, logCloudflared });
+      if (l.secretos?.length) this.secretosVivos.set(ID_EFIMERO, l.secretos);
+      await this.d.supervisor.iniciar({
+        id,
+        comando: l.comando,
+        args: l.args,
+        ...(l.env ? { env: l.env } : {}),
+        ...(l.envSecreto ? { envSecreto: l.envSecreto } : {}),
+        quitarEntorno: l.quitarEntorno ?? ['TUNNEL_'],
+        ...(l.cwd ? { cwd: l.cwd } : {}),
+        log: logSalida,
+        reiniciar: false,
+      });
+      const limite = Date.now() + this.esperaMs;
+      for (;;) {
+        // Se cerró (o cayó) mientras esperaba la URL.
+        if (this.efimero !== estado) {
+          throw new ErrorWolf('compartir.tunel_cerrado', 'El túnel se cerró.');
+        }
+        const texto = [leerTexto(logCloudflared), leerTexto(logSalida)].join('\n');
+        const url = proveedor.url(sitio, texto);
+        if (url) {
+          await proveedor.listo?.(sitio).catch(() => undefined);
+          return { url, cerrar: detener };
+        }
+        const problema = proveedor.problema?.(sitio, texto);
+        if (problema) {
+          throw new ErrorWolf(
+            problema.codigo as 'tuneles.ngrok_desactualizado',
+            'El túnel no se pudo abrir.',
+            {
+              ...problema.datos,
+            },
+          );
+        }
+        if (Date.now() >= limite) {
+          const segundos = Math.round(this.esperaMs / 1000);
+          throw new ErrorWolf(
+            'compartir.tunel_sin_url',
+            `No apareció la URL del túnel en ${segundos} s.`,
+            {
+              segundos,
+            },
+          );
+        }
+        await dormir(this.intervaloMs);
+      }
+    } catch (e) {
+      const mensaje = this.sinSecretos(ID_EFIMERO, e instanceof Error ? e.message : String(e));
+      await detener().catch((x: unknown) => {
+        console.error('No se pudo cerrar el túnel de Compartir:', x);
+      });
+      // El error que sube (IPC) tampoco lleva secretos del túnel.
+      throw e instanceof ErrorWolf ? e : new Error(mensaje);
+    }
   }
 
   cerrar(sitioId: string): Promise<void> {

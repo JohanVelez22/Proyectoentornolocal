@@ -364,6 +364,7 @@ import { ejecutarDiffEnProceso, type EjecutorDiff } from './herramientas/diffCar
 import { DiffCarpetas } from './herramientas/diffCarpetasServicio';
 import { ejecutarUsoDiscoEnProceso, type EjecutorUsoDisco } from './herramientas/usoDisco';
 import { UsoDisco } from './herramientas/usoDiscoServicio';
+import { Compartir } from './compartir/compartir';
 import { emitirCertificadoLibre } from './herramientas/certificadosLibres';
 import { entornoSistema, PLAZO_VERSION_MS, type EntornoSistema } from './herramientas/entorno';
 import { muestraSistemaWindows } from './plataforma/win';
@@ -4084,6 +4085,25 @@ export class Nucleo {
     }));
   }
 
+  private compartirServ?: Compartir;
+
+  /**
+   * Compartir carpeta o archivo (D52): servidor estático de solo lectura detrás de un túnel de
+   * Cloudflare rápido o ngrok, con caducidad obligatoria. La ruta sale del diálogo nativo (lo
+   * comprueba el IPC); el MCP y la CLI no lo exponen.
+   */
+  get compartir(): Compartir {
+    return (this.compartirServ ??= new Compartir({
+      tunel: (puerto, proveedor, alCaer) => this.tuneles.abrirPuerto(puerto, proveedor, alCaer),
+      carpetasPropias: () => this.carpetasPropias(),
+      carpetaInicio: () => this.plataforma.carpetaInicio(),
+      carpetasSistema: () => this.plataforma.carpetasDelSistema(),
+      sitios: () => this.sitios.listar(),
+      alEstado: (e) => this.eventos.emit('compartir:estado', e),
+      alAcceso: (a) => this.eventos.emit('compartir:acceso', a),
+    }));
+  }
+
   /** Certificado firmado por la CA local; devuelve los PEM (no escribe nada). */
   emitirCertificadoLibre(dominios: string[]): Promise<{ certPem: string; clavePem: string }> {
     return emitirCertificadoLibre(dominios, { rutas: this.rutas });
@@ -5063,6 +5083,7 @@ export class Nucleo {
     // Si no, el arranque automático aún en curso podría encender algo después de apagarlo todo.
     await this.esperarArranque();
     const errores = await this.tuneles.cerrarTodos();
+    await this.compartirServ?.detener().catch((e: unknown) => errores.push(e));
     await this.servicios.detenerTodo();
     if (errores.length) throw errores[0];
   }
@@ -5209,6 +5230,8 @@ export class Nucleo {
     this.busquedasEnCurso?.cancelarTodas();
     this.diffCarpetasServ?.cancelar();
     this.usoDiscoServ?.cancelar();
+    // Lo compartido por túnel nunca sobrevive a la app: cierra el servidor y el túnel.
+    await this.compartirServ?.cerrar().catch(() => undefined);
     // Un UAC abierto no debe sobrevivir a la app: se corta la PowerShell que lo espera.
     this.hosts.cancelarElevacion();
     if (this.temporizador) clearInterval(this.temporizador);

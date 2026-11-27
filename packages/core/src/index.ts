@@ -170,6 +170,8 @@ export * from './herramientas/diffCarpetas';
 export * from './herramientas/diffCarpetasServicio';
 export * from './herramientas/usoDisco';
 export * from './herramientas/usoDiscoServicio';
+export * from './compartir/compartir';
+export type { AccesoCompartido } from './compartir/servidor';
 export * from './herramientas/imagenes';
 export * from './herramientas/pdf';
 export * from './herramientas/zip';
