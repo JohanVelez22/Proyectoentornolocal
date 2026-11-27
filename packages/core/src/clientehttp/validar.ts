@@ -46,11 +46,13 @@ function pares(v: unknown, campo: string): ParHttp[] {
   return v.map((p) => {
     if (!esObjeto(p)) throw invalido(campo);
     const r = ref(p['ref'], campo);
+    const valor = texto(p['valor'] ?? '', campo, MAX_CUERPO_PETICION);
     return {
       clave: texto(p['clave'], campo, 256),
-      valor: texto(p['valor'] ?? '', campo, MAX_CUERPO_PETICION),
+      valor,
       activo: p['activo'] !== false,
       ...(r ? { ref: r } : {}),
+      ...(p['faltante'] === true && valor === '' && !r ? { faltante: true } : {}),
     };
   });
 }

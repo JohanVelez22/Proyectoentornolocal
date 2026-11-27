@@ -28,6 +28,8 @@ export interface ParHttp {
   valor: string;
   activo: boolean;
   ref?: string;
+  /** Se perdió su secreto (ref ajena, copia o historial): hay que escribirlo antes de enviar. */
+  faltante?: boolean;
 }
 
 export type CuerpoHttp =

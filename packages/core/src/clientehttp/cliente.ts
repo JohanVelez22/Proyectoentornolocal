@@ -45,6 +45,16 @@ export interface DepsClienteHttp {
   /** Dominios (y alias) de los sitios de WolfCore, además de `*.test`. */
   dominiosWolf: () => Promise<string[]>;
   ahora?: () => Date;
+  /** Escritura de los archivos de datos (inyectable en pruebas); por defecto, atómica. */
+  escribir?: (destino: string, datos: Buffer) => Promise<void>;
+  /** Aviso de un archivo ignorado (p. ej. por tamaño); por defecto, la consola del proceso. */
+  avisar?: (mensaje: string) => void;
+}
+
+/** Lo que una operación creó o sobrescribió en el almacén, para deshacerla si falla. */
+class Transaccion {
+  readonly creadas: string[] = [];
+  readonly previos = new Map<string, string | null>();
 }
 
 interface ArchivoColeccion {
@@ -78,6 +88,48 @@ function refsDe(p: PeticionHttp): string[] {
 const refsDeEntorno = (e: EntornoHttp): string[] =>
   e.variables.flatMap((v) => (v.ref ? [v.ref] : []));
 
+/**
+ * Descarta las refs que no están en `propias` (las de otra petición o entorno) y los `***` del
+ * historial puestos en una fila de nombre secreto. Una fila que se queda sin valor ni ref queda
+ * marcada como `faltante`: el envío se bloquea hasta que se escriba. Nunca se guarda `***`.
+ */
+export function sanearRefs(p: PeticionHttp, propias: ReadonlySet<string>): PeticionHttp {
+  const par = (x: ParHttp): ParHttp => {
+    let ref = x.ref;
+    let valor = x.valor;
+    let faltante = x.faltante === true;
+    if (ref !== undefined && !propias.has(ref)) {
+      ref = undefined;
+      if (valor === '') faltante = true;
+    }
+    if (ref === undefined && valor === MASCARA && esNombreSecreto(x.clave)) {
+      valor = '';
+      faltante = true;
+    }
+    return {
+      clave: x.clave,
+      valor,
+      activo: x.activo,
+      ...(ref !== undefined ? { ref } : {}),
+      ...(faltante && valor === '' && ref === undefined ? { faltante: true } : {}),
+    };
+  };
+  const c = p.cuerpo;
+  let auth = p.auth;
+  if (auth.tipo !== 'ninguna' && auth.ref !== undefined && !propias.has(auth.ref)) {
+    const copia: Record<string, unknown> = { ...auth };
+    delete copia['ref'];
+    auth = copia as unknown as AuthHttp;
+  }
+  return {
+    ...p,
+    params: p.params.map(par),
+    cabeceras: p.cabeceras.map(par),
+    cuerpo: c.tipo === 'form' || c.tipo === 'multipart' ? { ...c, campos: c.campos.map(par) } : c,
+    auth,
+  };
+}
+
 /** Cliente HTTP: colecciones, entornos, historial y envío. Solo vive en el proceso principal. */
 export class ClienteHttp {
   private cola: Promise<unknown> = Promise.resolve();
@@ -108,7 +160,8 @@ export class ClienteHttp {
 
   private async escribirJson(nombre: string, datos: unknown): Promise<void> {
     await mkdir(this.d.carpeta, { recursive: true });
-    await escribirAtomico(this.ruta(nombre), Buffer.from(JSON.stringify(datos, null, 2), 'utf8'));
+    const escribir = this.d.escribir ?? ((d: string, b: Buffer) => escribirAtomico(d, b));
+    await escribir(this.ruta(nombre), Buffer.from(JSON.stringify(datos, null, 2), 'utf8'));
   }
 
   private async coleccion(): Promise<PeticionHttp[]> {
@@ -173,7 +226,20 @@ export class ClienteHttp {
 
   // ---- Secretos ----
 
-  private async guardarSecreto(ref: string, valor: string, creadas: string[]): Promise<void> {
+  private async guardarSecreto(
+    ref: string,
+    valor: string,
+    tx: Transaccion,
+    propias: ReadonlySet<string>,
+  ): Promise<void> {
+    if (propias.has(ref)) {
+      // Se sobrescribe un secreto que ya existía: se recuerda el anterior por si algo falla.
+      if (!tx.previos.has(ref)) {
+        tx.previos.set(ref, await this.d.secretos.leer(ref).catch(() => null));
+      }
+    } else {
+      tx.creadas.push(ref);
+    }
     try {
       await this.d.secretos.guardar(ref, valor);
     } catch {
@@ -182,32 +248,60 @@ export class ClienteHttp {
         'No se pudo guardar un valor secreto (formato no válido o cifrado del sistema no disponible).',
       );
     }
-    creadas.push(ref);
   }
 
-  private async deshacer(creadas: string[]): Promise<void> {
-    await Promise.all(creadas.map((r) => this.d.secretos.borrar(r).catch(() => undefined)));
+  /** Deshace una operación a medias: borra lo creado y restaura lo sobrescrito. */
+  private async deshacer(tx: Transaccion): Promise<void> {
+    await Promise.all(tx.creadas.map((r) => this.d.secretos.borrar(r).catch(() => undefined)));
+    for (const [ref, previo] of tx.previos) {
+      if (previo !== null) await this.d.secretos.guardar(ref, previo).catch(() => undefined);
+    }
   }
 
-  /** Borra los secretos que dejaron de tener dueño tras un cambio. */
-  private async soltar(antes: string[], despues: string[]): Promise<void> {
-    const quedan = new Set(despues);
+  /** Todas las refs que hoy pertenecen a algo guardado. */
+  private async refsGuardadas(): Promise<Set<string>> {
+    const [coleccion, e] = await Promise.all([this.coleccion(), this.entornos()]);
+    return new Set([...coleccion.flatMap(refsDe), ...e.entornos.flatMap(refsDeEntorno)]);
+  }
+
+  /** Borra los secretos de `antes` que ya no pertenecen a nada guardado. */
+  private async soltar(antes: string[]): Promise<void> {
+    const vivas = await this.refsGuardadas();
     await Promise.all(
       [...new Set(antes)]
-        .filter((r) => !quedan.has(r))
+        .filter((r) => !vivas.has(r))
         .map((r) => this.d.secretos.borrar(r).catch(() => undefined)),
     );
   }
 
-  /** Mueve los valores secretos en línea al almacén; la petición solo conserva `ref`. */
-  private async sellar(p: PeticionHttp, creadas: string[]): Promise<PeticionHttp> {
+  /** Refs que ya son de la petición guardada con ese id (ninguna si no existe o no tiene id). */
+  private async refsDeLaPeticion(id: string): Promise<Set<string>> {
+    if (!id) return new Set();
+    const x = (await this.coleccion()).find((p) => p.id === id);
+    return new Set(x ? refsDe(x) : []);
+  }
+
+  /**
+   * Mueve los valores secretos en línea al almacén; la petición solo conserva `ref`. Las refs que
+   * no son de esta petición ya se descartaron (`sanearRefs`).
+   */
+  private async sellar(
+    p: PeticionHttp,
+    tx: Transaccion,
+    propias: ReadonlySet<string>,
+  ): Promise<PeticionHttp> {
     const par = async (x: ParHttp): Promise<ParHttp> => {
       const secreto =
         x.valor !== '' &&
         (x.ref !== undefined || (esNombreSecreto(x.clave) && !esSoloVariables(x.valor)));
-      if (!secreto) return x;
+      if (!secreto) {
+        if (x.faltante && x.valor === '' && x.ref === undefined) return x;
+        const { faltante: _f, ...resto } = x;
+        void _f;
+        return resto;
+      }
       const ref = x.ref ?? refNueva();
-      await this.guardarSecreto(ref, x.valor, creadas);
+      await this.guardarSecreto(ref, x.valor, tx, propias);
       return { clave: x.clave, valor: '', activo: x.activo, ref };
     };
     const pares = (l: ParHttp[]): Promise<ParHttp[]> => Promise.all(l.map(par));
@@ -215,7 +309,7 @@ export class ClienteHttp {
     let auth: AuthHttp = a;
     if (a.tipo !== 'ninguna' && a.valor !== undefined) {
       const ref = a.ref ?? refNueva();
-      await this.guardarSecreto(ref, a.valor, creadas);
+      await this.guardarSecreto(ref, a.valor, tx, propias);
       const { valor: _v, ...resto } = a;
       void _v;
       auth = { ...resto, ref } as AuthHttp;
@@ -247,25 +341,24 @@ export class ClienteHttp {
       if (i < 0 && lista.length >= MAX_COLECCION_HTTP) {
         throw new ErrorWolf('clientehttp.limite', 'Se alcanzó el máximo de peticiones guardadas.');
       }
-      const creadas: string[] = [];
+      // Solo se aceptan las refs que ya son de esta misma petición guardada.
+      const propias = new Set(i >= 0 ? refsDe(lista[i]!) : []);
+      const limpia = sanearRefs(p, propias);
+      const tx = new Transaccion();
       let sellada: PeticionHttp;
       try {
-        sellada = await this.sellar(p, creadas);
+        sellada = await this.sellar(limpia, tx, propias);
+        sellada = { ...sellada, id: p.id || idNuevo(), nombre: p.nombre.trim() || nombreDe(p) };
+        const antes = i >= 0 ? refsDe(lista[i]!) : [];
+        const nueva = [...lista];
+        if (i >= 0) nueva[i] = sellada;
+        else nueva.push(sellada);
+        await this.escribirJson('coleccion.json', { version: 1, peticiones: nueva });
+        await this.soltar(antes);
       } catch (e) {
-        await this.deshacer(creadas);
+        await this.deshacer(tx);
         throw e;
       }
-      sellada = { ...sellada, id: p.id || idNuevo(), nombre: p.nombre.trim() || nombreDe(p) };
-      const antes = i >= 0 ? refsDe(lista[i]!) : [];
-      if (i >= 0) lista[i] = sellada;
-      else lista.push(sellada);
-      try {
-        await this.escribirJson('coleccion.json', { version: 1, peticiones: lista });
-      } catch (e) {
-        await this.deshacer(creadas);
-        throw e;
-      }
-      await this.soltar(antes, refsDe(sellada));
       return sellada;
     });
   }
@@ -280,7 +373,7 @@ export class ClienteHttp {
         version: 1,
         peticiones: lista.filter((p) => p.id !== i),
       });
-      await this.soltar(refsDe(x), []);
+      await this.soltar(refsDe(x));
     });
   }
 
@@ -294,36 +387,34 @@ export class ClienteHttp {
       if (i < 0 && entornos.length >= MAX_ENTORNOS_HTTP) {
         throw new ErrorWolf('clientehttp.limite', 'Se alcanzó el máximo de entornos.');
       }
-      const creadas: string[] = [];
+      // Solo se aceptan las refs que ya son de este mismo entorno guardado.
+      const propias = new Set(i >= 0 ? refsDeEntorno(entornos[i]!) : []);
+      const tx = new Transaccion();
       let guardado: EntornoHttp;
       try {
         const variables = await Promise.all(
           e.variables.map(async (v) => {
             const secreta = v.secreta || esNombreSecreto(v.nombre);
             if (!secreta) return { nombre: v.nombre, valor: v.valor, secreta: false };
-            let ref = v.ref;
+            let ref = v.ref !== undefined && propias.has(v.ref) ? v.ref : undefined;
             if (v.valor !== '') {
               ref ??= refNueva();
-              await this.guardarSecreto(ref, v.valor, creadas);
+              await this.guardarSecreto(ref, v.valor, tx, propias);
             }
             return { nombre: v.nombre, valor: '', secreta: true, ...(ref ? { ref } : {}) };
           }),
         );
         guardado = { id: e.id || idNuevo(), nombre: e.nombre, variables };
+        const antes = i >= 0 ? refsDeEntorno(entornos[i]!) : [];
+        const nuevos = [...entornos];
+        if (i >= 0) nuevos[i] = guardado;
+        else nuevos.push(guardado);
+        await this.escribirJson('entornos.json', { version: 1, activo, entornos: nuevos });
+        await this.soltar(antes);
       } catch (err) {
-        await this.deshacer(creadas);
+        await this.deshacer(tx);
         throw err;
       }
-      const antes = i >= 0 ? refsDeEntorno(entornos[i]!) : [];
-      if (i >= 0) entornos[i] = guardado;
-      else entornos.push(guardado);
-      try {
-        await this.escribirJson('entornos.json', { version: 1, activo, entornos });
-      } catch (err) {
-        await this.deshacer(creadas);
-        throw err;
-      }
-      await this.soltar(antes, refsDeEntorno(guardado));
       return guardado;
     });
   }
@@ -339,7 +430,7 @@ export class ClienteHttp {
         activo: activo === i ? null : activo,
         entornos: entornos.filter((e) => e.id !== i),
       });
-      await this.soltar(refsDeEntorno(x), []);
+      await this.soltar(refsDeEntorno(x));
     });
   }
 
@@ -445,7 +536,8 @@ export class ClienteHttp {
     entrada: unknown,
     opciones: { entornoId?: unknown; idEnvio?: unknown } = {},
   ): Promise<RespuestaHttp> {
-    const p = peticionValida(entrada);
+    const valida = peticionValida(entrada);
+    const p = sanearRefs(valida, await this.refsDeLaPeticion(valida.id));
     const entorno = this.entornoDe(opciones.entornoId);
     const idEnvio = typeof opciones.idEnvio === 'string' ? opciones.idEnvio.slice(0, 64) : '';
     const resuelta = await componer(p, {
@@ -491,7 +583,8 @@ export class ClienteHttp {
     entornoId: unknown,
     incluirCredenciales: unknown,
   ): Promise<string> {
-    const p = peticionValida(entrada);
+    const valida = peticionValida(entrada);
+    const p = sanearRefs(valida, await this.refsDeLaPeticion(valida.id));
     const incluir = incluirCredenciales === true;
     const resuelta = await componer(p, {
       variables: await this.variables(this.entornoDe(entornoId), incluir),

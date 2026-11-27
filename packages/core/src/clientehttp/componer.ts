@@ -105,6 +105,7 @@ async function lista(
   const r: [string, string][] = [];
   for (const f of filas) {
     if (!f.activo || f.clave.trim() === '') continue;
+    if (f.faltante && f.valor === '' && !f.ref && ctx.incluirSecretos) throw errorSecretoFaltante();
     const clave = sustituir(f.clave, ctx.variables);
     r.push([clave, await valorDe(f.valor, f.ref, esNombreSecreto(clave), ctx, secretos)]);
   }
