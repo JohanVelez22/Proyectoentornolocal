@@ -6,7 +6,7 @@ import type { TextosParciales } from '../es';
  * Las claves pendientes las lista `node scripts/i18n-faltantes.mjs`.
  */
 export const zhExtra: TextosParciales = {
-  app: { lema: '您的本地开发环境，随时待命' },
+  app: { lema: '本地开发环境，随时待命' },
   resumenGlobal: {
     cortoApagado: '全部已关闭',
     cortoEncendidos: (n) => `${n} 个运行中`,

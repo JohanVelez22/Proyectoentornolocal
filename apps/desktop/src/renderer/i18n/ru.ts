@@ -4491,7 +4491,7 @@ export const ru: TextosParciales = {
       uk: 'Українська',
     },
     /** Aviso junto a los idiomas que no son es, en, pt ni fr (la traducción es automática y revisada). */
-    traduccionAutomatica: 'Машинный перевод, проверен',
+    traduccionAutomatica: 'Машинный перевод (проверен)',
     acento: 'Акцентный цвет',
     acentos: {
       indigo: 'Индиго',

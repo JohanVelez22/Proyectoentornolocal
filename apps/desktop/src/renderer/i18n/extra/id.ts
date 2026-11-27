@@ -8,7 +8,7 @@ const plural = (n: number, texto: string): string => `${n} ${texto}`;
  * Las claves pendientes las lista `node scripts/i18n-faltantes.mjs`.
  */
 export const idExtra: TextosParciales = {
-  app: { lema: 'Tumpukan lokal Anda, siap bekerja' },
+  app: { lema: 'Lingkungan lokal Anda, siap dipakai' },
   resumenGlobal: {
     cortoApagado: 'Semua mati',
     cortoEncendidos: (n) => `${n} berjalan`,

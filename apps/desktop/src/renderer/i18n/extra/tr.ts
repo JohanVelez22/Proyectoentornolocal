@@ -9,7 +9,7 @@ const plural = (n: number, tekil: string, cogul: string): string =>
  * Las claves pendientes las lista `node scripts/i18n-faltantes.mjs`.
  */
 export const trExtra: TextosParciales = {
-  app: { lema: 'Yerel yığınınız, çalışmaya hazır' },
+  app: { lema: 'Yerel geliştirme ortamınız, çalışmaya hazır' },
   resumenGlobal: {
     cortoApagado: 'Hepsi kapalı',
     cortoEncendidos: (n) => `${n} çalışıyor`,

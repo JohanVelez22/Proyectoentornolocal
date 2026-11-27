@@ -6,7 +6,7 @@ import type { TextosParciales } from '../es';
  * Las claves pendientes las lista `node scripts/i18n-faltantes.mjs`.
  */
 export const jaExtra: TextosParciales = {
-  app: { lema: 'ローカル環境を、すぐに使える状態に' },
+  app: { lema: 'すぐに使えるローカル環境' },
   resumenGlobal: {
     cortoApagado: 'すべて停止中',
     cortoEncendidos: (n) => `${n} 件が稼働中`,
