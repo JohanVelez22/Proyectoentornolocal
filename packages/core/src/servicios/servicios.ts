@@ -71,6 +71,8 @@ export interface DepsServicios {
    * quitó algo. Se llama antes de generar la configuración de Nginx y si `nginx -t` falla.
    */
   podarRed?: () => Promise<boolean>;
+  /** Pone al día los vhosts de los sitios con la plantilla actual al encender Nginx (D40). */
+  alinearVhosts?: () => Promise<void>;
   /** Servidor FTP del proceso: aparece como servicio "ftp" (herramienta). */
   ftp?: Pick<ServidorFtp, 'estado' | 'iniciar' | 'detener'>;
   /** Procesos de los proyectos: aparecen en los estados y se detienen primero en detenerTodo. */
@@ -172,6 +174,7 @@ export class Servicios {
       d.adminerPrincipal,
       d.phpmyadminPrincipal,
       d.podarRed,
+      d.alinearVhosts,
     );
     this.php = new ServicioPhp(d.rutas, d.plataforma, d.supervisor, d.instalador, d.leerConfig);
     const definiciones = d.definiciones;

@@ -30,7 +30,9 @@ let hostsRes: { ok: true } | { ok: false; motivo: string; comandoManual: string 
 let emitidos: Sitio[][];
 let gestorValidarHook: (() => void) | null = null;
 
-function gestor(avisarVhost?: (a: { sitio: string; modo: string; motivo: string }) => void): GestorSitios {
+function gestor(
+  avisarVhost?: (a: { sitio: string; modo: string; motivo: string }) => void,
+): GestorSitios {
   const eventos = new Eventos<EventosNucleo>();
   eventos.on('sitio:cambio', (l) => emitidos.push(l));
   return new GestorSitios({

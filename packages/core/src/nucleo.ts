@@ -1223,6 +1223,7 @@ export class Nucleo {
       adminerPrincipal: () => adminer.configNginx(),
       phpmyadminPrincipal: () => phpmyadmin.configNginx(),
       podarRed: async () => (await lanRef.podarRed()).length > 0,
+      alinearVhosts: () => sitios.alinearVhosts(),
       procesosProyecto: {
         estadosServicio: () => procesos.estadosServicio(),
         detenerTodos: () => procesos.detenerTodos(),

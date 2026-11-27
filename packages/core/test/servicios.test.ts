@@ -268,6 +268,54 @@ describe('ServicioNginx', () => {
     expect(existsSync(path.join(etc, 'fastcgi_params'))).toBe(true);
   });
 
+  it('al iniciar pone al día los vhosts antes de generar y probar nginx.conf (D40)', async () => {
+    sembrarNginx('1.28.0');
+    const orden: string[] = [];
+    const n = new ServicioNginx(
+      rutas,
+      plataforma(),
+      supervisor(),
+      instalador(['1.28.0'], []),
+      async () => cfg,
+      async () => [],
+      async (cmd, args) => {
+        orden.push('probar');
+        return exec(cmd, args);
+      },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      async () => {
+        orden.push('alinear');
+      },
+    );
+    await n.iniciar();
+    expect(orden).toEqual(['alinear', 'probar']);
+  });
+
+  it('si poner al día los vhosts falla, nginx inicia igual', async () => {
+    sembrarNginx('1.28.0');
+    const n = new ServicioNginx(
+      rutas,
+      plataforma(),
+      supervisor(),
+      instalador(['1.28.0'], []),
+      async () => cfg,
+      async () => [],
+      exec,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      async () => {
+        throw new Error('vhost ilegible');
+      },
+    );
+    await n.iniciar();
+    expect(iniciados).toHaveLength(1);
+  });
+
   it('validar prueba y reemplaza la config sin iniciar ni lanzar', async () => {
     sembrarNginx('1.28.0');
     const r = await crear().validar();
