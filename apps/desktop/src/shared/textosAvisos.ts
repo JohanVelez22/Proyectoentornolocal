@@ -958,7 +958,186 @@ const DE: Diccionario = {
   },
 };
 
-const DICCIONARIOS = { es: ES, en: EN, pt: PT, fr: FR, de: DE } satisfies Record<IdiomaUi, Diccionario>;
+const IT: Diccionario = {
+  porCodigo: {
+    'avisos.servicio_caido': (d) => ({
+      titulo: 'Un servizio si è fermato con un errore',
+      cuerpo: `${limpio(d['nombre'], 'Un servizio')} ha smesso di funzionare. Apra WolfCore Dev per i dettagli.`,
+    }),
+    'avisos.iniciar_todo_fallos': (d) => ({
+      titulo: 'Avvia tutto non ha potuto avviare tutto',
+      cuerpo: `Non avviato: ${limpio(d['nombres'], 'un servizio')}. Apra Servizi per i dettagli.`,
+    }),
+    'avisos.workspace_fallos': (d) => ({
+      titulo: 'Un workspace non ha potuto avviare tutto',
+      cuerpo: `${limpio(d['nombre'], 'Il workspace')}: non avviato ${limpio(d['nombres'], 'un elemento')}. Apra Inizio per vedere cosa è attivo.`,
+    }),
+    'avisos.workspace_fallos_detener': (d) => ({
+      titulo: 'Un workspace non ha potuto fermare tutto',
+      cuerpo: `${limpio(d['nombre'], 'Il workspace')}: non fermato ${limpio(d['nombres'], 'un elemento')}. Apra Inizio per vedere cosa è ancora attivo.`,
+    }),
+    'avisos.tarea_fallo': (d) => ({
+      titulo:
+        d['motivo'] === 'tiempo'
+          ? 'Un’attività pianificata ha impiegato troppo tempo'
+          : 'Un’attività pianificata è fallita',
+      cuerpo: `${limpio(d['nombre'], 'Un’attività')} (${limpio(d['sitio'], 'un progetto')}) ${d['motivo'] === 'tiempo' ? 'ha superato il tempo massimo ed è stata fermata' : 'è terminata con un errore'}. Apra il progetto per vedere il registro.`,
+    }),
+    'avisos.tarea_bloqueada': (d) => ({
+      titulo: 'Un’attività pianificata non è stata eseguita',
+      cuerpo: `${limpio(d['nombre'], 'Un’attività')} (${limpio(d['sitio'], 'un progetto')}): ${
+        {
+          aislado: 'la cartella dati è di test e non è stato consentito eseguire attività',
+          no_confiado: 'il progetto non è contrassegnato come attendibile',
+          receta_cambio: 'la ricetta del progetto è cambiata da quando si è fidato',
+          sin_confirmar: 'manca la conferma del comando',
+          comando_invalido: 'il comando non è consentito',
+          cron_invalida: 'la pianificazione non è valida',
+          carpeta: 'la cartella del progetto non esiste',
+        }[String(d['motivo'])] ?? 'le condizioni non sono soddisfatte'
+      }.`,
+    }),
+    'avisos.puerto_ocupado': (d) => ({
+      titulo: 'Porta occupata',
+      cuerpo: `La porta ${limpio(d['puerto'], '?')} è usata da ${limpio(d['nombre'], 'un altro programma')}: impossibile avviare il servizio.`,
+    }),
+    'avisos.proceso_error': (d) => ({
+      titulo: 'Un processo di progetto è terminato con un errore',
+      cuerpo: `${limpio(d['nombre'], 'Un processo')} ha smesso di funzionare. Controlli i suoi registri.`,
+    }),
+    'avisos.proceso_terminado': (d) => ({
+      titulo: 'Un processo è terminato',
+      cuerpo: `${limpio(d['nombre'], 'Un processo')} è terminato senza errori.`,
+    }),
+    'avisos.proceso_fallo': (d) => ({
+      titulo: 'Un processo è fallito',
+      cuerpo: `${limpio(d['nombre'], 'Un processo')} è terminato con un errore${d['codigoSalida'] !== undefined ? ` (codice ${limpio(d['codigoSalida'], '?')})` : ''}. Controlli i suoi registri.`,
+    }),
+    'avisos.receta_terminada': (d) => ({
+      titulo: 'Una ricetta è terminata',
+      cuerpo: `La ricetta di ${limpio(d['sitio'], 'un progetto')} è terminata senza errori.`,
+    }),
+    'avisos.receta_fallo': (d) => ({
+      titulo: 'Una ricetta è fallita',
+      cuerpo: `La ricetta di ${limpio(d['sitio'], 'un progetto')} si è fermata con un errore. Apra il progetto per vedere il passaggio.`,
+    }),
+    'avisos.tunel_caido': (d) => ({
+      titulo: 'Un tunnel è caduto',
+      cuerpo: `Il tunnel di ${limpio(d['fuente'], 'un progetto')} ha smesso di funzionare.`,
+    }),
+    'avisos.contenedor_detenido': (d) => ({
+      titulo: 'Un container si è fermato',
+      cuerpo: `${limpio(d['nombre'], 'Un container')} (${limpio(d['motor'], 'Docker')}) si è fermato inaspettatamente${d['codigoSalida'] !== undefined ? ` (codice ${limpio(d['codigoSalida'], '?')})` : ''}.`,
+    }),
+    'avisos.ca_por_vencer': (d) => ({
+      titulo: 'L’autorità di certificazione scade presto',
+      cuerpo: `Scade tra ${limpio(d['dias'], '?')} giorni. La rigeneri e le ridia fiducia.`,
+    }),
+    'avisos.certificado_por_vencer': (d) => ({
+      titulo: 'Un certificato scade presto',
+      cuerpo: `Il certificato di ${limpio(d['fuente'], 'un sito')} scade tra ${limpio(d['dias'], '?')} giorni.`,
+    }),
+    'avisos.certificado_vencido': (d) => ({
+      titulo: 'Un certificato è scaduto',
+      cuerpo: `Il certificato di ${limpio(d['fuente'], 'un sito')} non è più valido. Lo rigeneri.`,
+    }),
+    'avisos.php_sitio_fallo': (d) => ({
+      titulo: 'Il PHP dedicato di un sito non si è avviato',
+      cuerpo: `Il PHP di ${limpio(d['fuente'], 'un sito')} non si è avviato (la sua porta potrebbe essere occupata). Controlli la sezione PHP della scheda.`,
+    }),
+    'avisos.php_sitio_sin_puertos': (d) => ({
+      titulo: 'Nessuna porta per il PHP di un sito',
+      cuerpo: `${limpio(d['fuente'], 'Un sito')} usa il PHP condiviso della propria versione senza le sue impostazioni: non ci sono porte libere per un PHP dedicato.`,
+    }),
+    'avisos.php_sitio_descartados': (d) => ({
+      titulo: 'Impostazioni PHP scartate',
+      cuerpo: `Alcune impostazioni PHP di ${limpio(d['fuente'], 'un sito')} non sono valide e non sono state applicate: ${limpio(d['claves'], 'controlli la sezione PHP')}.`,
+    }),
+    'avisos.lan_red_cambio': (d) => ({
+      titulo: 'Condivisione in rete locale interrotta',
+      cuerpo: `La rete è cambiata: interrotta la condivisione di ${limpio(d['fuente'], 'un sito')}.`,
+    }),
+    'avisos.vhost_reglas_descartadas': (d) => ({
+      titulo: 'Regole Nginx scartate',
+      cuerpo: `Le regole personalizzate di ${limpio(d['fuente'], 'un sito')} non superano più la verifica (cartella, domini o porte cambiati) e sono state escluse dal vhost. Le riveda nella sezione Nginx.`,
+    }),
+    'avisos.vhost_manual_descartado': (d) => ({
+      titulo: 'Vhost manuale non usato',
+      cuerpo: `Il vhost scritto a mano di ${limpio(d['fuente'], 'un sito')} non supera più la verifica (cartella, domini o porte cambiati): viene usato quello generato. Lo riveda nella sezione Nginx.`,
+    }),
+    'avisos.rustup_entrada_ajena': () => ({
+      titulo: 'Rustup era già installato altrove',
+      cuerpo:
+        'Il Rust di WolfCore Dev è stato installato nella propria cartella. Windows aveva già una voce di disinstallazione di rustup verso un’altra installazione: non è stata toccata.',
+    }),
+    'avisos.version_nueva': (d) => ({
+      titulo: `Nuova versione di ${limpio(d['servicio'], 'un servizio')} disponibile`,
+      cuerpo: `${limpio(d['nueva'], 'Una nuova versione')} è disponibile (ha ${limpio(d['actual'], 'un’altra')}). Apra Servizi → Versioni per aggiornare; nulla viene installato da solo.`,
+      accion: 'Aggiorna',
+    }),
+    'avisos.version_nueva_sin_huella': (d) => ({
+      titulo: `Nuova versione di ${limpio(d['servicio'], 'un servizio')} disponibile`,
+      cuerpo: `${limpio(d['nueva'], 'Una nuova versione')} è disponibile (ha ${limpio(d['actual'], 'un’altra')}), senza impronta pubblicata: impossibile verificare il download. La controlli in Servizi → Versioni; l’installazione chiede conferma.`,
+    }),
+    'avisos.rama_nueva_sin_huella': (d) => ({
+      titulo: `Nuova versione principale di ${limpio(d['servicio'], 'un servizio')}`,
+      cuerpo: `${limpio(d['nueva'], 'Una nuova versione principale')} è più recente di quella in uso (${limpio(d['actual'], '?')}), senza impronta pubblicata: impossibile verificare il download. La controlli in Servizi → Versioni; l’installazione chiede conferma.`,
+    }),
+    'avisos.rama_nueva': (d) => ({
+      titulo: `Nuova versione principale di ${limpio(d['servicio'], 'un servizio')}`,
+      cuerpo: `${limpio(d['nueva'], 'Una nuova versione principale')} è più recente di quella in uso (${limpio(d['actual'], '?')}). Si installa separatamente, senza toccare i suoi dati.`,
+      accion: 'Aggiorna',
+    }),
+    'doctor.hallazgos': (d) => ({
+      titulo: 'Doctor ha rilevato errori nell’ambiente',
+      cuerpo: `Ci sono ${limpio(d['errores'], 'diversi')} problemi che possono impedire il funzionamento dell’ambiente. Apra Doctor per vedere come risolverli.`,
+    }),
+  },
+  porTipo: {
+    'servicio-caido': {
+      titulo: 'Un servizio si è fermato',
+      cuerpo: 'Apra WolfCore Dev per i dettagli.',
+    },
+    'puerto-ocupado': {
+      titulo: 'Porta occupata',
+      cuerpo: 'Apra WolfCore Dev per i dettagli.',
+    },
+    'certificado-por-vencer': {
+      titulo: 'Un certificato scade presto',
+      cuerpo: 'Apra WolfCore Dev per i dettagli.',
+    },
+    'tunel-caido': {
+      titulo: 'Un tunnel è caduto',
+      cuerpo: 'Apra WolfCore Dev per i dettagli.',
+    },
+    'proceso-error': {
+      titulo: 'Un processo è terminato con un errore',
+      cuerpo: 'Apra WolfCore Dev per i dettagli.',
+    },
+    'proceso-terminado': {
+      titulo: 'Un processo è terminato',
+      cuerpo: 'Apra WolfCore Dev per i dettagli.',
+    },
+    'receta-terminada': {
+      titulo: 'Una ricetta è terminata',
+      cuerpo: 'Apra WolfCore Dev per i dettagli.',
+    },
+    doctor: {
+      titulo: 'Doctor ha rilevato problemi',
+      cuerpo: 'Apra WolfCore Dev per esaminarli.',
+    },
+    'contenedor-detenido': {
+      titulo: 'Un container si è fermato',
+      cuerpo: 'Apra WolfCore Dev per i dettagli.',
+    },
+    'version-nueva': {
+      titulo: 'Nuova versione disponibile',
+      cuerpo: 'Apra WolfCore Dev per aggiornare.',
+    },
+  },
+};
+
+const DICCIONARIOS = { es: ES, en: EN, pt: PT, fr: FR, de: DE, it: IT } satisfies Record<IdiomaUi, Diccionario>;
 
 export const CODIGOS_AVISO = Object.keys(ES.porCodigo);
 
@@ -969,6 +1148,7 @@ export const CODIGOS_AVISO_POR_IDIOMA: Record<IdiomaUi, string[]> = {
   pt: Object.keys(PT.porCodigo),
   fr: Object.keys(FR.porCodigo),
   de: Object.keys(DE.porCodigo),
+  it: Object.keys(IT.porCodigo),
 };
 
 export function textoAviso(

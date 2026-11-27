@@ -5904,7 +5904,7 @@ export const fr: Textos = {
     tema: 'Thème',
     temas: { sistema: 'Système', claro: 'Clair', oscuro: 'Sombre' },
     idioma: 'Langue',
-    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch' },
+    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano' },
     acento: 'Couleur d’accent',
     acentos: {
       indigo: 'Indigo',

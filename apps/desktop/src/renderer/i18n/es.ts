@@ -5744,7 +5744,7 @@ export const es = {
     tema: 'Tema',
     temas: { sistema: 'Sistema', claro: 'Claro', oscuro: 'Oscuro' },
     idioma: 'Idioma',
-    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch' },
+    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano' },
     acento: 'Color de acento',
     acentos: {
       indigo: 'Índigo',

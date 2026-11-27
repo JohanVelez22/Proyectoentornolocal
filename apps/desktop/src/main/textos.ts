@@ -187,6 +187,34 @@ const TEXTOS = {
     carpetaDatosInvalida:
       'WOLFCORE_DATOS ist kein gültiger Datenordner: Er muss absolut sein, kein Systemordner und verschieden vom echten (und vorherigen) Ordner. Die App wird ohne Änderungen geschlossen.',
   },
+  it: {
+    abrir: 'Apri',
+    iniciarTodo: 'Avvia tutto',
+    detenerTodo: 'Ferma tutto',
+    salir: 'Esci',
+    workspaces: 'Workspaces',
+    workspaceParcial: 'parziale',
+    preguntaApagar: 'Fermare i servizi?',
+    siApagar: 'Sì, ferma',
+    noApagar: 'No, lasciali attivi',
+    cancelar: 'Annulla',
+    cliTitulo: 'Comando da terminale (wolf)',
+    cliTunelInternet:
+      'Un comando da terminale vuole pubblicare {dominio} su internet con {proveedor}. Chiunque abbia il link potrà vederlo.',
+    cliTunelTailnet:
+      'Un comando da terminale vuole condividere {dominio} con i dispositivi della sua tailnet ({proveedor}).',
+    cliPublicoEn: 'Indirizzo pubblico: https://{publico}',
+    cliDatosReales:
+      'ATTENZIONE: {dominio} contiene DATI REALI. Per continuare, scelga sotto il dominio esatto. Se non ha richiesto questa operazione, annulli.',
+    cliPublicar: 'Pubblica',
+    cliPhpGlobal:
+      'Un comando da terminale vuole cambiare il PHP di tutti i terminali alla versione {version}.',
+    cliCambiar: 'Cambia',
+    carpetaDatosAislada:
+      'cartella dati di test, senza modificare hosts, PATH né certificati di sistema',
+    carpetaDatosInvalida:
+      'WOLFCORE_DATOS non è una cartella dati valida: deve essere assoluta, non di sistema e diversa dalla cartella reale (e dalla precedente). L’app si chiude senza modificare nulla.',
+  },
 } satisfies Record<IdiomaUi, Record<string, string>>;
 
 export type TextosMain = (typeof TEXTOS)['es'];
