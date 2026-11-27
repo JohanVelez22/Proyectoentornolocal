@@ -134,10 +134,10 @@ O `ngrok` é outra ferramenta muito popular para túneis locais. A grande vantag
 
 1. Baixe e instale o `ngrok` (ou use a versão instalada no seu ambiente).
 2. Crie uma conta gratuita no ngrok e copie o seu token de autenticação.
-3. Registre o seu token uma única vez (troque `TU_TOKEN` pelo seu token real):
+3. Registre o seu token uma única vez (troque `MI_TOKEN` pelo seu token real):
 
 ```bash
-ngrok config add-authtoken TU_TOKEN
+ngrok config add-authtoken MI_TOKEN
 ```
 
 ### Abrir um túnel para uma porta local
@@ -228,7 +228,7 @@ Ali você verá ao vivo cada requisição que chega pelo túnel (cabeçalhos, JS
 | `cloudflared` | `cloudflared tunnel run --url http://localhost:8000 mi-tunel-demo` | Inicia o túnel com nome apontando para a sua porta local. |
 | `cloudflared` | `cloudflared tunnel cleanup mi-tunel-demo` | Fecha as conexões que tenham ficado abertas do túnel antes de apagá-lo. |
 | `cloudflared` | `cloudflared tunnel delete mi-tunel-demo` | Remove um túnel com nome que você não precisa mais. |
-| `ngrok` | `ngrok config add-authtoken TU_TOKEN` | Guarda o token da sua conta na configuração local do ngrok. |
+| `ngrok` | `ngrok config add-authtoken MI_TOKEN` | Guarda o token da sua conta na configuração local do ngrok. |
 | `ngrok` | `ngrok http 8000` | Expõe a porta local `8000` com uma URL pública HTTPS. |
 | `ngrok` | `ngrok http 80 --host-header=mi-sitio.test` | Expõe um site local do Nginx enviando o domínio `.test` dele no cabeçalho `Host`; o link público já sai com HTTPS. |
 | `ngrok` | Abrir `http://127.0.0.1:4040` no navegador | Mostra o inspetor local de requisições e permite reenviar webhooks. |

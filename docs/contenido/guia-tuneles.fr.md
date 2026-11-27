@@ -134,10 +134,10 @@ Pensez à supprimer aussi l'enregistrement DNS de test dans le panneau de Cloudf
 
 1. Téléchargez et installez `ngrok` (ou utilisez la version installée dans votre environnement).
 2. Créez un compte gratuit sur ngrok et copiez votre jeton d'authentification.
-3. Enregistrez votre jeton une seule fois (remplacez `TU_TOKEN` par votre vrai jeton) :
+3. Enregistrez votre jeton une seule fois (remplacez `MI_TOKEN` par votre vrai jeton) :
 
 ```bash
-ngrok config add-authtoken TU_TOKEN
+ngrok config add-authtoken MI_TOKEN
 ```
 
 ### Ouvrir un tunnel vers un port local
@@ -228,7 +228,7 @@ Vous y verrez en direct chaque requête qui arrive par le tunnel (en-têtes, JSO
 | `cloudflared` | `cloudflared tunnel run --url http://localhost:8000 mi-tunel-demo` | Démarre le tunnel nommé en visant votre port local. |
 | `cloudflared` | `cloudflared tunnel cleanup mi-tunel-demo` | Ferme les connexions restées ouvertes du tunnel avant de le supprimer. |
 | `cloudflared` | `cloudflared tunnel delete mi-tunel-demo` | Supprime un tunnel nommé dont vous n'avez plus besoin. |
-| `ngrok` | `ngrok config add-authtoken TU_TOKEN` | Enregistre votre jeton de compte dans la configuration locale de ngrok. |
+| `ngrok` | `ngrok config add-authtoken MI_TOKEN` | Enregistre votre jeton de compte dans la configuration locale de ngrok. |
 | `ngrok` | `ngrok http 8000` | Expose le port local `8000` avec une URL publique HTTPS. |
 | `ngrok` | `ngrok http 80 --host-header=mi-sitio.test` | Expose un site local sous Nginx en envoyant son domaine `.test` dans l'en-tête `Host` ; le lien public sort déjà en HTTPS. |
 | `ngrok` | Ouvrir `http://127.0.0.1:4040` dans le navigateur | Affiche l'inspecteur local de requêtes et permet de renvoyer des webhooks. |

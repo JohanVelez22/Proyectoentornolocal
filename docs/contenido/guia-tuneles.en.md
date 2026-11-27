@@ -134,10 +134,10 @@ Remember to also delete the test DNS record in the Cloudflare dashboard if you w
 
 1. Download and install `ngrok` (or use the version installed in your environment).
 2. Create a free ngrok account and copy your authentication token.
-3. Register your token just once (replace `TU_TOKEN` with your real token):
+3. Register your token just once (replace `MI_TOKEN` with your real token):
 
 ```bash
-ngrok config add-authtoken TU_TOKEN
+ngrok config add-authtoken MI_TOKEN
 ```
 
 ### Open a tunnel to a local port
@@ -228,7 +228,7 @@ There you will see live every request that arrives through the tunnel (headers, 
 | `cloudflared` | `cloudflared tunnel run --url http://localhost:8000 mi-tunel-demo` | Starts the named tunnel pointing at your local port. |
 | `cloudflared` | `cloudflared tunnel cleanup mi-tunel-demo` | Closes any connections left open on the tunnel before you delete it. |
 | `cloudflared` | `cloudflared tunnel delete mi-tunel-demo` | Deletes a named tunnel you no longer need. |
-| `ngrok` | `ngrok config add-authtoken TU_TOKEN` | Saves your account token in ngrok's local configuration. |
+| `ngrok` | `ngrok config add-authtoken MI_TOKEN` | Saves your account token in ngrok's local configuration. |
 | `ngrok` | `ngrok http 8000` | Exposes local port `8000` with a public HTTPS URL. |
 | `ngrok` | `ngrok http 80 --host-header=mi-sitio.test` | Exposes a local Nginx site sending its `.test` domain in the `Host` header; the public link already comes with HTTPS. |
 | `ngrok` | Open `http://127.0.0.1:4040` in the browser | Shows the local request inspector and lets you resend webhooks. |
