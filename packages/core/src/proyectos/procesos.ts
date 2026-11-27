@@ -193,9 +193,16 @@ export class ProcesosProyecto {
 
   constructor(private readonly d: DepsProcesosProyecto) {
     // Salida definitiva (sin reinicio pendiente): el aviso sale con el código, sea 0 o no.
-    d.supervisor.alTerminar((id, codigo) => {
+    d.supervisor.alTerminar((id, codigo, sinCodigo) => {
       const s = separarIdSupervisor(id);
-      if (s) d.eventos?.emit('proceso:terminado', { id, sitioId: s.sitioId, codigo });
+      if (s) {
+        d.eventos?.emit('proceso:terminado', {
+          id,
+          sitioId: s.sitioId,
+          codigo,
+          ...(sinCodigo ? { sinCodigo: true } : {}),
+        });
+      }
     });
   }
 

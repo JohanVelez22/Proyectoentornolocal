@@ -369,11 +369,31 @@ describe('Supervisor', () => {
     await s.cerrar();
   });
 
-  it('salida sin código (señal) sin reinicio queda en error', async () => {
+  it('salida por señal sin reinicio queda en error', async () => {
     const s = crear();
     await s.iniciar(def({ reiniciar: false }));
-    morir(hijos[0]!, null);
+    hijos[0]!.emit('exit', null, 'SIGKILL');
     expect(s.estado('nginx')).toBe('error');
+    await s.cerrar();
+  });
+
+  it('salida sin código ni señal sin reinicio (lanzador oculto) queda apagado, no en error (D39)', async () => {
+    const s = crear();
+    const fn = vi.fn();
+    s.alTerminar(fn);
+    await s.iniciar(def({ reiniciar: false }));
+    morir(hijos[0]!, null);
+    expect(s.estado('nginx')).toBe('apagado');
+    expect(s.mensaje('nginx')).toBe(MENSAJE_TERMINADO);
+    expect(fn).toHaveBeenCalledWith('nginx', null, true);
+    await s.cerrar();
+  });
+
+  it('con reiniciar: true una salida sin código se reinicia como siempre', async () => {
+    const s = crear();
+    await s.iniciar(def({ reiniciar: true }));
+    morir(hijos[0]!, null);
+    expect(s.estado('nginx')).toBe('iniciando');
     await s.cerrar();
   });
 
@@ -398,7 +418,7 @@ describe('Supervisor', () => {
     s2.alTerminar(fn);
     await s2.iniciar(def({ id: 'otro', reiniciar: false }));
     morir(hijos.at(-1)!, 0);
-    expect(fn).toHaveBeenCalledWith('otro', 0);
+    expect(fn).toHaveBeenCalledWith('otro', 0, false);
     await s2.cerrar();
   });
 

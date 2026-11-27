@@ -147,7 +147,9 @@ export class Supervisor {
   private readonly entradas = new Map<string, Entrada>();
   private readonly hijos = new Map<string, childProcess.ChildProcess>();
   private readonly oyentesSalida: Array<(id: string, codigo: number | null) => void> = [];
-  private readonly oyentesTermino: Array<(id: string, codigo: number | null) => void> = [];
+  private readonly oyentesTermino: Array<
+    (id: string, codigo: number | null, sinCodigo: boolean) => void
+  > = [];
   private readonly spawnFn: typeof childProcess.spawn;
   /** Se pasa a null si el lanzador no está disponible en este equipo (se usa el spawn clásico). */
   private lanzarOculto: LanzadorOculto | null;
@@ -310,7 +312,7 @@ export class Supervisor {
    * agotados). Se llama con el estado ya fijado (`apagado` con código 0, `error` si no) y antes de
    * emitirlo.
    */
-  alTerminar(fn: (id: string, codigo: number | null) => void): void {
+  alTerminar(fn: (id: string, codigo: number | null, sinCodigo: boolean) => void): void {
     this.oyentesTermino.push(fn);
   }
 
@@ -564,7 +566,9 @@ export class Supervisor {
       } else {
         entrada.pid = pid;
         this.hijos.set(def.id, hijo);
-        hijo.once('exit', (codigo: number | null) => this.alMorir(entrada, pid, codigo));
+        hijo.once('exit', (codigo: number | null, senal?: string | null) =>
+          this.alMorir(entrada, pid, codigo, senal ? `Terminó por la señal ${senal}` : undefined),
+        );
       }
     } catch (e) {
       entrada.pid = null;
@@ -626,8 +630,13 @@ export class Supervisor {
       }, espera);
       return;
     }
-    if (codigo === 0 && !def.reiniciar) {
-      // Terminó bien por sí mismo (un script, una migración, un build): no es una caída.
+    // Sin código y sin motivo de fallo (ni señal ni error de lanzamiento): con el lanzador oculto
+    // de Windows el proceso no es hijo nuestro, su muerte la ve el sondeo y el código de salida
+    // no se puede recuperar (el PID es de un nieto de PowerShell). Se tiene por terminado, no por
+    // caído: «falló» sin saberlo sería un aviso falso (D39).
+    const sinCodigo = codigo === null && motivo === undefined && !def.reiniciar;
+    if ((codigo === 0 && !def.reiniciar) || sinCodigo) {
+      // Terminó por sí mismo (un script, una migración, un build): no es una caída.
       entrada.estado = 'apagado';
       entrada.mensaje = MENSAJE_TERMINADO;
     } else {
@@ -636,7 +645,7 @@ export class Supervisor {
     }
     for (const fn of this.oyentesTermino) {
       try {
-        fn(def.id, codigo);
+        fn(def.id, codigo, sinCodigo);
       } catch (e) {
         console.error('Error en oyente de término:', e);
       }

@@ -267,6 +267,17 @@ export function conectarFuentesAvisos(
       const nombre = nombres.get(e.id);
       const base = { fuente: e.id, ...(nombre === undefined ? {} : { nombre }) };
       avisados.add(e.id);
+      if (e.codigo === null && e.sinCodigo) {
+        // Terminó pero no se sabe cómo: ni éxito ni fallo, un aviso neutro.
+        centro.publicar({
+          nivel: 'info',
+          tipo: 'proceso-terminado',
+          codigo: 'avisos.proceso_sin_codigo',
+          datos: base,
+          accion: { ruta: 'proyectos', foco: focoProceso(e.id, e.sitioId) },
+        });
+        return;
+      }
       if (e.codigo === 0) {
         centro.publicar({
           nivel: 'info',

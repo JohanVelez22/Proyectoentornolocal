@@ -270,8 +270,13 @@ describe('fuentes de avisos', () => {
         pid: null,
         ...extra,
       }) as never;
-    const terminado = (codigo: number | null) =>
-      ({ id: 'proy-mi-sitio-web', sitioId: 'mi-sitio', codigo }) as const;
+    const terminado = (codigo: number | null, sinCodigo?: boolean) =>
+      ({
+        id: 'proy-mi-sitio-web',
+        sitioId: 'mi-sitio',
+        codigo,
+        ...(sinCodigo ? { sinCodigo } : {}),
+      }) as const;
 
     it('codigo 0: proceso-terminado info con el nombre del proceso', () => {
       const { eventos, publicados } = montar();
@@ -308,6 +313,21 @@ describe('fuentes de avisos', () => {
       const { eventos, publicados } = montar();
       eventos.emit('proceso:terminado', terminado(null));
       expect(publicados[0]).toMatchObject({ codigo: 'avisos.proceso_fallo' });
+      expect(publicados[0]!.datos).not.toHaveProperty('codigoSalida');
+    });
+
+    it('terminó sin código conocido (lanzador oculto): aviso neutro, nunca «falló» (D39)', () => {
+      const { eventos, publicados } = montar();
+      eventos.emit('servicio:estado', e('encendido'));
+      eventos.emit('proceso:terminado', terminado(null, true));
+      eventos.emit('servicio:estado', e('apagado', { mensaje: 'terminado' }));
+      expect(publicados).toHaveLength(1);
+      expect(publicados[0]).toMatchObject({
+        nivel: 'info',
+        tipo: 'proceso-terminado',
+        codigo: 'avisos.proceso_sin_codigo',
+        datos: { fuente: 'proy-mi-sitio-web', nombre: 'web (mi.test)' },
+      });
       expect(publicados[0]!.datos).not.toHaveProperty('codigoSalida');
     });
 

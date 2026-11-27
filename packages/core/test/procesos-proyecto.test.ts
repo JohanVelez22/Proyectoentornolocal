@@ -35,15 +35,17 @@ class SupervisorFalso implements SupervisorProcesos {
   readonly estados = new Map<string, EstadoSup>();
   readonly mensajes = new Map<string, string>();
   alIniciar?: (def: DefProceso) => Promise<void>;
-  private readonly oyentesTermino: Array<(id: string, codigo: number | null) => void> = [];
+  private readonly oyentesTermino: Array<
+    (id: string, codigo: number | null, sinCodigo?: boolean) => void
+  > = [];
 
-  alTerminar(fn: (id: string, codigo: number | null) => void): void {
+  alTerminar(fn: (id: string, codigo: number | null, sinCodigo?: boolean) => void): void {
     this.oyentesTermino.push(fn);
   }
   /** Simula la salida definitiva de un proceso. */
-  terminar(id: string, codigo: number | null): void {
+  terminar(id: string, codigo: number | null, sinCodigo?: boolean): void {
     this.estados.delete(id);
-    for (const fn of this.oyentesTermino) fn(id, codigo);
+    for (const fn of this.oyentesTermino) fn(id, codigo, sinCodigo);
   }
 
   async iniciar(def: DefProceso): Promise<void> {
@@ -702,6 +704,12 @@ describe('proceso:terminado', () => {
       { id: 'proy-demo-vite', sitioId: 'demo', codigo: 2 },
       { id: 'proy-demo-vite', sitioId: 'demo', codigo: null },
     ]);
+  });
+
+  it('un término sin código conocido lo marca con sinCodigo (D39)', async () => {
+    const { a, emitidos } = await montar();
+    a.sup.terminar('proy-demo-vite', null, true);
+    expect(emitidos).toEqual([{ id: 'proy-demo-vite', sitioId: 'demo', codigo: null, sinCodigo: true }]);
   });
 
   it('ignora lo que no es un proceso de proyecto (servicios, túneles)', async () => {

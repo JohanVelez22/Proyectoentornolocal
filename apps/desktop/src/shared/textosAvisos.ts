@@ -78,6 +78,10 @@ const ES: Diccionario = {
       titulo: 'Un proceso terminó',
       cuerpo: `${limpio(d['nombre'], 'Un proceso')} terminó sin errores.`,
     }),
+    'avisos.proceso_sin_codigo': (d) => ({
+      titulo: 'Un proceso terminó',
+      cuerpo: `${limpio(d['nombre'], 'Un proceso')} terminó (código desconocido). No se pudo saber si fue bien: revise sus registros.`,
+    }),
     'avisos.proceso_fallo': (d) => ({
       titulo: 'Un proceso falló',
       cuerpo: `${limpio(d['nombre'], 'Un proceso')} terminó con un error${d['codigoSalida'] !== undefined ? ` (código ${limpio(d['codigoSalida'], '?')})` : ''}. Revise sus registros.`,
@@ -257,6 +261,10 @@ const EN: Diccionario = {
       titulo: 'A process finished',
       cuerpo: `${limpio(d['nombre'], 'A process')} finished without errors.`,
     }),
+    'avisos.proceso_sin_codigo': (d) => ({
+      titulo: 'A process finished',
+      cuerpo: `${limpio(d['nombre'], 'A process')} finished (exit code unknown). It could not be determined whether it went well: check its logs.`,
+    }),
     'avisos.proceso_fallo': (d) => ({
       titulo: 'A process failed',
       cuerpo: `${limpio(d['nombre'], 'A process')} ended with an error${d['codigoSalida'] !== undefined ? ` (code ${limpio(d['codigoSalida'], '?')})` : ''}. Check its logs.`,
@@ -428,6 +436,10 @@ const PT: Diccionario = {
     'avisos.proceso_terminado': (d) => ({
       titulo: 'Um processo terminou',
       cuerpo: `${limpio(d['nombre'], 'Um processo')} terminou sem erros.`,
+    }),
+    'avisos.proceso_sin_codigo': (d) => ({
+      titulo: 'Um processo terminou',
+      cuerpo: `${limpio(d['nombre'], 'Um processo')} terminou (código desconhecido). Não foi possível saber se correu bem: confira os registros dele.`,
     }),
     'avisos.proceso_fallo': (d) => ({
       titulo: 'Um processo falhou',
@@ -613,6 +625,10 @@ const FR: Diccionario = {
     'avisos.proceso_terminado': (d) => ({
       titulo: 'Un processus s’est terminé',
       cuerpo: `${limpio(d['nombre'], 'Un processus')} s’est terminé sans erreur.`,
+    }),
+    'avisos.proceso_sin_codigo': (d) => ({
+      titulo: 'Un processus s’est terminé',
+      cuerpo: `${limpio(d['nombre'], 'Un processus')} s’est terminé (code inconnu). Impossible de savoir si tout s’est bien passé : consultez ses journaux.`,
     }),
     'avisos.proceso_fallo': (d) => ({
       titulo: 'Un processus a échoué',

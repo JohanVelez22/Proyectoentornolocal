@@ -53,8 +53,11 @@ export type EventosNucleo = {
   'perfil:progreso': ProgresoPerfil;
   'ia:progreso': ProgresoIa;
   'receta:progreso': ProgresoReceta;
-  /** Un proceso de proyecto terminó y no se reinicia: `codigo` 0 = terminó bien. */
-  'proceso:terminado': { id: string; sitioId: string; codigo: number | null };
+  /**
+   * Un proceso de proyecto terminó y no se reinicia: `codigo` 0 = terminó bien. `sinCodigo`: el
+   * proceso terminó pero no se pudo leer su código (lanzador oculto de Windows): ni éxito ni fallo.
+   */
+  'proceso:terminado': { id: string; sitioId: string; codigo: number | null; sinCodigo?: boolean };
   /** Una receta terminó del todo (`lista` o `error`); cancelar no la emite. */
   'receta:terminada': { sitioId: string; estado: 'lista' | 'error' };
   /** Una tarea programada terminó (o no pudo correr): la interfaz recarga su estado. */
