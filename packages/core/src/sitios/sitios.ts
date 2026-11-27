@@ -323,6 +323,36 @@ export class GestorSitios {
     return { nginx, hosts, httpsPendiente };
   }
 
+  /**
+   * Deja los vhosts de los sitios con la plantilla actual (D40): una versión nueva puede cambiar
+   * el `listen` (ahora con 127.0.0.1) y Nginx da prioridad al `listen` con dirección, así que un
+   * vhost antiguo sin ella queda tapado por el servidor por defecto. Solo escribe los archivos que
+   * difieren (con lo ya al día no toca nada), y no recarga Nginx ni toca el archivo hosts. Respeta
+   * las reglas propias y el vhost manual válidos; un manual que ya no pasa la revisión (p. ej. un
+   * `listen` sin dirección) se descarta con aviso, como al aplicar.
+   */
+  alinearVhosts(): Promise<void> {
+    return this.serializar(() => this.alinearVhostsSinCola());
+  }
+
+  private async alinearVhostsSinCola(): Promise<void> {
+    const cfg = await this.d.almacen.leer();
+    if (cfg.sitios.length === 0) return;
+    const dir = path.dirname(this.d.rutas.vhost('x'));
+    const existentes = await readdir(dir).catch(() => [] as string[]);
+    // Sin carpeta de vhosts no hay nada antiguo que poner al día: lo crea el primer aplicar.
+    if (existentes.length === 0) return;
+    const httpsUsable = await this.httpsUsable(cfg);
+    for (const s of cfg.sitios) {
+      const ruta = this.d.rutas.vhost(s.id);
+      const actual = await readFile(ruta, 'utf8').catch(() => null);
+      // Sin archivo todavía: lo escribe aplicar, no esto.
+      if (actual === null) continue;
+      const v = await this.vhostCon(s, cfg, httpsUsable);
+      if (v.contenido !== actual) await writeFile(ruta, v.contenido, 'utf8');
+    }
+  }
+
   private async httpsUsable(cfg: Config): Promise<boolean> {
     return (
       !!this.d.https &&

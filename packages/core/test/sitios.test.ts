@@ -1,4 +1,13 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  utimesSync,
+  writeFileSync,
+} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -21,7 +30,7 @@ let hostsRes: { ok: true } | { ok: false; motivo: string; comandoManual: string 
 let emitidos: Sitio[][];
 let gestorValidarHook: (() => void) | null = null;
 
-function gestor(): GestorSitios {
+function gestor(avisarVhost?: (a: { sitio: string; modo: string; motivo: string }) => void): GestorSitios {
   const eventos = new Eventos<EventosNucleo>();
   eventos.on('sitio:cambio', (l) => emitidos.push(l));
   return new GestorSitios({
@@ -51,6 +60,7 @@ function gestor(): GestorSitios {
       instalados: async (s: string) => (s === 'nginx' ? nginxInstalado : phpInstalado),
     },
     eventos,
+    ...(avisarVhost ? { avisarVhost } : {}),
   });
 }
 
@@ -558,5 +568,73 @@ describe('GestorSitios.aplicar: orden y errores de hosts (ronda de seguridad)', 
     await g.crear(datos('a.test'));
     const r = await g.aplicar();
     expect(r.hosts).toMatchObject({ ok: false, motivo: 'error' });
+  });
+});
+
+describe('GestorSitios.alinearVhosts (D40)', () => {
+  const antiguo = (t: string): string =>
+    t.replaceAll('127.0.0.1:80;', '80;').replaceAll('127.0.0.1:443 ssl;', '443 ssl;');
+
+  it('reescribe con la plantilla actual los vhosts antiguos sin dirección en el listen', async () => {
+    const g = gestor();
+    const s = await g.crear(datos('viejo.test'));
+    await g.aplicar();
+    const actual = readFileSync(rutas.vhost(s.id), 'utf8');
+    expect(actual).toContain('listen 127.0.0.1:80;');
+    writeFileSync(rutas.vhost(s.id), antiguo(actual));
+    expect(readFileSync(rutas.vhost(s.id), 'utf8')).not.toContain('127.0.0.1');
+    dominiosHosts = [];
+
+    await g.alinearVhosts();
+
+    expect(readFileSync(rutas.vhost(s.id), 'utf8')).toBe(actual);
+    // No toca el archivo hosts ni recarga Nginx: solo deja los vhosts al día.
+    expect(dominiosHosts).toEqual([]);
+  });
+
+  it('no toca un vhost manual válido', async () => {
+    const g = gestor();
+    const s = await g.crear(datos('manual.test'));
+    await g.aplicar();
+    const manual = `${readFileSync(rutas.vhost(s.id), 'utf8')}\n# mío\n`;
+    await g.modificarConfig((c) => {
+      c.sitios[0]!.vhostManual = manual;
+    });
+    writeFileSync(rutas.vhost(s.id), manual);
+
+    await g.alinearVhosts();
+
+    expect(readFileSync(rutas.vhost(s.id), 'utf8')).toBe(manual);
+  });
+
+  it('con los vhosts ya al día no reescribe nada', async () => {
+    const g = gestor();
+    const s = await g.crear(datos('aldia.test'));
+    await g.aplicar();
+    const archivo = rutas.vhost(s.id);
+    const pasado = new Date('2020-01-01T00:00:00Z');
+    utimesSync(archivo, pasado, pasado);
+
+    await g.alinearVhosts();
+
+    expect(statSync(archivo).mtimeMs).toBe(pasado.getTime());
+  });
+
+  it('un vhost manual con listen sin dirección se descarta con aviso y queda el generado', async () => {
+    const avisos: { sitio: string; modo: string }[] = [];
+    const g = gestor((a) => avisos.push(a));
+    const s = await g.crear(datos('roto.test'));
+    await g.aplicar();
+    const bueno = readFileSync(rutas.vhost(s.id), 'utf8');
+    const manual = antiguo(bueno);
+    await g.modificarConfig((c) => {
+      c.sitios[0]!.vhostManual = manual;
+    });
+    writeFileSync(rutas.vhost(s.id), manual);
+
+    await g.alinearVhosts();
+
+    expect(readFileSync(rutas.vhost(s.id), 'utf8')).toBe(bueno);
+    expect(avisos).toEqual([{ sitio: 'roto', modo: 'manual', motivo: expect.any(String) }]);
   });
 });
