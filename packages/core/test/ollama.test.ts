@@ -158,6 +158,22 @@ describe('ClienteOllama', () => {
     await c.borrar('mistral');
   });
 
+  it('borrar acepta un 200 con el cuerpo vacío (Ollama 0.40)', async () => {
+    const { c } = cliente(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new SyntaxError('Unexpected end of JSON input');
+      },
+    }));
+    await expect(c.borrar('mistral')).resolves.toBeUndefined();
+  });
+
+  it('borrar sigue fallando con un error real de Ollama', async () => {
+    const { c } = cliente(async () => json({ error: 'model not found' }, 404));
+    await expect(c.borrar('mistral')).rejects.toThrow('model not found');
+  });
+
   it('probar devuelve la respuesta con stream:false', async () => {
     const { c } = cliente(async (url, init) => {
       expect(url).toBe('http://127.0.0.1:11434/api/generate');

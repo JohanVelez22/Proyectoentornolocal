@@ -156,7 +156,8 @@ export class ClienteOllama {
       },
       MS_LISTA,
     );
-    await this.leerJson(r);
+    // Ollama 0.40 responde 200 con el cuerpo vacío: el éxito no se parsea como JSON.
+    if (!r.ok) await this.leerJson(r);
   }
 
   async probar(nombre: string, texto: string): Promise<string> {
