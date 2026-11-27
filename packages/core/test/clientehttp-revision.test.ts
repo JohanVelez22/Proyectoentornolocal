@@ -1,10 +1,12 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
+import https from 'node:https';
 import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ClienteHttp, type PeticionHttp, type SecretosHttp } from '../src';
+import { emitirCertificado, generarCA } from '../src/https/ca';
 
 // Correcciones de la revisión opus de D48. Todo contra 127.0.0.1 con puerto aleatorio; los
 // valores son obviamente falsos.
@@ -12,6 +14,8 @@ const cerrar: (() => Promise<void>)[] = [];
 let carpeta: string;
 let almacen: Map<string, string>;
 let cliente: ClienteHttp;
+let caPem: string | null;
+let dominios: string[];
 let fallarEscritura: ((destino: string) => boolean) | null;
 
 const secretos: SecretosHttp = {
@@ -68,11 +72,13 @@ beforeEach(() => {
   carpeta = mkdtempSync(path.join(os.tmpdir(), 'pel-clientehttp-rev-'));
   almacen = new Map();
   fallarEscritura = null;
+  caPem = null;
+  dominios = [];
   cliente = new ClienteHttp({
     carpeta,
     secretos,
-    caWolf: async () => null,
-    dominiosWolf: async () => [],
+    caWolf: async () => caPem,
+    dominiosWolf: async () => dominios,
     escribir: async (destino, datos) => {
       if (fallarEscritura?.(destino)) throw new Error('disco lleno');
       writeFileSync(destino, datos);
@@ -249,5 +255,130 @@ describe('M1: un fallo de escritura no pierde secretos existentes', () => {
   });
 });
 
-void mkdirSync;
-void readFileSync;
+const textoDe = (r: { cuerpo: { tipo: string; texto?: string } }): string =>
+  r.cuerpo.tipo === 'texto' ? (r.cuerpo.texto ?? '') : '';
+
+describe('M2: una API key en la consulta no se ve en los saltos ni en la URL final', () => {
+  it('sustituye el valor (también codificado) por *** en saltos y urlFinal', async () => {
+    const puerto = await servidor((req, res) => {
+      if (req.url!.startsWith('/a')) {
+        res.writeHead(302, { location: '/b' + req.url!.slice(2) });
+        res.end();
+      } else eco(req, res);
+    });
+    const valor = 'clave falsa&=1';
+    const r = await cliente.enviar(
+      peticion(`http://127.0.0.1:${puerto}/a`, {
+        auth: { tipo: 'apikey', nombre: 'k', en: 'query', valor },
+      }),
+    );
+    const visto = JSON.stringify([r.saltos, r.urlFinal]);
+    expect(visto).not.toContain('falsa');
+    expect(visto).not.toContain(encodeURIComponent(valor));
+    expect(r.saltos[0]!.url).toContain('***');
+    expect(r.urlFinal).toContain('***');
+  });
+});
+
+describe('M3: al cambiar de origen solo pasa una lista blanca de cabeceras', () => {
+  it('X-Session y X-Auth no llegan al otro origen; sí Accept-Language y User-Agent', async () => {
+    const destino = await servidor(eco);
+    const origen = await servidor((_q, res) => {
+      res.writeHead(307, { location: `http://127.0.0.1:${destino}/otro` });
+      res.end();
+    });
+    const r = await cliente.enviar(
+      peticion(`http://127.0.0.1:${origen}/`, {
+        metodo: 'POST',
+        cabeceras: [
+          { clave: 'X-Session', valor: 'S', activo: true },
+          { clave: 'X-Auth', valor: 'A', activo: true },
+          { clave: 'X-Normal', valor: 'N', activo: true },
+          { clave: 'Accept-Language', valor: 'es', activo: true },
+          { clave: 'Cache-Control', valor: 'no-cache', activo: true },
+          { clave: 'User-Agent', valor: 'prueba', activo: true },
+        ],
+        cuerpo: { tipo: 'json', texto: '{"a":1}' },
+      }),
+    );
+    const h = JSON.parse(textoDe(r)).cabeceras;
+    expect(h['x-session']).toBeUndefined();
+    expect(h['x-auth']).toBeUndefined();
+    expect(h['x-normal']).toBeUndefined();
+    expect(h['accept-language']).toBe('es');
+    expect(h['cache-control']).toBe('no-cache');
+    expect(h['user-agent']).toBe('prueba');
+    expect(h['content-type']).toBe('application/json');
+  });
+
+  it('en el mismo origen se conservan todas', async () => {
+    const puerto = await servidor((req, res) => {
+      if (req.url === '/a') {
+        res.writeHead(302, { location: '/b' });
+        res.end();
+      } else eco(req, res);
+    });
+    const r = await cliente.enviar(
+      peticion(`http://127.0.0.1:${puerto}/a`, {
+        cabeceras: [{ clave: 'X-Session', valor: 'S', activo: true }],
+      }),
+    );
+    expect(JSON.parse(textoDe(r)).cabeceras['x-session']).toBe('S');
+  });
+});
+
+describe('certificadoIgnorado solo es true si de verdad se ignoró en el host final', () => {
+  it('en http o con un certificado válido es false aunque se pida ignorar', async () => {
+    const puerto = await servidor(eco);
+    const r = await cliente.enviar(
+      peticion(`http://127.0.0.1:${puerto}/`, { ignorarCertificado: true }),
+    );
+    expect(r.certificadoIgnorado).toBe(false);
+  });
+
+  it('con https: true solo si el certificado no se pudo verificar', async () => {
+    const ca = generarCA();
+    const hoja = emitirCertificado(ca, ['localhost', '127.0.0.1']);
+    const s = https.createServer({ key: hoja.keyPem, cert: hoja.certPem }, eco);
+    await new Promise<void>((ok) => s.listen(0, '127.0.0.1', ok));
+    cerrar.push(
+      () =>
+        new Promise<void>((r) => {
+          s.closeAllConnections();
+          s.close(() => r());
+        }),
+    );
+    const puerto = (s.address() as AddressInfo).port;
+    const ignorando = await cliente.enviar(
+      peticion(`https://127.0.0.1:${puerto}/`, { ignorarCertificado: true }),
+    );
+    expect(ignorando.certificadoIgnorado).toBe(true);
+    caPem = ca.certPem;
+    dominios = ['localhost'];
+    const verificado = await cliente.enviar(
+      peticion(`https://localhost:${puerto}/`, { ignorarCertificado: true }),
+    );
+    expect(verificado.estado).toBe(200);
+    expect(verificado.certificadoIgnorado).toBe(false);
+  }, 60_000);
+});
+
+describe('el Content-Type del cuerpo raw no admite saltos de línea', () => {
+  it('un {{variable}} con CR/LF en el tipo de contenido se rechaza', async () => {
+    const puerto = await servidor(eco);
+    const e = await cliente.guardarEntorno({
+      id: '',
+      nombre: 'e',
+      variables: [{ nombre: 'v', valor: 'x\r\nInjected: 1', secreta: false }],
+    });
+    await expect(
+      cliente.enviar(
+        peticion(`http://127.0.0.1:${puerto}/`, {
+          metodo: 'POST',
+          cuerpo: { tipo: 'raw', texto: 'a', tipoContenido: 'text/plain{{v}}' },
+        }),
+        { entornoId: e.id },
+      ),
+    ).rejects.toMatchObject({ codigo: 'clientehttp.cabecera_invalida' });
+  });
+});

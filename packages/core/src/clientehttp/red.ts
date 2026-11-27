@@ -1,10 +1,10 @@
 import http from 'node:http';
 import https from 'node:https';
-import tls from 'node:tls';
+import tls, { type TLSSocket } from 'node:tls';
 import { STATUS_CODES } from 'node:http';
 import { ErrorWolf } from '../errores';
 import { construirCuerpo, type PeticionResuelta } from './componer';
-import { cabeceraDeCredencial, urlSinSecretos } from './sensibles';
+import { MASCARA, urlSinSecretos } from './sensibles';
 import {
   MAX_REDIRECCIONES_HTTP,
   MAX_RESPUESTA_HTTP,
@@ -21,6 +21,19 @@ export interface OpcionesRed {
 }
 
 const REDIRECCIONES = new Set([301, 302, 303, 307, 308]);
+
+/**
+ * Al pasar a otro origen solo se conservan estas cabeceras (y las que pone el propio cliente):
+ * cualquier otra puede llevar una sesión o un token con un nombre que nadie previó.
+ */
+const CABECERAS_A_OTRO_ORIGEN = new Set([
+  'accept',
+  'accept-language',
+  'accept-encoding',
+  'content-type',
+  'user-agent',
+  'cache-control',
+]);
 
 /** Raíces del sistema (si Node las ofrece) más la CA de WolfCore, para un agente por petición. */
 export function raicesConCa(caWolf: string): string[] {
@@ -77,6 +90,8 @@ interface Salto {
   cabeceras: [string, string][];
   cuerpo: Buffer;
   truncada: boolean;
+  /** El certificado no se pudo verificar y se siguió porque se pidió ignorarlo. */
+  noVerificado: boolean;
 }
 
 function pedirUna(
@@ -116,6 +131,7 @@ function pedirUna(
           cabeceras: pares(res.rawHeaders),
           cuerpo: Buffer.concat(trozos),
           truncada,
+          noVerificado: esHttps && ignorar && (res.socket as TLSSocket).authorized === false,
         });
       res.on('data', (d: Buffer) => {
         if (truncada) return;
@@ -174,8 +190,7 @@ export function jsonConFormato(tipo: string, texto: string): string | null {
 
 /**
  * Envía la petición desde este proceso: plazo total, tope de respuesta, redirecciones a mano (cada
- * salto queda en la respuesta; al cambiar de origen se quitan `Authorization`, `Cookie` y las
- * cabeceras de credenciales), sin cookies persistentes y sin proxy. TLS siempre verificado; solo
+ * salto queda en la respuesta; al cambiar de origen solo pasa una lista blanca de cabeceras), sin cookies persistentes y sin proxy. TLS siempre verificado; solo
  * `ignorarCertificado` lo relaja, y solo para el host de la petición.
  */
 export async function ejecutar(req: PeticionResuelta, o: OpcionesRed = {}): Promise<RespuestaHttp> {
@@ -189,6 +204,14 @@ export async function ejecutar(req: PeticionResuelta, o: OpcionesRed = {}): Prom
   const cancelar = (): void => ctl.abort();
   if (o.senal?.aborted) ctl.abort();
   o.senal?.addEventListener('abort', cancelar, { once: true });
+  // Los valores secretos usados (también codificados) nunca salen en las URL mostradas.
+  const valores = [
+    ...new Set(
+      req.secretos.flatMap((s) => (s === '' ? [] : [s, encodeURIComponent(s), encodeURI(s)])),
+    ),
+  ].sort((a, b) => b.length - a.length);
+  const ver = (u: URL | string): string =>
+    valores.reduce((t, v) => t.split(v).join(MASCARA), urlSinSecretos(u.toString()));
   const maxCuerpo = o.maxCuerpo ?? MAX_RESPUESTA_HTTP;
   const maxSaltos = o.maxSaltos ?? MAX_REDIRECCIONES_HTTP;
   try {
@@ -259,8 +282,8 @@ export async function ejecutar(req: PeticionResuelta, o: OpcionesRed = {}): Prom
                 },
           truncada: r.truncada,
           saltos,
-          urlFinal: urlSinSecretos(url.toString()),
-          certificadoIgnorado: req.ignorarCertificado && url.protocol === 'https:',
+          urlFinal: ver(url),
+          certificadoIgnorado: r.noVerificado,
           caWolf,
         };
       }
@@ -285,12 +308,14 @@ export async function ejecutar(req: PeticionResuelta, o: OpcionesRed = {}): Prom
         );
       }
       saltos.push({
-        url: urlSinSecretos(url.toString()),
+        url: ver(url),
         estado: r.estado,
-        ubicacion: urlSinSecretos(siguiente.toString()),
+        ubicacion: ver(siguiente),
       });
       if (origen(siguiente) !== origen(url)) {
-        for (const k of [...cabeceras.keys()]) if (cabeceraDeCredencial(k)) cabeceras.delete(k);
+        for (const k of [...cabeceras.keys()]) {
+          if (!CABECERAS_A_OTRO_ORIGEN.has(k)) cabeceras.delete(k);
+        }
       }
       const aGet =
         r.estado === 303

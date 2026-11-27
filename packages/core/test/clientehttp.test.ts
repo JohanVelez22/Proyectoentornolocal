@@ -619,7 +619,7 @@ describe('redirecciones manuales', () => {
     expect(x.cabeceras['authorization']).toBe('Bearer ' + FALSO);
     expect(x.cabeceras['cookie']).toBe('a=1');
   });
-  it('al cambiar de origen se quitan Authorization, Cookie y las cabeceras de credenciales', async () => {
+  it('al cambiar de origen solo pasa la lista blanca (sin Authorization, Cookie ni otras)', async () => {
     const destino = await servidorHttp();
     const origen = await servidorHttp((_q, res) => {
       res.statusCode = 307;
@@ -645,7 +645,7 @@ describe('redirecciones manuales', () => {
     expect(x.cabeceras['authorization']).toBeUndefined();
     expect(x.cabeceras['cookie']).toBeUndefined();
     expect(x.cabeceras['x-api-key']).toBeUndefined();
-    expect(x.cabeceras['x-normal']).toBe('ok');
+    expect(x.cabeceras['x-normal']).toBeUndefined();
   });
   it('303 convierte POST en GET sin cuerpo', async () => {
     const puerto = await servidorHttp((req, res) => {

@@ -204,11 +204,15 @@ export async function componer(
       tipoContenido: 'application/json',
     };
   } else if (c.tipo === 'raw') {
-    cuerpo = {
-      tipo: 'texto',
-      texto: sustituir(c.texto, ctx.variables),
-      tipoContenido: c.tipoContenido ? sustituir(c.tipoContenido, ctx.variables) : 'text/plain',
-    };
+    const tipoContenido = c.tipoContenido
+      ? sustituir(c.tipoContenido, ctx.variables)
+      : 'text/plain';
+    if (!VALOR_CABECERA.test(tipoContenido)) {
+      throw new ErrorWolf('clientehttp.cabecera_invalida', 'Una cabecera no es válida.', {
+        nombre: 'Content-Type',
+      });
+    }
+    cuerpo = { tipo: 'texto', texto: sustituir(c.texto, ctx.variables), tipoContenido };
   } else if (c.tipo === 'form' || c.tipo === 'multipart') {
     cuerpo = { tipo: c.tipo, campos: await lista(c.campos, ctx, secretos) };
   }
