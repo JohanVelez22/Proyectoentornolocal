@@ -2,6 +2,26 @@
 
 ## Novedades
 
+- **Interfaz en 16 idiomas**
+  - Español, English, Português, Français, Deutsch, Italiano, Русский, 简体中文, 日本語, 한국어, हिन्दी, Türkçe, Bahasa Indonesia, Polski, Nederlands y Українська.
+  - El selector (en **Ajustes → Apariencia e idioma** y en la barra superior) muestra cada idioma con su nombre nativo. Los doce que no son español, inglés, portugués ni francés llevan el aviso «Traducción automática revisada»; si falta algún texto, se ve en inglés.
+  - El menú de la bandeja, los diálogos y los avisos de Windows también cambian de idioma. La ayuda de `wolf` sigue disponible solo en español, inglés, portugués y francés.
+
+- **Inicio más claro**
+  - Los avisos del panel se juntan en una sola tarjeta plegable, «Problemas detectados», que muestra los dos primeros y se despliega con «Ver los N».
+  - «Finalizar proceso» pasa a un menú con confirmación y la memoria alta se ve como una insignia en su tarjeta, no como un aviso.
+  - Nueva tarjeta «Espacio en disco» con el espacio libre del sistema y de los datos de WolfCore, que se pone ámbar o roja si queda poco. Su botón «Liberar espacio» ofrece limpiar versiones sin uso, limpiar temporales y cachés, o ver qué ocupa más.
+  - Una sola tarjeta, «Servicios y procesos», reúne lo que está en marcha con su uso de CPU y memoria y, debajo, el resto de los servicios.
+
+- **Pastilla de estado de la barra superior**
+  - Siempre muestra un texto corto («Todo apagado», «3 encendidos», «1 con error», «Conectando…» o «Sin conexión») y, al pulsarla, abre Servicios.
+
+- **Servicios con motores externos aparte**
+  - Los motores que administra otro programa (por ejemplo, un MySQL o un Nginx instalados por su cuenta) salen en su propia franja, «Detectados en su equipo», solo para consulta. No cuentan entre los servicios encendidos ni los toca «Iniciar todo». Si solo hay externos, una franja le invita a instalar Nginx y PHP.
+
+- **Navegación reorganizada**
+  - Herramientas se divide en 5 secciones (Código, Red, Seguridad, Archivos y medios y Sistema), con Comparar, QR y Guías como pestañas. PHP queda dentro de Servicios y Agentes dentro de IA; Contenedores aparece con «Mostrar secciones avanzadas». El asistente de inicio se sustituye por un recorrido de bienvenida de 7 pasos.
+
 - **Proyectos nuevos, plantillas e importación**
   - Crear un proyecto desde cero (carpeta, sitio con HTTPS, base y conexión) para Laravel, CodeIgniter 3 y 4, Symfony, FastAPI, WordPress y sitio estático. También hay recetas para Rails, Spring Boot, ASP.NET y Node.
   - Guardar un proyecto como plantilla (receta, ajustes de PHP y Nginx, extensiones y esquema de la base, solo la estructura) y crear proyectos nuevos a partir de ella.
@@ -54,6 +74,11 @@
 
 ## Correcciones
 
+- «Servicios encendidos: N de M» cuenta solo los servicios propios: ya no suman los motores externos ni el FTP apagado, así que el número nunca pasa del total.
+- La pastilla y los avisos de Inicio vuelven a ver los procesos de proyecto y ya no dan un aviso falso de «Nginx sin instalar».
+- La tarjeta de disco ya no se queda en «—» si falla una lectura y redondea hacia abajo, de modo que el color y el porcentaje coinciden.
+- El foco del teclado se ve en todos los controles y los botones pequeños tienen una zona de clic más grande.
+- La barra superior ya no se solapa a ningún ancho de ventana y el lema de la barra lateral no se corta a mitad de palabra en chino y japonés.
 - Las versiones de lenguajes se instalan sin tocar el PATH del sistema.
 - La migración automática a instancias paralelas conserva puerto, carpeta de datos y credenciales, con copia previa de la configuración.
 - Actualizar un parche respalda primero (volcado de bases y copia en frío) y vuelve a la versión anterior si la nueva no arranca.
