@@ -142,7 +142,8 @@ describe('vistas con foco', () => {
     ['componentes/TarjetaProyecto.vue', 'data-foco="`sitio:${sitio.id}`"'],
     ['componentes/TarjetaHallazgo.vue', 'data-foco="`hallazgo:${hallazgo.id}`"'],
     ['componentes/ProcesosProyecto.vue', 'data-foco="`proceso:${sitio.id}:${p.id}`"'],
-    ['vistas/Inicio.vue', 'data-foco="`servicio:${s.id}`"'],
+    ['componentes/TarjetaServiciosProcesos.vue', 'data-foco="`servicio:${s.id}`"'],
+    ['componentes/TablaProcesos.vue', 'data-foco="`servicio:${servicioDeProceso(f.id)}`"'],
     ['vistas/Tuneles.vue', "'data-foco': `sitio:${f.sitioId}`"],
   ])('%s declara su data-foco', (archivo, esperado) => {
     expect(fuente(...archivo.split('/'))).toContain(esperado);

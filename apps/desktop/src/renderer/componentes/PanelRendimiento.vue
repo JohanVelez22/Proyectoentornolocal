@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { EllipsisHorizontal, Warning } from '@vicons/ionicons5';
-import { NButton, NCard, NDropdown, NIcon, NTag, useDialog } from 'naive-ui';
+import { NButton, NCard, NIcon, NTag, useDialog } from 'naive-ui';
+import MenuDesplegable from './MenuDesplegable.vue';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { api } from '../api';
 import { useRouter } from 'vue-router';
@@ -148,8 +149,9 @@ function finalizar(a: AlertaPanel): void {
             <NButton v-if="p.alerta" size="small" quaternary @click="verPuertos">
               {{ t.alertas.verPuertos }}
             </NButton>
-            <NDropdown
+            <MenuDesplegable
               v-if="p.alerta?.proceso"
+              alinear-fin
               trigger="click"
               :options="opcionesFila"
               @select="() => p.alerta && finalizar(p.alerta)"
@@ -159,7 +161,7 @@ function finalizar(a: AlertaPanel): void {
                   ><NIcon><EllipsisHorizontal /></NIcon
                 ></template>
               </NButton>
-            </NDropdown>
+            </MenuDesplegable>
           </span>
         </li>
       </ul>

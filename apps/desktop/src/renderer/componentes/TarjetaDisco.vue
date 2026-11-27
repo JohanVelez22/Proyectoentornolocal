@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ChevronDown } from '@vicons/ionicons5';
-import { NButton, NCard, NDropdown, NIcon, NProgress, NTag } from 'naive-ui';
+import { NButton, NCard, NIcon, NProgress, NTag } from 'naive-ui';
+import MenuDesplegable from './MenuDesplegable.vue';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { UnidadDisco } from '../../shared/api';
@@ -106,14 +107,14 @@ function elegir(clave: string | number): void {
       </li>
     </ul>
     <p v-else class="leyendo">{{ leido ? '—' : t.leyendo }}</p>
-    <NDropdown trigger="click" :options="opciones" @select="elegir">
+    <MenuDesplegable trigger="click" :options="opciones" @select="elegir">
       <NButton size="small" secondary class="liberar">
         {{ t.liberar }}
         <template #icon
           ><NIcon><ChevronDown /></NIcon
         ></template>
       </NButton>
-    </NDropdown>
+    </MenuDesplegable>
     <DialogoLimpiarVersiones v-model:show="limpiando" @limpiado="leer" />
   </NCard>
 </template>

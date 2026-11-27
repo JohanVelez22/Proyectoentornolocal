@@ -117,7 +117,7 @@ function verRegistros(f: Fila): void {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="f in filas" :key="f.id">
+        <tr v-for="f in filas" :key="f.id" :data-foco="`servicio:${servicioDeProceso(f.id)}`">
           <td class="nombre">
             <span>{{ f.nombre }}</span>
             <NTag size="tiny" :bordered="false" :type="f.tipo === 'proyecto' ? 'info' : 'default'">
