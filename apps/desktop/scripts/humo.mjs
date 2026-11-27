@@ -12,6 +12,7 @@
 // `--no-sandbox`, ya previstos).
 import { chromium } from 'playwright-core';
 import { spawn } from 'node:child_process';
+import http from 'node:http';
 import { existsSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -253,6 +254,36 @@ try {
     registro(`ok   Editor de código: CodeMirror montó (role=${rol})`);
   } catch (e) {
     falla(`El editor de código no montó: ${e}`);
+  }
+  // Cliente HTTP (D48): la tarjeta abre, y una petición real a un servidor local (127.0.0.1, puerto
+  // aleatorio) vuelve con su resumen: comprueba el IPC, el proceso principal y la CSP.
+  const servidorHttp = http.createServer((req, res) => {
+    res.setHeader('content-type', 'application/json');
+    res.end(JSON.stringify({ metodo: req.method, ruta: req.url }));
+  });
+  try {
+    await new Promise((ok) => servidorHttp.listen(0, '127.0.0.1', ok));
+    const puertoHttp = servidorHttp.address().port;
+    await ventana.evaluate(() => {
+      location.hash = '#/herramientas';
+    });
+    await ventana.waitForSelector('[data-herramienta="clienteHttp"]', { timeout: 30_000 });
+    await ventana.evaluate(() =>
+      document.querySelector('[data-herramienta="clienteHttp"]')?.click(),
+    );
+    await ventana.waitForSelector('[data-testid="http-url"] input', { timeout: 30_000 });
+    await ventana.fill('[data-testid="http-url"] input', `http://127.0.0.1:${puertoHttp}/humo`);
+    await ventana.press('[data-testid="http-url"] input', 'Control+Enter');
+    await ventana.waitForSelector('[data-testid="http-resumen"]', { timeout: 30_000 });
+    const cuerpo = await ventana.textContent('[data-testid="http-cuerpo"]');
+    if (!cuerpo || !cuerpo.includes('/humo'))
+      falla(`El cliente HTTP no mostró la respuesta: ${cuerpo}`);
+    else registro('ok   Cliente HTTP: petición local enviada desde el proceso principal');
+  } catch (e) {
+    falla(`El cliente HTTP no funcionó: ${e}`);
+  } finally {
+    servidorHttp.closeAllConnections();
+    servidorHttp.close();
   }
   await ventana.waitForTimeout(500);
 
