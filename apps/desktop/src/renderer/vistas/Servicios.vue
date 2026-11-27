@@ -85,11 +85,23 @@ const grupos = computed<GrupoServicios[]>(() => {
   }
   return res;
 });
-const administrables = computed(() => servicios.visibles.filter((s) => s.estado !== 'externo'));
+/** Hasta que se sabe qué hay instalado se pintan esqueletos, nunca tarjetas que luego desaparecen. */
+const listo = computed(() => servicios.cargado && servicios.instaladosListos);
+/** Sin ningún servicio (ni propio ni externo): el único caso con estado vacío. */
+const sinNingunServicio = computed(
+  () => listo.value && servicios.nadaInstalado && servicios.externos.length === 0,
+);
+/** Solo hay motores externos: franja en vez de estado vacío. */
+const soloExternos = computed(
+  () => listo.value && servicios.nadaInstalado && servicios.externos.length > 0,
+);
+function irAInstalarWeb(): void {
+  void router.push({ name: 'servicios.versiones', params: { servicio: 'nginx' } });
+}
 // "Detener todo" también cierra los túneles: se habilita si hay alguno abierto.
 const algunoEncendido = computed(
   () =>
-    administrables.value.some((s) => s.estado === 'encendido' || s.estado === 'iniciando') ||
+    servicios.visibles.some((s) => s.estado === 'encendido' || s.estado === 'iniciando') ||
     Object.values(tuneles.porSitio).some((t) => t.estado === 'activo' || t.estado === 'iniciando'),
 );
 
@@ -141,7 +153,8 @@ onMounted(() => {
       <NSpace size="small" :wrap="false">
         <NButton
           size="small"
-          :disabled="!administrables.length || ocupado('detenerTodo')"
+          :disabled="!servicios.resumen.porArrancar || ocupado('detenerTodo')"
+          :title="servicios.resumen.porArrancar ? undefined : t.sinParaEncender"
           :loading="ocupado('iniciarTodo')"
           type="primary"
           @click="iniciarTodo"
@@ -167,7 +180,7 @@ onMounted(() => {
     </div>
 
     <EstadoVacio
-      v-if="servicios.cargado && servicios.nadaInstalado"
+      v-if="sinNingunServicio"
       marco
       :icono="Server"
       :titulo="textos.estadosVacios.serviciosVacio.titulo"
@@ -178,11 +191,20 @@ onMounted(() => {
       </NButton>
     </EstadoVacio>
 
+    <!-- Solo hay motores externos: una franja guía hacia lo que falta (no un estado vacío). -->
+    <div v-if="soloExternos" class="franja" role="note">
+      <NIcon :size="18" aria-hidden="true"><Server /></NIcon>
+      <span class="franja-texto">{{ t.franjaExternos.texto }}</span>
+      <NButton size="small" type="primary" @click="irAInstalarWeb">
+        {{ t.franjaExternos.accion }}
+      </NButton>
+    </div>
+
     <!-- Mientras llega la primera foto se reserva el espacio de las tarjetas (sin saltos). -->
-    <section v-if="!servicios.cargado" class="grupo" aria-busy="true">
+    <section v-if="!listo" class="grupo" aria-busy="true">
       <NSkeleton text :width="120" class="esqueleto-titulo" />
       <div class="rejilla">
-        <NSkeleton v-for="n in 3" :key="n" :height="148" :sharp="false" class="esqueleto" />
+        <NSkeleton v-for="n in 3" :key="n" :height="168" :sharp="false" class="esqueleto" />
       </div>
     </section>
 
@@ -204,6 +226,20 @@ onMounted(() => {
             <TarjetaHerramienta herramienta="adminer" />
             <TarjetaHerramienta herramienta="phpmyadmin" />
           </template>
+        </div>
+      </section>
+      <!-- Motores que corren fuera de WolfCore Dev, en su propia franja. -->
+      <section
+        v-if="servicios.externos.length"
+        class="grupo externos"
+        aria-labelledby="grupo-externos"
+      >
+        <header class="cabeza-grupo">
+          <h2 id="grupo-externos">{{ t.externos.titulo }}</h2>
+          <small>{{ t.externos.ayuda }}</small>
+        </header>
+        <div class="rejilla" aria-live="polite">
+          <TarjetaServicio v-for="s in servicios.externos" :key="s.id" :servicio="s" />
         </div>
       </section>
     </template>
@@ -273,8 +309,25 @@ onMounted(() => {
   gap: 14px;
 }
 .esqueleto {
-  border-radius: 12px;
+  border-radius: var(--wc-radio-lg);
 }
+.franja {
+  display: flex;
+  align-items: center;
+  gap: var(--wc-esp-3);
+  min-height: 56px;
+  margin-bottom: var(--wc-esp-4);
+  padding: 0 var(--wc-esp-4);
+  border: 1px solid rgba(var(--acento-rgb), 0.35);
+  border-radius: var(--wc-radio-md);
+  background: rgba(var(--acento-rgb), 0.06);
+}
+.franja-texto {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--wc-texto-sm);
+}
+
 .esqueleto-titulo {
   margin-bottom: 10px;
 }
