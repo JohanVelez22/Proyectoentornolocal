@@ -6,6 +6,7 @@ import { textos } from '../../i18n';
 import {
   probarRegexConLimite,
   segmentosResaltado,
+  textoErrorRegex,
   type ResultadoRegex,
 } from '../../utilidades/herramientas';
 
@@ -42,7 +43,7 @@ async function probar(): Promise<void> {
   if (mio !== turno) return;
   ocupado.value = false;
   if (r.estado === 'ok') {
-    error.value = r.resultado.error ?? null;
+    error.value = textoErrorRegex(r.resultado, textos.herramientas.errores);
     errorMotor.value = r.resultado.errorMotor ?? null;
     resultado.value = r.resultado.error ? null : r.resultado;
   } else {

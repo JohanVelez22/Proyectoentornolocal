@@ -9,7 +9,7 @@ import MarkdownIt, { type MarkdownIt as InstanciaMarkdown, type RendererRule } f
 import { textos } from '../i18n';
 import { aHex, md5, type Coincidencia, type ResultadoRegex } from './herramientasTrabajo';
 
-export { aHex, buscarCoincidencias, md5 } from './herramientasTrabajo';
+export { aHex, buscarCoincidencias, md5, textoErrorRegex } from './herramientasTrabajo';
 export type { Coincidencia, ResultadoRegex } from './herramientasTrabajo';
 
 const t = textos.herramientas.errores;

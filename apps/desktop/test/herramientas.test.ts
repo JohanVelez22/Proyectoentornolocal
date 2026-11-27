@@ -6,7 +6,7 @@ import { en } from '../src/renderer/i18n/en';
 import { es } from '../src/renderer/i18n/es';
 import { fr } from '../src/renderer/i18n/fr';
 import { pt } from '../src/renderer/i18n/pt';
-import { detalleRegex } from '../src/renderer/utilidades/herramientasTrabajo';
+import { detalleRegex, textoErrorRegex } from '../src/renderer/utilidades/herramientasTrabajo';
 import { errorWifi, textoQrWifi } from '../src/renderer/utilidades/qrWifi';
 import { pngsAIco, TAMANOS_ICO } from '../src/renderer/utilidades/ico';
 import {
@@ -98,24 +98,47 @@ describe('expresiones regulares', () => {
     expect(r.coincidencias[1]?.nombrados).toEqual({ user: 'LUIS' });
   });
 
-  it('un patrón inválido da un error en español', () => {
-    expect(buscarCoincidencias('(', '', 'x').error).toMatch(/^Expresión no válida/);
-    expect(buscarCoincidencias('a', 'q', 'x').error).toMatch(/Banderas no válidas/);
+  it('un patrón inválido devuelve el tipo de fallo; el texto lo arma la interfaz (D54a)', () => {
+    expect(buscarCoincidencias('(', '', 'x').error).toBe('regex');
+    expect(buscarCoincidencias('a', 'q', 'x').error).toBe('banderas');
+    expect(textoErrorRegex(buscarCoincidencias('(', '', 'x'), es.herramientas.errores)).toMatch(
+      /^Expresión no válida/,
+    );
+    expect(textoErrorRegex(buscarCoincidencias('a', 'q', 'x'), es.herramientas.errores)).toMatch(
+      /Banderas no válidas/,
+    );
   });
 
   it('el error del motor se traduce y el mensaje original queda aparte (D54a, I7)', () => {
     const r = buscarCoincidencias('(abc[', 'g', 'x');
-    expect(r.error).toBe('Expresión no válida: falta cerrar un corchete «[».');
-    expect(r.errorMotor).toMatch(/Unterminated character class/);
-    expect(buscarCoincidencias('(', '', 'x').error).toBe(
-      'Expresión no válida: falta cerrar un paréntesis «(».',
+    const texto = (p: string, d: typeof es = es) =>
+      textoErrorRegex(buscarCoincidencias(p, '', 'x'), d.herramientas.errores) ?? '';
+    expect(textoErrorRegex(r, es.herramientas.errores)).toBe(
+      'Expresión no válida: falta cerrar un corchete «[».',
     );
-    expect(buscarCoincidencias('*a', '', 'x').error).toMatch(/nada que repetir/);
-    expect(buscarCoincidencias('a)', '', 'x').error).toMatch(/«\)»/);
+    expect(r.errorMotor).toMatch(/Unterminated character class/);
+    expect(texto('(')).toBe('Expresión no válida: falta cerrar un paréntesis «(».');
+    expect(texto('*a')).toMatch(/nada que repetir/);
+    expect(texto('a)')).toMatch(/«\)»/);
     // El mensaje nunca lleva inglés del motor.
     for (const p of ['(', '[', '*', 'a)', '\\', '[z-a]', '(?<>a)', 'a{2,1}']) {
-      expect(buscarCoincidencias(p, '', 'x').error).not.toMatch(/Invalid|Unterminated|Unmatched/);
+      expect(texto(p)).not.toMatch(/Invalid|Unterminated|Unmatched/);
     }
+  });
+
+  it('el error de regex sale en el idioma de la interfaz, no en el del Worker (D54a)', () => {
+    // El Worker devuelve solo el tipo y el mensaje del motor: el texto se arma con el idioma pedido.
+    const r = buscarCoincidencias('(abc[', 'g', 'x');
+    expect(textoErrorRegex(r, en.herramientas.errores)).toBe(
+      en.herramientas.errores.regex(en.herramientas.errores.regexDetalle.corchete),
+    );
+    expect(textoErrorRegex(r, en.herramientas.errores)).not.toMatch(/Expresión|falta/);
+    expect(textoErrorRegex(r, pt.herramientas.errores)).not.toMatch(/Expresión|falta cerrar/);
+    expect(textoErrorRegex(r, fr.herramientas.errores)).not.toMatch(/Expresión|falta cerrar/);
+    expect(textoErrorRegex(buscarCoincidencias('a', 'q', 'x'), en.herramientas.errores)).toBe(
+      en.herramientas.errores.banderas,
+    );
+    expect(textoErrorRegex({}, en.herramientas.errores)).toBeNull();
   });
 
   it('un mensaje del motor que no se reconoce da «Expresión no válida.» sin inglés (D54a)', () => {

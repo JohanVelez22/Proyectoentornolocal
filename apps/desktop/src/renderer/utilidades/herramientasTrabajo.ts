@@ -2,10 +2,6 @@
  * Lo que corre dentro del Worker de Herramientas (regex y MD5). Separado para que el Worker no
  * arrastre markdown-it, diff ni bcryptjs.
  */
-import { textos } from '../i18n';
-
-const t = textos.herramientas.errores;
-
 export interface Coincidencia {
   indice: number;
   fin: number;
@@ -17,12 +13,25 @@ export interface Coincidencia {
 export interface ResultadoRegex {
   coincidencias: Coincidencia[];
   truncado: boolean;
-  error?: string;
-  /** Mensaje original del motor (en inglés) cuando se tradujo `error`; para el `title` del campo. */
+  /**
+   * Tipo de fallo. El Worker NO conoce el idioma de la interfaz (allí siempre vale `es`): devuelve
+   * solo el tipo y el mensaje del motor, y el hilo de la interfaz arma el texto con `textoErrorRegex`.
+   */
+  error?: 'banderas' | 'regex';
+  /** Mensaje original del motor (en inglés) si `error` es `regex`; también va al `title` del campo. */
   errorMotor?: string;
 }
 
-type ClavesRegex = keyof typeof t.regexDetalle;
+type ClavesRegex =
+  | 'corchete'
+  | 'parentesis'
+  | 'parentesisSobra'
+  | 'nadaQueRepetir'
+  | 'barraAlFinal'
+  | 'rangoInvertido'
+  | 'cuantificador'
+  | 'grupo'
+  | 'escape';
 
 /** Reconocimiento de los mensajes más comunes del motor regex (V8), por orden de especificidad. */
 const MENSAJES_MOTOR: [RegExp, ClavesRegex][] = [
@@ -52,6 +61,23 @@ export function detalleRegex(
   return null;
 }
 
+/**
+ * Texto del error de un resultado de regex en el idioma de la interfaz. `errores` es
+ * `textos.herramientas.errores` (se lee al llamar, así sigue el idioma activo).
+ */
+export function textoErrorRegex(
+  r: Pick<ResultadoRegex, 'error' | 'errorMotor'>,
+  errores: {
+    banderas: string;
+    regex: (detalle: string | null) => string;
+    regexDetalle: Record<string, string>;
+  },
+): string | null {
+  if (r.error === 'banderas') return errores.banderas;
+  if (r.error === 'regex') return errores.regex(detalleRegex(r.errorMotor ?? '', errores.regexDetalle));
+  return null;
+}
+
 /** Todas las coincidencias (hasta `max`). Corre dentro del Worker: un patrón malo no congela. */
 export function buscarCoincidencias(
   patron: string,
@@ -60,7 +86,7 @@ export function buscarCoincidencias(
   max = 1000,
 ): ResultadoRegex {
   if (!/^[dgimsuyv]*$/.test(banderas) || new Set(banderas).size !== banderas.length) {
-    return { coincidencias: [], truncado: false, error: t.banderas };
+    return { coincidencias: [], truncado: false, error: 'banderas' };
   }
   let re: RegExp;
   try {
@@ -70,7 +96,7 @@ export function buscarCoincidencias(
     return {
       coincidencias: [],
       truncado: false,
-      error: t.regex(detalleRegex(motor, t.regexDetalle)),
+      error: 'regex',
       errorMotor: motor,
     };
   }
