@@ -14,14 +14,23 @@ WolfCore Dev incluye tres pantallas en el grupo **Utilidades** para diagnosticar
    - **Autoridad de certificados (CA)** y **Certificados** vencidos o por vencer.
    - **Confianza de la CA** en Node, Python y Firefox.
    - **Archivo hosts** (bloques duplicados o sin cierre, codificación UTF-16, solo lectura, dominios faltantes).
-   - **PATH del usuario**, **Visual C++** (`vcredist`), **Enlazador de C++** (para Rust/pgvector), **Antivirus**, **Cortafuegos** y **Servicios** en error.
+   - **PATH del usuario**, **Visual C++** (`vcredist`), **Enlazador de C++** (para Rust/pgvector), **Antivirus**, **Cortafuegos** (reglas de entrada que dejan programas abiertos a la red; ver el paso 2) y **Servicios** en error.
 3. Los hallazgos se agrupan en **Errores**, **Avisos** e **Información**, cada uno con **Lo que se vio** (evidencia).
 4. En cada hallazgo reparable, pulse **Reparar** (o **Mover el puerto de WolfCore Dev** si prefiere no tocar un programa externo): se abre **Confirmar la reparación** mostrando exactamente qué se hará y si Windows pedirá administrador. Nada cambia hasta que pulse **Aplicar**.
 5. En hallazgos que WolfCore Dev nunca cambia solo (exclusiones de antivirus, rangos reservados o Build Tools), pulse **Copiar comando** para ejecutarlo usted mismo en una consola de administrador si lo decide.
 
 [CAPTURA: Pantalla Doctor mostrando hallazgos agrupados por Errores y Avisos con botones Reparar, Ver y la sección Confianza de la CA abajo]
 
-### 2. Configurar Confianza de la CA en Node, Python y Firefox
+### 2. Revisar el cortafuegos y quitar reglas peligrosas
+
+En la revisión **Cortafuegos**, Doctor lee las reglas de entrada de Windows y le avisa cuando alguna deja programas de WolfCore Dev (nginx, PHP o bases de datos) abiertos a la red:
+
+1. Pulse **Reparar** en el hallazgo de cortafuegos. Se abre **Confirmar la reparación** con la lista **Reglas afectadas: desmarque las que no quiera tocar** y el botón **Aplicar**.
+2. La reparación **Quitar esas reglas de entrada del cortafuegos** elimina las reglas peligrosas una por una y por su nombre exacto. Antes se guarda una copia protegida en `etc/cortafuegos-quitadas.json` para poder recrearlas, y Windows pide permiso de administrador. Nada cambia hasta que confirme.
+3. Las reglas de **otros programas** (FlyEnv, Laragon, XAMPP u otros) y las **acotadas a la red local** solo se muestran: **nunca se quitan desde aquí**.
+4. Si antes quitó reglas, el hallazgo **Reglas quitadas que se pueden restaurar** permite volver a crearlas con los mismos programa, perfil, protocolo, puertos y direcciones a partir de la copia protegida.
+
+### 3. Configurar Confianza de la CA en Node, Python y Firefox
 
 En la parte inferior de **Doctor**, la sección **Confianza de la CA** muestra cómo confía cada herramienta en sus certificados `.test`:
 
@@ -29,7 +38,7 @@ En la parte inferior de **Doctor**, la sección **Confianza de la CA** muestra c
 - **Python:** los proyectos con `.venv` reciben automáticamente `REQUESTS_CA_BUNDLE` y `SSL_CERT_FILE` combinando las raíces de `certifi` (o Windows) con la CA local.
 - **Firefox:** cierre Firefox y pulse **Activar en Firefox** para escribir `security.enterprise_roots.enabled` en `user.js` de cada perfil (con copia previa en `etc/respaldos`; `prefs.js` no se toca y los perfiles abiertos se saltan). Puede revertirlo con **Quitar de Firefox**.
 
-### 3. Capturar `dump()`, `dd()`, `wd()` y ver errores agrupados (`Depuración`)
+### 4. Capturar `dump()`, `dd()`, `wd()` y ver errores agrupados (`Depuración`)
 
 1. Abra **Depuración** en la barra lateral.
 2. En la pestaña **Volcados**, active la **Captura de dumps** (escucha en `127.0.0.1:9912` con un token de sesión aleatorio).
@@ -41,7 +50,7 @@ En la parte inferior de **Doctor**, la sección **Confianza de la CA** muestra c
 
 [CAPTURA: Pantalla Depuración mostrando un volcado PHP con archivo, línea y URL, y la pestaña Errores al lado]
 
-### 4. Seguir logs en tiempo real (`Registros`)
+### 5. Seguir logs en tiempo real (`Registros`)
 
 1. Abra **Registros** en la barra lateral (o **Ver registros** desde el menú de una tarjeta de proyecto).
 2. Elija la fuente en el desplegable superior (Nginx, PHP, bases de datos, `laravel.log`, procesos de proyecto o túneles).

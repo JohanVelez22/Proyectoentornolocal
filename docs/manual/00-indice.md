@@ -17,11 +17,11 @@ Este manual explica cómo instalar, configurar y usar **WolfCore Dev**, el entor
 | [07 · Túneles y compartir](07-tuneles-y-compartir.md) | Cloudflare rápido y con nombre, ngrok, Expose, Tailscale (Serve y Funnel), acceso en red local con QR e instalación de la CA en el móvil. |
 | [08 · Correo de prueba](08-correo-de-prueba.md) | Captadores locales (Mailpit, smtp4dev, Inbucket, Papercut SMTP) y proveedores SMTP remotos con prueba de envío. |
 | [09 · Procesos y tareas programadas](09-procesos-y-tareas.md) | Procesos supervisados por proyecto (`npm run dev`, `queue:work`, `uvicorn`, Reverb) y tareas cron programadas con historial. |
-| [10 · Herramientas](10-herramientas.md) | Editor de código, buscador, comparador, Cliente HTTP, WebSocket, contraseñas, cripto, imágenes, ZIP/PDF, conversor de documentos, captura de pantalla, limpieza de disco y guías. |
+| [10 · Herramientas](10-herramientas.md) | Editor de código, buscador, comparador, Cliente HTTP, WebSocket, contraseñas, cripto, imágenes, ZIP/PDF, conversor de documentos, uso del disco, compartir carpeta o archivo, captura y grabación de pantalla, limpieza de disco y guías. |
 | [11 · Agentes e IA](11-agentes-ia.md) | IA local con Ollama, proveedores en la nube, registro de agentes de IA con el servidor MCP y sugerencias de commit. |
 | [12 · CLI `wolf`](12-cli-wolf.md) | Activar el comando `wolf` en el PATH, órdenes disponibles (`status`, `link`, `park`, `use`, `secure`, `share`, `open`, `logs`, `doctor`, `start`, `stop`), `--json` y confirmaciones. |
 | [13 · Perfiles y ajustes](13-perfiles-y-ajustes.md) | Apariencia e idioma, avisos, puertos web, HTTPS, editor y terminal predeterminados, optimizador de memoria, respaldos y perfiles `.wolfperfil`. |
-| [14 · Doctor, Depuración y problemas](14-doctor-y-problemas.md) | Diagnóstico automático con Doctor, reparaciones guiadas, confianza de la CA en Node/Python/Firefox, Depuración (`dump()`/`dd()`/errores) y Registros en vivo. |
+| [14 · Doctor, Depuración y problemas](14-doctor-y-problemas.md) | Diagnóstico automático con Doctor, reparaciones guiadas, revisión del cortafuegos y eliminación de reglas peligrosas, confianza de la CA en Node/Python/Firefox, Depuración (`dump()`/`dd()`/errores) y Registros en vivo. |
 | [15 · Seguridad](15-seguridad.md) | Modelo de seguridad local, almacenamiento cifrado de secretos, confianza en repositorios, sitios con datos reales, verificación de descargas y reglas de red. |
 | [16 · Glosario](16-glosario.md) | Definiciones breves y claras de los términos que aparecen en WolfCore Dev. |
 
