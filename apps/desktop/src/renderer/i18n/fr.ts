@@ -351,6 +351,10 @@ export const fr: Textos = {
       'compartir.carpeta_sistema': 'Les dossiers du système ne se partagent pas.',
       'compartir.archivo_sensible':
         'Ce fichier semble contenir un secret ou des données réelles et ne se partage pas.',
+      'compartir.carpeta_perfil':
+        'Les données des programmes de l’utilisateur (AppData, .claude, .config…) ne se partagent pas.',
+      'compartir.archivo_grande':
+        'Ce fichier est trop volumineux pour être vérifié et n’est ni un média ni un paquet : il ne se partage pas.',
       'compartir.tunel_sin_url': 'Le tunnel n’a pas donné son adresse en {segundos} s. Réessayez.',
       'compartir.tunel_cerrado': 'Le tunnel s’est fermé avant d’avoir fini de s’ouvrir.',
       'compartir.fallo': 'Impossible de partager.',
@@ -4097,12 +4101,15 @@ export const fr: Textos = {
         texto:
           'Choisissez un dossier ou un fichier pour obtenir un lien public temporaire. Rien n’est publié tant que vous ne l’avez pas confirmé.',
       },
+      grandes:
+        'Les fichiers texte ou de type inconnu de plus de 8 Mo ne sont pas partagés, car ils ne peuvent pas être vérifiés en entier ; les images, l’audio, la vidéo et les paquets (zip, 7z, iso, pdf) le sont. Ils apparaissent marqués dans la liste.',
       confirmar: {
         titulo: 'Partager sur internet',
         pregunta: 'Publier ceci sur internet ?',
+        rutaReal: 'Chemin réel (liens résolus)',
         ruta: 'Chemin exact',
-        aviso: (hasta: string) =>
-          `Ce sera public sur internet jusqu’à ${hasta} : toute personne ayant le lien pourra consulter et télécharger ce qui est partagé.`,
+        aviso: (dur: string) =>
+          `Ce sera public sur internet pendant ${dur} à partir du moment où le lien sera prêt. Toute personne ayant le lien pourra consulter et télécharger ce qui est partagé.`,
         boton: 'Partager sur internet',
       },
       abriendo: 'Ouverture du tunnel…',

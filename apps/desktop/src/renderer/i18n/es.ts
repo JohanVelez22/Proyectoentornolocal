@@ -336,6 +336,10 @@ export const es = {
       'compartir.carpeta_sistema': 'Las carpetas del sistema no se comparten.',
       'compartir.archivo_sensible':
         'Ese archivo parece guardar un secreto o datos reales y no se comparte.',
+      'compartir.carpeta_perfil':
+        'Los datos de los programas del usuario (AppData, .claude, .config…) no se comparten.',
+      'compartir.archivo_grande':
+        'Ese archivo es demasiado grande para revisarlo y no es un medio ni un paquete: no se comparte.',
       'compartir.tunel_sin_url':
         'El túnel no dio su dirección en {segundos} s. Inténtelo de nuevo.',
       'compartir.tunel_cerrado': 'El túnel se cerró antes de terminar de abrirse.',
@@ -3984,12 +3988,15 @@ export const es = {
         texto:
           'Elija una carpeta o un archivo para obtener un enlace público temporal. Nada se publica hasta que lo confirme.',
       },
+      grandes:
+        'Los archivos de texto o de tipo desconocido de más de 8 MB no se comparten, porque no se pueden revisar por completo; las imágenes, el audio, el vídeo y los paquetes (zip, 7z, iso, pdf) sí. En el listado aparecen marcados.',
       confirmar: {
         titulo: 'Compartir en internet',
         pregunta: '¿Publicar esto en internet?',
+        rutaReal: 'Ruta real (con los enlaces resueltos)',
         ruta: 'Ruta exacta',
-        aviso: (hasta: string) =>
-          `Quedará público en internet hasta las ${hasta}: cualquiera que tenga el enlace podrá ver y descargar lo compartido.`,
+        aviso: (dur: string) =>
+          `Quedará público en internet durante ${dur} desde que el enlace esté listo. Cualquiera que tenga el enlace podrá ver y descargar lo compartido.`,
         boton: 'Compartir en internet',
       },
       abriendo: 'Abriendo el túnel…',

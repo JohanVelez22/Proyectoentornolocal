@@ -18,6 +18,7 @@ function preparar(opciones: { elegirCarpeta?: string | null; elegirArchivo?: str
   const canales = new Map<string, Manejador>();
   const ipcMain: IpcMainLike = { handle: (c, fn) => void canales.set(c, fn as Manejador) };
   const compartir = {
+    vista: vi.fn(async (ruta: string) => ({ ruta, real: ruta, tipo: 'carpeta', difiere: false })),
     estado: vi.fn(() => ({ fase: 'inactiva' })),
     accesos: vi.fn(() => []),
     iniciar: vi.fn(async () => ({ fase: 'activa' })),
@@ -103,6 +104,15 @@ describe('IPC de Compartir (D52)', () => {
     expect(t.compartir.iniciar).not.toHaveBeenCalled();
   });
 
+  it('la vista previa solo acepta una ruta elegida para compartir', async () => {
+    const t = preparar({ elegirCarpeta: 'C:\\Publica' });
+    expect((await t.llamar('compartir.vista', 'C:\\Publica')).ok).toBe(false);
+    await t.llamar('compartir.elegir', 'carpeta');
+    expect((await t.llamar('compartir.vista', 'C:\\Publica')).ok).toBe(true);
+    expect((await t.llamar('compartir.vista', 'C:\\Otra')).ok).toBe(false);
+    expect(t.compartir.vista).toHaveBeenCalledTimes(1);
+  });
+
   it('estado, accesos y detener pasan al núcleo', async () => {
     const t = preparar();
     expect(await t.llamar('compartir.estado')).toMatchObject({ ok: true });
@@ -144,6 +154,10 @@ describe('Compartir: lo que no debe existir', () => {
     // El campo de ruta no existe: solo se ve la elegida con el diálogo.
     expect(f).not.toMatch(/v-model:value="(ruta|elegido)/);
     expect(f).toMatch(/botonCancelar/);
+    // La confirmación enseña la ruta real (validada por el núcleo antes) y se puede cancelar mientras se abre.
+    expect(f).toMatch(/api\(\)\s*\.compartir\.vista\(e\.ruta\)/);
+    expect(f).toMatch(/compartir-ruta-real-confirmar/);
+    expect(f).toMatch(/compartir-cancelar-inicio/);
     expect(f).toMatch(/:auto-focus="false"/);
     expect(f).toMatch(
       /api\(\)\.compartir\.iniciar\(e\.ruta, duracion\.value, proveedor\.value, true\)/,
@@ -157,7 +171,11 @@ describe('textos de D52 en los cuatro idiomas', () => {
       const t = d.herramientas.compartir;
       expect(t.explicacion, id).not.toBe('');
       expect(d.herramientas.lista.compartir.nombre, id).not.toBe('');
-      expect(t.confirmar.aviso('14:30'), id).toContain('14:30');
+      expect(t.confirmar.aviso('1 h'), id).toContain('1 h');
+      expect(t.grandes, id).toMatch(/8 ?(MB|Mo)/);
+      expect(t.confirmar.rutaReal, id).not.toBe('');
+      expect(d.errores.codigos['compartir.carpeta_perfil'], id).not.toBe('');
+      expect(d.errores.codigos['compartir.archivo_grande'], id).not.toBe('');
       expect(t.vence('14:30', '5 min'), id).toContain('14:30');
       expect(t.restan(5), id).toContain('5');
       expect(d.servicios.ftp.compartir.ayuda, id).toMatch(/HTTP/);

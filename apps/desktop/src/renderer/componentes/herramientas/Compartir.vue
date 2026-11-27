@@ -35,6 +35,8 @@ const duracion = ref<DuracionCompartir>(60);
 const proveedor = ref<ProveedorCompartir>('cloudflare-rapido');
 const ngrokListo = ref(false);
 const confirmando = ref(false);
+/** Lo que el núcleo publicaría con lo elegido (su ruta real), antes de confirmar. */
+const vista = ref<{ real: string; difiere: boolean } | null>(null);
 const qr = ref<string | null>(null);
 const ahora = ref(Date.now());
 const botonCancelar = ref<InstanceType<typeof NButton> | null>(null);
@@ -45,10 +47,8 @@ const fase = computed(() => estado.value?.fase ?? 'inactiva');
 const activa = computed(() => fase.value === 'activa');
 const iniciando = computed(() => fase.value === 'iniciando');
 
-/** Hasta cuándo quedaría público lo que se está confirmando. */
-const hastaConfirmar = computed(() =>
-  formatearFecha(ahora.value + duracion.value * 60_000, { timeStyle: 'short' }),
-);
+/** Cuánto quedaría público lo que se está confirmando (cuenta desde que el enlace esté listo). */
+const duracionTexto = computed(() => t.duraciones[CLAVES_DURACION[duracion.value]]);
 const hastaActiva = computed(() =>
   estado.value?.expira ? formatearFecha(estado.value.expira, { timeStyle: 'short' }) : '',
 );
@@ -111,6 +111,12 @@ async function elegir(tipo: 'carpeta' | 'archivo'): Promise<void> {
 }
 
 async function abrirConfirmacion(): Promise<void> {
+  const e = elegido.value;
+  if (!e) return;
+  // El núcleo valida primero (los rechazos salen aquí, antes de confirmar) y da la ruta real.
+  const v = await ejecutar('vista', () => api().compartir.vista(e.ruta));
+  if (!v) return;
+  vista.value = { real: v.real, difiere: v.difiere };
   ahora.value = Date.now();
   confirmando.value = true;
   // El foco empieza en Cancelar: Intro nunca publica nada.
@@ -146,6 +152,7 @@ const recientes = computed(() => [...accesos.value].reverse());
 <template>
   <div class="herr compartir">
     <NAlert type="info" :show-icon="false">{{ t.explicacion }}</NAlert>
+    <p class="herr-tenue">{{ t.grandes }}</p>
 
     <template v-if="!activa && !iniciando">
       <NAlert v-if="estado?.fin === 'vencio'" type="warning" :show-icon="false">{{
@@ -214,13 +221,22 @@ const recientes = computed(() => [...accesos.value].reverse());
     </template>
 
     <template v-else>
-      <p v-if="iniciando" class="herr-tenue" role="status">{{ t.abriendo }}</p>
+      <div v-if="iniciando" class="herr-fila" role="status">
+        <span class="herr-tenue">{{ t.abriendo }}</span>
+        <NButton size="small" secondary data-testid="compartir-cancelar-inicio" @click="dejar">{{
+          textos.acciones.cancelar
+        }}</NButton>
+      </div>
       <section v-else class="activa" data-testid="compartir-activa">
         <div class="cabecera">
           <strong>{{ t.activa }}</strong>
           <span class="herr-tenue">{{ t.vence(hastaActiva, restan) }}</span>
         </div>
         <TextoLargo v-if="estado?.ruta" :texto="estado.ruta" mono />
+        <div v-if="estado?.rutaReal" class="real" data-testid="compartir-ruta-real">
+          <span class="herr-tenue">{{ t.confirmar.rutaReal }}</span>
+          <TextoLargo :texto="estado.rutaReal" mono />
+        </div>
         <div class="cuerpo">
           <div class="enlace">
             <div class="herr-etiqueta">{{ t.enlace }}</div>
@@ -304,8 +320,14 @@ const recientes = computed(() => [...accesos.value].reverse());
       <p class="pregunta">{{ t.confirmar.pregunta }}</p>
       <div class="herr-etiqueta">{{ t.confirmar.ruta }}</div>
       <code class="ruta-exacta" data-testid="compartir-ruta-exacta">{{ elegido?.ruta }}</code>
+      <template v-if="vista?.difiere">
+        <div class="herr-etiqueta">{{ t.confirmar.rutaReal }}</div>
+        <code class="ruta-exacta" data-testid="compartir-ruta-real-confirmar">{{
+          vista.real
+        }}</code>
+      </template>
       <NAlert type="warning" :show-icon="false" class="aviso">{{
-        t.confirmar.aviso(hastaConfirmar)
+        t.confirmar.aviso(duracionTexto)
       }}</NAlert>
       <template #footer>
         <div class="botones">
@@ -375,6 +397,11 @@ const recientes = computed(() => [...accesos.value].reverse());
 }
 .aviso {
   margin-top: 12px;
+}
+.real {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 .botones {
   display: flex;

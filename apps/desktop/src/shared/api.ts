@@ -1659,6 +1659,16 @@ export interface ApiEntorno {
      * sirve para `iniciar` si salió de aquí. null si se cancela.
      */
     elegir(tipo: 'carpeta' | 'archivo'): Promise<string | null>;
+    /**
+     * Valida lo elegido igual que `iniciar` (los rechazos salen antes de confirmar) y devuelve la
+     * ruta real; `difiere` es true si pasa por enlaces, uniones o nombres cortos.
+     */
+    vista(ruta: string): Promise<{
+      ruta: string;
+      real: string;
+      tipo: 'carpeta' | 'archivo';
+      difiere: boolean;
+    }>;
     estado(): Promise<EstadoCompartir>;
     /** Últimos accesos (hasta 200); los nuevos llegan por `compartir:acceso`. */
     accesos(): Promise<AccesoCompartido[]>;
@@ -2171,6 +2181,7 @@ export const RUTAS_IPC = [
   'discoUso.cancelar',
   'discoUso.abrirCarpeta',
   'compartir.elegir',
+  'compartir.vista',
   'compartir.estado',
   'compartir.accesos',
   'compartir.iniciar',

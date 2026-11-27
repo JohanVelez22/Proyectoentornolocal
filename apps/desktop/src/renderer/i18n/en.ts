@@ -332,6 +332,10 @@ export const en: Textos = {
       'compartir.carpeta_sistema': 'System folders are not shared.',
       'compartir.archivo_sensible':
         'That file looks like it holds a secret or real data and is not shared.',
+      'compartir.carpeta_perfil':
+        'The data of the user’s programs (AppData, .claude, .config…) is not shared.',
+      'compartir.archivo_grande':
+        'That file is too large to check and is not a media file or a package: it is not shared.',
       'compartir.tunel_sin_url': 'The tunnel did not give its address in {segundos} s. Try again.',
       'compartir.tunel_cerrado': 'The tunnel closed before it finished opening.',
       'compartir.fallo': 'Could not share.',
@@ -3953,12 +3957,15 @@ export const en: Textos = {
         texto:
           'Choose a folder or a file to get a temporary public link. Nothing is published until you confirm it.',
       },
+      grandes:
+        'Text files or files of an unknown type larger than 8 MB are not shared, because they cannot be fully checked; images, audio, video and packages (zip, 7z, iso, pdf) are. They show as marked in the listing.',
       confirmar: {
         titulo: 'Share on the internet',
         pregunta: 'Publish this on the internet?',
+        rutaReal: 'Real path (links resolved)',
         ruta: 'Exact path',
-        aviso: (hasta: string) =>
-          `It will be public on the internet until ${hasta}: anyone with the link will be able to view and download what is shared.`,
+        aviso: (dur: string) =>
+          `It will be public on the internet for ${dur} from the moment the link is ready. Anyone with the link will be able to view and download what is shared.`,
         boton: 'Share on the internet',
       },
       abriendo: 'Opening the tunnel…',

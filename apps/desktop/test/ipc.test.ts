@@ -1040,6 +1040,7 @@ describe('registrarIpc', () => {
         'discoUso.cancelar',
         'discoUso.abrirCarpeta',
         'compartir.elegir',
+        'compartir.vista',
         'compartir.estado',
         'compartir.accesos',
         'compartir.iniciar',

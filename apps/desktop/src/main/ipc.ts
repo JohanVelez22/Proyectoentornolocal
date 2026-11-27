@@ -2087,6 +2087,8 @@ const TABLA: Record<RutaIpc, Manejador> = {
     const ruta = tipo === 'carpeta' ? await s.elegirCarpeta() : await s.elegirArchivo();
     return s.elegidas.registrar(ruta, 'compartir');
   },
+  'compartir.vista': (n, s, ruta) =>
+    n.compartir.vista(s.elegidas.exigir(ruta, 'carpeta', 'compartir')),
   'compartir.estado': (n) => n.compartir.estado(),
   'compartir.accesos': (n) => n.compartir.accesos(),
   'compartir.iniciar': (n, s, ruta, duracion, proveedor, confirmacion) =>

@@ -565,6 +565,7 @@ const api: ApiEntorno = {
   },
   compartir: {
     elegir: (tipo) => invocar('compartir.elegir', tipo),
+    vista: (ruta) => invocar('compartir.vista', ruta),
     estado: () => invocar('compartir.estado'),
     accesos: () => invocar('compartir.accesos'),
     iniciar: (ruta, duracion, proveedor, confirmado) =>
