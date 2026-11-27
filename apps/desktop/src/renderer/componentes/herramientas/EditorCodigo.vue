@@ -316,7 +316,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="herr editor">
+  <!-- Zona de arrastre propia: CodeMirror lee los archivos de texto que se sueltan en el editor. -->
+  <div class="herr editor" data-zona-arrastre>
     <p class="herr-tenue">{{ t.intro(MAX_MB) }}</p>
 
     <div class="herr-fila">

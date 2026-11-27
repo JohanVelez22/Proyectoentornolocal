@@ -43,6 +43,7 @@ import ConfirmacionMcp from './ConfirmacionMcp.vue';
 import PanelAvisos from './PanelAvisos.vue';
 import PanelMemoria from './PanelMemoria.vue';
 import PaletaComandos from './PaletaComandos.vue';
+import SoltarArchivos from './SoltarArchivos.vue';
 import SelectorIdioma from './SelectorIdioma.vue';
 import SelectorTema from './SelectorTema.vue';
 import { idioma, textos } from '../i18n';
@@ -297,6 +298,7 @@ onBeforeUnmount(() => {
     <ConfirmacionMcp />
     <PaletaComandos />
     <AsistenteInicio />
+    <SoltarArchivos />
   </NLayout>
 </template>
 

@@ -2089,8 +2089,7 @@ const TABLA: Record<RutaIpc, Manejador> = {
     s.elegidas.registrar(info.ruta, 'info');
     return info;
   },
-  'infoArchivo.hashes': (n, s, ruta) =>
-    n.hashesRuta(s.elegidas.exigir(ruta, 'archivo', 'info')),
+  'infoArchivo.hashes': (n, s, ruta) => n.hashesRuta(s.elegidas.exigir(ruta, 'archivo', 'info')),
   'infoArchivo.carpeta': (n, s, ruta) =>
     n.usoDisco.analizar(s.elegidas.exigir(ruta, 'carpeta', 'info')),
   'discoUso.analizarUnidad': (n, _s, ruta) =>

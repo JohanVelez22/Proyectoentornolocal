@@ -1,4 +1,4 @@
-import type { PeticionHttp } from '@pel/core';
+import type { InfoRuta, PeticionHttp } from '@pel/core';
 import { reactive } from 'vue';
 
 /**
@@ -13,6 +13,10 @@ export const solicitudes = reactive({
   peticionHttp: null as Partial<PeticionHttp> | null,
   /** Archivo que el editor de código (D43) debe abrir; lo pide `abrirEnEditor`. */
   archivoEditor: null as string | null,
+  /** Archivo o carpeta soltado o elegido que Info de archivo debe mostrar (D55); ya está registrado. */
+  archivoInfo: null as InfoRuta | null,
+  /** Carpeta que Uso del disco debe analizar al abrirse (la pide Info de archivo, D55). */
+  carpetaDisco: null as string | null,
   /** El editor de código tiene cambios sin guardar (para avisar al cerrar o salir). */
   editorSinGuardar: false,
   /** Proyecto (id) cuyo gestor de variables .env debe abrir Proyectos (lo pide el editor de código). */

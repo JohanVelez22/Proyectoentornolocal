@@ -39,6 +39,12 @@ onMounted(() => {
     .discoUso.unidades()
     .then((l) => (unidades.value = l))
     .catch(() => (unidades.value = []));
+  // «Abrir en Uso del disco» desde Info de archivo (D55): la carpeta ya está registrada.
+  const pedida = solicitudes.carpetaDisco;
+  if (pedida) {
+    solicitudes.carpetaDisco = null;
+    void correr(() => api().discoUso.analizar(pedida));
+  }
 });
 
 onBeforeUnmount(() => {
