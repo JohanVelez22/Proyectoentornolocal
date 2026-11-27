@@ -173,7 +173,9 @@ describe('GestorHttps', () => {
     const g = gestorHttps();
     expect(await g.ocupantePuerto(443)).toBeNull();
     duenos.set(443, { pid: 10, nombre: 'nginx.exe' });
+    rutasProceso.set(10, 'C:/FlyEnv/nginx/nginx.exe');
     expect(await g.ocupantePuerto(443)).toEqual({ pid: 10, nombre: 'nginx.exe' });
+    rutasProceso.delete(10);
     pidNginx = 10;
     expect(await g.ocupantePuerto(443)).toBeNull();
   });
@@ -183,13 +185,26 @@ describe('GestorHttps', () => {
     const g = gestorHttps();
     pidNginx = 10;
     duenos.set(443, { pid: 11, nombre: 'nginx.exe' });
-    expect(await g.ocupantePuerto(443)).toEqual({ pid: 11, nombre: 'nginx.exe' });
     hijosNginx.set(10, [11]);
     expect(await g.ocupantePuerto(443)).toBeNull();
     expect(await g.puertoUsable(443)).toBe(true);
-    // Un nginx ajeno (p. ej. el de FlyEnv) sigue contando como ocupado.
+    // Un nginx ajeno (p. ej. el de FlyEnv, con su ruta legible) sigue contando como ocupado.
     duenos.set(443, { pid: 99, nombre: 'nginx.exe' });
+    rutasProceso.set(99, 'C:/FlyEnv/nginx/nginx.exe');
     expect(await g.puertoUsable(443)).toBe(false);
+  });
+
+  it('estadoPuerto: un worker de nginx que se cierra tras una recarga (sin ruta y fuera de los hijos) no quita el HTTPS (D40)', async () => {
+    // Visto en la aceptación real: al borrar un sitio, el 443 figuraba a nombre del worker viejo.
+    const g = gestorHttps();
+    pidNginx = 10;
+    hijosNginx.set(10, [12]);
+    duenos.set(443, { pid: 11, nombre: 'nginx.exe' });
+    expect((await g.estadoPuerto(443)).estado).toBe('desconocido');
+    expect(await g.puertoUsable(443)).toBe(true);
+    // Otro programa sin ruta legible (p. ej. System por HTTP.sys) sí es ajeno.
+    duenos.set(443, { pid: 4, nombre: 'System' });
+    expect((await g.estadoPuerto(443)).estado).toBe('ajeno');
   });
 
   it('ocupantePuerto: si no se puede saber quién es el dueño no se concluye «otro programa» (D40)', async () => {

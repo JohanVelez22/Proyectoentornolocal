@@ -327,6 +327,11 @@ export class GestorHttps {
       if (hijos === null) return { estado: 'desconocido', dueno };
       if ((hijos.get(maestro) ?? []).includes(dueno.pid)) return { estado: 'propio', dueno };
     }
+    // Un nginx sin ruta legible y fuera de la lista de hijos suele ser un worker nuestro que se
+    // está cerrando tras una recarga (el sistema aún le atribuye el socket): no se sabe, y quitar
+    // el HTTPS de todos los sitios es peor que dejarlo. Un nginx ajeno real tiene su ruta legible
+    // y ya se decidió arriba como «ajeno» (D40).
+    if (/^nginx(\.exe)?$/i.test(dueno.nombre)) return { estado: 'desconocido', dueno };
     return { estado: 'ajeno', dueno };
   }
 
