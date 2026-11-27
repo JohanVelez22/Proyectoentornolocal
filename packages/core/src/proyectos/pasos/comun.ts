@@ -258,6 +258,9 @@ export async function entornoProyecto(
   nuevo.push(...d.runtimes.carpetasPath(versiones));
   // JAVA_HOME, DOTNET_ROOT, GOROOT/GOPATH, RUSTUP_HOME/CARGO_HOME de lo que usa el proyecto.
   Object.assign(cambios, d.runtimes.variables?.(versiones) ?? {});
+  // Las gemas van al proyecto (`vendor/bundle`), no al Ruby compartido de WolfCore Dev: así un
+  // `bundle install` no modifica la versión instalada y cada proyecto tiene las suyas.
+  if (versiones.ruby) cambios.BUNDLE_PATH = path.join(carpeta, 'vendor', 'bundle');
   nuevo.push(d.rutas.herramientas('bin'));
   if (env[clave]) nuevo.push(env[clave]);
   cambios[clave] = nuevo.join(';');
@@ -350,8 +353,11 @@ export async function resolverPrograma(
       // Mismo aviso claro que Node y Python si el proyecto no tiene ese runtime instalado.
       const version = h.versiones[nombre];
       if (!version) {
-        throw new Error(
-          `No hay ${nombre === 'ruby' ? 'Ruby' : '.NET'} instalado para este proyecto: instálelo desde Servicios.`,
+        const que = nombre === 'ruby' ? 'Ruby' : '.NET';
+        throw new ErrorWolf(
+          'runtimes.falta_runtime',
+          `No hay ${que} instalado para este proyecto: instálelo desde Servicios.`,
+          { nombre: que },
         );
       }
       const exe =
@@ -364,12 +370,16 @@ export async function resolverPrograma(
       const tipo = nombre === 'mvn' ? 'maven' : 'gradle';
       const version = h.versiones[tipo];
       if (!version) {
-        throw new Error(
-          `No hay ${tipo === 'maven' ? 'Maven' : 'Gradle'} instalado para este proyecto: instálelo desde Servicios.`,
+        const que = tipo === 'maven' ? 'Maven' : 'Gradle';
+        throw new ErrorWolf(
+          'runtimes.falta_runtime',
+          `No hay ${que} instalado para este proyecto: instálelo desde Servicios.`,
+          { nombre: que },
         );
       }
       if (!h.versiones.java) {
-        throw new Error(
+        throw new ErrorWolf(
+          'runtimes.falta_jdk',
           'No hay un JDK instalado para este proyecto: instale Java desde Servicios.',
         );
       }

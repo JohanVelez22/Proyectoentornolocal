@@ -90,7 +90,8 @@ export function variablesRuntime(
     case 'kotlin':
       return { KOTLIN_HOME: carpeta };
     case 'ruby':
-      return {};
+      // Configuración y caché de Bundler en la carpeta de datos, no en el perfil del usuario.
+      return o.datos ? { BUNDLE_USER_HOME: path.join(o.datos, 'cache', 'ruby', 'bundle') } : {};
     case 'maven':
       return { MAVEN_HOME: carpeta };
     case 'gradle':

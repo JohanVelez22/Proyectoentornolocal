@@ -1,5 +1,6 @@
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
+import { ErrorWolf } from '../errores';
 
 /** Primer archivo de `carpeta` cuyo nombre cumple `patron` (orden alfabético), o null. */
 async function archivoDe(carpeta: string, patron: RegExp): Promise<string | null> {
@@ -24,8 +25,10 @@ export async function lanzamientoMaven(
 ): Promise<{ cmd: string; args: string[] }> {
   const jar = await archivoDe(path.join(maven, 'boot'), /^plexus-classworlds-.+\.jar$/);
   if (jar === null) {
-    throw new Error(
+    throw new ErrorWolf(
+      'runtimes.instalacion_incompleta',
       'La instalación de Maven está incompleta (falta plexus-classworlds). Reinstálela.',
+      { nombre: 'Maven' },
     );
   }
   return {
@@ -66,7 +69,11 @@ export async function lanzamientoGradle(
   }
   const viejo = await archivoDe(lib, /^gradle-launcher-.+\.jar$/);
   if (viejo === null) {
-    throw new Error('La instalación de Gradle está incompleta (falta su lanzador). Reinstálela.');
+    throw new ErrorWolf(
+      'runtimes.instalacion_incompleta',
+      'La instalación de Gradle está incompleta (falta su lanzador). Reinstálela.',
+      { nombre: 'Gradle' },
+    );
   }
   return {
     cmd: java,

@@ -870,6 +870,15 @@ export const es = {
       'catalogo.huella_no_coincide': 'La descarga no coincide con la huella publicada.',
       'catalogo.paquete_invalido':
         'El paquete descargado no es seguro (rutas fuera de la carpeta, enlaces o tamaño excesivo).',
+      'catalogo.extraccion_fallo': 'No se pudo leer o extraer el paquete .7z descargado.',
+      'runtimes.falta_runtime':
+        'No hay {nombre} instalado para este proyecto: instálelo desde Servicios.',
+      'runtimes.falta_jdk':
+        'No hay un JDK instalado para este proyecto: instale Java desde Servicios.',
+      'runtimes.instalacion_incompleta':
+        'La instalación de {nombre} está incompleta: reinstálela desde Servicios.',
+      'procesos.escucha_publica':
+        'El proceso escucha en {direccion}:{puerto}, abierto a la red. Se detuvo: debe escuchar solo en 127.0.0.1.',
       'catalogo.redireccion_ajena': 'La descarga intentó ir a un sitio no permitido ({host}).',
       'catalogo.demasiadas_redirecciones':
         'La descarga hizo demasiadas redirecciones (más de {maximo}).',
@@ -4587,6 +4596,8 @@ export const es = {
   },
   versiones: {
     pestana: 'Versiones',
+    avisoMaven:
+      'WolfCore Dev lanza Maven directamente con el JDK y, por seguridad, no lee .mvn/jvm.config ni la variable MAVEN_OPTS. Si su proyecto las necesita, ejecute Maven desde una terminal.',
     avisoRuby:
       'Ruby se instala sin Devkit (MSYS2) y sin tocar el PATH ni el registro de Windows: no hay instalador. Las gemas con extensiones nativas que no traen binario precompilado necesitan el Devkit. Es un paso manual: abra una terminal desde el proyecto y ejecute «ridk install» (instala MSYS2 en su equipo y descarga de Internet).',
     avisoJdk:

@@ -203,6 +203,9 @@ function pedirBorrarRespaldo(r: RespaldoDatos): void {
     <NAlert v-if="servicio === 'ruby'" type="info" :show-icon="false" class="aviso-meili">
       {{ t.avisoRuby }}
     </NAlert>
+    <NAlert v-if="servicio === 'maven'" type="info" :show-icon="false" class="aviso-meili">
+      {{ t.avisoMaven }}
+    </NAlert>
     <NAlert v-if="necesitaJdk && !hayJdk" type="warning" :show-icon="false" class="aviso-meili">
       {{ t.avisoJdk }}
     </NAlert>

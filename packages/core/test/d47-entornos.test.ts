@@ -150,7 +150,9 @@ describe('D47: instalar un .7z', () => {
   const LISTA_NOMBRES = ['rb/', 'rb/bin/', 'rb/bin/ruby.exe', 'rb/lib/x.rb'].join('\n');
   const LISTA_DETALLE = [
     'drwxr-xr-x  0 0      0           0 nov. 19 15:45 rb/',
+    'drwxr-xr-x  0 0      0           0 nov. 19 15:45 rb/bin/',
     '-rw-r--r--  0 0      0          10 nov. 19 15:45 rb/bin/ruby.exe',
+    '-rw-r--r--  0 0      0          10 nov. 19 15:45 rb/lib/x.rb',
   ].join('\n');
 
   /** tar falso: lista lo dado y, al extraer, crea los archivos en el destino. */

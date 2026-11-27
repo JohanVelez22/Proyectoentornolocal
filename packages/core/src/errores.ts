@@ -627,6 +627,12 @@ export const PARAMETROS_ERROR = {
   'catalogo.huella_debil': ['servicio', 'version'],
   'catalogo.huella_no_coincide': [],
   'catalogo.paquete_invalido': [],
+  'catalogo.extraccion_fallo': [],
+  // Runtimes de los procesos de proyecto y su escucha (D47)
+  'runtimes.falta_runtime': ['nombre'],
+  'runtimes.falta_jdk': [],
+  'runtimes.instalacion_incompleta': ['nombre'],
+  'procesos.escucha_publica': ['direccion', 'puerto'],
   'catalogo.redireccion_ajena': ['host'],
   'catalogo.demasiadas_redirecciones': ['maximo'],
   'catalogo.respuesta_grande': ['maximo'],

@@ -875,6 +875,15 @@ export const pt: Textos = {
       'catalogo.huella_no_coincide': 'O download não confere com o checksum publicado.',
       'catalogo.paquete_invalido':
         'O pacote baixado não é seguro (caminhos fora da pasta, links ou tamanho excessivo).',
+      'catalogo.extraccion_fallo': 'Não foi possível ler ou extrair o pacote .7z baixado.',
+      'runtimes.falta_runtime':
+        '{nombre} não está instalado para este projeto: instale-o em Serviços.',
+      'runtimes.falta_jdk':
+        'Não há um JDK instalado para este projeto: instale o Java em Serviços.',
+      'runtimes.instalacion_incompleta':
+        'A instalação de {nombre} está incompleta: reinstale-a em Serviços.',
+      'procesos.escucha_publica':
+        'O processo escuta em {direccion}:{puerto}, aberto à rede. Foi interrompido: só pode escutar em 127.0.0.1.',
       'catalogo.redireccion_ajena': 'O download tentou ir para um site não permitido ({host}).',
       'catalogo.demasiadas_redirecciones':
         'O download fez redirecionamentos demais (mais de {maximo}).',
@@ -4598,6 +4607,8 @@ export const pt: Textos = {
   },
   versiones: {
     pestana: 'Versões',
+    avisoMaven:
+      'O WolfCore Dev inicia o Maven diretamente com o JDK e, por segurança, não lê .mvn/jvm.config nem a variável MAVEN_OPTS. Se o seu projeto precisar deles, execute o Maven em um terminal.',
     avisoRuby:
       'O Ruby é instalado sem o Devkit (MSYS2) e sem tocar no PATH nem no registro do Windows: não há instalador. As gems com extensões nativas sem binário pré-compilado precisam do Devkit. É um passo manual: abra um terminal a partir do projeto e execute «ridk install» (instala o MSYS2 no seu computador e baixa da Internet).',
     avisoJdk:
