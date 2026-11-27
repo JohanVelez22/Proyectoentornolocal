@@ -4443,7 +4443,7 @@ export const ru: Textos = {
     tema: 'Тема',
     temas: { sistema: 'Системная', claro: 'Светлая', oscuro: 'Тёмная' },
     idioma: 'Язык',
-    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский' },
+    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体' },
     acento: 'Акцентный цвет',
     acentos: {
       indigo: 'Индиго',

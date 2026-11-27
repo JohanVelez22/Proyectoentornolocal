@@ -1316,7 +1316,183 @@ const RU: Diccionario = {
   },
 };
 
-const DICCIONARIOS = { es: ES, en: EN, pt: PT, fr: FR, de: DE, it: IT, ru: RU } satisfies Record<IdiomaUi, Diccionario>;
+const ZH: Diccionario = {
+  porCodigo: {
+    'avisos.servicio_caido': (d) => ({
+      titulo: '某项服务因错误停止',
+      cuerpo: `${limpio(d['nombre'], '某项服务')} 已停止运行。请打开 WolfCore Dev 查看详情。`,
+    }),
+    'avisos.iniciar_todo_fallos': (d) => ({
+      titulo: '全部启动未能启动所有服务',
+      cuerpo: `未能启动：${limpio(d['nombres'], '部分服务')}。请打开“服务”查看详情。`,
+    }),
+    'avisos.workspace_fallos': (d) => ({
+      titulo: '工作区未能启动全部项目',
+      cuerpo: `${limpio(d['nombre'], '工作区')}：未能启动 ${limpio(d['nombres'], '部分项目')}。请打开“首页”查看运行状态。`,
+    }),
+    'avisos.workspace_fallos_detener': (d) => ({
+      titulo: '工作区未能停止全部项目',
+      cuerpo: `${limpio(d['nombre'], '工作区')}：未能停止 ${limpio(d['nombres'], '部分项目')}。请打开“首页”查看仍在运行的项目。`,
+    }),
+    'avisos.tarea_fallo': (d) => ({
+      titulo: d['motivo'] === 'tiempo' ? '定时任务运行超时' : '定时任务执行失败',
+      cuerpo: `${limpio(d['nombre'], '某项任务')}（${limpio(d['sitio'], '某个项目')}）${d['motivo'] === 'tiempo' ? '超过最长运行时间并已停止' : '以错误结束'}。请打开项目查看日志。`,
+    }),
+    'avisos.tarea_bloqueada': (d) => ({
+      titulo: '定时任务未执行',
+      cuerpo: `${limpio(d['nombre'], '某项任务')}（${limpio(d['sitio'], '某个项目')}）：${
+        {
+          aislado: '当前为测试数据文件夹，未允许执行任务',
+          no_confiado: '项目未标记为受信任',
+          receta_cambio: '自您信任以来项目安装方案已变更',
+          sin_confirmar: '尚未确认其命令',
+          comando_invalido: '其命令不被允许',
+          cron_invalida: '其计划时间无效',
+          carpeta: '项目文件夹不存在',
+        }[String(d['motivo'])] ?? '不满足执行条件'
+      }。`,
+    }),
+    'avisos.puerto_ocupado': (d) => ({
+      titulo: '端口被占用',
+      cuerpo: `端口 ${limpio(d['puerto'], '?')} 正被 ${limpio(d['nombre'], '其他程序')} 占用：无法启动服务。`,
+    }),
+    'avisos.proceso_error': (d) => ({
+      titulo: '项目进程因错误终止',
+      cuerpo: `${limpio(d['nombre'], '某个进程')} 已停止运行。请检查其日志。`,
+    }),
+    'avisos.proceso_terminado': (d) => ({
+      titulo: '进程已结束',
+      cuerpo: `${limpio(d['nombre'], '某个进程')} 已无错误结束。`,
+    }),
+    'avisos.proceso_fallo': (d) => ({
+      titulo: '进程失败',
+      cuerpo: `${limpio(d['nombre'], '某个进程')} 以错误结束${d['codigoSalida'] !== undefined ? `（代码 ${limpio(d['codigoSalida'], '?')}）` : ''}。请检查其日志。`,
+    }),
+    'avisos.receta_terminada': (d) => ({
+      titulo: '安装方案已完成',
+      cuerpo: `${limpio(d['sitio'], '某个项目')} 的安装方案已无错误完成。`,
+    }),
+    'avisos.receta_fallo': (d) => ({
+      titulo: '安装方案失败',
+      cuerpo: `${limpio(d['sitio'], '某个项目')} 的安装方案因错误停止。请打开项目查看具体步骤。`,
+    }),
+    'avisos.tunel_caido': (d) => ({
+      titulo: '隧道已断开',
+      cuerpo: `${limpio(d['fuente'], '某个项目')} 的隧道已停止工作。`,
+    }),
+    'avisos.contenedor_detenido': (d) => ({
+      titulo: '容器已停止',
+      cuerpo: `${limpio(d['nombre'], '某个容器')}（${limpio(d['motor'], 'Docker')}）意外停止${d['codigoSalida'] !== undefined ? `（代码 ${limpio(d['codigoSalida'], '?')}）` : ''}。`,
+    }),
+    'avisos.ca_por_vencer': (d) => ({
+      titulo: '证书颁发机构即将过期',
+      cuerpo: `将在 ${limpio(d['dias'], '?')} 天后过期。请重新生成并再次信任。`,
+    }),
+    'avisos.certificado_por_vencer': (d) => ({
+      titulo: '证书即将过期',
+      cuerpo: `${limpio(d['fuente'], '某个站点')} 的证书将在 ${limpio(d['dias'], '?')} 天后过期。`,
+    }),
+    'avisos.certificado_vencido': (d) => ({
+      titulo: '证书已过期',
+      cuerpo: `${limpio(d['fuente'], '某个站点')} 的证书已失效。请重新生成。`,
+    }),
+    'avisos.php_sitio_fallo': (d) => ({
+      titulo: '站点专用 PHP 未能启动',
+      cuerpo: `${limpio(d['fuente'], '某个站点')} 的 PHP 未能启动（可能端口被占用）。请检查站点卡片的 PHP 区域。`,
+    }),
+    'avisos.php_sitio_sin_puertos': (d) => ({
+      titulo: '站点 PHP 无可用端口',
+      cuerpo: `${limpio(d['fuente'], '某个站点')} 现使用该版本的共享 PHP（不含自定义设置）：没有空闲端口供专用 PHP 使用。`,
+    }),
+    'avisos.php_sitio_descartados': (d) => ({
+      titulo: 'PHP 设置已忽略',
+      cuerpo: `${limpio(d['fuente'], '某个站点')} 的部分 PHP 设置无效且未应用：${limpio(d['claves'], '请检查 PHP 区域')}。`,
+    }),
+    'avisos.lan_red_cambio': (d) => ({
+      titulo: '已停止局域网共享',
+      cuerpo: `网络发生变化：已停止共享 ${limpio(d['fuente'], '某个站点')}。`,
+    }),
+    'avisos.vhost_reglas_descartadas': (d) => ({
+      titulo: 'Nginx 规则已忽略',
+      cuerpo: `${limpio(d['fuente'], '某个站点')} 的自定义规则未通过校验（目录、域名或端口已变），已从 vhost 中排除。请在 Nginx 区域检查。`,
+    }),
+    'avisos.vhost_manual_descartado': (d) => ({
+      titulo: '手写 vhost 未生效',
+      cuerpo: `${limpio(d['fuente'], '某个站点')} 的手写 vhost 未通过校验（目录、域名或端口已变）：已改用自动生成配置。请在 Nginx 区域检查。`,
+    }),
+    'avisos.rustup_entrada_ajena': () => ({
+      titulo: 'Rustup 已安装于其他位置',
+      cuerpo:
+        'WolfCore Dev 的 Rust 已安装至自有文件夹。Windows 已存在指向另一安装的 rustup 卸载项：未做修改。',
+    }),
+    'avisos.version_nueva': (d) => ({
+      titulo: `${limpio(d['servicio'], '某项服务')} 有新版本可用`,
+      cuerpo: `${limpio(d['nueva'], '新版本')} 已发布（当前为 ${limpio(d['actual'], '其他版本')}）。请前往“服务 → 版本”更新；不会自动安装。`,
+      accion: '更新',
+    }),
+    'avisos.version_nueva_sin_huella': (d) => ({
+      titulo: `${limpio(d['servicio'], '某项服务')} 有新版本可用`,
+      cuerpo: `${limpio(d['nueva'], '新版本')} 已发布（当前为 ${limpio(d['actual'], '其他版本')}），无公布校验和：无法验证下载。请在“服务 → 版本”查看；安装时需您确认。`,
+    }),
+    'avisos.rama_nueva_sin_huella': (d) => ({
+      titulo: `${limpio(d['servicio'], '某项服务')} 有新的主版本`,
+      cuerpo: `${limpio(d['nueva'], '新主版本')} 比您当前使用的版本（${limpio(d['actual'], '?')}）更新，无公布校验和：无法验证下载。请在“服务 → 版本”查看；安装时需您确认。`,
+    }),
+    'avisos.rama_nueva': (d) => ({
+      titulo: `${limpio(d['servicio'], '某项服务')} 有新的主版本`,
+      cuerpo: `${limpio(d['nueva'], '新主版本')} 比您当前使用的版本（${limpio(d['actual'], '?')}）更新。将并行安装，不影响您的数据。`,
+      accion: '更新',
+    }),
+    'doctor.hallazgos': (d) => ({
+      titulo: 'Doctor 在环境中发现了错误',
+      cuerpo: `共有 ${limpio(d['errores'], '多项')} 问题可能影响环境运行。请打开 Doctor 查看修复方式。`,
+    }),
+  },
+  porTipo: {
+    'servicio-caido': {
+      titulo: '某项服务已停止',
+      cuerpo: '请打开 WolfCore Dev 查看详情。',
+    },
+    'puerto-ocupado': {
+      titulo: '端口被占用',
+      cuerpo: '请打开 WolfCore Dev 查看详情。',
+    },
+    'certificado-por-vencer': {
+      titulo: '证书即将过期',
+      cuerpo: '请打开 WolfCore Dev 查看详情。',
+    },
+    'tunel-caido': {
+      titulo: '隧道已断开',
+      cuerpo: '请打开 WolfCore Dev 查看详情。',
+    },
+    'proceso-error': {
+      titulo: '进程因错误结束',
+      cuerpo: '请打开 WolfCore Dev 查看详情。',
+    },
+    'proceso-terminado': {
+      titulo: '进程已结束',
+      cuerpo: '请打开 WolfCore Dev 查看详情。',
+    },
+    'receta-terminada': {
+      titulo: '安装方案已完成',
+      cuerpo: '请打开 WolfCore Dev 查看详情。',
+    },
+    doctor: {
+      titulo: 'Doctor 发现了问题',
+      cuerpo: '请打开 WolfCore Dev 进行检查。',
+    },
+    'contenedor-detenido': {
+      titulo: '容器已停止',
+      cuerpo: '请打开 WolfCore Dev 查看详情。',
+    },
+    'version-nueva': {
+      titulo: '有新版本可用',
+      cuerpo: '请打开 WolfCore Dev 进行更新。',
+    },
+  },
+};
+
+const DICCIONARIOS = { es: ES, en: EN, pt: PT, fr: FR, de: DE, it: IT, ru: RU, zh: ZH } satisfies Record<IdiomaUi, Diccionario>;
 
 export const CODIGOS_AVISO = Object.keys(ES.porCodigo);
 
@@ -1329,6 +1505,7 @@ export const CODIGOS_AVISO_POR_IDIOMA: Record<IdiomaUi, string[]> = {
   de: Object.keys(DE.porCodigo),
   it: Object.keys(IT.porCodigo),
   ru: Object.keys(RU.porCodigo),
+  zh: Object.keys(ZH.porCodigo),
 };
 
 export function textoAviso(

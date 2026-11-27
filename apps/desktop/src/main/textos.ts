@@ -243,6 +243,34 @@ const TEXTOS = {
     carpetaDatosInvalida:
       'WOLFCORE_DATOS не является допустимой папкой данных: путь должен быть абсолютным, не системным и отличным от основной (и предыдущей) папки. Приложение закрывается без изменений.',
   },
+  zh: {
+    abrir: '打开',
+    iniciarTodo: '全部启动',
+    detenerTodo: '全部停止',
+    salir: '退出',
+    workspaces: '工作区',
+    workspaceParcial: '部分运行',
+    preguntaApagar: '是否停止所有服务？',
+    siApagar: '是，停止',
+    noApagar: '否，保持运行',
+    cancelar: '取消',
+    cliTitulo: '终端命令 (wolf)',
+    cliTunelInternet:
+      '有一条终端命令希望通过 {proveedor} 将 {dominio} 发布到互联网。任何持有链接的人都可以访问。',
+    cliTunelTailnet:
+      '有一条终端命令希望将 {dominio} 共享给您 tailnet 中的设备（{proveedor}）。',
+    cliPublicoEn: '公开地址：https://{publico}',
+    cliDatosReales:
+      '警告：{dominio} 包含真实数据。若要继续，请在下方选择其准确域名。若非您本人请求，请取消。',
+    cliPublicar: '发布',
+    cliPhpGlobal:
+      '有一条终端命令希望将所有终端的 PHP 切换为版本 {version}。',
+    cliCambiar: '切换',
+    carpetaDatosAislada:
+      '测试数据文件夹，不修改系统 hosts、PATH 或证书',
+    carpetaDatosInvalida:
+      'WOLFCORE_DATOS 不是有效的数据文件夹：必须为绝对路径、非系统目录且不同于真实（及先前的）文件夹。应用将关闭且不做任何更改。',
+  },
 } satisfies Record<IdiomaUi, Record<string, string>>;
 
 export type TextosMain = (typeof TEXTOS)['es'];

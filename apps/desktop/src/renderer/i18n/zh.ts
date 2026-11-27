@@ -1,0 +1,5225 @@
+/**
+ * 简体中文界面文本 (zh-CN)。与 es.ts 保持相同的键和函数签名。
+ * 固定术语表：服务、实例、站点、隧道、备份、通知；Doctor 与 WolfCore Dev 不翻译。
+ * 正式中性语气；除 Git 外一律使用“版本”而非“分支”。
+ */
+import type { Textos } from './es';
+
+const plural = (n: number, texto: string): string => `${n} ${texto}`;
+
+export const zh: Textos = {
+  app: {
+    nombre: 'WolfCore Dev',
+    lema: '轻松管理 PHP 和 Nginx',
+    version: '版本',
+  },
+  nav: {
+    inicio: '首页',
+    proyectos: '项目',
+    agentes: '智能体',
+    servicios: '服务',
+    basesDeDatos: '数据库',
+    correo: '邮件',
+    php: 'PHP',
+    ia: 'AI',
+    tuneles: '隧道',
+    contenedores: '容器',
+    herramientas: '工具',
+    doctor: 'Doctor',
+    depuracion: '调试',
+    registros: '日志',
+    ajustes: '设置',
+    contraer: '收起菜单',
+    expandir: '展开菜单',
+  },
+  resumenGlobal: {
+    servicios: (n: number) => plural(n, '个运行中的服务'),
+    tuneles: (n: number) => plural(n, '个活动隧道'),
+    cargando: '正在连接核心…',
+    conErrores: '存在错误',
+    sinConexion: '未连接到核心',
+  },
+  estado: {
+    encendido: '运行中',
+    apagado: '已停止',
+    iniciando: '正在启动…',
+    error: '错误',
+    externo: '外部',
+    activo: '已启用',
+    aviso: '注意',
+  },
+  acciones: {
+    encender: '启动',
+    apagar: '停止',
+    iniciarTodo: '全部启动',
+    detenerTodo: '全部停止',
+    abrir: '打开',
+    copiar: '复制',
+    copiado: '已复制到剪贴板',
+    guardar: '保存',
+    cerrar: '关闭',
+    abrirCarpeta: '打开文件夹',
+    instalar: '安装',
+    reintentar: '重试',
+    cancelar: '取消',
+    borrar: '删除',
+    editar: '编辑',
+    duplicar: '复制副本',
+    renovar: '刷新',
+    masAcciones: '更多操作',
+    actualizar: '更新',
+    quitar: '移除',
+    reinstalar: '重新安装',
+  },
+  errores: {
+    titulo: '无法完成此操作',
+    arranque: '无法读取环境状态',
+    desconocido: '发生了意外错误。',
+    /** Detalles que el núcleo manda como código dentro de un error. */
+    detalles: {
+      'sintaxis.comillas_sin_cerrar': '引号未闭合',
+      'sintaxis.tras_comillas': '引号后缺少空格或“;”',
+      'sintaxis.punto_y_coma_inesperado': '缺少指令的“;”',
+      'sintaxis.llave_inesperada': '缺少指令的“{”',
+      'sintaxis.falta_punto_y_coma': '指令末尾缺少“;”',
+      'sintaxis.sobra_llave': '多余的“}”',
+      'sintaxis.falta_llave': '缺少“}”',
+    },
+    codigos: {
+      'git.cambios_locales':
+        '文件夹中存在未保存的更改：拉取前请先提交（commit）或放弃更改。未做任何修改。',
+      'git.divergencia':
+        '本地分支与远程分支已分叉（存在不同的本地和远程提交）：请手动解决。未做任何修改。',
+      'git.sin_upstream':
+        '当前分支未跟踪任何远程分支：无法拉取更改。',
+      'git.sin_rama': '仓库处于游离提交状态（无分支）：未做任何修改。',
+      'git.no_repositorio': '该文件夹不是 Git 仓库。',
+      'git.destino_no_vacio': '目标文件夹不为空。',
+      'git.destino_es_archivo': '目标是一个文件，而非文件夹。',
+      'git.no_encontrado': '未找到 git：请先安装。',
+      'git.gh_no_encontrado': '未找到 GitHub CLI (gh)：请先安装。',
+      'git.plazo': '克隆超过 {minutos} 分钟超时限制，已取消。',
+      'git.token_invalido': 'GitHub 令牌无效。',
+      'git.url_con_credenciales':
+        'URL 不得包含用户名或密码：请单独使用令牌。',
+      'servicios.desconocido': '未知服务：{id}。',
+      'servicios.no_instalado': '{nombre} 尚未安装。请在“服务”中安装。',
+      'servicios.puerto_invalido': '端口号必须为 1024 到 65535 之间的数字。',
+      'servicios.puerto_asignado': '端口 {puerto} 已分配给 {otro}。',
+      'servicios.puerto_ocupado':
+        '端口 {puerto} 正被 {nombre}（PID {pid}）占用。请关闭该程序或选择其他端口。',
+      'servicios.confirmacion_borrado': '要删除 {nombre} 的数据，请输入 "{id}"。',
+      'servicios.ftp_no_disponible': 'FTP 服务器不可用。',
+      'sistema.sin_cliente_ftp':
+        '此计算机未关联 FTP 客户端。请安装一个客户端（如 FileZilla）或复制地址。',
+      'servicios.mailpit_no_responde': 'Mailpit 无响应。请在“服务”中启动它。',
+      'servicios.iniciar_todo_fallos':
+        '全部启动未能启动：{nombres}。请检查“服务”及其日志。',
+      'servicios.respaldo_fallo':
+        '未更新 {nombre}：预先备份失败，未做任何更改。',
+      'servicios.espacio_insuficiente':
+        '磁盘空间不足，无法复制数据：需要 {necesarios} MB，可用 {libres} MB。',
+      'servicios.actualizacion_revertida':
+        '版本 {version} 未能启动；{nombre} 已回退至 {anterior}。备份已保留。',
+      'servicios.restauracion_fallo':
+        '新版本未能启动且无法恢复 {nombre} 的数据。未启动任何服务：已修改的数据位于 {fallida}，备份位于 {respaldo}。',
+      'servicios.otra_rama':
+        '{nombre} {version} 属于不同的主版本：请将其创建为新实例。',
+      'servicios.misma_version': '{id} 已在使用版本 {version}。',
+      'servicios.instancia_bloqueada':
+        '{nombre} 已锁定：一次更新未能恢复其数据。已修改的数据位于 {fallida}，备份位于 {respaldo}。启动前请在“服务 → 版本”中解决。',
+      'servicios.datos_apartados':
+        '{nombre} 的文件夹中没有数据，但存在更新时暂存的数据：不会创建空文件夹。请检查“服务 → 版本”。',
+      'servicios.puerto_reservado':
+        '端口 {puerto} 已被系统保留（{desde}–{hasta}）：请选择其他端口。',
+      'servicios.borrado_con_bloqueo':
+        '{nombre} 存在更新后锁定的实例：删除数据前请先解除锁定。',
+      'servicios.config_no_revertida':
+        '{nombre} {version} 未能启动且无法在配置中回退到 {anterior}。请在“服务 → 版本”中重新选择 {anterior}。',
+      'servicios.puerto_revertido_apagada':
+        '{nombre} 未能在新端口启动；已回退至 {anterior}，但仍未启动：现保持停止于端口 {anterior}。',
+      'servicios.puerto_no_revertido':
+        '{nombre} 未能在端口 {nuevo} 启动且无法在配置中回退至 {anterior}：现保持停止。',
+      'instancias.id_invalido': '实例标识符无效。',
+      'instancias.no_existe': '实例 {id} 不存在。',
+      'instancias.existe': '实例 {id} 已存在。',
+      'instancias.una_sola': '{nombre} 仅支持单个实例。',
+      'instancias.ultima': '{id} 是唯一实例：无法移除。',
+      'instancias.sin_puerto_libre': '未找到可用于该实例的空闲端口。',
+      'instancias.confirmacion': '要继续，请输入 "{id}"。',
+      'instancias.sin_datos': '{id} 文件夹中没有数据：请选择一个备份进行恢复。',
+      'instancias.respaldo_no_existe': '{id} 的该备份不存在。',
+      'instancias.respaldo_en_uso':
+        '已锁定的实例 {id} 需要该备份：请先解除锁定。',
+      'instancias.version_requerida':
+        '无法确定 {id} 应回退至哪个版本：请选择同一主版本下的已安装版本。',
+      'instalador.version_en_uso':
+        '无法卸载 {servicio} {version}：实例 {instancia} 正在使用它。',
+      'limpieza.sin_confirmar': '清理版本需要您的确认。',
+      'limpieza.seleccion_invalida': '版本选择无效。',
+      'limpieza.en_curso': '已有版本清理任务正在进行。',
+      'limpieza.no_existe': '{servicio} {version} 已不再安装。',
+      'limpieza.en_uso': '{servicio} {version} 已被使用：未移除。',
+      'limpieza.ruta_insegura':
+        '{servicio} {version} 的文件夹不安全（符号链接或位于 bin 之外）：未做任何操作。',
+      'limpieza.version_bloqueada':
+        '{servicio} {version} 有文件正在被使用或锁定：未移除且未残留半成品。',
+      'limpieza.otro_volumen':
+        '{servicio} {version} 与临时数据文件夹不在同一磁盘：无法整体移动，未做任何操作。',
+      'limpieza.contenido_ajeno':
+        '{servicio} {version} 包含您自行安装的包（npm、pip…）：需确认接受丢失才能移除。',
+      'limpieza.destino_ocupado':
+        'bin 中已存在 {servicio} {version} 文件夹：不会覆盖。恢复前请先移除它。',
+      'bd.encender_servicio': '请先启动 {nombre} 以管理其数据库。',
+      'bd.sin_credenciales': '未保存 {nombre} 的凭据。',
+      'bd.confirmacion_borrado': '要删除数据库 {nombre}，请输入其准确名称。',
+      'bd.usuario_privilegiado':
+        '用户 {usuario} 是管理员或系统角色：请为项目选择专用用户。',
+      'bd.usuario_en_uso':
+        '其他项目已在使用用户 {usuario}：不会修改其密码以免导致断连。未创建任何内容。',
+      'bd.rol_sin_login':
+        '用户 {usuario} 已存在但无法登录（无 LOGIN 权限的角色或服务器访问规则限制）。未做任何更改。',
+      'bd.usuario_clave_distinta':
+        '用户 {usuario} 已存在但密码不同。请使用其当前密码：不会修改以免影响其他项目连接。',
+      'bd.mongosh_faltante': '缺少 mongosh：请在“服务”中安装以管理 MongoDB。',
+      'tuneles.sitio_no_encontrado': '未找到该项目。',
+      'tuneles.confirmacion_requerida':
+        '将 {dominio} 发布到互联网必须在 WolfCore Dev 中确认。',
+      'tuneles.confirmacion_obsoleta':
+        '确认后 {dominio} 的隧道已变更：请重新确认。',
+      'tuneles.cloudflared_no_instalado':
+        'cloudflared 未安装。请在“服务”中安装。',
+      'tuneles.proveedor_no_disponible': '隧道提供商 {proveedor} 不可用。',
+      'tuneles.cloudflare_sin_cuenta':
+        '请先在隧道选项中连接您的 Cloudflare 账户。',
+      'tuneles.cloudflare_sin_credencial':
+        '此隧道没有已保存的凭据：请在隧道选项中重新创建。',
+      'tuneles.cloudflare_datos_invalidos':
+        '隧道名称（仅限小写字母、数字和连字符）或公开域名无效。',
+      'tuneles.cloudflare_conexion_en_curso': '正在连接 Cloudflare，请稍候。',
+      'tuneles.cloudflare_dominio_distinto':
+        'Cloudflare 注册了 {registrado} 而非 {dominio}：该域名不属于您授权的区域。请在 Cloudflare 面板中删除该记录。',
+      'tuneles.cloudflare_conexiones_activas':
+        '隧道 {nombre} 仍有活动连接（cloudflared 需要 -f 才能删除）。请在所有已打开该隧道的设备上关闭它后重试，或使用“仅在此处忘记”。',
+      'tuneles.nombre_en_uso': '隧道 {nombre} 已被其他站点使用。',
+      'tuneles.dominio_en_uso': '域名 {dominio} 已被其他站点使用。',
+      'tuneles.confirmacion_olvidar': '忘记或重新创建隧道 {nombre} 需要确认。',
+      'tuneles.cloudflare_fallo': 'cloudflared 无法完成操作：{detalle}',
+      'tuneles.credencial_no_protegida':
+        '无法将凭据权限限制为当前用户，因此未使用。',
+      'tuneles.sin_cifrado':
+        '系统加密不可用：无法保存凭据。',
+      'tuneles.token_invalido':
+        '令牌无效：仅允许字母、数字及 _ . -（8 至 200 个字符）。请在隧道选项中重新保存。',
+      'tuneles.ngrok_no_instalado':
+        '此计算机未安装 ngrok。请从 ngrok.com 安装后重试。',
+      'tuneles.ngrok_sin_token': '缺少 ngrok 令牌：请在隧道选项中保存。',
+      'tuneles.expose_sin_token': '缺少 Expose 令牌：请在隧道选项中保存。',
+      'tuneles.tailscale_no_instalado':
+        '此计算机未安装 Tailscale。WolfCore Dev 不会安装它：请从 tailscale.com 安装。',
+      'tuneles.tailscale_sin_sesion':
+        'Tailscale 尚未登录：请先登录 Tailscale 后重试。',
+      'tuneles.tailscale_puerto_ocupado':
+        'Tailscale 已在 HTTPS 端口 {puerto} 上发布了服务。WolfCore Dev 不会覆盖它：请通过 Tailscale 移除后重试。',
+      'lan.sitio_no_encontrado': '未找到该站点。',
+      'lan.confirmacion_requerida':
+        '在局域网中共享 {dominio} 必须在 WolfCore Dev 中确认。',
+      'lan.datos_reales':
+        '{dominio} 包含真实数据：即使确认也禁止在局域网中共享。请使用不含客户数据的副本。',
+      'lan.sin_red':
+        '未连接局域网（Wi-Fi 或以太网）。请连接网络后重试。',
+      'lan.ip_no_valida':
+        '地址 {ip} 已不再属于您的局域网。请重新打开对话框并再次确认。',
+      'lan.requiere_https': '{dominio} 会重定向至 HTTPS：请勾选 HTTPS 选项进行共享。',
+      'lan.sin_puertos':
+        '8100 至 8199 之间已无可用局域网端口（共享站点和 CA 链接使用该范围）。请停止共享某个站点或关闭 CA 对话框后重试。',
+      'tuneles.expose_no_instalado':
+        'Expose 未安装。在 Windows 上仅支持 expose.phar：请将其放入 {carpeta}。',
+      'tuneles.expose_datos_reales':
+        'Expose 不可用于包含真实数据的站点：其请求检查器对整个局域网可见。请更换其他提供商。',
+      'tuneles.confirmacion_requerida_tailnet':
+        '向您的 tailnet 共享 {dominio} 必须在 WolfCore Dev 中确认。',
+      'tuneles.tailscale_estado_ilegible':
+        '无法读取 Tailscale 在此设备上已发布的内容，为避免覆盖未打开任何共享。请确认 Tailscale 正在运行后重试。',
+      'tuneles.tailscale_no_habilitado':
+        '您的 tailnet 尚未启用 Serve 或 Funnel。请前往 {enlace} 启用后重试。',
+      'tuneles.ngrok_desactualizado':
+        '您的 ngrok 版本过旧，不支持 WolfCore Dev 所需的功能。请更新（ngrok update）后重试。',
+      'hosts.dominio_invalido': '存在无效域名。',
+      'hosts.tiempo_agotado':
+        '管理员权限请求在 {segundos} 秒内未获响应；hosts 文件未作更改。',
+      'https.sin_dominio': '证书至少需要一个域名。',
+      'https.sin_autoridad':
+        'WolfCore Dev 证书颁发机构不存在。签发证书前请先在 HTTPS 区域安装 CA。',
+      'herramientas.pid_invalido': 'PID 无效。',
+      'herramientas.pid_sistema': 'PID {pid} 属于系统进程，无法结束。',
+      'herramientas.proceso_propio':
+        '无法结束 WolfCore Dev 或启动它的进程。',
+      'herramientas.proceso_inexistente': '进程 {pid} 已不存在。',
+      'herramientas.sin_editor':
+        '未检测到代码编辑器。请安装一个编辑器（VS Code、Cursor、PhpStorm、Sublime Text…）。',
+      'herramientas.editor_no_instalado':
+        '{nombre} 未安装。请在“设置”中选择其他编辑器。',
+      'herramientas.editor_invalido': '该编辑器无效。',
+      'herramientas.carpeta_sitio_inexistente': '项目文件夹不存在。',
+      'herramientas.ruta_no_absoluta': '路径必须为绝对路径。',
+      'herramientas.sin_seleccion': '请至少选择一项。',
+      'herramientas.dominio_invalido': '存在无效的域名或 IP。',
+      'herramientas.demasiados_dominios':
+        '单张证书最多允许 {maximo} 个域名或 IP。',
+      'buscar.consulta_invalida': '请输入要搜索的内容（最多 500 个字符）。',
+      'buscar.raiz_invalida': '文件夹或文件不存在或无效。',
+      'buscar.regex_invalida': '正则表达式无效。',
+      'buscar.regex_lenta':
+        '正则表达式执行耗时过长：请简化表达式或使用纯文本搜索。',
+      'buscar.demasiadas': '已有 {maximo} 个搜索正在进行：请取消一个或稍候。',
+      'terminal.no_abrio': '无法打开终端。',
+      'terminal.no_instalada': '{nombre} 未安装。请在“设置”中选择其他终端。',
+      'terminal.invalida': '该终端无效。',
+      'terminal.powershell_restringido':
+        '此计算机上的 PowerShell 处于受限语言模式（组织策略或 AppLocker）：WolfCore Dev 无法打开终端。请自行在项目文件夹中打开。',
+      'proyectos.no_existe': '该项目不存在。',
+      'proyectos.no_confiado': '请勾选“我信任此仓库”后再执行安装方案。',
+      'proyectos.receta_en_curso': '此项目已有安装方案正在执行。',
+      'proyectos.paso_no_omitible': '无法跳过“创建站点”步骤。',
+      'workspaces.no_existe': '该工作区不存在。',
+      'workspaces.invalido': '工作区无效：请检查其名称和包含项。',
+      'workspaces.captadores_exclusivos':
+        '两个邮件捕获工具无法同时运行：一次只能启动一个。',
+      'workspaces.elemento_fallo':
+        '无法完成对 {elemento} 的操作。请检查“服务”及其日志。',
+      'workspaces.base_no_responde':
+        '未启动 {elemento}，因为该项目的数据库无响应。',
+      'tareas.cron_invalida':
+        'Cron 表达式无效。请使用 5 个字段：分钟、小时、日期、月份、星期（例如 0 3 * * *）。',
+      'tareas.comando_invalido':
+        '该命令不被允许。请对项目文件使用 php、node、npm run 或 python，不得包含行内代码参数（-r、-e、-c）。',
+      'tareas.invalida': '任务无效：请检查名称、计划时间和命令。',
+      'tareas.no_existe': '该任务已不存在。',
+      'tareas.sin_confirmar': '请先确认任务命令后再执行。',
+      'tareas.sitio_no_confiado':
+        '请在项目中勾选“我信任此仓库”以运行其定时任务。',
+      'tareas.receta_cambio':
+        '自您信任后项目安装方案已变更：请检查并重新勾选“我信任此仓库”。',
+      'tareas.aislado':
+        '当前为测试数据文件夹（WOLFCORE_DATOS）：需先允许定时任务才能运行。',
+      'tareas.carpeta': '项目文件夹不存在：无法运行任务。',
+      'tareas.en_curso': '该任务正在运行。',
+      'tareas.demasiadas': '此项目中的任务过多（最多 {maximo} 个）。',
+      'cli.no_autorizado':
+        'CLI 命令未获授权：请在 WolfCore Dev 应用打开的状态下重新执行。',
+      'cli.orden_desconocida': 'WolfCore Dev 不识别该 CLI 命令。',
+      'cli.argumentos_invalidos': '命令参数无效。',
+      'cli.solicitud_grande': '请求过大（最大 {maximo} 字节）。',
+      'cli.formato_no_admitido': '请求格式不被 CLI 支持。',
+      'cli.plazo':
+        '命令执行超时：可能仍在后台运行。请在 WolfCore Dev 中检查状态。',
+      'cli.ocupado':
+        'WolfCore Dev 正在处理过多 CLI 命令：请稍候。',
+      'cli.requiere_confirmacion':
+        '此命令会发布或更改内容，需要在 {sitio} 上确认（--si）。',
+      'cli.requiere_confirmacion_datos_reales':
+        '{sitio} 包含真实数据：还需通过命令的真实数据选项（站点域名）确认。',
+      'cli.requiere_confirmacion_global':
+        '更改所有终端的 PHP 版本需要确认（--si）。',
+      'cli.confirmacion_rechazada':
+        'WolfCore Dev 窗口中的确认被拒绝或不可用：未执行任何操作。',
+      'cli.confirmacion_vencida':
+        '未及时在 WolfCore Dev 窗口中确认：未执行任何操作。',
+      'cli.tunel_fallo': '无法打开隧道。请在 WolfCore Dev 中查看其日志。',
+      'cli.inicio_fallo':
+        '未能启动所有请求的项目。请在 WolfCore Dev 中查看日志。',
+      'cli.parada_fallo':
+        '未能停止所有请求的项目。请在 WolfCore Dev 中查看日志。',
+      'cli.interno': 'CLI 服务器内部错误。',
+      'cli.proveedor_distinto':
+        '该站点使用另一隧道提供商（{proveedor}）。请检查并重新确认。',
+      'cli.sitio_no_encontrado': '站点 {sitio} 不存在。',
+      'cli.carpeta_invalida':
+        '文件夹不存在、属于系统目录或是 WolfCore Dev 的数据文件夹。',
+      'cli.carpeta_sin_sitio':
+        '该文件夹不属于任何 WolfCore Dev 站点：请先关联。',
+      'cli.ya_vinculada': '该文件夹已是站点 {sitio}。',
+      'cli.tipo_no_soportado':
+        '{tipo} 类型的项目请通过 WolfCore Dev 界面创建。',
+      'cli.sitio_sin_php': '站点 {sitio} 未使用 PHP。',
+      'cli.version_no_instalada':
+        '{servicio} {version} 未安装。请在“服务”中安装。',
+      'cli.fuente_no_existe': '该日志尚不存在。',
+      'cli.token_no_protegido':
+        '无法将令牌文件限制为当前用户访问：CLI 未启用。',
+      'cli.carpeta_ajena':
+        '数据目录中的 run/ 文件夹属于其他用户：CLI 未启用。',
+      'cli.ruta_invalida': 'WolfCore Dev 的路径包含 wolf.cmd 不支持的字符。',
+      'cli.path_aislado':
+        '使用测试数据文件夹（WOLFCORE_DATOS）时不会修改用户 PATH。',
+      'cli.sin_cliente': '此版本 WolfCore Dev 未附带 wolf 客户端（尚未编译）。',
+      'cli.demasiados_dialogos':
+        '最近一分钟内确认请求过多：请稍候重试。',
+      'cli.error': '无法完成命令：{detalle}',
+      'proyectos.carpeta_no_vacia':
+        '项目文件夹中已有文件：请选择其他文件夹或先清空。',
+      'secretos.sin_cifrado':
+        '系统加密不可用：无法保存专用用户的密码。未做任何更改。',
+      'proyectos.clave_bd_falta':
+        '缺少用户 {usuario} 的已保存密码：未写入任何内容。在 .env 管理器中点击“使用专用用户”可生成新密码。',
+      'env.archivo_grande': '环境变量文件过大（最大 {maximo}）。',
+      'env.no_regular': '.env 不是常规文件：不会读取或修改。',
+      'env.clave_inexistente': '变量 {clave} 不存在。',
+      'env.cambio_invalido': '.env 的某项更改无效。',
+      'env.variable_invalida': '变量 {clave} 的更改无效。',
+      'env.solo_lectura': '变量 {clave} 跨越多行：请在文件中手动编辑。',
+      'env.usuario_compartido':
+        '数据库 {base} 也被项目 {proyecto} 使用：请确认是否共享其用户。',
+      'env.cambio_externo':
+        '自显示预览以来 .env 已发生变化：保存前请重新检查。',
+      'env.sin_confirmar': '请确认要保存对 .env 的更改。',
+      'env.versionado':
+        'Git 已跟踪此项目的 .env：下次提交将会上传其值。请单独确认以继续。',
+      'env.versionado_desconocido':
+        '无法检查 Git 是否跟踪此项目的 .env：请单独确认以继续。',
+      'env.copia_invalida': '.env 备份无效或已不存在。',
+      'env.sin_base': '此项目的 .env 未配置数据库连接。',
+      'env.base_no_resuelta':
+        '此项目的数据库不属于 WolfCore Dev 本地服务器：未做任何更改。',
+      'env.motor_no_soportado': '目前“使用专用用户”仅支持 MySQL 和 MariaDB。',
+      'env.ya_usa_usuario_propio': '此项目已在使用专用用户。',
+      'plantillas.id_invalido': '模板标识符无效。',
+      'plantillas.no_existe': '模板不存在。',
+      'plantillas.danada':
+        '模板已损坏或被篡改：无法使用。请删除后重新保存。',
+      'plantillas.demasiado_grande':
+        '项目文件过多，无法保存为模板（最多 {maximo} 个文件）。请排除大型文件夹。',
+      'plantillas.demasiado_pesada':
+        '项目体积过大，无法保存为模板（最大 {maximo}）。请排除大型文件夹。',
+      'plantillas.exclusion_invalida':
+        '某条排除规则无效（请使用名称或相对路径，不得包含 ".."）。',
+      'plantillas.nombre_invalido':
+        '模板名称无效（1 至 60 个字符）。',
+      'plantillas.esquema_fallo':
+        '无法读取项目数据库结构：请确认对应服务正在运行。',
+      'plantillas.base_no_resuelta':
+        '无法保存模板：数据库服务器为远程服务器或没有本地服务使用该端口。',
+      'plantillas.sin_generador_base':
+        '此项目类型没有基础生成器：模板必须包含项目文件。',
+      'plantillas.exclusiones_nuevas':
+        '模板包含现已排除的文件（{archivo}）：请从项目重新保存或删除该模板。',
+      'plantillas.motor_distinto':
+        '模板结构来自 MySQL 而所选服务器为 MariaDB（或相反）：可能存在差异。请确认继续。',
+      'bd.sql_no_permitido':
+        '结构文件包含非结构语句，未执行任何操作：{sentencia}',
+      'bd.extension_no_permitida':
+        '结构文件请求了未在允许列表中的扩展 {nombre}：未恢复任何内容。',
+      'bd.esquema_fallo': '无法完整恢复数据库结构：未残留部分更改。',
+      'bd.datos_no_permitidos':
+        '数据转储包含非数据语句（仅允许 INSERT、LOCK TABLES 和 SET）：未导入任何内容。',
+      'bd.datos_fallo':
+        '无法导入数据：数据库保持原状，未残留半成品。',
+      'perfiles.destino_invalido': '请选择配置文件的保存位置（.wolfperfil 文件）。',
+      'perfiles.frase_debil': 'CA 密码短语至少需要 {minimo} 个字符。',
+      'perfiles.frase_incorrecta': '密码短语不正确：未导入任何内容。',
+      'perfiles.certificados_sin_ca':
+        '站点证书只能随加密的 CA 一同导出：请连同 CA 及密码短语一起包含。',
+      'perfiles.no_existe': '配置文件不存在。',
+      'perfiles.danado': '配置文件已损坏或被修改：未导入任何内容。',
+      'perfiles.demasiado_grande': '配置文件过大（最大 {maximo}）。',
+      'perfiles.version_no_soportada':
+        '该配置文件来自更新版本的 WolfCore Dev（格式 {version}）：请先更新应用后再导入。',
+      'perfiles.sin_confirmar': '请确认您要导入该配置文件。',
+      'perfiles.vista_previa_vieja':
+        '自预览后数据文件夹或配置文件已变更：请重新检查。',
+      'perfiles.carpeta_datos_invalida':
+        'WOLFCORE_DATOS 不是有效的数据文件夹：必须为绝对路径、非系统目录且不同于真实数据文件夹。',
+      'perfiles.confirmar_reemplazar_ca':
+        '该配置文件包含 CA，且本机已有自己的 CA：请核对指纹并单独确认替换（仅限您自己的 CA）。',
+      'herramientas.imagen_tipo':
+        '该文件不是受支持的图片格式（PNG、JPG、WebP、GIF、BMP 或 ICO），或其内容与类型不符。',
+      'herramientas.imagen_grande': '图片体积过大（最大 {maximo}）。',
+      'herramientas.imagen_dimensiones':
+        '图片尺寸过大（{ancho}×{alto} px；单边上限 {maximo} px），出于安全考虑未打开。',
+      'herramientas.zip_sin_archivos': '没有可压缩的文件（不会跟随符号链接）。',
+      'herramientas.zip_demasiados': '要压缩的文件过多（最多 {maximo} 个）。',
+      'herramientas.zip_grande': '要压缩的内容体积过大（最大 {maximo}）。',
+      'herramientas.pdf_invalido': '该文件不是可优化的 PDF。',
+      'herramientas.pdf_grande': 'PDF 体积过大（最大 {maximo}）。',
+      'herramientas.pdf_cifrado': 'PDF 受密码保护，无法优化。',
+      'herramientas.pdf_plazo': 'PDF 处理超过 {segundos} 秒，已取消。',
+      'herramientas.salida_ocupada': '无法为新文件找到可用文件名。',
+      'conversor.formato': '不支持该格式转换。',
+      'conversor.archivo_invalido':
+        '文件已损坏或与扩展名所指类型不符。',
+      'conversor.archivo_grande': '文件体积过大（最大 {maximo}）。',
+      'conversor.archivo_peligroso':
+        '文件疑似 ZIP 炸弹或遭篡改（内容过大、含 XML 实体或无效文件名），出于安全考虑未打开。',
+      'conversor.limite_filas': '表格行数过多（最多 {maximo} 行）。',
+      'conversor.limite_columnas': '表格列数过多（最多 {maximo} 列）。',
+      'conversor.limite_paginas': 'PDF 页数过多（最多 {maximo} 页）。',
+      'conversor.pdf_cifrado': 'PDF 受密码保护，无法转换。',
+      'conversor.plazo': '转换超过 {segundos} 秒，已取消。',
+      'conversor.cancelado': '转换已取消。',
+      'conversor.libreoffice_ausente':
+        '该转换需要 LibreOffice，但本机尚未安装（WolfCore Dev 不会自动安装）。',
+      'conversor.libreoffice_fallo': 'LibreOffice 无法转换该文档。',
+      'conversor.limite_celdas': '表格单元格过多（最多 {maximo} 个）。',
+      'conversor.memoria': '文件所需内存过大（超过 {maximo}），已取消。',
+      'conversor.pdf_no_disponible': '当前无法打印为 PDF。',
+      'herramientas.imagen_pixeles':
+        '图片总像素过高（{ancho}×{alto} px；上限 {maximo}），出于安全考虑未打开。',
+      'herramientas.zip_cambio': '压缩过程中有文件发生变化：请重试。',
+      'herramientas.pdf_demasiado_complejo':
+        'PDF 过于复杂（会超出允许内存），已取消。',
+      'herramientas.salida_denegada':
+        '无法写入该位置：请检查权限或确认文件夹存在。',
+      'herramientas.fuera_de_la_ca':
+        'WolfCore Dev 的 CA 仅签发 .test 域名、localhost 及本地地址：无法包含 {dominio}。',
+      'perfiles.frase_requerida':
+        '请输入配置文件的密码短语以导入数据库或 CA（或选择不导入数据库）。',
+      'perfiles.sin_espacio':
+        '磁盘剩余空间不足，无法导入配置文件：需要 {necesarios}，可用 {libres}。',
+      'perfiles.ca_sin_restricciones':
+        '此 CA 可签发任何网站证书：仅在确认是您自己的 CA 且核对指纹后才可导入。请单独确认以继续。',
+      'perfiles.ca_restricciones_ajenas':
+        '配置文件中的 CA 包含非 WolfCore Dev 的名称限制：拒绝导入。',
+      'perfiles.instantanea_fallo':
+        '无法保存环境预先快照：未做任何更改。请检查磁盘空间和数据文件夹权限。',
+      'perfiles.en_curso': '已有配置文件导入正在进行：请等待完成。',
+      'importar.origen_apagado':
+        '无法连接到其他程序的数据库服务器：请在该程序中启动后重试。站点已正常导入。',
+      'importar.origen_no_local': '源服务器必须位于本机（127.0.0.1）。',
+      'importar.origen_rechazado': '源服务器拒绝了用户名或密码。',
+      'importar.origen_version':
+        '源服务器版本无法使用 WolfCore Dev 当前已安装的组件导入。',
+      'importar.volcado_enorme':
+        '数据库数据超过 {maximo} MB：不支持一次性导入。',
+      'importar.motor_no_soportado':
+        '仅支持从其他程序导入 MySQL 和 MariaDB 数据库。',
+      'importar.ruta_fuera':
+        '已跳过指向安装目录之外或系统目录的文件夹或文件。',
+      'importar.carpeta_invalida': '已跳过不再存在或无效的文件夹。',
+      'importar.archivo_grande':
+        '某个配置文件大于 {maximo} KB，未读取。',
+      'importar.archivo_ilegible': '某个配置文件不是文本文件或无法读取。',
+      'importar.demasiados':
+        '站点或配置文件数量过多：仅读取了前一批。',
+      'importar.candidato_desconocido':
+        '源程序中已不再显示该站点：请重新扫描。',
+      'importar.ya_vinculado': '该文件夹已是 WolfCore Dev 站点。',
+      'importar.dominio_existe':
+        '已存在域名为 {dominio} 的站点：导入前请先更改。',
+      'importar.sin_php':
+        '此站点需要 PHP，但尚未安装任何版本：请在“服务”中安装。',
+      'importar.base_existe':
+        '目标中已存在数据库 {nombre}，未作修改。请确认替换以导入（替换前会先备份）。',
+      'importar.base_fallo':
+        '无法导入数据库 {nombre}：已保持原状，未残留半成品。',
+      'importar.sitio_fallo': '无法创建站点。',
+      'importar.origen_invalido':
+        '源服务器信息无效（用户名、密码或端口）。',
+      'importar.sin_seleccion': '请至少选择一个要导入的站点。',
+      'importar.en_curso': '已有导入任务正在进行：请等待完成。',
+      'importar.cancelado': '导入已取消：正在导入的内容保持原状。',
+      'importar.origen_estancado':
+        '导出期间另一程序的服务器停止响应：未导入该数据库。',
+      'importar.sin_espacio':
+        '磁盘剩余空间不足，无法导入数据库：约需 {necesarios} MB，可用 {libres} MB。',
+      'importar.origen_fallo': '无法导出另一程序的数据库。',
+      'importar.clave_no_ascii':
+        '密码包含无法传递给导出工具的特殊字符：请使用纯 ASCII 密码。',
+      'plantillas.sin_esquema': '模板不包含数据库结构。',
+      'proyectos.carpeta_invalida': '项目文件夹无效。',
+      'proyectos.nombre_invalido':
+        '项目名称仅可包含小写字母、数字和连字符（最多 40 个字符）。',
+      'proyectos.argumento_invalido': '项目参数无效（字段：{campo}）。',
+      'proyectos.base_existe': '数据库 {nombre} 已存在：请另选名称。',
+      'proyectos.dominio_existe': '已存在域名为 {dominio} 的站点。',
+      'proyectos.carpeta_de_otro_sitio':
+        '该文件夹属于项目 {dominio} 或位于其内部：请另选文件夹。',
+      'proyectos.sin_python': '尚未安装 Python：请在“服务”中安装。',
+      'proyectos.venv_ajeno':
+        '项目自带 .venv，WolfCore Dev 不会执行外部仓库中的 Python：请删除它并重新创建环境。',
+      'proyectos.paso_base_no_omitible':
+        '新建项目时无法跳过“创建数据库”步骤。',
+      'proyectos.sin_php': '尚未安装 PHP：请在“服务”中安装。',
+      'proyectos.php_no_instalado': 'PHP {version} 未安装：请在“服务”中安装。',
+      'proyectos.python_no_instalado':
+        'Python {version} 未安装：请在“服务”中安装。',
+      'mcp.token_invalido': 'MCP 服务器令牌无效。',
+      'mcp.solicitud_cancelada': 'MCP 客户端已取消请求：未执行操作。',
+      'doctor.puerto_ocupado': '{servicio} 的端口 {puerto} 正被另一程序（{proceso}）占用。',
+      'doctor.puerto_iis': 'IIS（{programa}）占用了 {servicio} 的端口 {puerto}。',
+      'doctor.puerto_http_sys':
+        'Windows 服务（{programa}）占用了 {servicio} 的端口 {puerto}。',
+      'doctor.puerto_flyenv':
+        '{programa} 占用了 {servicio} 的端口 {puerto}。请关闭它或更改 WolfCore Dev 的端口。',
+      'doctor.puerto_xampp': '{programa} 占用了 {servicio} 的端口 {puerto}。',
+      'doctor.puerto_skype': '{programa} 占用了 {servicio} 的端口 {puerto}。',
+      'doctor.puerto_reservado':
+        '{servicio} 的端口 {puerto} 位于 Windows 保留范围内（{desde}-{hasta}：Hyper-V、WSL 或 Docker）。',
+      'doctor.ca_por_vencer': 'WolfCore Dev 证书颁发机构将在 {dias} 天后过期。',
+      'doctor.ca_vencida': 'WolfCore Dev 证书颁发机构已过期。',
+      'doctor.certificado_por_vencer': '{dominio} 的证书将在 {dias} 天后过期。',
+      'doctor.certificado_vencido': '{dominio} 的证书已过期。',
+      'doctor.hosts_ilegible': '无法读取 hosts 文件。',
+      'doctor.hosts_utf16':
+        'hosts 文件以 UTF-16 编码保存：Windows 可能无法读取其中的条目。',
+      'doctor.hosts_bloque_duplicado':
+        'hosts 文件中存在 {bloques} 个 WolfCore Dev 区块；应仅保留一个。',
+      'doctor.hosts_bloque_sin_cierre':
+        'hosts 文件中的 WolfCore Dev 区块缺少结束标记。',
+      'doctor.hosts_dominios_faltantes':
+        'hosts 文件中缺少 {cantidad} 个站点域名。',
+      'doctor.hosts_solo_lectura':
+        'hosts 文件为只读状态（通常由杀毒软件设置）。WolfCore Dev 仍可在获取管理员权限后写入。',
+      'doctor.path_duplicados':
+        '用户 PATH 中存在 {cantidad} 条重复的 WolfCore Dev 条目。',
+      'doctor.path_ajeno_delante':
+        'PATH 中另一个包含 {programa} 的文件夹（{origen}）排在 WolfCore Dev 之前：终端将优先使用它。',
+      'doctor.vcredist_ausente':
+        '缺少 Microsoft Visual C++ 2015-2022 (x64)：没有它，PHP 和其他服务将无法启动。',
+      'doctor.enlazador_msvc_ausente':
+        '已安装 Rust，但缺少 Visual Studio Build Tools 的 C++ 工具（MSVC 链接器）：cargo 将无法链接程序。',
+      'doctor.antivirus_sin_exclusion':
+        '杀毒软件正在扫描 WolfCore Dev 的数据文件夹：PHP 和服务可能启动缓慢。',
+      'doctor.firewall_reglas':
+        'Windows 允许来自网络的 {cantidad} 条规则访问 WolfCore Dev 程序（nginx、PHP 或数据库），配置文件：{perfiles}：这些程序将暴露在网络中。',
+      'doctor.firewall_no_comprobado':
+        '无法检查 Windows 防火墙（可能需要管理员权限）。',
+      'doctor.firewall_reglas_ajenas':
+        '在配置文件 {perfiles} 中发现 {cantidad} 条来自其他程序（FlyEnv、Laragon、XAMPP 等）针对 nginx、PHP 或数据库的入站规则。它们不属于 WolfCore Dev：此处仅作展示，绝不会移除。',
+      'doctor.servicio_en_error': '{servicio} 处于错误状态。',
+      'doctor.revision_fallida': '无法完成 {revision} 检查。',
+      'doctor.confirmacion_requerida': '应用前请确认此修复。',
+      'doctor.hallazgo_desconocido': '该问题已不存在：请重新检查。',
+      'doctor.solo_informa':
+        '该问题没有自动修复方案：请按提示操作。',
+      'doctor.reparacion_fallida': '无法应用修复。',
+      'doctor.reparacion_cancelada': '已取消管理员授权：未做任何更改。',
+      'doctor.reparacion_denegada': 'Windows 或杀毒软件拒绝了访问：未做任何更改。',
+      'doctor.ya_resuelto': '该问题已消失：无需更改。',
+      'doctor.ca_vieja_sin_quitar':
+        '新证书颁发机构已启用，但未能从 Windows 存储区移除旧 CA。您可在 HTTPS 区域移除。',
+      'doctor.sin_puerto_libre': '未找到空闲端口以迁移该服务。',
+      'doctor.ca_vuelta_atras_incompleta':
+        '无法应用新 CA 且回滚未完成。请检查 HTTPS 区域；etc/respaldos 中保留了带日期的副本。',
+      'doctor.firefox_sin_confianza':
+        'Firefox 在 {cantidad} 个配置文件中不信任 WolfCore Dev 证书颁发机构（它使用独立证书库）。',
+      'confianza.sin_ca': '尚无证书颁发机构：请先在 HTTPS 区域创建。',
+      'confianza.sin_raices':
+        '未找到 Python 的受信任根证书（certifi 与 Windows 均未找到）：未做任何更改。',
+      'confianza.node_variable_ajena':
+        '您已设置自己的 NODE_EXTRA_CA_CERTS：WolfCore Dev 不会替换它。',
+      'confianza.variable_fallida': '无法更改该用户环境变量。',
+      'firefox.abierto': 'Firefox 正在运行：请先关闭后重试。',
+      'firefox.error': '无法修改该配置文件的 user.js；已保持原状。',
+      'firefox.fuera':
+        '存在位于 Firefox 默认文件夹之外的配置文件：请在“CA 信任”中单独确认启用。',
+      'confianza.node_variable_cambiada':
+        'NODE_EXTRA_CA_CERTS 已不再指向 WolfCore Dev CA（被手动更改）：未删除。',
+      'ia.clave_invalida': '提供商拒绝了该密钥：请检查或重新生成。',
+      'ia.sin_saldo': '提供商账户余额或配额不足。',
+      'ia.limite': '提供商限制了请求频率：请稍后再试。',
+      'ia.region': '提供商在您所在的国家或地区暂不提供服务。',
+      'ia.sin_red': '无法连接到提供商：请检查网络或基础 URL。',
+      'ia.url_invalida':
+        '基础 URL 无效：请使用 https://（或仅限 127.0.0.1 / [::1] 的 http://），且不得包含用户名或密码。',
+      'ia.plazo': '提供商在 {segundos} 秒内未响应。',
+      'ia.respuesta_rara': '提供商返回了意外响应。',
+      'ia.cancelado': '对提供商的请求已取消。',
+      'ia.sin_clave': '此提供商需要密钥：请先保存。',
+      'ia.clave_mal_formada':
+        '密钥格式无效（不得包含空格或换行符）。',
+      'ia.modelo_invalido': '模型名称无效。',
+      'ia.modelo_no_disponible': '模型不存在或您的账户无权访问。',
+      'ia.proveedor_invalido': '提供商配置无效。',
+      'ia.env_conflicto':
+        '.env 中已使用其他值定义了 {claves}：请确认是否替换。',
+      'ia.env_sin_confirmar':
+        '请确认要将密钥写入 .env（将以明文保存）。',
+      'ia.env_versionado':
+        'Git 已跟踪此项目的 .env：即使在 .gitignore 中，下次提交仍会上传密钥。请先运行 git rm --cached .env 将其移出暂存索引。',
+      'ia.env_versionado_desconocido':
+        '无法检查 Git 是否已跟踪此项目的 .env：请单独确认写入密钥。',
+      'ia.proveedor_no_existe': '该 AI 提供商已不存在。',
+      'ia.url_cambia_con_clave':
+        '此提供商已保存密钥：请确认是否要将其发送到新 URL。',
+      'ia.mensaje_sin_confirmar':
+        '请确认发送测试消息（会消耗您账户的令牌额度）。',
+      'ia.clave_ilegible':
+        '无法读取已保存的提供商密钥：请删除并重新保存。',
+      'ia.argumento_invalido': '参数无效（{campo}）。',
+      'correo.auth': '提供商拒绝了用户名或密码。',
+      'correo.conexion': '无法连接到 SMTP 服务器：请检查主机和端口。',
+      'correo.tls':
+        '无法与服务器建立经验证的加密连接（证书、主机名或 STARTTLS）。未发送任何邮件。',
+      'correo.rechazado':
+        '服务器拒绝了邮件或地址。请检查发件人：许多提供商仅允许经过验证的发件人或域名。',
+      'correo.plazo': '服务器未及时响应（20 秒）。',
+      'correo.host_invalido':
+        'SMTP 服务器必须是主机名或 IP，不得包含协议、端口或路径。',
+      'correo.host_local':
+        '该服务器指向本机或局域网：请确认后使用。',
+      'correo.destinatario_invalido': '收件人地址无效。',
+      'correo.proveedor_invalido': '提供商数据无效。',
+      'correo.proveedor_no_existe': '该邮件提供商已不存在。',
+      'correo.sin_clave': '该提供商没有已保存的密钥。',
+      'correo.clave_ilegible':
+        '无法读取已保存的提供商密钥：请删除并重新保存。',
+      'correo.cambia_con_clave':
+        '该提供商已保存密钥：请确认是否发送到新服务器。',
+      'correo.env_sin_confirmar':
+        '请确认要将邮件变量写入 .env。',
+      'correo.ocupado': '已有发送测试正在进行。',
+      'correo.limite': '请等待 {segundos} 秒后再进行下一次发送测试。',
+      'correo.clave_mal_formada':
+        '密钥格式无效：仅允许可打印字符、无换行符且不超过 4096 个字符。',
+      'correo.argumento_invalido': '参数无效（{campo}）。',
+      'agentes.no_existe': '不支持该智能体。',
+      'agentes.sin_confirmar': '继续前请在对话框中确认操作。',
+      'agentes.no_instalable':
+        '此智能体不通过 WolfCore Dev 安装：请遵循官方指南（{guia}）。',
+      'agentes.sin_node': '请先在“服务”中安装 Node，才能安装该智能体。',
+      'agentes.node_antiguo':
+        '{agente} 需要 Node {requerida} 或更高版本，当前版本为 {actual}。请在“服务”中安装更新的 Node。',
+      'agentes.node_version_desconocida':
+        '无法确定 Node 版本，而 {agente} 需要 Node {requerida} 或更高版本。请检查“服务”中的 Node。',
+      'instalador.zip_demasiado_grande':
+        '下载的安装包过大或包含过多文件：未安装。',
+      'rust.rustup_init_fallo': 'rustup-init 未正常结束（代码 {codigo}）：{detalle}',
+      'rust.toolchain_fallo': '无法安装 Rust {version}（代码 {codigo}）：{detalle}',
+      'rust.desinstalar_fallo': '无法卸载 Rust {version}：{detalle}',
+      'rust.descarga_fallo': '无法下载 rustup（HTTP {estado}）。',
+      'agentes.instalacion_fallo': '无法安装智能体：{detalle}',
+      'agentes.no_instalado': '{agente} 尚未安装。',
+      'agentes.mcp_no_soportado':
+        '{agente} 未说明如何从环境变量读取令牌：不会为其注册 MCP。',
+      'agentes.config_ilegible':
+        '无法解析 {archivo}；未作修改。请手动检查。',
+      'agentes.config_en_uso':
+        'WolfCore Dev 编辑期间 {archivo} 发生变化：请关闭智能体后重试。未作修改。',
+      'agentes.proveedor_incompatible': '{agente} 无法使用该 AI 提供商。',
+      'agentes.sin_cambios_preparados': '没有可描述的已暂存更改（git add）。',
+      'agentes.argumento_invalido': '参数无效（{campo}）。',
+      'git.commit_fallo': '无法提交：{detalle}',
+      'git.mensaje_invalido': '提交说明为空或无效。',
+      'php.rama_no_instalada': 'PHP {rama} 尚未安装。',
+      'php.argumento_invalido': '参数无效（{campo}）。',
+      'php.valor_invalido': '{clave} 的值无效。',
+      'php.ini_invalido': '使用该 php.ini 时 PHP 无法启动；未保存。输出：{salida}',
+      'php.no_arranco':
+        '应用更改后 PHP {rama} 未能重新启动；已恢复先前配置并正常运行。',
+      'php.caido_tras_restaurar':
+        'PHP {rama} 未能重启；已恢复先前配置但仍无响应。请检查“服务”和 PHP 日志。',
+      'php.respaldo_no_existe': '该 php.ini 备份不存在。',
+      'php.extension_no_existe': '扩展 {nombre} 不在此版本的 ext 文件夹中。',
+      'php.extension_no_catalogo':
+        '此版本的目录中没有扩展 {nombre}。',
+      'php.variante_desconocida': '无法确定此 PHP 的编译变体。',
+      'php.sin_variante': '目录中没有适用于 {variante} 编译版本的 {nombre}。',
+      'php.huella_distinta': '下载文件与公布的校验和不匹配；未安装任何内容。',
+      'php.descarga_fallida': '无法下载扩展：{detalle}',
+      'php.extension_en_uso':
+        '{nombre} 的 DLL 正在被使用。请停止 PHP {rama} 后重试。',
+      'php.extension_sin_dll':
+        '无法替换 {nombre} 的 DLL，PHP {rama} 的 ext 目录中缺少该文件。请停止 PHP {rama} 后重试：启动时将恢复旧文件。',
+      'php.sitio_sin_php': '该站点不使用 PHP。',
+      'php.sitio_no_arranco':
+        '应用更改后 {sitio} 的专用 PHP 无响应；已恢复先前配置。',
+      'php.sin_puertos_sitio': '已无可用端口用于站点专用 PHP。',
+      'xdebug.launch_invalido':
+        '无法解析项目的 .vscode/launch.json；未做任何修改。',
+      'xdebug.launch_no_seguro':
+        '.vscode 文件夹或其 launch.json 为链接或其他特殊文件：不会写入。',
+      'xdebug.sin_configurar': '生成 launch.json 前请先在站点中配置 Xdebug。',
+      'nginx.sitio_no_existe': '该站点已不存在。',
+      'nginx.texto_invalido':
+        'vhost 文本过长、为空或包含控制字符。',
+      'nginx.sintaxis': '第 {linea} 行：{detalle}。未做任何更改。',
+      'nginx.directiva_prohibida':
+        '第 {linea} 行：站点 vhost 中不允许使用“{directiva}”（可能影响其他站点或项目外文件）。未做任何更改。',
+      'nginx.ruta_fuera':
+        '第 {linea} 行：“{directiva}”指向项目目录或其日志和证书目录之外。未做任何更改。',
+      'nginx.fuera_de_server':
+        '第 {linea} 行：完整 vhost 仅允许包含“server”块；“{directiva}”位于块外。未做任何更改。',
+      'nginx.dominio_ajeno':
+        '第 {linea} 行：“{nombre}”不是此站点的域名。请先将其添加为站点别名。',
+      'nginx.puerto_ajeno':
+        '第 {linea} 行：站点仅可监听在“设置”中配置的 Nginx 端口。',
+      'nginx.version_no_existe': '该 vhost 版本已不在历史记录中。',
+      'nginx.argumento_invalido': '参数无效：{campo}',
+      'nginx.destino_interno':
+        '第 {linea} 行：“{directiva}”指向 WolfCore Dev 内部服务（Adminer、Mailpit、数据库、其他站点的 PHP…），会将其暴露给网络和隧道。未做任何更改。',
+      'nginx.caido_tras_restaurar':
+        'Nginx 无响应：已恢复先前的 vhost，但仍无响应。请检查“服务”和 Nginx 日志。{salida}',
+      'depuracion.puerto_ocupado':
+        '端口 {puerto} 已被占用：转储捕获无法监听。请关闭占用该端口的程序（如 Symfony server:dump）。',
+      'depuracion.no_iniciado': '转储捕获已关闭。',
+      'depuracion.tipo_no_soportado': 'Dump 捕获仅适用于 PHP 和 FastAPI 站点。',
+      'depuracion.confirmacion': '请在对话框中确认 dump 捕获。',
+      'depuracion.argumento_invalido': '无效参数：{campo}',
+      'depuracion.archivo_fuera_del_sitio':
+        '该文件不在站点文件夹内：不会在编辑器中打开。',
+      'contenedores.motor_invalido': '未知的容器引擎。',
+      'contenedores.id_invalido': '容器 ID 无效。',
+      'contenedores.argumento_invalido': '无效参数：{campo}',
+      'contenedores.sin_motor': '此计算机未安装 {motor}。',
+      'contenedores.no_responde':
+        '{motor} 无响应。请打开 Docker Desktop 或启动 Podman 虚拟机后重试。',
+      'contenedores.remoto':
+        '{motor} 的默认连接指向另一台计算机：WolfCore Dev 仅使用本地引擎。',
+      'contenedores.no_existe': '该容器已不存在。请刷新列表。',
+      'contenedores.accion_fallo': '引擎无法执行此操作：{detalle}',
+      'contenedores.demasiados_registros':
+        '最多可同时跟踪 {maximo} 个容器日志。',
+      'contenedores.sin_confirmar': '请在对话框中确认此操作。',
+      'catalogo.indice_invalido':
+        '{servicio} 的版本索引未通过校验；将使用已保存的列表。',
+      'catalogo.sin_huella':
+        '{servicio} {version} 没有已发布的校验和：请在对话框中确认安装。',
+      'catalogo.huella_debil':
+        '{servicio} {version} 仅提供弱校验和（MD5 或 SHA-1）：请在对话框中确认安装。',
+      'catalogo.huella_no_coincide': '下载文件与已发布的校验和不匹配。',
+      'catalogo.redireccion_ajena': '下载尝试跳转到不允许的站点（{host}）。',
+      'catalogo.demasiadas_redirecciones':
+        '下载重定向次数过多（超过 {maximo} 次）。',
+      'catalogo.respuesta_grande': '服务器响应过大。',
+      'catalogo.version_no_encontrada':
+        '目录中不存在 {servicio} 的版本 {version}。',
+      'catalogo.huella_no_disponible':
+        '无法获取 {servicio} {version} 的校验和（无网络连接或源服务器无响应）。请重试。',
+      'catalogo.firma_invalida':
+        '{servicio} {version} 的 PGP 签名无效或未发布：未执行安装。',
+      'catalogo.firma_no_soportada':
+        '{servicio} {version} 的 PGP 签名使用了 WolfCore Dev 不支持的校验格式：未执行安装。',
+      'catalogo.clave_desconocida':
+        '{servicio} {version} 的签名来自不在应用内置可信密钥中的密钥：未执行安装。',
+      'catalogo.firma_vencida':
+        '{servicio} {version} 的签名或其密钥已过期：未执行安装。请更新 WolfCore Dev 以获取最新密钥。',
+      'catalogo.reloj_atrasado':
+        '{servicio} {version} 的签名日期在未来：请检查计算机的日期和时间后重试。',
+      'acceso_bd.datos_invalidos': '数据库访问凭据无效。',
+      'acceso_bd.sin_base': '此项目的 .env 未指向任何数据库。',
+      'acceso_bd.motor_no_soportado':
+        'phpMyAdmin 仅支持打开 MySQL 和 MariaDB 数据库；PostgreSQL 请使用 Adminer。',
+      'acceso_bd.servidor_no_resuelto':
+        '此项目的数据库不属于 WolfCore Dev 本地服务器。',
+      'acceso_bd.no_listo':
+        '该工具尚未就绪：请在“服务”中安装并启动 PHP。',
+      'auditoria.tabla_invalida': '该数据库中不存在此表。',
+      'auditoria.columna_invalida':
+        '该表中不存在此列（且用户名列与哈希列必须不同）。',
+      'auditoria.usuario_no_encontrado': '没有找到该用户名对应的账户。',
+      'auditoria.usuario_repetido':
+        '该用户名对应多个账户：为避免误改，未执行重置。',
+      'auditoria.formato_no_soportado':
+        '无法复现当前哈希格式：未执行重置。',
+      'auditoria.clave_larga':
+        'bcrypt 仅使用密码的前 72 字节：请使用更短的密码。',
+      'auditoria.clave_invalida': '新密码无效。',
+      'auditoria.sin_confirmar': '请确认您要重置此密码。',
+      'auditoria.respaldo_previo_fallo':
+        '重置前无法保存数据库备份：未作任何更改。',
+      'auditoria.copia_fallo': '无法保存该行数据的备份：未作任何更改。',
+      'auditoria.motor_no_soportado':
+        '密码审计仅适用于 MySQL、MariaDB 和 PostgreSQL。',
+      'auditoria.cancelada': '审计已取消。',
+      'auditoria.usuario_invalido': '用户名长度必须在 1 到 256 个字符之间。',
+      'auditoria.en_curso': '已有正在进行的审计：请等待其完成或先取消。',
+      'auditoria.base_sistema': '无法审计系统数据库：请选择项目数据库。',
+      'auditoria.esquema_invalido': '该数据库中不存在此模式（Schema）。',
+      'auditoria.fila_cambio':
+        '该账户在此期间发生了变更：未执行重置。请重试。',
+      'auditoria.verificacion_fallo':
+        '数据库未按预期保存密码：已撤销更改。',
+      'auditoria.columna_corta':
+        '哈希列最多容纳 {largo} 个字符，但新哈希需要 {necesario} 个字符：未作任何更改。请扩大该列长度。',
+      'auditoria.datos_reales_sin_confirmar':
+        '此数据库包含真实客户数据：重置密码需要强化确认。',
+      'instantaneas.id_invalido': '快照无效。',
+      'instantaneas.no_encontrada': '未找到该快照；可能已被删除。',
+      'instantaneas.otra_base': '此快照属于其他数据库：无法应用到当前数据库。',
+      'instantaneas.sin_confirmar': '请确认您要恢复到此快照。',
+      'instantaneas.motor_no_soportado': '快照功能仅适用于 MySQL、MariaDB 和 PostgreSQL。',
+      'instantaneas.demasiado_grande':
+        '数据库大小超过 {maximo} MB，已超出单个快照的最大限制。',
+      'instantaneas.sin_espacio':
+        '可用空间不足，无法创建快照：需要 {necesarios} MB，当前可用 {libres} MB。',
+      'instantaneas.limite':
+        '此数据库已有 {maximo} 个快照：请先删除部分快照再创建新快照。',
+      'instantaneas.tomar_fallo': '无法创建快照。数据库未被修改。',
+      'instantaneas.huella_no_coincide':
+        '快照文件已被修改或损坏：未执行任何恢复。',
+      'instantaneas.respaldo_previo_fallo':
+        '无法保存数据库当前状态：未执行任何恢复。',
+      'instantaneas.restauracion_fallo':
+        '无法恢复快照。数据库已回滚到先前状态。原因：{detalle}',
+      'instantaneas.restauracion_sin_copia':
+        '无法恢复快照，且未保存先前状态：数据库可能已为空或处于不完整状态。原因：{detalle}',
+      'instantaneas.restauracion_sin_revertir':
+        '无法恢复快照，也无法回滚到先前状态。先前状态已保存在自动快照 {respaldo} 中：请在“快照”中恢复该快照。',
+    },
+  },
+  instantaneas: {
+    abrir: '快照',
+    titulo: (base: string) => `${base} 的快照`,
+    ayuda:
+      '快照会保存数据库当前的状态。您随时可以恢复到某个快照：在恢复前，系统会自动为当前状态保存一份快照。',
+    ubicacion:
+      '快照保存在 WolfCore Dev 的数据文件夹中，仅当前用户可读。不会影响服务及其数据。',
+    notaEtiqueta: '备注（可选）',
+    notaMarcador: '例如：迁移前',
+    tomar: '创建快照',
+    tomada: '快照已保存',
+    cargando: '正在读取快照…',
+    vacio: '此数据库尚无快照。',
+    automatica: '自动',
+    sinNota: '无备注',
+    detalle: (tablas: number, tamano: string) => `${tablas} 张表 · ${tamano}`,
+    volver: '恢复到此快照',
+    borrar: '删除',
+    borrada: '快照已移至回收站',
+    papelera:
+      '已删除的快照可在 7 天内从 WolfCore Dev 回收站中恢复。',
+    cerrar: '关闭',
+    papeleraTitulo: '回收站',
+    papeleraVacia: '回收站中没有快照。',
+    recuperar: '还原',
+    recuperada: '快照已还原',
+    borradaEl: (fecha: string) => `删除于 ${fecha}`,
+    borrarPregunta: '确定将此快照移至回收站吗？',
+    borrarSi: '移至回收站',
+    notaAutomatica: (fecha: string) =>
+      `先前状态，在恢复到 ${fecha} 的快照前自动保存`,
+    notaAutomaticaSinOrigen: '先前状态，在恢复到其他快照前自动保存',
+    extensionesAviso: (lista: string) =>
+      `包含 PostgreSQL 扩展（${lista}），仅在具备本机指纹记录时才会恢复。`,
+    limites:
+      '在 MySQL 和 MariaDB 中，还会保存存储过程、触发器和事件。在 PostgreSQL 中，这是单个数据库的压缩转储：不包含服务器的角色和用户。无法验证为本机创建的快照将使用仅限于该数据库的受限用户进行恢复，不支持其他用户的视图、存储过程或触发器。',
+    basesBorradas: '已不存在的数据库的快照',
+    basesBorradasAyuda: '选择一个数据库以从其快照重新创建。',
+    dialogoVolver: {
+      titulo: (base: string) => `恢复 ${base} 的快照`,
+      cargando: '正在准备预览…',
+      base: '数据库',
+      instantanea: '快照',
+      ahora: '当前',
+      tamano: '大小',
+      tablas: '表',
+      nota: '备注',
+      aviso: (base: string) =>
+        `数据库 ${base} 将被此快照完全替换：此后所做的所有更改都将从数据库中丢失。恢复前会自动保存当前状态的快照；如果发生故障，数据库会自动回滚到该状态。`,
+      pedir: (base: string) => `请输入 ${base} 以确认`,
+      confirmar: '恢复到此快照',
+      trabajando: (base: string) => `正在恢复 ${base}… 完成前请勿关闭程序。`,
+      hecho: (base: string) => `数据库 ${base} 已恢复到该快照`,
+      respaldoPrevio: '先前状态已保存在以下时间的自动快照中：',
+      advertencias: '恢复完成，但有以下通知：',
+      hechoConAvisos: (base: string) => `数据库 ${base} 已恢复到该快照，但存在通知`,
+      baseVacia: '数据库不存在或为空：恢复前无需保存当前状态。',
+      sinGuardarTitulo: '无法保存当前状态',
+      sinGuardarTexto:
+        'WolfCore Dev 无法在恢复前保存数据库当前状态。如果在未保存的情况下继续且恢复失败，数据库当前数据将会丢失。',
+      sinGuardarConfirmar: '我了解数据库当前的数据将会丢失',
+      sinGuardarBoton: '不保存当前状态并继续恢复',
+    },
+  },
+  avisoInicio: {
+    titulo: 'WolfCore Dev 通知',
+  },
+  tareas: {
+    titulo: '定时任务',
+    resumen: (n: number) => (n === 0 ? '无任务' : `${n} 个任务`),
+    mostrar: '查看任务',
+    ocultar: '隐藏',
+    cargando: '正在加载任务',
+    errorCargar: '无法加载任务',
+    soloAbierta:
+      '定时任务仅在 WolfCore Dev 打开时运行。它们不使用 Windows 任务计划程序：应用关闭或计算机休眠时不会运行，错过的执行也不会补跑。',
+    repoEjecuta:
+      '在受信任的项目中，仓库内的内容会按原样执行：任务指定的文件、`artisan`、`package.json` 中的脚本、`.venv` 等。如果在执行 `git pull` 时发生变更，任务将运行新版本。',
+    vacio:
+      '此项目没有定时任务。请创建一个（例如在 Laravel 中每分钟运行“php artisan schedule:run”）。',
+    nueva: '新建任务',
+    pausada: '已暂停',
+    enCurso: '正在运行…',
+    nunca: '尚未运行',
+    ultima: (f: string) => `上次：${f}`,
+    proxima: (f: string) => `下次：${f}`,
+    codigo: (n: number) => `退出码 ${n}`,
+    resultadoTitulo: (n: string) => `“${n}”`,
+    origen: { usuario: '在此创建', 'wolfcore.yml': '来自 wolfcore.yml' },
+    describir: {
+      cadaMinuto: '每分钟',
+      cadaN: (n: number) => `每 ${n} 分钟`,
+      cadaHora: '每小时整点',
+      diaria: (h: string) => `每天 ${h}`,
+      laborables: (h: string) => `周一至周五 ${h}`,
+      personalizada: (e: string) => `Cron ${e}`,
+    },
+    estado: {
+      ok: '成功',
+      fallo: '失败',
+      tiempo: '已超时',
+      cancelada: '已取消',
+      omitida: '已跳过',
+      bloqueada: '未执行',
+    },
+    motivo: {
+      aislado:
+        '当前为测试数据文件夹（WOLFCORE_DATOS）：需在本次会话中允许任务后才会运行。',
+      no_confiado:
+        '该项目尚未标记为受信任：请勾选“我信任此仓库”以允许运行。',
+      receta_cambio:
+        '自您信任该项目以来，项目配置配方已更改：请检查并重新勾选“我信任此仓库”。',
+      sin_confirmar: '尚未确认该命令：检查并确认后才会执行。',
+      comando_invalido: '不允许使用该命令（仅支持 php、node、npm run 和 python）。',
+      cron_invalida: '计划时间不是有效的 cron 表达式。',
+      carpeta: '项目文件夹不存在。',
+      solapada: '上一次执行仍在运行：已跳过本次执行。',
+      retraso: '已错过执行时间（应用处于挂起状态）：不会补跑。',
+      error: '无法执行该程序。',
+    },
+    acciones: {
+      ejecutar: '立即运行',
+      editar: '编辑',
+      borrar: '删除',
+      verRegistro: '查看日志',
+      revisarConfirmar: '检查并确认',
+      activar: (n: string) => `启用任务 ${n}`,
+    },
+    borrar: {
+      titulo: (n: string) => `确定删除“${n}”吗？`,
+      texto:
+        '将移除该任务及其历史记录。已执行的操作不会撤销，项目文件也不会受影响。',
+      confirmar: '删除',
+      hecho: (n: string) => `已删除任务“${n}”。`,
+    },
+    aislado: {
+      titulo: '测试数据文件夹。',
+      texto:
+        '使用 WOLFCORE_DATOS 时，任何任务都不会自动运行。仅在您希望于本次会话中测试时才允许它们运行。',
+      permitir: '在本次会话中允许',
+      confirmarTitulo: '确定在此测试文件夹中允许运行任务吗？',
+      confirmarTexto:
+        '受信任项目中已启用的任务将开始运行，直到您关闭应用。命令来自各项目本身，并将在其真实文件夹中运行。',
+      permitido: '已在本次会话中允许运行任务。',
+    },
+    yml: {
+      titulo: '来自 wolfcore.yml 的建议',
+      texto:
+        '项目文件建议了以下任务。仅写入文件不会自动运行：请检查命令并确认后采用。',
+      estado: { nueva: '新增', adoptada: '已采用', cambiada: '已变更' },
+      revisar: '检查并采用',
+      cambiada:
+        '自您采用以来，wolfcore.yml 中的命令已更改。项目任务仍使用您此前确认的命令；如确认无误，请采用新版本。',
+      guardarEn: '保存到 wolfcore.yml',
+      escribirTitulo: '确定将任务写入 wolfcore.yml 吗？',
+      escribirTexto:
+        '将在项目文件中添加或更新此任务（不改动其余内容），使其随仓库同步。其他克隆该仓库的用户需在其计算机上确认后才能运行。',
+      escribir: '写入',
+      escrita: '任务已保存到 wolfcore.yml。',
+    },
+    registro: {
+      titulo: (n: string) => `“${n}”的日志`,
+      historial: '最近执行记录',
+      sinHistorial: '尚无执行记录。',
+      salida: '最近一次执行输出',
+      sinSalida: '无已保存的输出。',
+      enmascarado:
+        '日志会自动隐藏密码和密钥，限制最大体积并自动轮转。',
+      origen: { programada: '定时', manual: '手动' },
+    },
+    dialogo: {
+      tituloNueva: '新建定时任务',
+      tituloEditar: '编辑定时任务',
+      tituloAdoptar: '采用 wolfcore.yml 中的任务',
+      tituloConfirmar: '确认任务命令',
+      nombre: '名称',
+      nombrePlaceholder: 'Laravel 定时任务',
+      horario: '运行时间',
+      preset: {
+        cadaMinuto: '每分钟',
+        cadaN: '每隔数分钟',
+        cadaHora: '每小时',
+        diaria: '每天定时',
+        laborables: '周一至周五定时',
+        personalizada: '自定义 cron 表达式',
+      },
+      cadaNOpcion: (n: number) => `每 ${n} 分钟`,
+      hora: '时间',
+      horaPlaceholder: '03:00',
+      horaInvalida: '请输入有效时间，例如 03:00。',
+      expresion: 'Cron 表达式',
+      cronEquivale: 'Cron 表达式：',
+      expresionAyuda:
+        '5 个字段：分、时、日、月、周（* , - /）。最小频率为每分钟一次。',
+      proximas: '接下来的执行时间：',
+      comando: '命令',
+      comandoPlaceholder: 'php artisan schedule:run',
+      comandoAyuda:
+        '仅支持 php、node、npm run 和 python，并指定项目内文件。在项目文件夹中运行，不经过 shell，且不允许行内代码参数（-r、-e、-c）。',
+      comandoFijo:
+        '此命令包含无法以纯文本编辑的带引号参数：将按原样保留，无法在此修改（如需更改，请删除后重新创建）。',
+      argumentos: '将使用以下参数运行：',
+      comillasSinCerrar: '存在未闭合的引号。',
+      tiempo: '超时时间',
+      minutos: '分钟',
+      tiempoAyuda: '超时后将自动停止（仅终止该进程及其子进程）。',
+      activa: '启用（应用打开时自动运行）',
+      advertencia:
+        '点击确认即授权此精确命令：到点时它将在该项目文件夹中自动运行。若修改命令，需重新确认。',
+      revise: '我已检查并确认此命令。',
+      guardar: '保存并确认命令',
+      adoptar: '确认并采用',
+      confirmar: '确认命令',
+      guardada: '任务已保存。',
+      adoptada: '任务已采用。',
+      confirmada: '命令已确认。',
+    },
+  },
+  workspaces: {
+    titulo: '工作区',
+    descripcion:
+      '将数据库、服务和进程分组命名，以便一键同时启动和停止。',
+    nuevo: '新建工作区',
+    vacio:
+      '尚无工作区。请创建一个，例如包含 PostgreSQL、Redis、Ollama 及项目进程的“Bot FastAPI”。',
+    elementos: (n: number) => `${n} 项`,
+    sinElementos: '无项目',
+    estado: { apagado: '已停止', parcial: '部分运行', encendido: '运行中' },
+    acciones: {
+      iniciar: '启动',
+      detener: '停止',
+      editar: '编辑',
+      borrar: '删除',
+      cerrar: '关闭',
+    },
+    borrar: {
+      titulo: (n: string) => `确定删除“${n}”吗？`,
+      texto:
+        '删除工作区不会停止或删除任何内容：仅移除该分组。正在运行的服务和进程将继续运行。',
+      confirmar: '删除',
+      hecho: (n: string) => `已删除工作区“${n}”。`,
+    },
+    dialogo: {
+      tituloNuevo: '新建工作区',
+      tituloEditar: '编辑工作区',
+      nombre: '名称',
+      nombrePlaceholder: 'Bot FastAPI',
+      nombreVacio: '请输入名称。',
+      aviso:
+        '工作区仅记录要启动哪些项目。它不会打开隧道、不会在局域网共享，也不会启动不受信任项目的进程。',
+      secciones: {
+        instancias: '数据库',
+        servicios: '服务',
+        procesos: '项目进程',
+      },
+      sinOpciones: '此处没有可选项。',
+      captadorUnico: '同时只能使用一个邮件捕获工具：选择新工具将替换先前的选择。',
+      yaNoExisten: (lista: string) => `以下项目已不存在，保存时将移除：${lista}`,
+      guardar: '保存',
+      guardado: (n: string) => `工作区“${n}”已保存。`,
+    },
+    resultado: {
+      tituloIniciar: (n: string) => `“${n}”：启动结果`,
+      tituloDetener: (n: string) => `“${n}”：停止结果`,
+      encendido: '已启动',
+      apagado: '已停止',
+      yaEncendido: '已在运行',
+      yaApagado: '早已停止',
+      noExiste: '已不存在：已忽略',
+      compartido: '保持运行：正被其他运行中的工作区使用',
+      reemplaza: (otro: string) => `已启动；同时停止了同属邮件组的 ${otro}`,
+      fallo: '未能启动',
+      falloApagar: '仍在运行',
+      ok: (n: string) => `“${n}”已就绪。`,
+      parcial: (n: string, encendidos: number, total: number) =>
+        `“${n}”：已启动 ${encendidos}/${total} 项。请检查未能启动的项目。`,
+      parcialApagar: (n: string, siguen: number) =>
+        `“${n}”：仍有 ${siguen} 项在运行。请检查未能停止的项目。`,
+    },
+  },
+  inicio: {
+    titulo: '首页',
+    bienvenida: '您的开发环境一目了然。',
+    tiles: {
+      servicios: '运行中的服务',
+      serviciosDe: (total: number) => `共 ${total} 个`,
+      sitios: '项目',
+      tuneles: '活动隧道',
+      hosts: '待处理的 hosts',
+      hostsOk: '一切正常',
+      hostsFaltan: '需要处理',
+    },
+    hosts: {
+      titulo: '存在未在 hosts 文件中注册的域名',
+      texto:
+        '这些域名尚未指向您的计算机。修复时，Windows 将请求管理员权限。',
+      corregir: '应用待处理的 hosts',
+      reintentarPermiso: '重新请求权限并重试',
+      corregido: 'hosts 文件已更新',
+      fallo: '无法更新 hosts 文件',
+      verInstrucciones: '查看说明',
+      duplicados:
+        '以下域名已存在于 WolfCore Dev 区块之外的 hosts 文件中（将予以保留）：',
+      motivos: {
+        cancelado: '已取消管理员权限请求。hosts 文件保持不变。',
+        tiempo:
+          '管理员权限请求超时未响应。站点已保存；hosts 文件保持不变。如果您仍看到 Windows 提示，请取消它（已不会生效）。请在方便时应用待处理项（一次授权即可全部应用）。',
+        denegado:
+          'Windows 不允许写入 hosts 文件。可能是防病毒软件将其拦截。',
+      } as Record<string, string>,
+      modalTitulo: '手动修复 hosts',
+      modalTexto:
+        '以管理员身份打开 PowerShell（右键点击“开始”→“终端（管理员）”），粘贴以下命令并按 Enter。',
+    },
+    servicios: {
+      titulo: '服务',
+      ver: '查看服务',
+      vacio: '尚未安装任何服务。',
+    },
+    tuneles: {
+      titulo: '活动隧道',
+      vacio: '当前没有打开的隧道。您可以在“项目”中打开隧道。',
+      sitioDesconocido: '未命名站点',
+    },
+  },
+  servicios: {
+    titulo: '服务',
+    descripcion:
+      '启动和停止 Web 服务器、PHP、数据库及工具。状态会自动更新。',
+    grupos: {
+      web: 'Web',
+      php: 'PHP',
+      bd: '数据库',
+      correo: '邮件',
+      ia: 'AI',
+      herramientas: '工具',
+    },
+    gruposAyuda: {
+      web: '处理 .test 域名的服务器。',
+      php: '每个版本独立安装（8.3、8.4…）；各站点可使用各自的版本。',
+      bd: '仅监听 127.0.0.1。',
+      correo: '捕获项目发送的邮件，不会发送到互联网。',
+      ia: '本机运行的大语言模型。',
+      herramientas: '日常开发实用工具。',
+    },
+    puerto: '端口',
+    cambiarPuerto: '更改端口',
+    cambiarPuertoDe: (nombre: string) => `更改 ${nombre} 的端口`,
+    versionesDe: (nombre: string) => `${nombre} 的版本`,
+    instancias: (n: number, encendidas: number) => `${n} 个实例，${encendidas} 个运行中`,
+    usarPuerto: (p: number) => `使用端口 ${p}`,
+    puertoCambiado: (nombre: string, p: number) => `${nombre} 现已使用端口 ${p}`,
+    conflicto: '端口被占用',
+    autoIniciar: '随 WolfCore Dev 启动',
+    autoIniciarActivado: (nombre: string) => `${nombre} 将随 WolfCore Dev 自动启动`,
+    autoIniciarDesactivado: (nombre: string) =>
+      `${nombre} 将不再随 WolfCore Dev 自动启动`,
+    dialogoPuerto: {
+      titulo: (nombre: string) => `${nombre} 的端口`,
+      etiqueta: '新端口',
+      ayuda:
+        '需为 1024 到 65535 之间的空闲端口。若服务正在运行，将会重启。请记得更新项目的 .env 文件。',
+      rango: '请输入 1024 到 65535 之间的数字',
+      igual: '与当前端口相同',
+      guardar: '更改端口',
+    },
+    borrarDatos: {
+      opcion: '删除数据',
+      titulo: (nombre: string) => `删除 ${nombre} 的数据`,
+      copias: (n: number, tam: string) =>
+        `同时还将删除 ${n} 份更新备份（${tam}）。如需保留，请先从数据文件夹中复制出来。`,
+      /** 根据不同服务将丢失的数据。 */
+      que: {
+        mysql: 'MySQL 中的所有数据库和用户',
+        mariadb: 'MariaDB 中的所有数据库和用户',
+        postgresql: 'PostgreSQL 中的所有数据库和用户',
+        redis: 'Redis 中保存的所有键和数据',
+        mongodb: 'MongoDB 中的所有数据库、集合和数据',
+        mailpit: 'Mailpit 捕获的所有邮件',
+        smtp4dev: 'smtp4dev 捕获的所有邮件',
+        inbucket: 'Inbucket 捕获的所有邮件',
+        papercut: 'Papercut SMTP 捕获的所有邮件',
+        ollama: 'Ollama 中已下载的所有模型',
+      } as Record<string, string>,
+      texto: (que: string) =>
+        `将删除${que}。此操作无法撤销。程序仍保持安装状态。`,
+      generico: (nombre: string) => `${nombre} 的所有数据`,
+      pedir: (id: string) => `为确认操作，请输入 ${id}`,
+      boton: '删除数据',
+      hecho: (nombre: string) => `已删除 ${nombre} 的数据`,
+    },
+    ftp: {
+      interruptor: 'FTP 服务器',
+      redLocal: '允许局域网连接',
+      redLocalAyuda:
+        '关闭时，仅本机可以连接 (127.0.0.1)。各站点可在“站点”中单独开启访问。',
+      avisoTitulo: '向局域网开放 FTP',
+      avisoTexto:
+        'FTP 会以明文传输用户名、密码和文件，不会加密。局域网内的任何设备均可尝试连接。请仅在受信任的网络中使用。',
+      avisoConfirmar: '允许',
+      redLocalActivada: 'FTP 已允许局域网连接',
+      redLocalDesactivada: 'FTP 仅允许本机连接',
+    },
+    composer: {
+      nombre: 'Composer',
+      detalle: 'PHP 依赖管理工具',
+      instalado: '已安装',
+      noInstalado: '未安装',
+      sinVersion: '未安装',
+      uso: '用法',
+      usoTexto: 'composer',
+      ayuda: '在项目中使用“终端”，或在“设置”中将 WolfCore Dev 添加到 PATH。',
+      instaladoOk: 'Composer 已安装',
+      sinPhp: '请先安装 PHP',
+      actualizado: (v: string) => `Composer 已更新：${v}`,
+    },
+    adminer: {
+      nombre: 'Adminer',
+      detalle: 'Web 数据库管理工具',
+      direccion: '地址',
+      disponible: '就绪',
+      noInstalado: '未安装',
+      sinPhp: '缺少 PHP',
+      abrir: '打开 Adminer',
+      instaladoOk: 'Adminer 已安装',
+    },
+    phpmyadmin: {
+      nombre: 'phpMyAdmin',
+      detalle: 'MySQL 和 MariaDB Web 管理工具',
+      direccion: '地址',
+      disponible: '就绪',
+      noInstalado: '未安装',
+      sinPhp: '缺少 PHP',
+      abrirDesdeProyecto: '从各个项目卡片直接打开，已自动登录。',
+      faltaExtension: (ext: string, rama: string) =>
+        `PHP ${rama} 未启用 ${ext} 扩展。请重启 PHP 或在 php.ini 中启用该扩展。`,
+      phpFueraDeRango: (rama: string) =>
+        `phpMyAdmin 官方最高支持到 PHP 8.3，当前正在使用 PHP ${rama}，可能会出现报错。如遇异常，请启用 PHP 7.2 至 8.3 版本。`,
+      instalarPrimero: '请先安装 phpMyAdmin 后再使用。',
+      encenderPhp: '请先启动 PHP 以使用 phpMyAdmin。',
+      instaladoOk: 'phpMyAdmin 已安装',
+    },
+    puertos: '端口',
+    pid: 'PID',
+    sinVersion: '无版本',
+    sinPuertos: '—',
+    terminado: '已正常结束',
+    externo: '由 WolfCore Dev 外部管理',
+    verDetalle: '查看错误详情',
+    vacioTitulo: '暂无服务',
+    vacio:
+      '尚未安装任何服务。请先为您的站点安装 Nginx 和 PHP，或安装一个数据库。',
+    irAInstalar: '前往安装',
+  },
+  bd: {
+    descripcion:
+      '创建、备份并恢复项目的数据库。数据库服务器仅在 127.0.0.1 上监听。',
+    motores: {
+      mysql: 'MySQL',
+      mariadb: 'MariaDB',
+      postgresql: 'PostgreSQL',
+      mongodb: 'MongoDB',
+    } as Record<string, string>,
+    nueva: '新建数据库',
+    restaurar: '恢复备份',
+    importar: '从其他服务器导入',
+    soloSql: '仅适用于 MySQL、MariaDB 和 PostgreSQL',
+    enCursoAyuda: '请等待当前操作完成',
+    encenderPrimero: (motor: string) => `请先启动 ${motor}`,
+    cargando: '正在加载数据库…',
+    recargar: '重新加载列表',
+    vacioTitulo: '尚未安装任何数据库服务器',
+    vacio:
+      '请在“服务”中安装 MySQL、MariaDB、PostgreSQL 或 MongoDB 以管理您的数据库。',
+    irAServicios: '前往服务',
+    apagado: {
+      titulo: (motor: string) => `${motor} 已停止`,
+      texto: (motor: string) => `启动 ${motor} 以查看和管理其数据库。`,
+      iniciando: (motor: string) => `正在启动 ${motor}…`,
+      error: (motor: string) => `${motor} 启动失败`,
+      encender: (motor: string) => `启动 ${motor}`,
+      verServicios: '在服务中查看',
+    },
+    errorLista: '无法读取数据库列表',
+    sinBases: '此服务器尚无自定义数据库。',
+    total: (n: number) => plural(n, '个数据库'),
+    columnas: { nombre: '数据库', tamano: '大小', acciones: '操作' },
+    acciones: {
+      respaldar: '备份',
+      restaurarAqui: '恢复到此库',
+      adminer: '在 Adminer 中打开',
+      conexion: '连接信息',
+      vector: '启用向量',
+      borrar: '删除',
+      de: (accion: string, base: string) => `${accion}：${base}`,
+    },
+    adminerNoDisponible: '请在“服务”中安装 Adminer 和 PHP 后再打开',
+    vectorSinInstalar: '请在下方安装 pgvector 后再在数据库中启用',
+    vectorActivado: (base: string) => `已在 ${base} 中启用向量`,
+    formatos: {
+      sql: '纯 SQL 文件',
+      pgdump: 'PostgreSQL 备份（pg_dump，自定义格式）',
+      gz: '压缩 SQL 文件 (.gz)',
+      zip: '.zip 压缩包（恢复前自动解压）',
+      rar: '.rar 压缩包（尝试使用 Windows 解压）',
+      '7z': '.7z 压缩包（尝试使用 Windows 解压）',
+      desconocido: '无法识别的格式',
+    } as Record<string, string>,
+    formatoDesconocido:
+      '无法识别该文件格式。如果是压缩包，请先解压并选择其中的 .sql 或 .dump 文件。',
+    formatoIncompatible:
+      '此文件为 PostgreSQL 备份：请在 PostgreSQL 标签页中恢复。',
+    nombre: {
+      etiqueta: '数据库名称',
+      vacio: '请输入名称',
+      largo: '名称过长',
+      caracteres: {
+        mysql: '仅限使用字母、数字和下划线',
+        mariadb: '仅限使用字母、数字和下划线',
+        postgresql: '仅限使用小写字母、数字和下划线',
+        mongodb: '仅限使用字母、数字、连字符和下划线',
+      } as Record<string, string>,
+      inicio: '在 PostgreSQL 中，名称不能以数字开头',
+    },
+    reemplazo: {
+      titulo: (base: string) => `数据库 ${base} 中已包含数据表`,
+      texto: (base: string) =>
+        `如果继续，现有的 ${base} 数据库将被完全替换。系统会先自动保存一份备份，然后删除原数据库并使用新内容重新创建。`,
+      donde: '备份将保存至',
+      carpetaPorDefecto: '文档\\WolfCore Dev\\Respaldos',
+      otraBase:
+        '如果您不想替换它，请返回并输入其他名称，系统将创建新的数据库。',
+      pedir: (base: string) => `为确认操作，请输入 ${base}`,
+      volver: '返回',
+      confirmar: '替换数据库',
+    },
+    resultado: {
+      restaurada: (base: string) => `数据库 ${base} 已恢复`,
+      importada: (base: string) => `数据库 ${base} 已导入`,
+      respaldada: (base: string) => `已保存 ${base} 的备份`,
+      archivo: '文件',
+      respaldoPrevio: '原数据库的备份副本',
+      advertencias: (n: number) => plural(n, '条警告'),
+      advertenciasAyuda:
+        '操作已完成。请查看这些通知；通常是因为此计算机上不存在相应的角色或权限。',
+      fallo: {
+        restaurar: '恢复失败',
+        importar: '导入失败',
+        respaldar: '备份失败',
+      } as Record<string, string>,
+      trasReemplazo: '原数据库已被替换，但恢复未完成',
+      trasReemplazoAyuda:
+        '您之前的数据保存在上述备份副本中，可以通过“恢复备份”进行还原。',
+    },
+    progreso: {
+      titulo: '日志',
+      corriendo: {
+        restaurar: (base: string) => `正在恢复 ${base}…`,
+        importar: (base: string) => `正在导入 ${base}…`,
+        respaldar: (base: string) => `正在备份 ${base}…`,
+      } as Record<string, (base: string) => string>,
+      vacio: '正在等待工具输出…',
+      limitado: (n: number) => `仅显示最后 ${n} 行。`,
+      noCierre:
+        '操作完成前请勿关闭程序。您可以离开此页面并稍后返回查看结果。',
+      otraEnCurso: '已有操作正在进行中，请等待其完成。',
+      ver: '查看详情',
+      descartar: '关闭',
+    },
+    dialogoRestaurar: {
+      titulo: (motor: string) => `在 ${motor} 中恢复备份`,
+      confianza:
+        '请仅恢复受信任的备份：备份文件可能会在服务器上执行任意操作。',
+      archivo: '备份文件',
+      elegir: '选择文件…',
+      cambiar: '更改',
+      sinArchivo: '未选择文件',
+      formato: '检测到的格式',
+      detectando: '正在检测格式…',
+      destino: '目标数据库',
+      destinoAyuda:
+        '若不存在将自动创建；若存在且为空则直接使用；若包含数据表，则会提示您确认。',
+      restaurar: '恢复',
+    },
+    dialogoImportar: {
+      titulo: (motor: string) => `从其他服务器导入到 ${motor}`,
+      soloLectura:
+        '仅对源服务器执行只读操作：您的数据库会复制到本机，源服务器不会被修改。',
+      detectado: (puerto: number) =>
+        `在端口 ${puerto} 上检测到其他服务器（例如 FlyEnv 的服务器）。`,
+      origen: '源服务器',
+      host: '服务器',
+      puerto: '端口',
+      usuario: '用户名',
+      clave: '密码',
+      claveAyuda: '仅用于本次复制，不会被保存。',
+      baseOrigen: '源数据库',
+      destino: '本机目标数据库',
+      destinoAyuda:
+        '若不存在将自动创建；若包含数据表，替换前会提示您确认。',
+      faltaHost: '请输入服务器地址',
+      faltaPuerto: '请使用 1 到 65535 之间的端口',
+      faltaUsuario: '请输入用户名',
+      faltaBase: '请输入源数据库名称',
+      importar: '导入',
+    },
+    dialogoNueva: {
+      titulo: (motor: string) => `在 ${motor} 中新建数据库`,
+      codificacion: '字符编码',
+      codificacionValor: {
+        mysql: 'utf8mb4（支持 Emoji 及全部字符）',
+        mariadb: 'utf8mb4（支持 Emoji 及全部字符）',
+        postgresql: 'UTF8',
+        mongodb: 'UTF-8',
+      } as Record<string, string>,
+      usuarioPropio: '为此数据库创建专用用户',
+      usuarioPropioAyuda:
+        '可选。若不创建，您的项目将使用服务器管理员账户。',
+      usuario: '用户名',
+      clave: '密码',
+      faltaClave: '请输入密码',
+      crear: '创建数据库',
+      creada: (base: string) => `数据库 ${base} 已创建`,
+      mongo: '在 MongoDB 中，创建数据库时会生成一个初始集合 (_pel_init)。',
+      cambiarClave: '更改密码',
+      cambiarClaveTitulo: (u: string) => `用户 ${u} 已存在但密码不同`,
+      cambiarClaveTexto: (u: string) =>
+        `如果更改 ${u} 的密码，已使用该账户的项目将无法连接，直到您更新其 .env 文件。通常建议使用当前密码。仍要更改吗？`,
+    },
+    dialogoBorrar: {
+      titulo: (base: string) => `删除数据库 ${base}？`,
+      texto: (base: string, motor: string) =>
+        `将删除 ${motor} 中的数据库 ${base} 及其全部数据。此操作无法撤销。如有需要，请先备份。`,
+      pedir: (base: string) => `为确认操作，请输入 ${base}`,
+      boton: '删除数据库',
+      hecho: (base: string) => `数据库 ${base} 已删除`,
+    },
+    dialogoRespaldar: {
+      titulo: (base: string) => `备份 ${base}`,
+      destino: '保存位置',
+      porDefecto: '文档\\WolfCore Dev\\Respaldos（默认文件夹）',
+      porDefectoEn: (carpeta: string) => `${carpeta}（默认文件夹）`,
+      cambiar: '选择其他文件夹…',
+      porDefectoVolver: '使用默认文件夹',
+      formato: {
+        mysql: '.sql 文件（包含存储过程与触发器的 mysqldump）',
+        mariadb: '.sql 文件（包含存储过程与触发器的 mysqldump）',
+        postgresql: '.dump 文件（pg_dump 自定义格式）',
+      } as Record<string, string>,
+      boton: '备份',
+    },
+    dialogoConexion: {
+      sitio: '项目',
+      sitioAyuda:
+        '将读取站点的 .env 文件以匹配现有变量名（例如 CodeIgniter 4）。不会显示或复制其内容。',
+      generico: '通用（Laravel 格式）',
+      titulo: (base: string) => `${base} 连接信息`,
+      host: '服务器',
+      puerto: '端口',
+      usuario: '用户名',
+      clave: '密码',
+      base: '数据库',
+      sinClave: '无密码（仅在 127.0.0.1 上监听）',
+      mostrar: '显示密码',
+      ocultar: '隐藏密码',
+      copiarDato: (dato: string) => `复制${dato}`,
+      env: '.env 配置块',
+      envAyuda: '请粘贴到项目的 .env 文件中。WolfCore Dev 不会修改您的项目文件。',
+      copiarEnv: '复制配置块',
+      cargando: '正在读取连接信息…',
+    },
+    pgvector: {
+      titulo: 'pgvector',
+      enCurso: 'pgvector 正在安装中。',
+      descripcion:
+        '在 PostgreSQL 内提供相似度检索 (embeddings) 功能。从官方源码编译安装。',
+      instalado: (v: string | null) => (v ? `已安装（版本 ${v}）` : '已安装'),
+      noInstalado: '未安装',
+      herramientas: '编译工具',
+      herramientasSi: '就绪',
+      herramientasNo: '缺少',
+      instalar: '安装 pgvector',
+      reinstalar: '重新编译',
+      instalarHerramientas: '安装编译工具',
+      dialogoHerramientasTitulo: '安装编译工具',
+      dialogoHerramientas:
+        '编译 pgvector 需要安装 Visual Studio 生成工具。下载量约 6 GB，Windows 会请求管理员权限。此过程可能耗时较长，请保持 WolfCore Dev 处于打开状态。',
+      dialogoCompilarTitulo: '编译并安装 pgvector',
+      dialogoCompilar:
+        '将下载 pgvector 官方源码，编译并安装到您的 PostgreSQL 中。复制扩展文件期间 PostgreSQL 会短暂停止几秒，随后自动重启。',
+      continuar: '继续',
+      instalando: '正在安装编译工具…',
+      compilando: '正在编译 pgvector…',
+      herramientasOk: '编译工具已安装',
+      instaladoOk: (v: string) => `pgvector ${v} 已安装`,
+      sinWinget:
+        '此计算机未安装 winget。请前往 visualstudio.microsoft.com 安装“Visual Studio 2022 生成工具”，勾选“使用 C++ 的桌面开发”工作负载后再重试。',
+      falloHerramientas: '编译工具安装失败',
+      activarAyuda: '完成后，在需要使用的数据库上点击“启用向量”。',
+      errorEstado: '无法读取 pgvector 状态',
+    },
+  },
+  instalar: {
+    titulo: '安装',
+    descripcion:
+      '下载官方版本。每个文件在使用前都会经过 SHA-256 校验和验证。',
+    servicios: {
+      nginx: { nombre: 'Nginx', detalle: 'Web 服务器 (nginx.org)' },
+      php: { nombre: 'PHP', detalle: 'NTS x64 (windows.php.net)' },
+      cloudflared: { nombre: 'cloudflared', detalle: '公网隧道 (Cloudflare)' },
+      mysql: { nombre: 'MySQL', detalle: '数据库，8.4 LTS (dev.mysql.com)' },
+      mariadb: { nombre: 'MariaDB', detalle: '数据库，11.4 LTS (mariadb.org)' },
+      postgresql: { nombre: 'PostgreSQL', detalle: '数据库 (enterprisedb.com)' },
+      redis: { nombre: 'Redis', detalle: '内存缓存与队列 (redis-windows)' },
+      mongodb: { nombre: 'MongoDB', detalle: '文档数据库 (mongodb.com)' },
+      mongosh: { nombre: 'mongosh', detalle: 'MongoDB 命令行工具 (mongodb.com)' },
+      mailpit: { nombre: 'Mailpit', detalle: '测试邮件服务器 (github.com/axllent)' },
+      smtp4dev: { nombre: 'smtp4dev', detalle: '测试邮件服务器 (github.com/rnwood)' },
+      inbucket: { nombre: 'Inbucket', detalle: '测试邮件服务器 (github.com/inbucket)' },
+      papercut: {
+        nombre: 'Papercut SMTP',
+        detalle: '测试邮件服务器 (github.com/ChangemakerStudios)',
+      },
+      ollama: { nombre: 'Ollama', detalle: '本地 AI (ollama.com)' },
+      composer: { nombre: 'Composer', detalle: 'PHP 依赖管理 (getcomposer.org)' },
+      adminer: { nombre: 'Adminer', detalle: 'Web 数据库管理工具' },
+      phpmyadmin: { nombre: 'phpMyAdmin', detalle: 'MySQL Web 管理工具 (phpmyadmin.net)' },
+    },
+    grupos: {
+      web: 'Web 与 PHP',
+      bd: '数据库',
+      otros: '邮件、AI 与隧道',
+    },
+    instalados: '已安装',
+    ninguno: '未安装任何版本',
+    elegir: '选择版本',
+    buscando: '正在查找版本…',
+    sinVersiones: '未找到可用版本',
+    rama: (rama: string) => rama,
+    yaInstalada: '已安装',
+    fases: {
+      descargando: '正在下载',
+      verificando: '正在校验 SHA-256',
+      extrayendo: '正在解压',
+      compilando: '正在编译',
+      listo: '已安装',
+      error: '安装失败',
+    },
+    exito: (nombre: string, version: string) => `${nombre} ${version} 已安装`,
+  },
+  sitios: {
+    titulo: '站点',
+    descripcion: '每个站点均对应一个由 Nginx 通过独立 .test 域名提供服务的文件夹。',
+    nuevo: '新建站点',
+    buscar: '按名称或域名搜索',
+    sinResultados: (q: string) => `没有站点匹配“${q}”。`,
+    vacioTitulo: '暂无站点',
+    vacio:
+      '选择一个项目文件夹，WolfCore Dev 将自动识别其为 Laravel、CodeIgniter 还是静态站点。',
+    agregar: '添加站点',
+    total: (n: number) => plural(n, '个站点'),
+    abrirSitio: (dominio: string) => `在浏览器中打开 ${dominio}`,
+    carpeta: '文件夹',
+    abrirCarpeta: '打开项目文件夹',
+    alias: (n: number) => `+${plural(n, '个别名')}`,
+    tipos: {
+      laravel: 'Laravel',
+      codeigniter3: 'CodeIgniter 3',
+      estatico: '静态站点',
+      proxy: '代理（本地端口）',
+      personalizado: '自定义',
+      codeigniter4: 'CodeIgniter 4',
+      wordpress: 'WordPress',
+      fastapi: 'FastAPI（本地端口）',
+      node: 'Node / Vite（本地端口）',
+    } as Record<string, string>,
+    tiposCortos: {
+      laravel: 'Laravel',
+      codeigniter3: 'CI3',
+      estatico: '静态',
+      proxy: '代理',
+      personalizado: 'PHP',
+      codeigniter4: 'CI4',
+      wordpress: 'WP',
+      fastapi: 'FastAPI',
+      node: 'Node',
+    } as Record<string, string>,
+    php: (v: string) => `PHP ${v}`,
+    puerto: (p: number) => `→ :${p}`,
+    datosReales: '真实数据',
+    datosRealesAyuda: '包含真实客户数据：对外发布时请务必谨慎。',
+    faltaHosts: '缺少 hosts 记录',
+    faltaHostsAyuda: (dominios: string) =>
+      `${dominios} 尚未指向本机。请通过上方的通知修复 hosts 文件。`,
+    estado: {
+      enLinea: '在线',
+      faltaHosts: '缺少 hosts 记录',
+      iniciando: 'Nginx 正在启动…',
+      errorNginx: 'Nginx 出错',
+      nginxExterno: '外部 Nginx',
+      nginxApagado: 'Nginx 已停止',
+    },
+    borrar: {
+      titulo: (nombre: string) => `删除站点 ${nombre}？`,
+      texto: '不会删除或修改项目文件夹。',
+      hecho: (nombre: string) => `站点 ${nombre} 已删除`,
+      nginxFallo: '站点已删除，但 Nginx 未能接受新配置',
+    },
+  },
+  formSitio: {
+    tituloNuevo: '新建站点',
+    tituloEditar: '编辑站点',
+    tituloDuplicar: '复制站点',
+    paso: '首先选择项目文件夹',
+    pasoAyuda:
+      '系统将自动检测项目类型、PHP 版本并推荐域名。之后您可修改所有设置。',
+    elegirCarpeta: '选择文件夹',
+    cambiarCarpeta: '更改',
+    detectando: '正在分析项目…',
+    detectado: (tipo: string) => `已检测到：${tipo}`,
+    sinDeteccionAlEditar: '自动检测仅在新建时生效；请检查项目类型与 PHP 版本。',
+    nombre: '名称',
+    nombreAyuda: '仅用于在列表中区分识别。',
+    nombreCopia: (nombre: string) => `${nombre}（副本）`,
+    duplicarProxy:
+      '副本与原站点指向同一个本地端口，且不会复制其进程：请更改端口或添加独立进程。',
+    dominio: '域名',
+    dominioPlaceholder: 'my-project',
+    alias: '别名',
+    aliasAyuda: '指向同一站点的其他 .test 域名。输入后按 Enter 添加。',
+    aliasAgregar: '添加别名',
+    carpeta: '项目文件夹',
+    raizLaravel: 'Nginx 将托管 public/ 子文件夹。',
+    tipo: '项目类型',
+    php: 'PHP 版本',
+    phpElegir: '选择版本',
+    phpNinguno: '尚未安装任何 PHP 版本。',
+    phpInstalar: '安装 PHP',
+    phpNoInstalada: (pedida: string, elegida: string) =>
+      `项目需要 PHP ${pedida}，但该版本未安装。已自动选择 PHP ${elegida}。`,
+    puertoProxy: '本地端口',
+    puertoProxyAyuda:
+      'Nginx 会将请求转发至 http://127.0.0.1:<puerto>（例如 Vite 或 Node）。',
+    urlBaseVar: '基础 URL 变量',
+    urlBaseVarAyuda:
+      '开启隧道时，公网链接会写入 .env 中的此变量；关闭隧道后自动还原。',
+    urlBaseVarNinguna: '无（不修改 .env）',
+    datosReales: '包含真实客户数据',
+    datosRealesAyuda:
+      '将在列表中标记，并在通过隧道对外发布前要求确认。',
+    avanzado: '高级',
+    reglasExtra: 'Nginx 额外规则',
+    reglasExtraAyuda:
+      '插入到 server 配置块内（如安全响应头、自定义 deny 规则等）。保存时将使用 nginx -t 校验。',
+    reglasExtraEjemplo: 'add_header X-Frame-Options "SAMEORIGIN";',
+    nota: '备注',
+    notaPlaceholder: '记录关于此站点的备忘信息',
+    guardar: '保存站点',
+    guardado: (nombre: string) => `站点 ${nombre} 已保存`,
+    errorGuardar: '无法保存站点',
+    nginxFallo: '站点已保存，但 Nginx 拒绝了该配置',
+    nginxFalloAyuda:
+      '已恢复之前的 Nginx 配置。请检查额外规则后重新保存。',
+    errores: {
+      carpeta: '请选择项目文件夹',
+      sufijo: '域名必须以 .test 结尾',
+      caracteres: '仅限使用字母、数字、连字符和点号',
+      aliasIgualDominio: (d: string) => `别名 ${d} 与站点域名相同`,
+      aliasRepetido: (d: string) => `别名 ${d} 重复`,
+      ocupado: (d: string) => `已存在使用域名 ${d} 的站点`,
+      puertoFalta: '代理站点需要指定端口',
+      puertoRango: '端口必须在 1 到 65535 之间',
+      php: '请为此站点选择一个 PHP 版本',
+      urlBaseVar: '仅限使用字母、数字和下划线（例如 APP_URL）',
+    },
+  },
+  tunel: {
+    interruptor: (dominio: string) => `${dominio} 的公网隧道`,
+    etiqueta: '隧道',
+    apagadoAyuda: '通过临时公网链接共享此站点。',
+    abriendo: '正在开启隧道…',
+    cerrando: '正在关闭隧道…',
+    error: '隧道出错',
+    sinNginx: '请先启动 Nginx',
+    sinCloudflared: '请在“服务”中安装 cloudflared',
+    abrirUrl: '打开公网链接',
+    copiarUrl: '复制公网链接',
+    verQr: '显示链接二维码',
+    qrTitulo: '此站点的公网链接',
+    renovar: '刷新（生成新链接）',
+    cerrar: '关闭隧道',
+    confirmarTitulo: '发布包含真实数据的站点',
+    confirmarRealesTexto: (dominio: string, destino: string) =>
+      `${dominio} 包含真实客户数据，即将通过 ${destino} 发布到互联网：只要隧道保持开启，任何获得链接的人均可访问。确定要发布吗？`,
+    confirmarExposeTexto: (dominio: string) =>
+      `即将通过 Expose 将 ${dominio} 发布到互联网：只要隧道保持开启，任何获得链接的人均可访问。此外，Expose 请求检查器将对您局域网内的任何设备可见。确定要发布吗？`,
+    compartir: '共享',
+    confirmar: '发布',
+    confirmarPublicoTitulo: '将站点发布到互联网',
+    confirmarPublicoTexto: (dominio: string) =>
+      `即将为 ${dominio} 开启 Cloudflare 公网隧道：只要隧道保持开启，任何获得链接的人均可访问。确定要发布吗？`,
+    opciones: '隧道选项',
+    opcionesDe: (dominio: string) => `${dominio} 的隧道选项`,
+    proveedor: '提供商',
+    proveedorRapido: '快速模式（无需账户）',
+    proveedorRapidoAyuda: '每次开启都会生成新的 trycloudflare.com 链接。',
+    proveedorNombre: '命名隧道（使用您的域名）',
+    proveedorNombreAyuda:
+      '使用您在 Cloudflare 上的自有域名生成固定链接，需要 Cloudflare 账户。',
+    cuentaConectada: '已连接 Cloudflare 账户。',
+    cuentaSinConectar: '尚未连接 Cloudflare 账户。',
+    conectar: '连接 Cloudflare',
+    conectando: '正在等待浏览器中的授权…',
+    conectarAyuda:
+      '将打开浏览器以授权 WolfCore Dev 访问您的账户。证书仅保存在您的数据文件夹中。',
+    autorizacion: 'Cloudflare 授权',
+    abrirAutorizacion: '打开授权页面',
+    copiarAutorizacion: '复制授权链接',
+    cancelarConexion: '取消',
+    recrear: '重建隧道',
+    olvidar: '忘记隧道',
+    recrearTitulo: '重建隧道',
+    recrearTexto: (n: string) =>
+      `将删除 Cloudflare 中的隧道“${n}”，并使用相同名称创建新隧道。正在使用该隧道的站点将关闭隧道。`,
+    olvidarTitulo: '忘记隧道',
+    olvidarTexto: (n: string) =>
+      `将删除 Cloudflare 中的隧道“${n}”及其保存的凭据。使用该隧道的站点将恢复为快速模式。`,
+    olvidarAqui: '仅在此处忘记',
+    olvidarAquiTitulo: '仅在此计算机上忘记隧道',
+    olvidarAquiTexto: (n: string) =>
+      `将删除本机保存的隧道“${n}”凭据；该隧道在 Cloudflare 中仍会保留。使用它的站点将切回快速隧道。`,
+    desconectar: '断开连接',
+    nombreTunel: '隧道名称',
+    nombreTunelAyuda: '小写字母、数字和连字符。',
+    dominioPublico: '公开域名',
+    dominioPublicoAyuda:
+      '您在 Cloudflare 中所拥有域名的子域名，例如 demo.mydomain.com。',
+    crear: '创建并路由',
+    guardadoNombre: '命名隧道已就绪。打开时会请求确认。',
+    guardadoRapido: '此站点已切回快速隧道。',
+    cambiarCierra: '切换提供商时将关闭此站点已打开的隧道。',
+    usarRapido: '使用快速隧道',
+    nombreActual: (nombre: string, dominio: string) => `隧道“${nombre}”位于 ${dominio}`,
+    confirmarPublicoNombreTexto: (dominio: string, publico: string) =>
+      `将通过 Cloudflare 隧道把 ${dominio} 发布到 ${publico}：只要保持开启，任何持有链接的人都可访问。是否发布？`,
+    proveedorNgrokAyuda:
+      '使用您的 ngrok 账户。需预先在本机安装 ngrok 程序。',
+    proveedorExposeAyuda:
+      '使用您的 Expose 账户。需预先在本机安装 Expose；在 Windows 上仅支持 expose.phar。其检查器对局域网可见，因此不可用于含真实数据的站点。',
+    proveedorTailscaleAyuda:
+      '通过您的私有 Tailscale 网络。需已安装并登录 Tailscale。',
+    tokenGuardado: (f: string) => `令牌已保存（结尾为 ${f}）。`,
+    tokenSinGuardar: '尚未保存令牌。',
+    tokenNgrok: 'ngrok 令牌',
+    tokenExpose: 'Expose 令牌',
+    tokenAyuda:
+      '加密保存在本机，仅在打开隧道时传递给程序；绝不显示明文。',
+    tokenPlaceholder: '在此粘贴令牌',
+    guardarToken: '保存令牌',
+    borrarToken: '删除令牌',
+    usarProveedor: '使用此提供商',
+    guardadoProveedor: '提供商已保存。打开隧道时会请求确认。',
+    ngrokAyudaInstalacion:
+      '本机必须已安装 ngrok（由于 ngrok 未发布可校验的下载包，WolfCore Dev 不会代为下载）。不会更改您的全局配置。',
+    exposeAyudaInstalacion:
+      '本机必须已安装 Expose，或将 expose.phar 放入 WolfCore Dev 数据目录的 bin/expose 文件夹（Windows 仅支持 phar，无校验下载）。其请求检查器对整个局域网可见，故禁止用于含真实数据的站点。不会更改您的全局配置。',
+    tailscaleAlcance: '访问范围',
+    tailscaleServe: 'Serve：仅限您的 tailnet',
+    tailscaleServeAyuda: '仅限您 Tailscale 网络内的设备，不向互联网公开。',
+    tailscaleFunnel: 'Funnel：整个互联网',
+    tailscaleFunnelAyuda: '任何持有链接的人均可访问，无论是否在您的 tailnet 中。',
+    tailscaleFunnelAviso:
+      'Funnel 会将此站点发布到互联网：只要保持开启，任何持有链接的人都可访问。',
+    tailscaleAyudaInstalacion:
+      'WolfCore Dev 不会安装 Tailscale（属于系统服务）：需已安装并登录。不会改动您现有的 Tailscale 发布；站点使用 HTTPS 端口 8443。',
+    confirmarTailnetTitulo: '共享到您的 tailnet',
+    confirmarTailnetTexto: (dominio: string) =>
+      `将通过 Tailscale Serve 共享 ${dominio}：仅您 tailnet 中的设备可访问，不向互联网公开。是否共享？`,
+    confirmarTailnetRealesTexto: (dominio: string) =>
+      `${dominio} 包含真实客户数据。使用 Tailscale Serve 时仅您的 tailnet 设备可见（不会公开到互联网）。是否共享？`,
+    confirmarFunnelTexto: (dominio: string) =>
+      `将通过 Tailscale Funnel 把 ${dominio} 发布到互联网：只要保持开启，任何持有链接的人都可访问。是否发布？`,
+    confirmarProveedorTexto: (dominio: string, proveedor: string) =>
+      `将通过 ${proveedor} 把 ${dominio} 发布到互联网：只要保持开启，任何持有链接的人都可访问。是否发布？`,
+    tituloError: '无法打开隧道',
+  },
+  tuneles: {
+    titulo: '隧道',
+    descripcion: 'Cloudflare 临时公开链接，用于在局域网外展示本地站点。',
+    explicacion:
+      '快速隧道每次打开或刷新都会变更地址，且仅在本机开机且进程存活期间有效（退出 WolfCore Dev 时若保留进程运行，则仍保持活跃）。',
+    columnas: { sitio: '站点', estado: '状态', url: '链接', acciones: '操作' },
+    vacioTitulo: '暂无打开的隧道',
+    vacio: '打开某站点的隧道开关即可获取公开链接。',
+    irASitios: '前往站点',
+    sinNombre: '已删除的站点',
+  },
+  ajustes: {
+    titulo: '设置',
+    descripcion: '环境偏好设置。',
+    general: '常规',
+    carpetaDatos: '数据文件夹',
+    carpetaDatosAyuda: '二进制文件、配置与日志所在位置。可打开，不可更改。',
+    servicios: '服务',
+    puertoNginx: 'Nginx 端口',
+    puertoNginxAyuda:
+      '通常为 80。若不是 80，本地 URL 会附带端口号。已打开的隧道仍使用旧端口，请刷新。',
+    trabajadores: 'PHP 工作进程数',
+    trabajadoresAyuda:
+      '每个版本的 php-cgi 进程数。更多工作进程可同时处理更多请求。',
+    nota: '保存时会使用新端口重新生成站点配置。若 Nginx 正在运行则会重启（端口未变时仅重载）；若工作进程数改变，运行中的 PHP 版本也会重启。',
+    guardado: (reiniciados: string[]) =>
+      reiniciados.length
+        ? `设置已保存并应用。已重启：${reiniciados.join('、')}。`
+        : '设置已保存并应用。',
+    errorAplicar: '设置已保存，但未能全部应用',
+    errorSeccion: (detalle: string) => `无法读取该项数据：${detalle}`,
+    acerca: '关于',
+    avisos: {
+      titulo: '通知',
+      descripcion:
+        '选择哪些通知保留在通知铃铛中，以及窗口不在前台时是否显示 Windows 系统通知。',
+      nativas: 'Windows 通知',
+      nativasAyuda:
+        '仅在 WolfCore Dev 不在前台时显示；同类通知每 5 分钟最多一次。',
+      tiposTitulo: '通知类型',
+      versionesTitulo: '按服务接收新版本通知',
+      versionesAyuda:
+        '关闭某项服务以停止接收其新版本通知（“版本”标签页仍会标记更新）。',
+      versionesDe: (s: string) => `通知 ${s} 的新版本`,
+      tipos: {
+        'servicio-caido': '服务因错误停止',
+        'puerto-ocupado': '启动服务时端口被占用',
+        'certificado-por-vencer': '证书即将过期',
+        'tunel-caido': '隧道断开',
+        'proceso-error': '项目进程失败',
+        'proceso-terminado': '项目进程已结束',
+        'receta-terminada': '项目安装方案已完成',
+        doctor: '诊断（Doctor）',
+        'contenedor-detenido': '容器已停止',
+        'version-nueva': '已安装的服务有新版本',
+      } as Record<string, string>,
+      errorGuardar: '无法保存通知设置',
+    },
+    versionPrograma: '程序版本',
+    https: {
+      titulo: 'HTTPS',
+      autoridad: '本地证书颁发机构',
+      autoridadAyuda:
+        'WolfCore Dev 使用自有 CA 为您的 .test 站点签发证书。安装于您的 Windows 用户证书存储区，无需管理员权限。',
+      instalada: '已安装到 Windows',
+      noInstalada: '未安装',
+      instalar: '安装 CA',
+      reinstalar: '重新安装',
+      quitar: '移除',
+      instaladaOk: '已安装 HTTPS CA',
+      quitadaOk: '已移除 HTTPS CA',
+      cancelado: '已取消 Windows 确认。未做任何更改。',
+      fallo: '无法更改 HTTPS CA',
+      quitarTitulo: '移除 HTTPS CA？',
+      quitarTexto:
+        '在重新安装之前，浏览器将不再信任您 .test 站点的证书。',
+      puerto: 'HTTPS 端口',
+      puertoAyuda:
+        '通常为 443。若被其他程序占用，请选择 1024 至 65535 之间的端口；URL 将附带端口号。',
+      puertoRango: '请使用 443 或 1024 至 65535 之间的数字',
+      puertoGuardado: (p: number) => `HTTPS 现已使用端口 ${p}`,
+      puertoAplicarFallo: '端口已保存，但 Nginx 拒绝了新配置',
+      firefox:
+        'Firefox 使用独立证书库。要信任本地 CA，请打开 about:config 并启用',
+    },
+    herramientas: {
+      titulo: '终端与工具',
+      phpPorDefecto: '默认 PHP',
+      phpPorDefectoAyuda:
+        '终端及 WolfCore Dev 快捷方式中使用的 php 和 composer 版本。“终端”按钮使用各项目自身的 PHP。',
+      phpMasReciente: '最新已安装版本',
+      phpSinInstalar: '请在“服务”中安装 PHP 后再选择版本',
+      phpGuardado: '默认 PHP 已更新',
+      path: '用户 PATH',
+      pathAyuda:
+        '将 WolfCore Dev 的 php 和 composer 添加到用户 PATH，以便在任意终端中使用。',
+      pathActivo: '已添加到 PATH',
+      pathInactivo: '未在 PATH 中',
+      pathAgregar: '添加到用户 PATH',
+      pathQuitar: '从 PATH 移除',
+      pathTitulo: 'PATH 已更新',
+      pathAviso: '请打开新终端使更改生效：已打开的终端不会感知此变化。',
+      pathQuitarTitulo: '从 PATH 中移除 WolfCore Dev？',
+      pathQuitarTexto:
+        '新终端中将无法再直接使用 WolfCore Dev 的 php 和 composer。已打开的终端不受影响。',
+      adminer: 'Adminer 端口',
+      adminerAyuda: 'Adminer 仅在本机此固定地址上提供服务。',
+      terminal: '默认终端',
+      terminalSistema: '系统默认（PowerShell）',
+      terminalAyuda:
+        '点击项目中的“终端”时打开。若项目需要专用环境变量（如项目 PHP 或智能体密钥），选择“Windows Terminal”会在 Windows 默认终端中打开 PowerShell：已打开的 Windows Terminal 不会接收这些变量。',
+      terminalGuardada: '默认终端已更新',
+      editor: '默认编辑器',
+      editorPrimero: '首个检测到的编辑器',
+      editorAyuda:
+        '用于项目中的“编辑器”以及搜索和错误中的“在编辑器中打开”。可检测 VS Code、Cursor、Windsurf、PhpStorm、Sublime Text、Zed 和 Notepad++。',
+      editorGuardado: '默认编辑器已更新',
+      editorNinguno: '未检测到任何编辑器。',
+    },
+  },
+  /* ───────────── HTTPS, terminal y FTP en sitios; Correo; IA local ───────────── */
+  sitioHttps: {
+    etiqueta: 'HTTPS',
+    candado: 'HTTPS 已启用',
+    candadoAyuda: '此站点同时通过由 WolfCore Dev 签发的证书响应 HTTPS。',
+    redirige: '重定向 http → https',
+    abrirHttp: (dominio: string) => `在浏览器中打开 http://${dominio}`,
+    abrirHttps: (url: string) => `在浏览器中打开 ${url}`,
+    pendiente: (motivo: string) => `HTTPS 待处理：${motivo}`,
+    pendienteCorto: 'HTTPS 待处理',
+    ocupado: (puerto: number, nombre: string, pid: number) =>
+      `端口 ${puerto} 正被 ${nombre}（PID ${pid}）占用。`,
+    sinAutoridad: '缺少证书颁发机构。请在“设置”中安装。',
+    pendienteAyuda:
+      '站点仍可通过 HTTP 访问。请关闭该程序或在“设置”中另选 HTTPS 端口。',
+    sinConfianza: 'CA 未安装',
+    sinConfianzaAyuda:
+      '在安装 WolfCore Dev CA（设置 → HTTPS）之前，浏览器将显示安全警告。',
+  },
+  formSitioHttps: {
+    titulo: 'HTTPS',
+    https: '同时提供 HTTPS 服务',
+    httpsAyuda: '使用由 WolfCore Dev 签发的专用证书覆盖主域名及别名。',
+    redirigir: '重定向到 HTTPS',
+    redirigirAyuda: '将 http 访问重定向至 https。不影响公开隧道。',
+    redirigirDeshabilitado: '请先启用 HTTPS',
+    sinAutoridadTitulo: 'HTTPS CA 尚未安装',
+    sinAutoridadTexto:
+      '未安装时浏览器会显示安全警告。Windows 将请您确认安装。',
+    instalar: '安装 CA',
+    instalada: 'HTTPS CA 已安装',
+    cancelado: '已取消 Windows 确认。未做任何更改。',
+    fallo: '无法安装 HTTPS CA',
+  },
+  terminalSitio: {
+    boton: '终端',
+    ayuda: '在项目文件夹中打开终端，并将项目的 PHP 和 Composer 加入 PATH。',
+    elegir: '选择终端',
+    predeterminada: '默认',
+  },
+  editorSitio: {
+    ayuda: '在默认编辑器中打开项目文件夹。',
+    elegir: '打开方式…',
+    predeterminada: '默认',
+    sustituido: (pred: string, usado: string) =>
+      '{pred} 未安装：已改用 {usado} 打开。'
+        .replace('{pred}', pred)
+        .replace('{usado}', usado),
+    error: '无法打开编辑器',
+  },
+  phpSitio: {
+    etiqueta: 'PHP',
+    compartido: (rama: string) => `共享 PHP ${rama}`,
+    propio: (rama: string) => `此站点专用 PHP ${rama}`,
+    conXdebug: 'Xdebug 已启用',
+    mostrar: 'PHP 设置',
+    ocultar: '隐藏 PHP 设置',
+    cargando: '正在读取 PHP 设置…',
+    apagadoRama: (rama: string) =>
+      `PHP ${rama} 已停止：此站点的专用 PHP 将随其一起启动。`,
+    ajustesTitulo: '专用 php.ini',
+    ajustesAyuda: (rama: string) =>
+      `仅针对此站点追加到 PHP ${rama} 的 php.ini。配置任意项（或启用 Xdebug）后，站点将使用独立的 1–2 个 PHP 进程；其他站点不受影响。`,
+    clave: '指令',
+    valor: '值',
+    clavePlaceholder: 'memory_limit',
+    valorPlaceholder: '512M',
+    quitarAjuste: (clave: string) => `移除 ${clave || '设置'}`,
+    agregar: '添加设置',
+    guardarAjustes: '测试并保存',
+    ajustesGuardados: '站点 PHP 设置已应用',
+    sinAjustes: '无专用设置：直接使用共享 php.ini。',
+    xdebugTitulo: 'Xdebug',
+    xdebugInterruptor: (dominio: string) => `为 ${dominio} 启用 Xdebug`,
+    xdebugAyuda:
+      '仅加载在此站点的专用 PHP 中，绝不加载到共享 PHP：其他站点速度不受影响。',
+    xdebugDescarga:
+      '此 PHP 版本尚未安装 Xdebug：将从目录下载（xdebug.org，校验 SHA-256）。',
+    modo: '模式',
+    modos: {
+      debug: 'debug（断点调试）',
+      develop: 'develop（增强错误显示）',
+      coverage: 'coverage（代码覆盖率）',
+      profile: 'profile（性能分析）',
+      trace: 'trace（调用跟踪）',
+    },
+    puerto: '编辑器端口',
+    inicio: '何时连接',
+    inicioTrigger: '仅在存在 XDEBUG_TRIGGER 时',
+    inicioYes: '每次请求均连接',
+    inicioAyuda:
+      '选择“仅在存在 XDEBUG_TRIGGER 时”，仅当请求包含 Cookie、GET/POST 参数或浏览器扩展（Xdebug Helper）时才启动调试。',
+    guardarXdebug: '保存 Xdebug',
+    xdebugPuertoEnUso: (puerto: number) =>
+      `端口 ${puerto} 已被 WolfCore Dev 的 PHP 或其他服务占用：您的编辑器将无法监听。请选择其他端口（通常为 9003）。`,
+    xdebugGuardado: '站点 Xdebug 已应用',
+    quitarXdebug: '移除 Xdebug',
+    quitarXdebugTitulo: '从此站点移除 Xdebug？',
+    quitarXdebugTexto:
+      '将清除其配置。若站点无其他专用设置，将切回共享 PHP。不会修改项目的 launch.json。',
+    xdebugQuitado: '已从站点移除 Xdebug',
+    ide: '编辑器',
+    generarLaunch: '生成 launch.json',
+    launchTitulo: '项目的 .vscode/launch.json',
+    launchNuevo:
+      '将使用此配置创建 .vscode/launch.json（适用于 VS Code PHP Debug，仅监听 127.0.0.1）。',
+    launchFusion:
+      '已存在 launch.json：仅追加或更新 WolfCore 配置，保留其他配置及注释。操作前会在数据目录保存带日期的备份。',
+    launchSinCambios: 'launch.json 中已包含此配置。',
+    launchEscribir: '写入 launch.json',
+    launchCreado: '已在 .vscode 中创建 launch.json',
+    launchActualizado: (respaldo: string) => `launch.json 已更新。先前备份：${respaldo}`,
+    phpStorm: 'PhpStorm 配置',
+    copiarPhpStorm: '复制 PhpStorm 配置',
+    errorNginx: (salida: string) => `Nginx 未接受该更改；已恢复先前状态。${salida}`,
+  },
+  nginxEditor: {
+    etiqueta: 'Nginx',
+    generadoResumen: '自动生成的 vhost',
+    conReglas: '含自定义规则',
+    manualResumen: '手写 vhost（不再自动重新生成）',
+    mostrar: '编辑 vhost',
+    ocultar: '隐藏 vhost',
+    cargando: '正在读取 vhost…',
+    reglasTitulo: '自定义规则',
+    reglasAyuda:
+      '插入此站点的 server 块内。应用前会在完整配置副本上执行 nginx -t 测试；若失败则保持原样。',
+    reglasEtiqueta: '自定义 Nginx 规则',
+    reglasPlaceholder: '# 例如：client_max_body_size 256m;',
+    snippetsTitulo: '代码片段',
+    insertar: (titulo: string) => `插入：${titulo}`,
+    snippets: {
+      cors: 'CORS',
+      'cache-estaticos': '静态资源缓存',
+      'limite-subida': '上传大小限制',
+      spa: 'SPA (index.html)',
+      'cabeceras-seguridad': '安全响应头',
+      websocket: 'WebSocket 代理',
+      gzip: 'gzip 压缩',
+      ocultos: '禁止访问隐藏文件',
+    },
+    aplicar: '测试并应用',
+    descartar: '放弃更改',
+    aplicado: 'vhost 已应用，Nginx 已重载',
+    aplicadoApagado: 'vhost 已保存；将在启动 Nginx 时生效',
+    fallo: 'Nginx 拒绝了更改；vhost 保持原状',
+    salidaTitulo: 'nginx -t 输出',
+    desactivado:
+      '应用配置时 Nginx 未接受您为此站点编写的规则，已将其排除在 vhost 之外（内容仍保留）。请修正后重新应用。',
+    avisoDestino: (destino: string, linea: number) =>
+      `第 ${linea} 行：流量将转发至其他设备（${destino}）。请确认这符合您的预期。`,
+    generadoTitulo: '自动生成的 vhost（只读）',
+    avanzadoTitulo: '高级模式',
+    avanzadoInterruptor: '手动编写完整 vhost',
+    avanzadoAyuda:
+      '替代自动生成的 vhost。WolfCore Dev 不再自动重新生成：若更改域名、HTTPS、端口或目录，需由您手动调整。仅可使用本站点域名与端口。',
+    avanzadoActivarTitulo: '手动编写 vhost？',
+    avanzadoActivarTexto:
+      '将以当前生成的 vhost 为起点。启用期间，站点改动（域名、HTTPS、PHP…）不会自动同步到 vhost，需自行维护。',
+    avanzadoActivar: '手动编写',
+    manualEtiqueta: '站点完整 vhost',
+    aplicarManual: '测试并应用 vhost',
+    volverGenerado: '恢复自动生成的 vhost',
+    volverGeneradoTitulo: '恢复自动生成的 vhost？',
+    volverGeneradoTexto:
+      '手写 vhost 将保存到历史记录，WolfCore Dev 将重新为该站点生成 vhost（含您的自定义规则）。',
+    historial: '历史记录',
+    historialTitulo: 'vhost 历史版本',
+    historialVacio: '暂无历史版本。',
+    historialAyuda:
+      '每次更改前最多保留最近 10 个版本。恢复时同样会通过 nginx -t 验证。',
+    modoReglas: '含规则自动生成',
+    modoManual: '手动编写',
+    restaurar: '恢复',
+    restaurarTitulo: '恢复此版本？',
+    restaurarTexto: (fecha: string) =>
+      `vhost 将恢复至 ${fecha} 的状态。当前版本将保留在历史记录中。`,
+    restaurado: '版本已恢复',
+  },
+  lan: {
+    etiqueta: '局域网',
+    interruptor: (dominio: string) => `在局域网中共享 ${dominio}`,
+    apagadoAyuda: '可在手机或同一网络下的其他设备打开此站点。',
+    sinNginx: '请先启动 Nginx，再在局域网中共享站点。',
+    sinRed: '未连接局域网（Wi-Fi 或以太网）。',
+    activo: '局域网可见',
+    abriendo: '正在共享…',
+    cerrando: '正在停止共享…',
+    abrirUrl: '在本机打开',
+    copiarUrl: '复制地址',
+    verQr: '显示二维码',
+    qrTitulo: (dominio: string) => `局域网中的 ${dominio}`,
+    qrAviso: '使用连接到同一网络的手机扫描二维码。',
+    confirmarTitulo: '在局域网中共享',
+    confirmarTexto: (dominio: string, ip: string) =>
+      `${dominio} 将对连接至与本机（${ip}）同一网络的任意设备无密码可见。关闭开关、退出或重启 WolfCore Dev 时将自动停止共享。`,
+    ipEtiqueta: '网络（本机 IP）',
+    https: '使用 HTTPS',
+    httpsAyuda:
+      '使用 HTTPS 时，手机需信任 WolfCore Dev 的 CA（点击“在手机上安装 CA”）。否则站点将通过 HTTP 访问。',
+    httpsObligatorio: '此站点会重定向至 HTTPS，因此将通过 HTTPS 共享。',
+    compartir: '在局域网共享',
+    tituloError: '无法在局域网中共享',
+    caBoton: '在手机上安装 CA',
+    firewallTitulo: '手机上打不开？',
+    datosRealesBloqueado: (dominio: string) =>
+      `${dominio} 包含真实数据，即使确认也禁止在局域网中共享。`,
+    redPublica:
+      '此网络在 Windows 中被标记为公用网络：防火墙会拦截入站连接，且该命令仅开放专用网络。如为您信任的网络，请将其设为专用网络。',
+    firewallTexto:
+      'WolfCore Dev 不会更改防火墙。请勿在 Windows 弹窗中放行整个程序：请以管理员身份在 PowerShell 中运行此端口的命令（仅限本地子网和专用网络）。公用网络中不会放行，且已有阻止规则优先级更高。',
+    copiarComando: '复制命令',
+  },
+  caMovil: {
+    titulo: '在手机上安装 CA',
+    intro:
+      '使用连接至同一网络的手机扫描二维码，即可下载 WolfCore Dev 证书颁发机构的证书。仅提供该文件，链接将自动关闭。',
+    abriendo: '正在打开链接…',
+    expira: (minutos: number) => `链接将在 ${minutos} 分钟后自动关闭。`,
+    expirado: '链接已关闭。',
+    reabrir: '重新打开',
+    android: 'Android',
+    ios: 'iPhone 或 iPad',
+    pasosAndroid: [
+      '扫描二维码或在手机浏览器中打开该地址并下载文件。',
+      '打开 设置 > 安全和隐私 > 更多安全设置 > 加密与凭据 > 安装证书 > CA 证书（不同品牌名称略有差异）。',
+      '信任前请核对手机显示的 SHA-256 指纹与本对话框是否一致：若不一致请勿安装。',
+      '选择下载的文件并确认提示：Android 对所有 CA 都会显示此提示，属正常现象。',
+    ],
+    pasosIos: [
+      '在 Safari 中打开该地址并允许下载描述文件。',
+      '打开 设置 > 已下载描述文件，核对详情中的 SHA-1 指纹与本对话框是否一致：若不一致请勿安装，一致再安装。',
+      '打开 设置 > 通用 > 关于本机 > 证书信任设置，为 WolfCore Dev CA 开启完全信任。',
+    ],
+    aviso:
+      '安装 CA 后该手机会信任其签发的所有证书：仅在您自己的设备上安装，使用完毕后及时移除。',
+    firewallAviso: (puerto: number) =>
+      '要让手机访问该链接，需开放端口 ' +
+      puerto +
+      '（仅限本地子网和专用网络）。请勿在 Windows 弹窗中放行整个程序：请以管理员身份在 PowerShell 中执行此命令。公用网络中不会放行，且已有阻止规则优先。',
+    huellas: '证书指纹',
+    tituloError: '无法打开 CA 链接',
+  },
+  dialogoQr: {
+    descargar: '下载 PNG',
+    descargado: '二维码已保存',
+    largo: '内容过长，无法生成二维码。',
+    generando: '正在生成二维码…',
+  },
+  ftpSitio: {
+    etiqueta: 'FTP',
+    interruptor: (dominio: string) => `${dominio} 的 FTP 访问`,
+    apagadoAyuda: '允许通过 FTP 向此站点文件夹上传文件。',
+    activoAyuda: '访问已启用。',
+    soloLecturaEtiqueta: '只读',
+    mostrarDatos: '显示 FTP 信息',
+    ocultarDatos: '隐藏 FTP 信息',
+    host: '服务器',
+    puerto: '端口',
+    usuario: '用户',
+    clave: '密码',
+    mostrarClave: '显示密码',
+    ocultarClave: '隐藏密码',
+    copiarDato: (dato: string) => `复制 ${dato}`,
+    cargando: '正在读取 FTP 信息…',
+    regenerar: '重新生成密码',
+    regenerarTitulo: '重新生成 FTP 密码？',
+    regenerarTexto:
+      '当前密码将立即失效，并关闭此站点的活动连接。您需要在 FTP 客户端中更新密码。',
+    regenerada: 'FTP 密码已重新生成',
+    soloLectura: '只读',
+    soloLecturaAyuda: '允许下载，但无法上传、修改或删除文件。',
+    soloLecturaActivado: '此站点的 FTP 现已设为只读',
+    soloLecturaDesactivado: '此站点的 FTP 现已允许写入',
+    activado: '已启用 FTP 访问',
+    desactivarTitulo: '移除此站点的 FTP 访问权限？',
+    desactivarTexto:
+      '将删除密码并关闭已打开的连接。站点文件夹不会被修改。',
+    desactivar: '移除访问权限',
+    desactivado: '已移除 FTP 访问权限',
+    redLocalAviso:
+      'FTP 会接受局域网连接，并以未加密方式传输密码和文件。请仅在受信任的网络中使用。',
+    redLocalHost: '或本机在您网络中的 IP',
+    servidorApagado: 'FTP 服务器已关闭：在您启动之前，任何人都无法连接。',
+    encender: '启动 FTP',
+    urlEtiqueta: '地址',
+    urlAyuda: '地址中不包含密码：连接时会提示输入。',
+    abrirUrl: '在 FTP 客户端中打开',
+    copiarUrl: '复制 FTP 地址',
+    verQr: '显示地址的二维码',
+    qrTitulo: '此站点的 FTP 地址',
+    qrAviso: '二维码仅包含地址，不包含密码。',
+  },
+  correo: {
+    descripcion:
+      '邮件捕获器会拦截您项目发送的邮件，便于您在不发送到互联网的情况下查看。它们仅在本机 (127.0.0.1) 监听，且同一时间只能运行一个。',
+    seccionCaptadores: '本地捕获器',
+    seccionProveedores: '远程 SMTP 服务商',
+    proveedores: {
+      descripcion:
+        '真实 SMTP 服务商会实际发送邮件：可用于在发布项目前测试发信功能。密码会加密保存在本机，永不显示。',
+      agregar: '添加服务商',
+      vacio:
+        '您尚未添加任何服务商。可选择 Mailtrap、Resend、Brevo、Mailgun、SendGrid、Postmark、Amazon SES、SMTP2GO 或 Gmail，也可以自定义配置。',
+      errorLista: '无法读取服务商列表',
+      tarjeta: {
+        servidor: '服务器',
+        usuario: '用户名',
+        clave: '密码',
+        sinClave: '无密码',
+        claveIlegible: '已保存（无法读取）',
+        red: '网络',
+        redLocal: '本机或局域网服务器（已确认）',
+        editar: '编辑',
+        borrar: '删除',
+        borrarTitulo: (n: string) => `删除 ${n}？`,
+        borrarTexto:
+          '将删除该服务商及其已保存的密码。使用它的项目将切回本地捕获器，但项目的 .env 不会被修改：其中仍保留该服务商的 MAIL_* 变量（以及您写入的密码）。请重新写入每个 .env 中的邮件配置块。',
+        borrado: (n: string) => `已删除 ${n}`,
+        usar: '在项目中使用',
+        destino: '测试收件地址',
+        destinoPlaceholder: 'your-address@example.com',
+        probar: '测试发送',
+        probando: '正在发送…',
+        probarAyuda:
+          '通过已验证的加密连接向该地址发送一封真实邮件。每 15 秒最多发送一次。',
+        sinClaveParaProbar: '请先保存服务商密码后再测试发送。',
+        hostLocal: '该服务器名称解析到本机或局域网。',
+        confirmarRed: '确认局域网',
+        enviado: (para: string) => `邮件已发送至 ${para}。请查收您的收件箱。`,
+        fallos: {
+          'correo.auth': '服务商拒绝了该用户名或密码。',
+          'correo.conexion': '无法连接：请检查主机名和端口。',
+          'correo.tls':
+            '加密连接无效（证书、主机名或 STARTTLS 问题）。未发送任何邮件。',
+          'correo.rechazado':
+            '服务器拒绝了邮件或地址。请检查发件人：许多服务商仅接受经过验证的发件人或域名。',
+          'correo.plazo': '服务器响应超时（20 秒）。',
+        },
+      },
+      dialogo: {
+        nuevo: '添加 SMTP 服务商',
+        editar: (n: string) => `编辑 ${n}`,
+        preset: '服务商',
+        presetOtro: '其他（手动填写）',
+        presetAyuda: '主机名和端口来自各服务商的官方文档。',
+        documentacion: '查看文档',
+        region: '区域',
+        nombre: '名称',
+        nombreObligatorio: '请输入名称。',
+        host: '服务器（主机）',
+        hostAyuda: '仅填写主机名或 IP，不要包含 smtp:// 或端口。',
+        hostObligatorio: '请输入服务器地址。',
+        puerto: '端口',
+        seguridad: '加密方式',
+        seguridadAyuda:
+          '始终要求使用带有有效证书的加密连接：绝不降级为明文传输。',
+        tls: '直接 TLS（端口 465）',
+        starttls: 'STARTTLS（端口 587）',
+        usuario: '用户名',
+        usuarioObligatorio: '请输入用户名。',
+        usuarioFijoAyuda: '此服务商始终使用该用户名；密码为您账户的密码。',
+        clave: 'SMTP 密码',
+        claveGuardada: (f: string) => `已保存：••••${f}`,
+        claveNueva: '输入密码以保存',
+        claveAyuda:
+          '密码会加密保存在本机，之后不再显示。留空则保持不变。',
+        remitente: '测试发件人（可选）',
+        remitenteAyuda:
+          '许多服务商仅允许从已验证的发件人或域名发信。留空时将使用收件地址作为发件人。',
+        claveSinEspacios:
+          '请按服务商提供的原样粘贴密码：内部空格会被保留。',
+        borrarClave: '删除密码',
+        borrarClaveTitulo: (n: string) => `删除 ${n} 的密码？`,
+        borrarClaveTexto: '将删除已保存的密码。该服务商仍保留在列表中。',
+        claveBorrada: '密码已删除',
+        guardar: '保存',
+        guardado: (n: string) => `已保存 ${n}`,
+        redLocalTitulo: '本机或局域网服务器',
+        redLocalTexto: (h: string) =>
+          `${h} 指向本机或局域网。WolfCore Dev 仅在您确认后才会连接。这是您自己的服务器吗？`,
+        redLocalConfirmar: '是的，是我的',
+        cambiaTitulo: '将密码发送到其他服务器',
+        cambiaTexto: (h: string) =>
+          `该服务商已保存密码，但您更改了服务器或用户名。密码将被发送至 ${h}。是否继续？`,
+        cambiaConfirmar: '是的，继续',
+      },
+      env: {
+        titulo: (n: string) => `在项目中使用 ${n}`,
+        proyecto: '项目',
+        sinProyectos: '目前还没有项目。',
+        yaUsaSmtp: '此项目当前已通过 SMTP 服务商发信。',
+        volverCaptador: '切回本地捕获器',
+        volvio: (n: string) =>
+          `${n} 已切回向本地捕获器发信，但它的 .env 未被修改：仍保留服务商的 MAIL_* 变量（以及您写入的密码）。请重新写入其邮件配置块。`,
+        incluirClave: '同时将密码写入 .env',
+        incluirClaveAyuda: '未勾选时，配置块不包含 MAIL_PASSWORD，需由您手动添加。',
+        sinClaveGuardada: '该服务商没有已保存的密码。',
+        vista: '.env 变更预览（密码已脱敏显示）',
+        textoPlano:
+          '密码将以明文保存在项目的 .env 中。任何能访问该文件夹（或在您推送后访问仓库）的人都可以读取它。',
+        claveTitulo: '将密码写入 .env',
+        claveTexto:
+          '密码将以明文保存在项目的 .env 文件中。请仅在项目不会推送到仓库且该文件夹仅归您本人所有时使用。',
+        claveConfirmar: '我了解，包含密码',
+        agregarGitignore: '将 .env 添加到 .gitignore',
+        gitignoreTitulo: '修改 .gitignore',
+        gitignoreTexto:
+          '将向项目的 .gitignore 添加 .env 这一行（修改前会先创建副本）。',
+        gitignoreConfirmar: '添加',
+        versionadoTitulo: 'Git 已跟踪 .env',
+        versionadoTexto:
+          '下次提交会上传其中的值。请使用 git rm --cached .env 将其从暂存区移除。',
+        desconocidoTitulo: '无法检查 git 状态',
+        desconocidoTexto: '无法确定 git 是否正在跟踪此项目的 .env。',
+        aceptarVersionado: '仍然写入',
+        aceptarTitulo: '写入已被版本控制的 .env',
+        aceptarTexto:
+          '如果 git 正在跟踪 .env，这些变量可能会进入代码仓库。确定仍要写入吗？',
+        aceptarConfirmar: '仍然写入',
+        confirmarTitulo: '写入 .env',
+        confirmarTexto: (ruta: string) =>
+          `将先保存 ${ruta} 的副本，然后添加不含密码的 MAIL_* 变量。`,
+        confirmarTextoClave: (ruta: string) =>
+          `将先保存 ${ruta} 的副本，然后添加包含明文密码的 MAIL_* 变量。`,
+        confirmar: '写入',
+        escribir: '写入 .env',
+        escrito: (n: string) => `${n} 现已通过此服务商发信`,
+      },
+    },
+    estado: '状态',
+    smtp: 'SMTP',
+    buzon: 'Web 邮箱',
+    abrirBuzon: '打开邮箱',
+    noLeidos: '未读',
+    noLeidosValor: (n: number) => plural(n, '封未读邮件'),
+    noLeidosError: '无法读取邮箱',
+    actualizar: '重新统计邮件数',
+    actualizaSolo: '此页面打开时每 15 秒自动刷新一次。',
+    env: 'Laravel .env 配置块',
+    envAyuda: (captador: string) =>
+      `将其粘贴到您项目的 .env 中。邮件会保留在 ${captador} 中，无需加密和用户名。`,
+    copiarEnv: '复制配置块',
+    irAServicios: '前往服务',
+    cargando: '正在读取捕获器…',
+    errorLista: '无法读取捕获器列表',
+    captador: {
+      opcional: '可选',
+      elegido: '接收您项目的邮件',
+      noInstalado: '未安装',
+      instalar: '安装',
+      usar: '使用此项',
+      apagar: '关闭',
+      iniciando: '正在启动…',
+      avisoMantenimiento:
+        '此捕获器几乎不再维护。建议优先使用 Mailpit 或 smtp4dev。',
+    },
+    notaDescartados:
+      '未提供 MailHog 和 MailDev：MailHog 未发布可用于校验下载的哈希指纹，而 MailDev 仅在 npm 上提供。没有可验证的哈希指纹时，不会下载任何文件。',
+    notaHost:
+      'Web 邮箱仅响应 127.0.0.1，但在捕获器运行期间，恶意网页可能会尝试读取您的邮箱（DNS rebinding）。smtp4dev 和 Papercut 会拒绝外部 Host 请求头；Mailpit 通过本机专属的私密路径提供邮箱服务（WolfCore Dev 会为您打开该地址）；Inbucket 没有任何防护：不使用时请将其关闭。',
+  },
+  ia: {
+    descripcion:
+      '云端 AI 服务商以及通过 Ollama 运行的本地模型。密钥会加密保存在本机，永不显示。',
+    nube: {
+      titulo: '云端 AI',
+      agregar: '添加服务商',
+      vacio:
+        '您尚未添加任何服务商。可添加 OpenAI、Anthropic、Gemini、Hermes (Nous) 或兼容 OpenAI 的服务商。',
+      errorLista: '无法读取服务商列表',
+    },
+    local: { titulo: '本地 AI (Ollama)' },
+    tipos: {
+      ollama: 'Ollama',
+      hermes: 'Hermes (Nous Research)',
+      gemini: 'Google Gemini',
+      openai: 'OpenAI',
+      anthropic: 'Anthropic Claude',
+      compatible: '兼容 OpenAI',
+    } as Record<string, string>,
+    tarjeta: {
+      clave: '密钥',
+      sinClave: '无密钥',
+      claveIlegible: '已保存（无法读取）',
+      url: '基础 URL',
+      modeloPorDefecto: '默认模型',
+      ninguno: '无',
+      probarConexion: '测试连接',
+      probarConexionAyuda: '获取服务商的模型列表。不消耗 token。',
+      probando: '正在测试…',
+      conectado: (ms: number, n: number) => `已连接 · ${ms} ms · ${n} 个模型`,
+      verModelos: (n: number) => `查看全部 ${n} 个模型`,
+      soloGratuitos: '仅免费',
+      fallo: '无法连接',
+      probarMensaje: '测试消息',
+      probarMensajeAyuda:
+        '发送一条简短的固定消息以验证模型是否正常响应。会消耗少量 token。',
+      elegirModelo: '测试所用模型',
+      sinModelo: '请先测试连接或设置默认模型以进行选择。',
+      enviando: '正在发送…',
+      respuesta: (ms: number) => `响应耗时 ${ms} ms`,
+      tokens: (entrada: number, salida: number) =>
+        `输入 ${entrada} 个 token，输出 ${salida} 个`,
+      usar: '在项目中使用',
+      editar: '编辑',
+      borrar: '删除',
+      acciones: (nombre: string) => `${nombre} 的操作`,
+    },
+    costo: {
+      titulo: '测试消息',
+      texto: (modelo: string, proveedor: string) =>
+        `将向 ${proveedor} 的 ${modelo} 模型发送一条简短的固定消息。这会消耗您账户的 token：回复限制为 16 个 token，费用通常不到一美分。`,
+      enviar: '发送消息',
+    },
+    dialogo: {
+      nuevo: '添加 AI 服务商',
+      editar: (nombre: string) => `编辑 ${nombre}`,
+      tipo: '类型',
+      preset: '兼容服务商',
+      presetAyuda: '自动填充名称和 URL；您可以自行修改。',
+      presetOtro: '其他',
+      documentacion: '查看文档',
+      nombre: '名称',
+      urlBase: '基础 URL',
+      urlAyuda: '留空 = 官方地址。仅支持 https://，或指向 127.0.0.1 / [::1] 的 http://（LM Studio）。',
+      urlObligatoria: '请输入兼容服务商的基础 URL。',
+      modelo: '默认模型（可选）',
+      modeloAyuda: '用于 .env 配置块 (AI_MODEL) 和测试消息。',
+      clave: 'API 密钥',
+      claveNueva: '粘贴密钥',
+      claveGuardada: (final: string) =>
+        `已保存密钥（${final}）。仅在需要替换时输入新密钥。`,
+      claveAyuda:
+        '密钥会加密保存在本机，之后不再显示。仅显示最后 4 位字符。',
+      claveOpcional: '本地服务器（LM Studio）可留空。',
+      borrarClave: '删除密钥',
+      guardar: '保存',
+      guardado: (nombre: string) => `已保存 ${nombre}`,
+      urlCambiaTitulo: '密钥将发送到新的 URL',
+      urlCambiaTexto: (url: string) =>
+        `此服务商已保存密钥。今后密钥将发送至 ${url}。请仅在信任该服务器时确认。`,
+      urlCambiaConfirmar: '将密钥发送到新 URL',
+    },
+    borrar: {
+      claveTitulo: (nombre: string) => `删除 ${nombre} 的密钥？`,
+      claveTexto:
+        '密钥将从本机删除。已写入该密钥的 .env 文件不会被修改：如果您吊销了密钥，也请同步更新这些文件。',
+      proveedorTitulo: (nombre: string) => `删除 ${nombre}？`,
+      proveedorTexto:
+        '将删除该服务商及其已保存的密钥。您项目的 .env 文件不会被修改。',
+      respaldos: (n: number) =>
+        n === 1
+          ? '同时删除 1 个项目中包含此明文密钥的 .env 副本'
+          : `同时删除 ${n} 个项目中包含此明文密钥的 .env 副本`,
+      respaldosAyuda:
+        'WolfCore Dev 在写入 .env 前会在项目外部保存副本。删除后无法撤销。',
+      claveBorrada: '密钥已删除',
+      proveedorBorrado: (nombre: string) => `已删除 ${nombre}`,
+      respaldosBorrados: (n: number) => `已删除 ${n} 个项目的 .env 副本`,
+    },
+    env: {
+      titulo: (nombre: string) => `在项目中使用 ${nombre}`,
+      proyecto: '项目',
+      sinProyectos: '没有已加载的项目。',
+      modelo: '模型 (AI_MODEL)',
+      modeloAyuda: '可选。从列表中选择或手动输入。',
+      vista: '将写入 .env 的配置块（密钥已脱敏显示）',
+      cargando: '正在准备预览…',
+      textoPlano:
+        '密钥将以明文保存在项目的 .env 中。任何能访问该文件夹的人都可以读取它。',
+      copiaPrevia:
+        '写入前会先将当前 .env 备份到项目外部（WolfCore Dev 的数据文件夹中）。',
+      sinClave: '此服务商需要密钥：请先保存密钥再在项目中使用。',
+      gitignoreFalta: '项目的 .gitignore 未忽略 .env。',
+      gitignoreNoExiste: '此项目没有 .gitignore 文件。',
+      gitignoreOk: '.gitignore 已忽略 .env。',
+      agregarGitignore: '将 .env 添加到 .gitignore',
+      gitignoreTitulo: '修改 .gitignore',
+      gitignoreTexto:
+        '将向项目的 .gitignore 添加 .env 这一行（或创建该文件），修改前会先创建副本。',
+      gitignoreConfirmar: '添加到 .gitignore',
+      versionadoTitulo: 'Git 已跟踪此项目的 .env',
+      versionadoTexto:
+        '即使已加入 .gitignore，下次提交仍会上传密钥。写入前，请先将其从暂存区移除并提交：',
+      desconocidoTitulo: '无法检查 git 是否跟踪了 .env',
+      desconocidoTexto:
+        'Git 未响应（未安装或文件夹不受信任）。如果 .env 已在仓库中，下次提交将会上传密钥。请使用以下命令检查：',
+      aceptarVersionado: '我了解风险：仍然写入密钥',
+      aceptarTitulo: '尽管 git 可能上传密钥，仍然写入',
+      aceptarTexto:
+        '如果 .env 已在仓库中，密钥将会进入下次提交和历史记录。请仅在已执行 git rm --cached .env 或仓库仅归您本人所有时继续。',
+      aceptarConfirmar: '我接受风险',
+      conflictoTitulo: '.env 已使用其他值定义了这些变量',
+      reemplazar: (claves: string) => `替换 ${claves}`,
+      reemplazarTitulo: '替换 .env 中的变量',
+      reemplazarTexto: (claves: string) =>
+        `将移除 .env 中原有的 ${claves} 行，并保留 WolfCore Dev 配置块中的值。修改前会先备份原 .env。`,
+      reemplazarConfirmar: '替换',
+      escribir: '写入 .env',
+      confirmarTitulo: '以明文写入密钥',
+      confirmarTexto: (carpeta: string) =>
+        `密钥将以未加密形式写入 ${carpeta}。请勿分享该文件或将其上传到代码仓库。`,
+      confirmar: '写入密钥',
+      escrito: (proyecto: string) => `已将 AI 配置块写入 ${proyecto} 的 .env`,
+      copiarComando: '复制命令',
+    },
+  },
+  iaLocal: {
+    descripcion:
+      '通过 Ollama 在本机运行的语言模型。可在您的项目中使用，无需将数据发送到互联网。',
+    sinInstalarTitulo: '未安装 Ollama',
+    sinInstalar: '请前往“服务”进行安装，以便在本机下载和使用模型。',
+    irAServicios: '前往服务',
+    apagadoTitulo: 'Ollama 已关闭',
+    apagado: '启动后即可查看、下载和测试模型。',
+    iniciando: 'Ollama 正在启动…',
+    errorTitulo: 'Ollama 启动失败',
+    encender: '启动 Ollama',
+    verServicios: '在服务中查看',
+    modelos: '已安装的模型',
+    sinModelos: '尚无模型。请在下方下载一个模型。',
+    errorModelos: '无法读取模型列表',
+    recargar: '重新加载列表',
+    total: (n: number) => plural(n, '个模型'),
+    espacio: '已用空间',
+    espacioAyuda: '所有模型在数据文件夹中占用的空间总和。',
+    probarDe: (modelo: string) => `测试 ${modelo}`,
+    borrarDe: (modelo: string) => `删除 ${modelo}`,
+    borrarTitulo: (modelo: string) => `删除模型 ${modelo}？`,
+    borrarTexto: (tamano: string) =>
+      `将释放 ${tamano} 磁盘空间。如需再次使用，必须重新下载。`,
+    borrado: (modelo: string) => `已删除模型 ${modelo}`,
+    descargar: {
+      titulo: '下载模型',
+      campo: '模型名称',
+      placeholder: 'llama3.2, qwen2.5-coder:7b…',
+      ayuda: '输入 Ollama 使用的名称 (ollama.com/library) 或从推荐中选择。',
+      sugerenciaAyuda: {
+        'llama3.2': '通用对话，轻量',
+        'qwen2.5-coder': '编程',
+        mistral: '通用对话',
+        'nomic-embed-text': '用于搜索的向量嵌入（机器人）',
+      } as Record<string, string>,
+      boton: '下载',
+      invalido: '请使用字母、数字以及 . _ : / -（例如 llama3.2）',
+      yaInstalado: '该模型已安装',
+      enCurso: '该模型正在下载中',
+      confirmarTitulo: (modelo: string) => `下载 ${modelo}？`,
+      confirmarTexto:
+        '模型通常体积较大（从 1 GB 到 40 GB 以上，视参数规模而定）。Ollama 在开始前不会提供体积信息：您可以在进度条中查看，并可随时取消。',
+      confirmar: '下载',
+    },
+    progreso: {
+      fases: {
+        preparando: '准备中…',
+        descargando: '下载中',
+        verificando: '校验中',
+        guardando: '保存中',
+        listo: '完成',
+      } as Record<string, string>,
+      de: (hecho: string, total: string) => `${hecho} / ${total}`,
+      cancelarDe: (modelo: string) => `取消下载 ${modelo}`,
+      cancelando: '正在取消…',
+      listo: (modelo: string) => `${modelo} 下载完成`,
+      cancelado: (modelo: string) => `已取消下载 ${modelo}`,
+      error: (modelo: string) => `无法下载 ${modelo}`,
+      descartar: '关闭',
+      descartarDe: (modelo: string) => `关闭 ${modelo} 的通知`,
+    },
+    prueba: {
+      titulo: '测试模型',
+      modelo: '模型',
+      elegir: '选择模型',
+      prompt: '消息',
+      placeholder: '输入一个简短的问题并按 Enter',
+      enviar: '发送',
+      respuesta: '回复',
+      pensando: '模型正在回复… 首次加载可能需要一些时间。',
+      vacia: '（模型未返回文本。）',
+      sinModelos: '请先下载一个模型再进行测试。',
+    },
+    conexion: {
+      titulo: '从您的项目连接',
+      base: 'Ollama 基础 URL',
+      openai: '兼容 OpenAI 的端点',
+      env: '.env 文件配置块',
+      envAyuda:
+        '适用于 Laravel 或基于 FastAPI 的机器人。WolfCore Dev 不会主动写入您的项目。',
+      copiarEnv: '复制配置块',
+      copiarDato: (dato: string) => `复制 ${dato}`,
+    },
+    etapaB:
+      '在阶段 B 中，Hermes Agent、Claude Code 和 Codex 将支持一键连接到这些模型。',
+  },
+  proyectos: {
+    titulo: '项目',
+    descripcion:
+      '每个项目都是一个文件夹，包含对应的 .test 站点、安装配置流程和进程。',
+    agregar: '添加项目',
+    vacioTitulo: '目前还没有项目',
+    vacio:
+      '克隆 GitHub 仓库或选择一个文件夹：WolfCore Dev 会自动检测项目类型并逐步为您准备就绪。',
+    pasos: {
+      porTipo: {
+        'composer-install': '安装 PHP 依赖 (composer install)',
+        'env-crear': '创建 .env 文件',
+        'key-generate': '生成应用密钥',
+        'bd-crear': '创建数据库',
+        'bd-restaurar': '恢复备份',
+        migrar: '迁移数据库',
+        'storage-link': '链接 storage (storage:link)',
+        'npm-ci': '安装 Node 依赖 (npm ci)',
+        'npm-build': '构建前端资源 (npm run build)',
+        'python-venv': '创建虚拟环境 (.venv)',
+        'pip-install': '安装 Python 依赖 (pip)',
+        'pgvector-activar': '在数据库中启用 pgvector',
+        'sitio-crear': '创建站点',
+        comando: '项目命令',
+      } as Record<string, string>,
+      sitioCrear: (dominio: string) => (dominio ? `创建站点 ${dominio}` : '创建站点'),
+      bdRestaurar: (archivo: string | null) =>
+        archivo ? `恢复备份 ${archivo}` : '恢复备份',
+      migrar: '迁移数据库',
+      migrarSemilla: '迁移数据库并填充测试数据 (--seed)',
+      comando: (linea: string) => (linea ? `执行：${linea}` : '项目命令'),
+    },
+    estadoPaso: {
+      pendiente: '等待中',
+      corriendo: '进行中',
+      listo: '完成',
+      error: '出错',
+      omitido: '已跳过',
+    } as Record<string, string>,
+    estadoReceta: {
+      inactiva: '未准备',
+      corriendo: '准备中…',
+      lista: '已就绪',
+      error: '有步骤失败',
+      cancelada: '准备已取消',
+      incompleta: '准备未完成',
+    } as Record<string, string>,
+    agregarDialogo: {
+      titulo: '添加项目',
+      pestanas: { github: 'GitHub', url: 'Git URL', carpeta: '文件夹' },
+      destino: '目标文件夹',
+      destinoAyuda: (base: string) =>
+        `将克隆到 ${base}。如需其他位置，请使用“选择文件夹…”。`,
+      nombreCarpeta: '文件夹名称',
+      nombrePlaceholder: 'my-project',
+      elegirDestino: '选择文件夹…',
+      destinoPorDefecto: '使用项目文件夹',
+      clonar: '克隆',
+      clonando: '正在克隆…',
+      clonado: '仓库已克隆',
+      errorClonar: '无法克隆仓库',
+      sinCancelar:
+        '无法从此处中断克隆：请等待其完成（可能需要几分钟）。',
+      sinGit: '未安装 Git。请先安装 (git-scm.com) 后再重新打开此对话框。',
+    },
+    github: {
+      estadoGh: (usuario?: string) =>
+        usuario ? `已通过 GitHub CLI 以 ${usuario} 身份连接` : '已通过 GitHub CLI 连接',
+      estadoToken: '已通过个人访问令牌连接',
+      estadoNinguna: '未连接 GitHub',
+      ayudaNinguna:
+        '请使用 GitHub CLI 登录（推荐），或使用具有内容读取权限的细粒度个人访问令牌。',
+      instalarGh: '安装 GitHub CLI',
+      instalandoGh: '正在安装 GitHub CLI…',
+      ghInstalado: 'GitHub CLI 已安装。现在请登录。',
+      iniciarSesion: '登录',
+      sesionAbierta:
+        '已打开登录窗口。完成后请点击“重新检查”。',
+      comprobar: '重新检查',
+      usarToken: '使用令牌',
+      token: 'GitHub 个人令牌',
+      tokenPlaceholder: 'github_pat_…',
+      tokenAyuda:
+        '加密保存在本机，绝不会再次显示，也不会写入任何项目中。',
+      guardarToken: '保存令牌',
+      tokenGuardado: '令牌已保存',
+      quitarToken: '移除令牌',
+      tokenQuitado: '令牌已移除',
+      buscar: '搜索仓库',
+      cargando: '正在加载仓库…',
+      sinRepos: '未找到仓库。',
+      cargarMas: '加载更多',
+      privado: '私有',
+      yaClonado: '已克隆',
+      yaClonadoAyuda: '已有项目使用此仓库或位于其目标文件夹。',
+      actualizado: (fecha: string) => `更新于 ${fecha}`,
+      elegir: '选择',
+      errorRepos: '无法读取仓库列表',
+    },
+    url: {
+      etiqueta: '仓库 URL',
+      placeholder: 'https://github.com/usuario/proyecto.git',
+      ayuda:
+        'https://…、git@host:ruta 或 usuario/proyecto（GitHub）。URL 中请勿包含用户名或密码。',
+      invalida: '请使用 https://…、git@host:ruta 或 usuario/proyecto',
+    },
+    carpeta: {
+      titulo: '本机已有的项目',
+      texto: '选择文件夹：将自动检测项目类型并推荐安装方案。',
+      elegir: '选择文件夹',
+      manual: '不使用方案直接添加（手动配置）',
+      yaEsProyecto: (nombre: string) => `该文件夹已是项目 ${nombre}。`,
+      vigilarTitulo: '监控文件夹',
+      vigilarTexto:
+        '当出现看起来像项目的新文件夹时，WolfCore Dev 会提醒您。克隆的仓库也会默认放在这里。',
+      vigilando: (carpeta: string) => `正在监控 ${carpeta}`,
+      sinVigilar: '尚未监控任何文件夹。',
+      vigilar: '选择要监控的文件夹',
+      cambiarVigilada: '更改',
+      dejarDeVigilar: '停止监控',
+    },
+    asistente: {
+      titulo: (nombre: string) => `配置 ${nombre}`,
+      cargando: '正在分析项目…',
+      origenYml: '该方案来自仓库中的 wolfcore.yml。',
+      origenDefecto: '根据项目类型推荐的方案。',
+      deteccion: '检测结果',
+      deteccionAyuda: '如有与项目不符之处请手动修正。',
+      tipo: '类型',
+      php: 'PHP',
+      phpNinguno: '未安装',
+      node: 'Node',
+      python: 'Python',
+      java: 'Java',
+      dotnet: '.NET',
+      go: 'Go',
+      rust: 'Rust',
+      bun: 'Bun',
+      deno: 'Deno',
+      zig: 'Zig',
+      kotlin: 'Kotlin',
+      dart: 'Dart',
+      versionAuto: '自动检测',
+      servicios: '服务',
+      serviciosNinguno: '无',
+      nombresServicio: {
+        mysql: 'MySQL',
+        mariadb: 'MariaDB',
+        postgresql: 'PostgreSQL',
+        mongodb: 'MongoDB',
+        redis: 'Redis',
+        mailpit: 'Mailpit',
+      } as Record<string, string>,
+      detectado: (v: string) => `已检测：${v}`,
+      nodeInstalar: '未安装 Node：请在“服务”中安装。',
+      pythonInstalar: '未安装 Python：请在“服务”中安装。',
+      lenguajeInstalar: (nombre: string) => `未安装 ${nombre}：请在“服务”中安装。`,
+      dominio: '域名',
+      puertoProxy: '本地端口',
+      puertoPlaceholder: '8000',
+      receta: '步骤',
+      recetaAyuda:
+        '按顺序执行。可取消勾选不需要的步骤；可选步骤可调整顺序。',
+      subir: '上移',
+      bajar: '下移',
+      fijo: '此步骤为必需项',
+      restaurar: '恢复备份…',
+      cambiarRespaldo: '更换备份',
+      quitarRespaldo: '移除备份',
+      sobrescribir: '如果数据库已有数据表则覆盖',
+      semilla: '加载测试数据 (--seed)',
+      sinMotor:
+        '无数据库引擎：请在“服务”中选择一个引擎以创建数据库或恢复备份。',
+      confio: '我信任此仓库：执行其安装步骤',
+      confioAyuda:
+        '这些步骤会在您的计算机上运行项目命令（composer、npm、pip、迁移）。仅在您了解代码时勾选。',
+      montar: '配置项目',
+      montando: '正在配置项目…',
+      reintentar: '重试',
+      omitir: '跳过',
+      cancelar: '取消',
+      cancelando: '正在取消…',
+      cerrar: '关闭',
+      cerrarCorriendo: '隐藏（后台继续运行）',
+      abrirSitio: '打开站点',
+      verRegistro: '查看日志',
+      ocultarRegistro: '隐藏日志',
+      listo: '项目已就绪。',
+      fallo: (paso: string) => `失败：${paso}。可重试、跳过或取消；未回滚任何内容。`,
+      cancelada: '配置已取消。您可随时在项目卡片中继续。',
+      incompleta: '仍有未执行的步骤。',
+      errorCrear: '无法创建项目',
+      errorReceta: '无法读取安装方案',
+      recetaCambio:
+        '自您信任后项目安装方案（wolfcore.yml）已变更。重试将使用上次保存的方案。',
+      recargar: '检查新方案',
+      seguirGuardada: '继续使用已保存方案',
+      soloLectura:
+        '类型、PHP、域名、版本和端口沿用项目设置：请通过“编辑”修改。',
+    },
+    tarjeta: {
+      receta: '配置',
+      reinstalar: '重新安装依赖',
+      reinstalarTitulo: (nombre: string) => `执行 ${nombre} 的安装方案？`,
+      reinstalarTexto:
+        '将重复上次配置时的步骤（即您在向导中确认过的步骤）：',
+      noRestaura: '不会重复恢复',
+      recetaCambio:
+        '自您信任后项目安装方案（wolfcore.yml）已变更。重新安装将重复已保存方案；使用“检查方案”可查看新方案。',
+      revisarReceta: '检查方案',
+      preparar: '配置…',
+      ejecutar: '执行',
+      verPreparacion: '查看配置',
+      sinConfianza:
+        '请在向导中检查方案并勾选“我信任此仓库”后再执行。',
+      runtimes: '版本通知',
+      verRegistros: '查看日志',
+      abrirAgente: '打开 AI 智能体',
+      vscode: '编辑器',
+      vscodeAyuda: '在默认编辑器中打开项目文件夹',
+      vscodeError: '无法打开编辑器',
+      baseDatos: '数据库',
+      baseDatosAyuda: (base: string) =>
+        `免密自动登录打开数据库“${base}”（Adminer 或 phpMyAdmin）`,
+      baseDatosSinDetectar: '打开项目数据库（Adminer 或 phpMyAdmin）',
+      sinBase: '项目 .env 未声明 MySQL、MariaDB 或 PostgreSQL 数据库。',
+      adminerNoListo: 'Adminer 未就绪',
+      entradaAutomatica: '免输密码自动登录。',
+      elegirBd: '选择 Adminer 或 phpMyAdmin',
+      opcionAdminer: 'Adminer',
+      opcionPhpMyAdmin: 'phpMyAdmin',
+      opcionPhpMyAdminSoloMysql: 'phpMyAdmin（仅支持 MySQL 和 MariaDB）',
+      phpMyAdminNoListo: 'phpMyAdmin 未就绪',
+      entroComoAdmin: (usuario: string) =>
+        `已以服务器管理员 ${usuario} 身份登录，因为该项目未使用专用用户。在 .env 管理器中点击“使用专用用户”可创建仅限该数据库的用户。`,
+      entroComoAdminSinClave: (usuario: string) =>
+        `已以服务器管理员 ${usuario} 身份登录：本机未保存该项目专用用户的密码。在 .env 管理器中点击“使用专用用户”可生成新密码。`,
+      abrirSitio: '在浏览器中打开站点',
+      github: '仓库',
+      abrirRemoto: (url: string) => `打开 ${url}`,
+      confiado: '受信任',
+      confiadoAyuda: '允许执行其安装步骤。',
+    },
+    git: {
+      rama: (rama: string) => rama,
+      sinRama: '游离 HEAD',
+      cambios: (n: number) => plural(n, '处未保存的更改'),
+      limpio: '无更改',
+      atras: (n: number) => `落后 ${n} 个提交`,
+      adelante: (n: number) => `领先 ${n} 个提交`,
+      traer: '拉取更改',
+      traerAyuda: '不合并的 git pull：若有本地更改或分支分叉，不会修改任何内容。',
+      alDia: '已是最新。',
+      actualizado: '已拉取更改',
+      sugeridosTitulo: '已拉取更改',
+      sugeridosTexto: '根据变更内容，建议执行以下步骤：',
+      sugeridosNinguno: '无需执行任何步骤。',
+      migracionesNuevas: (n: number) => plural(n, '个新迁移'),
+      ejecutarSugeridos: '执行步骤',
+      corridaTitulo: '拉取后的建议步骤',
+      corridaAyuda: '不会修改项目已保存的安装方案。',
+      ahoraNo: '暂不',
+      errorEstado: '无法读取 Git 状态',
+      commitIa: {
+        boton: '生成提交说明',
+        ayuda:
+          '使用 AI 为已暂存更改（git add）建议提交说明，经您同意后再执行提交。',
+        titulo: '使用建议说明提交',
+        proveedor: 'AI 提供商',
+        modelo: '模型',
+        sinProveedores:
+          '请先配置一个云端 AI 提供商（AI 页面）以生成提交说明。',
+        privacidad:
+          '将向提供商发送已暂存更改的 diff（排除 .env、密钥、证书、凭据及二进制文件，最多 20 000 字符）。仅消耗少量令牌。',
+        sugerir: '生成说明',
+        mensaje: '提交说明（可编辑）',
+        commit: '提交',
+        commitAyuda: '仅提交已暂存内容（git add）：不会添加文件也不会推送。',
+        hecho: '已对暂存更改完成提交。',
+      },
+    },
+    procesos: {
+      titulo: '进程',
+      /** Mensaje del supervisor de un proceso sin reinicio que salió con código 0. */
+      terminado: '已无错误结束',
+      ninguno: '暂无进程。可添加 npm run dev、queue:work、uvicorn…',
+      agregar: '添加进程',
+      editar: '编辑进程',
+      nuevo: '新建进程',
+      interruptor: (nombre: string) => `启动或停止 ${nombre}`,
+      proxy: '代理',
+      proxyAyuda: 'Nginx 会将站点请求转发到此进程。',
+      puerto: (p: number) => `:${p}`,
+      reinicios: (n: number) => plural(n, '次重启'),
+      verLog: '查看日志',
+      ocultarLog: '隐藏日志',
+      logVacio: '暂无输出。',
+      abrirCarpetaLog: '打开日志文件夹',
+      quitar: '移除进程',
+      quitarTitulo: (nombre: string) => `移除进程 ${nombre}？`,
+      quitarTexto: '如果正在运行，将会停止。',
+      nombre: '名称',
+      nombrePlaceholder: 'Vite',
+      comando: '命令',
+      comandoPlaceholder: 'npm run dev',
+      comandoAyuda: '程序与参数，不经 Shell 执行。含空格的参数请使用引号。',
+      cwd: '工作目录',
+      cwdPlaceholder: 'raiz',
+      cwdAyuda: '填写 raiz 或项目子文件夹（例如 frontend）。',
+      puertoCampo: '端口',
+      puertoNinguno: '无',
+      puertoAyuda: '仅作说明用途，除非该进程为代理目标。',
+      autoIniciar: '随 WolfCore Dev 启动',
+      reiniciar: '崩溃时自动重启',
+      esProxy: '作为 Nginx 代理目标',
+      requiereReinicio:
+        '进程正在运行：命令、目录或端口的更改将在重启后生效。',
+      reinicieAhora: '已保存。请停止并重新启动该进程以应用更改。',
+      guardado: '进程已保存',
+      errores: {
+        comando: '请输入命令',
+        puerto: '端口必须在 1 到 65535 之间',
+        proxySinPuerto: '代理目标必须指定端口',
+        cwd: '请使用 raiz 或项目内的子文件夹',
+        repetido: '已存在同名进程',
+      },
+      estados: {
+        encendido: '运行中',
+        apagado: '已停止',
+        iniciando: '正在启动…',
+        error: '错误',
+        externo: '外部',
+      } as Record<string, string>,
+    },
+    registros: {
+      titulo: (nombre: string) => `${nombre} 的日志`,
+      fuente: '来源',
+      ninguna: '该项目暂无日志。',
+      vacio: '日志为空。',
+      actualizar: '刷新',
+      abrirCarpeta: '打开文件夹',
+    },
+    sugerencias: {
+      titulo: (n: number) => `发现 ${n} 个疑似项目的新文件夹`,
+      montar: '配置',
+      ignorar: '忽略',
+      tipo: (tipo: string) => tipo,
+    },
+  },
+  inicioExtra: {
+    correo: '未读邮件',
+    correoApagado: 'Mailpit 已停止',
+    correoSinInstalar: 'Mailpit 未安装',
+    modelos: 'AI 模型',
+    iaApagada: 'Ollama 已停止',
+    iaSinInstalar: 'Ollama 未安装',
+    sinLeer: '无法读取',
+    sinDato: '—',
+  },
+  /* ───────────── Panel de rendimiento, visor de registros y MCP (Task 13) ───────────── */
+  unidades: {
+    bytes: ['B', 'KB', 'MB', 'GB', 'TB'],
+    porSegundo: '/s',
+    porcentaje: '%',
+    segundos: '秒',
+    minutos: '分钟',
+    horas: '小时',
+    dias: '天',
+    /** Trabajador N de un servicio (p. ej. PHP 8.4 #2). */
+    trabajador: (n: string) => `#${n}`,
+  },
+  panel: {
+    titulo: '性能',
+    ventana: '最近 5 分钟',
+    pausado: '窗口隐藏时已暂停',
+    esperando: '正在等待首次采样…',
+    errorMuestreo: (detalle: string) => `无法请求性能采样：${detalle}`,
+    cpu: 'CPU',
+    ram: '内存',
+    disco: '数据磁盘',
+    red: '网络',
+    deTotal: (usado: string, total: string) => `${usado} / ${total}`,
+    libre: (libre: string) => `可用 ${libre}`,
+    bajada: '下载',
+    subida: '上传',
+    graficaCpu: (valor: string) => `最近 5 分钟 CPU 图表；当前 ${valor}`,
+    graficaRam: (valor: string) => `最近 5 分钟内存图表；当前 ${valor}`,
+    graficaRed: (bajada: string, subida: string) =>
+      `最近 5 分钟网络图表；下载 ${bajada}，上传 ${subida}`,
+    alertas: {
+      titulo: '警报',
+      conflicto: (servicio: string, puerto: number, programa: string, pid: number) =>
+        `${servicio} 的端口 ${puerto} 正被其他程序占用：${programa}（PID ${pid}）。`,
+      ramAlta: (porcentaje: number) =>
+        `本机内存使用率已达 ${porcentaje} %。请关闭不用的服务以提升响应速度。`,
+      huerfano: (pid: number, puertos: number[]) =>
+        `检测到非 WolfCore Dev 管理的 php-cgi（PID ${pid}）正在监听 ${puertos.join('、')}：可能是上次会话残留。`,
+      finalizar: '结束进程',
+      finalizarTitulo: '结束此进程？',
+      finalizarTexto: (nombre: string, pid: number) =>
+        `将强制关闭 ${nombre}（PID ${pid}），未保存的数据会丢失。仅在确认不再需要该程序时使用。`,
+      finalizado: (nombre: string) => `已结束 ${nombre}`,
+      verPuertos: '查看端口',
+      errorPuertos: '无法检查占用端口的程序。',
+    },
+    procesos: {
+      titulo: '服务与进程',
+      vacio: '当前没有运行中的服务或项目进程。',
+      nombre: '名称',
+      cpu: 'CPU',
+      ram: '内存',
+      pid: 'PID',
+      puerto: '端口',
+      encendido: '运行状态',
+      acciones: '操作',
+      detener: '停止',
+      registros: '查看日志',
+      servicio: '服务',
+      proyecto: '项目',
+      procesoDe: (proyecto: string, proceso: string) => `${proyecto}：${proceso}`,
+    },
+  },
+  registros: {
+    titulo: '日志',
+    descripcion:
+      '实时追踪 Nginx、PHP、服务、站点、项目进程和隧道的日志。',
+    fuente: '来源',
+    elegirFuente: '选择日志',
+    sinFuentes:
+      '暂无日志。当服务、站点或进程写入第一条日志时将显示在此处。',
+    buscar: '按文本筛选',
+    niveles: { error: 'ERROR', warning: 'WARNING', info: 'INFO' } as Record<string, string>,
+    pausar: '暂停',
+    reanudar: '继续',
+    pausadoNuevas: (n: number) => `已暂停，新增 ${n} 行`,
+    copiar: '复制可见内容',
+    copiadas: (n: number) => `已复制 ${n} 行`,
+    limpiar: '清空',
+    abrirCarpeta: '打开文件夹',
+    alFinal: '跟随末尾',
+    mostrarMas: '显示更多',
+    ocultas: (n: number) => `已隐藏较早的 ${n} 行`,
+    vacio: '暂无日志行。新写入的内容将实时显示于此。',
+    sinCoincidencias: '没有匹配筛选条件的行。',
+    cuenta: (visibles: number, total: number) =>
+      visibles === total ? `共 ${total} 行` : `${visibles} / ${total} 行`,
+    descartadas: (n: number) => `（保留最近 5000 行；已丢弃较早的 ${n} 行）`,
+    grupos: {
+      nginx: 'Nginx',
+      php: 'PHP',
+      servicio: '服务',
+      sitio: '站点',
+      laravel: 'Laravel',
+      proyecto: '项目进程',
+      tunel: '隧道',
+      ci3: 'CodeIgniter 3',
+    },
+    fuentes: {
+      nginxAcceso: 'Nginx（访问）',
+      nginxError: 'Nginx（错误）',
+      php: (version: string) => `PHP ${version}`,
+      servicio: (nombre: string) => nombre,
+      sitioAcceso: (dominio: string) => `${dominio}（访问）`,
+      sitioError: (dominio: string) => `${dominio}（错误）`,
+      tunel: (sitio: string) => `${sitio} 的隧道`,
+      tunelSalida: (sitio: string) => `${sitio} 的隧道（输出）`,
+      laravel: (sitio: string) => `${sitio}：laravel.log`,
+      ci3: (sitio: string) => `${sitio}：CodeIgniter`,
+      proceso: (sitio: string, proceso: string) => `${sitio}：${proceso}`,
+    },
+  },
+  cli: {
+    avisoTerminalNueva:
+      '请打开新终端使更改生效：已打开的终端不会感知此变化。',
+    enPathSinCliente: '已在 PATH 中，但缺少命令文件',
+    reparar: '修复',
+    repararTitulo: '修复 wolf 命令？',
+    repararTexto:
+      'wolf 已在 PATH 中，但其文件不完整。将重新复制到数据文件夹并启动本地服务器。',
+    titulo: '终端：wolf 命令',
+    descripcion:
+      '在 PowerShell、cmd 或 Git Bash 中控制 WolfCore Dev：wolf status、wolf use php@8.4、wolf share、wolf logs。仅在应用打开时有效。',
+    activo: '已在 PATH 中可用',
+    enPathSinServidor: '已在 PATH 中，服务器已停止',
+    inactivo: '未在 PATH 中',
+    agregarBoton: '将 wolf 添加到 PATH',
+    quitarBoton: '从 PATH 移除 wolf',
+    agregarTitulo: '将 wolf 添加到用户 PATH？',
+    agregarTexto:
+      '将把 wolf 命令复制到 WolfCore Dev 数据文件夹，将该文件夹添加到用户 PATH（会保留原 PATH 备份），并启动仅监听 127.0.0.1 的本地服务器（每次启动使用新密钥验证 wolf）。发布站点到互联网或更改所有终端的 PHP 时，始终还会在应用窗口中要求确认。您可随时移除。',
+    agregar: '添加',
+    quitarTitulo: '从 PATH 移除 wolf？',
+    quitarTexto:
+      '将从用户 PATH 中移除 wolf 文件夹，停止本地服务器并删除复制的命令。已打开的终端不受影响。',
+    quitar: '移除',
+    listoTitulo: 'wolf 命令已更新',
+    ayuda: '添加后请打开新终端。服务器仅监听 127.0.0.1。',
+    aislado: '使用测试数据文件夹（WOLFCORE_DATOS）时不会修改 PATH。',
+    errorCargar: (detalle: string) => `无法读取 wolf 状态：${detalle}`,
+  },
+  mcp: {
+    titulo: 'MCP 服务器',
+    descripcion:
+      '允许 Claude Code 和其他助手在本机管理您的站点、服务和数据库。仅监听 127.0.0.1 且需要令牌认证。',
+    estado: '状态',
+    activo: '已启用',
+    inactivo: '已停止',
+    activar: '启用',
+    detener: '停止',
+    activado: 'MCP 服务器已启用',
+    detenido: 'MCP 服务器已停止',
+    direccion: '地址',
+    puerto: '端口',
+    puertoAyuda: '1024 至 65535 之间。若已启用，将在新端口重启。',
+    puertoRango: '请使用 1024 至 65535 之间的数字',
+    puertoGuardado: (p: number) => `MCP 服务器将使用端口 ${p}`,
+    copiarConfig: '复制 Claude Code 配置',
+    copiarConfigAyuda:
+      '将含令牌的配置复制到剪贴板并粘贴至 Claude Code；此处不显示令牌。',
+    configCopiada: '配置已复制到剪贴板',
+    regenerar: '重新生成令牌',
+    regenerarTitulo: '重新生成 MCP 服务器令牌？',
+    regenerarTexto:
+      '当前令牌将立即失效：已连接的助手必须改用新配置。',
+    regenerado: '令牌已重新生成，请重新复制配置。',
+    errorCargar: (detalle: string) => `无法读取 MCP 服务器状态：${detalle}`,
+    confirmacion: {
+      titulo: '助手请求确认',
+      herramienta: '工具',
+      pendientes: (actual: number, total: number) => `${actual} / ${total}`,
+      aprobar: '批准',
+      rechazar: '拒绝',
+      aprobada: '操作已批准',
+      rechazada: '操作已拒绝',
+      vencida: '该请求已不再等待确认。',
+      descartadas: (n: number) => `另有 ${n} 项未显示（将自动过期）`,
+      falloRespuesta: (detalle: string) =>
+        `无法发送回复；请求仍处于等待状态。${detalle}`,
+      si: '是',
+      no: '否',
+      campos: {
+        motor: '引擎',
+        base: '数据库',
+        archivo: '文件',
+        sobrescribir: '覆盖',
+        pid: 'PID',
+        nombre: '进程',
+        proyecto: '项目',
+        pasos: '步骤',
+        cantidad: '转储数',
+      } as Record<string, string>,
+    },
+  },
+  herramientas: {
+    descripcion: '日常开发实用工具。离线运行，无需外部服务。',
+    buscar: '搜索工具…',
+    sinResultados: '没有匹配的工具。',
+    abrir: '打开',
+    procesar: '处理中…',
+    copiar: '复制',
+    copiado: '已复制到剪贴板',
+    limpiar: '清空',
+    pendienteApi: '待实现：核心尚未向界面暴露该信息。',
+    lista: {
+      qr: { nombre: '二维码生成器', descripcion: '从文本或隧道链接生成 PNG 二维码。' },
+      json: { nombre: 'JSON', descripcion: '格式化、校验、压缩并支持树形视图。' },
+      regex: {
+        nombre: '正则表达式',
+        descripcion: '测试匹配、捕获组并提供速查参考。',
+      },
+      diff: {
+        nombre: '文本对比',
+        descripcion: '并排对比差异，亦支持文件。',
+      },
+      tiempo: { nombre: '时间转换', descripcion: '时间戳 ↔ 日期，支持时区。' },
+      puertos: {
+        nombre: '端口与进程',
+        descripcion: '查看端口监听情况并结束进程。',
+      },
+      bom: { nombre: 'UTF-8 BOM 清理', descripcion: '移除文件或文件夹中的 BOM。' },
+      certificados: {
+        nombre: '证书',
+        descripcion: '使用 WolfCore Dev CA 为任意名称签发证书。',
+      },
+      cripto: {
+        nombre: '加密工具',
+        descripcion: '哈希、Base64、URL、UUID、密码与 JWT。',
+      },
+      markdown: { nombre: 'Markdown 预览', descripcion: '实时编写并预览效果。' },
+      entorno: { nombre: '系统环境', descripcion: 'PATH、版本与环境变量。' },
+      buscar: {
+        nombre: '搜索',
+        descripcion: '在项目、文件夹或文件的名称与内容中查找文本。',
+      },
+      infoArchivo: {
+        nombre: '文件信息',
+        descripcion: '查看文件大小、类型与哈希值。',
+      },
+      websocket: { nombre: 'WebSocket 客户端', descripcion: '连接、发送并查看消息。' },
+      contrasenas: {
+        nombre: '密码',
+        descripcion: '检测密码强度并排查数据库中的弱口令账户。',
+      },
+      qrWifi: {
+        nombre: 'Wi-Fi 二维码',
+        descripcion: '生成二维码方便他人连接您的无线网络。',
+      },
+      imagenes: {
+        nombre: '图片处理',
+        descripcion: '转换为 ICO 或 PNG，以及压缩 JPEG 或 WebP。',
+      },
+      comprimir: {
+        nombre: 'ZIP 与 PDF',
+        descripcion: '将文件和文件夹打包为 ZIP 并优化 PDF。',
+      },
+      conversor: {
+        nombre: '文档转换器',
+        descripcion: '在本机转换 Word、Excel、PDF、CSV 与 Markdown。',
+      },
+    },
+    errores: {
+      jsonVacio: '请输入或粘贴 JSON。',
+      jsonInvalido: (linea: number, columna: number) =>
+        `JSON 无效：请检查第 ${linea} 行，第 ${columna} 列。`,
+      banderas: '标志无效：仅允许不重复的 d、g、i、m、s、u、v 或 y。',
+      regex: (detalle: string) => `表达式无效（${detalle}）。`,
+      trabajador: '无法在后台执行此操作。',
+      diffLento: '文本差异过大，无法在限定时间内完成对比。',
+      base64: '无效的 Base64。',
+      utf8: '解码内容不是有效的 UTF-8 文本。',
+      url: '无效的 URL 编码序列。',
+      coste: (max: number) => `bcrypt 成本因子必须在 4 到 ${max} 之间。`,
+      jwtPartes: 'JWT 必须包含由点号分隔的三部分。',
+      jwtCabecera: '无法读取 JWT 头部。',
+      jwtCarga: '无法读取 JWT 载荷。',
+      longitud: '长度必须在 4 到 256 之间。',
+      sinConjuntos: '请至少选择一种字符类型。',
+      sinDominios: '请至少输入一个名称或 IP。',
+      muchosDominios: (max: number) => `每个证书最多支持 ${max} 个名称。`,
+    },
+    qr: {
+      texto: '文本或 URL',
+      textoAyuda: '二维码在本地设备上生成，不会发送到网络。',
+      tunel: '项目的隧道链接',
+      sinTuneles: '当前没有活动隧道',
+      descargar: '下载 PNG',
+      vacio: '请输入内容以生成二维码。',
+      largo: '文本过长，无法生成二维码。',
+      descargado: '已开始下载。',
+    },
+    json: {
+      entrada: 'JSON',
+      formatear: '格式化',
+      minificar: '压缩',
+      validar: '验证',
+      valido: 'JSON 格式有效。',
+      resultado: '结果',
+      arbol: '树形视图',
+      mas: (n: number) => `… 还有 ${n} 项`,
+    },
+    regex: {
+      patron: '正则表达式',
+      banderas: '标志',
+      texto: '测试文本',
+      coincidencias: (n: number, truncado: boolean) =>
+        `${n} 个匹配项${truncado ? '（仅显示前几项）' : ''}`,
+      sinCoincidencias: '无匹配项。',
+      tiempo: '表达式执行耗时过长已中止（可能存在灾难性回溯）。',
+      grupo: (n: number) => `分组 ${n}`,
+      referencia: '快速参考',
+      tabla: [
+        ['.', '任意字符（未启用 s 时不含换行符）'],
+        ['\\d \\w \\s', '数字、字母/数字/_ 及空白字符'],
+        ['\\D \\W \\S', '与上述各项相反'],
+        ['[abc] [^abc]', '列表中的任意字符 / 非列表中的字符'],
+        ['^ $', '开头和结尾（启用 m 时为行首和行尾）'],
+        ['\\b', '单词边界'],
+        ['* + ?', '零次或多次、一次或多次、可选'],
+        ['{n,m}', '重复 n 到 m 次'],
+        ['*? +?', '非贪婪模式'],
+        ['(…) (?<nombre>…)', '捕获组和命名捕获组'],
+        ['(?:…)', '非捕获组'],
+        ['(?=…) (?!…)', '正向先行断言 / 负向先行断言'],
+        ['a|b', '或'],
+        ['g i m s u y', '全局、忽略大小写、多行、点号通配、Unicode、粘连'],
+      ] as [string, string][],
+    },
+    diff: {
+      original: '原始文本',
+      modificado: '修改后',
+      cargarArchivo: '加载文件',
+      comparar: '对比',
+      resumen: (mas: number, menos: number) => `+${mas} · −${menos} 行`,
+      iguales: '两段文本完全相同。',
+      archivoGrande: '文件超过 5 MB，请选择较小的文件。',
+      textoGrande: '每段文本最大支持 5 MB。',
+      truncado: (mostradas: number, total: number) =>
+        `共 ${total} 行，仅显示前 ${mostradas} 行。`,
+    },
+    tiempo: {
+      timestamp: '时间戳（秒或毫秒）',
+      fecha: '日期（YYYY-MM-DD HH:mm:ss）',
+      zona: '时区',
+      ahora: '当前时间',
+      segundos: '秒',
+      milisegundos: '毫秒',
+      iso: 'ISO 8601 (UTC)',
+      enZona: '所选时区时间',
+      desplazamiento: '时差偏移',
+      relativo: '相对时间',
+      detectado: (unidad: 's' | 'ms'): string =>
+        unidad === 's' ? '按秒解析' : '按毫秒解析',
+      timestampInvalido: '请仅输入数字（可带正负号）。',
+      fechaInvalida: '请使用 YYYY-MM-DD HH:mm[:ss] 格式并输入有效日期。',
+      zonaInvalida: '未知时区。',
+    },
+    puertos: {
+      filtro: '按端口、PID 或名称筛选',
+      actualizar: '刷新',
+      columnas: {
+        puerto: '端口',
+        protocolo: '协议',
+        proceso: '进程',
+        pid: 'PID',
+        direcciones: '地址',
+        acciones: '操作',
+      },
+      propio: 'WolfCore Dev',
+      sistema: '系统',
+      finalizar: '结束',
+      noFinalizable: '系统进程和 WolfCore Dev 进程无法在此结束。',
+      confirmarTitulo: '结束进程',
+      confirmarTexto: (nombre: string, pid: number) =>
+        `将直接强制关闭“${nombre}”(PID ${pid}) 且不保存数据。如需确认，请输入该进程名称：`,
+      finalizado: (nombre: string) => `已结束 ${nombre}。`,
+      vacio: '没有正在使用的端口，或无法读取端口信息。',
+    },
+    bom: {
+      explicacion:
+        '先检测哪些文件包含 BOM；清理时会为每个文件保留 .bak-bom 备份。默认跳过 node_modules、vendor、.git 及二进制文件。',
+      elegirArchivos: '选择文件',
+      elegirCarpeta: '选择文件夹',
+      seleccion: (n: number) => `已选择 ${n} 个路径`,
+      analizar: '扫描',
+      limpiar: '移除 BOM',
+      confirmar: (n: number) =>
+        `将移除 ${n} 个文件的 BOM（会保留备份）。是否继续？`,
+      conBom: (n: number) => `${n} 个文件包含 BOM`,
+      sinBom: '没有文件包含 BOM。',
+      limpiados: (n: number) => `已清理 ${n} 个文件。`,
+      copia: '备份',
+    },
+    certificados: {
+      explicacion:
+        '使用 WolfCore Dev 本地 CA 签发证书。.crt 文件将保存到您指定的位置，私钥 (.key) 保存在同目录下；私钥绝不经过界面传输。',
+      dominios: '域名或 IP（用空格、逗号或换行分隔）',
+      ejemplo: 'miapp.test, *.miapp.test, 127.0.0.1',
+      emitir: '签发并保存',
+      guardado: '证书已保存',
+      certificado: '证书',
+      clave: '私钥',
+    },
+    cripto: {
+      texto: '文本',
+      hash: '哈希值',
+      calcular: '计算',
+      bcrypt: 'bcrypt',
+      bcryptCoste: 'bcrypt 成本因子',
+      bcryptTrunca: 'bcrypt 仅使用文本的前 72 个字节。',
+      bcryptVerificar: '待验证的 bcrypt 哈希值',
+      verificar: '验证',
+      coincide: '文本与哈希值匹配。',
+      noCoincide: '文本与哈希值不匹配。',
+      base64: 'Base64',
+      base64Url: 'URL 安全变体',
+      codificar: '编码',
+      decodificar: '解码',
+      url: 'URL 编码',
+      decodificarUrl: 'URL 解码',
+      codificarBase64: 'Base64 编码',
+      decodificarBase64: 'Base64 解码',
+      pestanaCodificar: 'Base64 / URL',
+      pestanaGenerar: 'UUID 与密码',
+      uuid: 'UUID v4',
+      generar: '生成',
+      generarDiez: '生成 10 个',
+      contrasena: '随机密码',
+      longitud: '长度',
+      mayusculas: 'A-Z',
+      minusculas: 'a-z',
+      numeros: '0-9',
+      simbolos: '符号',
+      jwt: '解码 JWT',
+      jwtToken: '令牌',
+      cabecera: '头部',
+      carga: '载荷',
+      firmaNoVerificada:
+        '未验证签名：内容按原样显示，可能已被篡改。',
+      vencido: '令牌已过期 (exp)。',
+      vigente: '令牌尚未过期 (exp)。',
+      salida: '结果',
+    },
+    markdown: {
+      entrada: 'Markdown',
+      vista: '预览',
+      ejemplo:
+        '# 标题\n\n包含**粗体**、_斜体_和[链接](https://example.com)的文本。\n\n- 一\n- 二\n\n```\n代码\n```\n',
+      seguro:
+        '原始 HTML 以纯文本显示，危险链接会被过滤，且不会加载外部图片。',
+      imagenOmitida: (alt: string) => `[图片${alt ? `：${alt}` : ''}]`,
+    },
+    entorno: {
+      aplicacion: 'WolfCore Dev 版本',
+      navegador: '界面引擎',
+      plataforma: '平台',
+      idioma: '语言',
+      zona: '时区',
+      nucleos: '逻辑核心数',
+      actualizar: '刷新',
+      path: 'PATH',
+      pathVacio: 'PATH 为空。',
+      herramientas: 'WolfCore Dev 工具',
+      noInstalada: '未安装',
+      sinRespuesta: '响应超时',
+      variables: '环境变量',
+      filtro: '筛选变量',
+      enmascarada: '值已隐藏：变量名疑似包含敏感凭据。',
+    },
+    busqueda: {
+      explicacion:
+        '搜索文件名和文件内容，不跟随符号链接且不读取二进制文件。默认跳过 node_modules、vendor 和 .git。',
+      origen: '搜索范围',
+      proyecto: '项目',
+      elegirCarpeta: '选择文件夹',
+      elegirArchivo: '选择文件',
+      sinOrigen: '请选择项目、文件夹或文件。',
+      consulta: '搜索内容',
+      modoNombre: '文件名',
+      modoContenido: '文件内容',
+      modoAmbos: '两者',
+      regex: '正则表达式',
+      mayusculas: '区分大小写',
+      incluir: '仅包含文件（用逗号分隔，例如 *.php）',
+      excluir: '排除（用逗号分隔）',
+      buscar: '搜索',
+      cancelar: '取消',
+      buscando: '搜索中…',
+      sinResultados: '无匹配项。',
+      truncado: '实际结果多于当前显示数量，请缩小搜索范围。',
+      cancelada: '搜索已取消。',
+      abrir: '在编辑器中打开',
+      coincidencias: (n: number) => `${n} 个匹配项`,
+      resumen: (archivos: number, examinados: number) =>
+        `分布于 ${archivos} 个文件（共检查 ${examinados} 个）`,
+    },
+    infoArchivo: {
+      elegir: '选择文件',
+      ayuda: '在本地设备上读取以计算哈希值（最大 200 MB）。',
+      nombre: '名称',
+      tamano: '大小',
+      tipo: '类型',
+      modificado: '修改时间',
+      sinTipo: '未知',
+      grande: '文件超过 200 MB：仅显示基本信息，不计算哈希值。',
+      calculando: '正在计算哈希值…',
+    },
+    websocket: {
+      url: 'URL（ws:// 或 wss://）',
+      conectar: '连接',
+      desconectar: '断开',
+      mensaje: '消息',
+      enviar: '发送',
+      urlInvalida: '请输入以 ws:// 或 wss:// 开头的 URL。',
+      conectando: '正在连接…',
+      conectado: '已连接',
+      desconectado: '已断开',
+      error: '连接错误',
+      cerrado: (codigo: number, motivo: string) =>
+        `已关闭 (${codigo}${motivo ? `：${motivo}` : ''})`,
+      enviado: '已发送',
+      recibido: '已接收',
+      binario: (n: number) => `[二进制数据，${n} 字节]`,
+      vacio: '暂无消息。',
+      tope: '仅保留最近 500 条消息；单条消息最多显示 10 KB。',
+    },
+    qrWifi: {
+      ssid: '网络名称 (SSID)',
+      clave: '密码',
+      seguridad: '加密方式',
+      segWpa: 'WPA / WPA2 / WPA3',
+      segWep: 'WEP',
+      segNinguna: '无密码',
+      oculta: '隐藏网络',
+      mostrar: '显示',
+      ocultar: '隐藏',
+      aviso:
+        '此二维码以明文包含 Wi-Fi 密码：任何看到或拍下该二维码的人均可连接到您的网络。二维码仅在本地生成，不会保存，关闭此面板后即被清除。',
+      avisoPng:
+        '下载的 PNG 图片同样在二维码中包含明文密码：请妥善保管，仅限您本人查看。',
+      escribala:
+        '密码需由您手动输入：WolfCore Dev 绝不会读取系统中保存的 Wi-Fi 密码。',
+      errorSsid: '请输入网络名称（最多 32 个字符）。',
+      errorClave: '请输入密码。',
+      errorClaveWpa: 'WPA 密码长度须为 8 到 63 个字符。',
+      vacio: '请填写信息以生成二维码。',
+      alt: '用于连接 Wi-Fi 网络的二维码',
+      descargar: '下载 PNG',
+      descargado: '二维码已保存',
+      largo: '数据过长，无法生成二维码。',
+    },
+    imagenes: {
+      elegir: '选择图片',
+      ayuda:
+        '在本地设备上处理（最大 30 MB，单边不超过 12000 px）。原图不会被修改，处理结果将保存为新文件。',
+      original: '原图',
+      accion: '操作方式',
+      aIco: '转换为 ICO',
+      aPng: '转换为 PNG',
+      comprimir: '压缩',
+      tamanos: 'ICO 尺寸',
+      formato: '格式',
+      calidad: '质量',
+      ladoMax: '最大边长（px，留空表示保持原尺寸）',
+      procesar: '处理',
+      procesando: '正在处理…',
+      guardar: '另存为…',
+      antes: '处理前',
+      despues: '处理后',
+      sinMejora: '处理后的文件并未变小，请尝试其他质量或格式。',
+      errorAbrir: '无法在此设备上打开该图片。',
+      errorProcesar: '无法处理该图片。',
+      sufijoConvertida: '-已转换',
+      sufijoComprimida: '-已压缩',
+      dimensiones: (ancho: number, alto: number) => `${ancho}×${alto} px`,
+      ahorro: (porcentaje: number) =>
+        porcentaje > 0
+          ? `减少 ${porcentaje}%`
+          : porcentaje < 0
+            ? `增加 ${-porcentaje}%`
+            : '无变化',
+      guardado: (archivo: string) => `已保存至 ${archivo}`,
+    },
+    comprimir: {
+      zip: '压缩为 ZIP',
+      zipAyuda:
+        '选择文件或文件夹。不跟随符号链接，且生成的 ZIP 为新文件，绝不覆盖已有文件。',
+      agregarArchivos: '添加文件',
+      agregarCarpeta: '添加文件夹',
+      quitar: '移除',
+      vacio: '尚未选择任何内容。',
+      crearZip: '创建 ZIP…',
+      creando: '正在创建…',
+      pdf: '优化 PDF',
+      pdfAyuda:
+        '在独立线程中使用对象流重新保存。仅当文件体积减小时才创建新文件；不支持受密码保护的 PDF。原文件不会被修改。注意：重新保存会导致数字签名和 PDF/A 合规性丢失。',
+      elegirPdf: '选择 PDF',
+      optimizar: '优化…',
+      optimizando: '正在优化…',
+      antes: '优化前',
+      despues: '优化后',
+      sinMejora: '优化后 PDF 体积并未减小，未创建新文件。',
+      sufijoOptimizado: '-已优化',
+      omitidos: (n: number) =>
+        `已跳过 ${n} 个符号链接、无法读取的文件夹或特殊文件。`,
+      archivos: (n: number) => `${n} 个文件`,
+      ahorro: (porcentaje: number) =>
+        porcentaje > 0
+          ? `减少 ${porcentaje}%`
+          : porcentaje < 0
+            ? `增加 ${-porcentaje}%`
+            : '无变化',
+      guardado: (archivo: string) => `已保存至 ${archivo}`,
+    },
+    conversor: {
+      ayuda:
+        '转换在本地设备上完成，文档不会上传到任何地方。原文件不会被修改，结果将保存为新文件且绝不覆盖已有文件。',
+      elegir: '选择文档',
+      tipoNoSoportado:
+        '不支持转换该类型的文件。支持 docx、xlsx、csv、md、html 和 pdf（安装 LibreOffice 后还支持 odt、pptx 和 doc）。',
+      convertirA: '转换为',
+      convertir: '转换…',
+      convirtiendo: '正在转换…',
+      avisoLibreOffice:
+        '此转换使用本机已安装的 LibreOffice。WolfCore Dev 不会安装或下载它，仅以无窗口模式和临时配置文件调用。',
+      sinLibreOffice:
+        '如果安装 LibreOffice，您还可以转换 odt、pptx 和 doc（WolfCore Dev 不会自动安装）。',
+      limites:
+        '出于安全考虑，存在以下限制：最大 50 MB（md 和 html 为 10 MB）、120 秒、200 000 行、1000 列和 500 万个单元格；疑似 ZIP 炸弹或包含 XML 实体的文件将被拒绝。',
+      guardado: (archivo: string) => `已保存至 ${archivo}`,
+    },
+    contrasenas: {
+      pestanaFortaleza: '强度检测',
+      pestanaAuditar: '审计数据库',
+      fortaleza: {
+        etiqueta: '待检测密码',
+        marcador: '输入密码',
+        privacidad: '仅在本地检测，不会离开您的设备，也不会保存。',
+        mostrar: '显示',
+        ocultar: '隐藏',
+        niveles: ['极弱', '弱', '一般', '强', '极强'],
+        sinAvisos: '无改进建议。',
+        estimacion: '结果仅供参考，不构成安全保证。',
+        avisos: {
+          straightRow: '键盘上连续排列的按键很容易被猜到。',
+          keyPattern: '简短的键盘按键规律很容易被猜到。',
+          simpleRepeat: '重复单个字符或字符组几乎无法增强安全性。',
+          extendedRepeat: '重复的字符组很容易被猜到。',
+          sequences: '像 abc 或 6543 这样的顺序序列很容易被猜到。',
+          recentYears: '请避免使用近期年份及与您相关的日期。',
+          dates: '请避免使用日期，它们很容易被猜到。',
+          topTen: '此密码位列最常用的十大密码之中。',
+          topHundred: '此密码位列最常用的前一百个密码之中。',
+          common: '这是一个非常常见的密码。',
+          similarToCommon: '此密码与非常常见的密码过于相似。',
+          wordByItself: '单个常见词很容易被猜到。',
+          namesByThemselves: '单独的姓名或姓氏很容易被猜到。',
+          commonNames: '常见姓名和姓氏很容易被猜到。',
+          userInputs: '请勿使用他人可能知晓的个人信息。',
+          l33t: '将字母替换为常见符号（如用 @ 代替 a）帮助有限。',
+          reverseWords: '将单词倒序拼写帮助有限。',
+          allUppercase: '全部使用大写字母帮助有限。',
+          capitalization: '仅将首字母大写帮助有限。',
+          associatedYears: '请避免使用与您相关的年份。',
+          repeated: '请避免重复使用单词和字符。',
+          longerKeyboardPattern: '请使用更长的键盘路径并变换方向。',
+          anotherWord: '再增加一两个单词，使用生僻词效果更好。',
+          useWords: '将多个随机单词组合起来是不错的密码。',
+          noNeed: '即使不使用符号或数字也能保证安全，关键在于长度。',
+        },
+      },
+      auditar: {
+        limite:
+          '此功能仅检测极常见的弱密码：将每个哈希值与约 200 个常见密码的短列表进行比对，并非攻击或暴力破解。未被标记的账号并不代表其密码足够安全。',
+        privacidad:
+          '绝不会显示匹配到的具体密码，且通过临时只读用户进行读取（在 PostgreSQL 中以只读会话运行）。请仅用于您自己的数据库。',
+        motor: '引擎',
+        base: '数据库',
+        tabla: '数据表',
+        columnaUsuario: '用户列',
+        columnaHash: '哈希列',
+        tablaMarcador: 'users',
+        usuarioMarcador: 'email',
+        hashMarcador: 'password',
+        apagado: '请先在“数据库”中启动服务器以检查其数据库。',
+        sinBases: '此服务器中没有数据库。',
+        sinMotores: '没有内置的 MySQL、MariaDB 或 PostgreSQL 服务器。',
+        revisar: '开始检查',
+        revisando: '正在检查…',
+        resumen: (r: number, d: number) =>
+          `已检查 ${r} 个账号 · 发现 ${d} 个弱密码`,
+        sinDebiles: '已检查的账号中未发现极常见的弱密码。',
+        noRevisables: (n: number) =>
+          `有 ${n} 个账号无法检查：`,
+        truncado:
+          '因达到 10 000 行或 60 秒上限，检查已中止：仍有部分账号未检查。',
+        usuario: '用户',
+        motivo: '原因',
+        accion: '操作',
+        motivos: {
+          comun: '极常见密码',
+          formato_debil: '弱哈希格式（无盐 md5 或 sha1）',
+        },
+        restablecer: '重置',
+        mas: (n: number) => `另有 ${n} 项（仅显示前 200 项）`,
+        esquema: '模式 (PostgreSQL)',
+        esquemaMarcador: 'public',
+        cancelar: '取消',
+        cancelando: '正在取消…',
+        cancelada: '审计已取消。',
+        progreso: (a: number, b: number) => `已检查 ${a} / ${b}`,
+        tiposNoRevisables: {
+          vacio: '空哈希值',
+          md5crypt: 'md5crypt ($1$)',
+          sha256crypt: 'sha256crypt ($5$)',
+          sha512crypt: 'sha512crypt ($6$)',
+          scrypt: 'scrypt',
+          argon2: 'Argon2（本机不可用或参数超出上限）',
+          bcrypt_otro: '成本因子超出范围或为 $2x$ 变体的 bcrypt',
+          pbkdf2_otro: '参数超出上限的 PBKDF2',
+          ldap: 'LDAP 格式 ({SHA}…)',
+          otro: '未知格式',
+        },
+        rlsActiva:
+          '该表启用了行级安全策略 (RLS)：审计只能看到策略允许受限角色访问的行，因此可能会遗漏部分账号。',
+        falsoPositivo:
+          '长度为 32 或 40 的十六进制值会被识别为 md5 或 sha1，但也可能是其他数据（例如令牌）。如果该列存储的不是密码，则此结果无效。',
+      },
+      restablecer: {
+        titulo: (u: string) => `重置 ${u} 的密码`,
+        ayuda:
+          '密码无法找回，只能设置新密码。操作前会先创建数据库快照并保存该行数据的备份。',
+        cargando: '正在准备预览…',
+        sentencia: '即将执行的语句（参数值单独传递且不显示）',
+        formatoActual: (f: string) => `当前格式：${f}`,
+        cambiaFormato:
+          '该账号将转换为 bcrypt 格式：应用程序必须能够验证 bcrypt（例如使用 password_verify），否则无人能通过该账号登录。',
+        nueva: '新密码',
+        generar: '生成一个',
+        mostrar: '显示',
+        ocultar: '隐藏',
+        anotar: '请立即记下此密码：此后不会再次显示，也不会保存。',
+        escribaUsuario: (u: string) => `如需确认，请输入用户名：${u}`,
+        confirmar: '重置密码',
+        cancelar: '取消',
+        cerrar: '关闭',
+        hecho: '密码已重置。',
+        copiaFila: '行数据备份（标识与旧哈希值，保留 30 天）：',
+        instantanea: '操作前的数据库快照：',
+        instantaneaAyuda: '可通过“数据库 › 快照”恢复到此快照。',
+        aBcrypt: '转换为 bcrypt：仅当应用使用 password_verify 或等效方式时勾选',
+        avisoLegado:
+          '此哈希为无盐 md5 或 sha1，将保持原格式。如果应用将盐值单独保存在其他列或常量中，则无法复现该哈希，新密码将无法登录。',
+        datosReales: {
+          titulo: '包含真实数据的数据库',
+          texto:
+            '此数据库属于标记为包含真实客户数据的站点：重置密码将会修改真实账号。',
+          casilla: '我已了解这是真实数据，并确认要重置此密码',
+        },
+        rlsActiva:
+          '该表启用了行级安全策略 (RLS)：如果策略对受限角色隐藏了此账号，将无法重置。',
+        copiaSinRestringir:
+          '无法将该备份的访问权限限制为仅限当前系统用户：请检查文件夹权限。',
+      },
+    },
+  },
+  doctor: {
+    descripcion:
+      '检查端口、证书、hosts 文件、PATH、Visual C++、杀毒软件和服务，并提供修复建议。',
+    revisarAhora: '立即检查',
+    revisando: '正在检查…',
+    sinRevision: '尚未执行过检查。请点击“立即检查”。',
+    sinHallazgos: '一切正常：未发现问题。',
+    gravedades: { error: '错误', aviso: '通知', info: '信息' },
+    evidencia: '检测结果',
+    requiereAdmin: '需要管理员权限',
+    comandoManual: '请在管理员控制台中运行以下命令（不会自动执行）：',
+    copiar: '复制命令',
+    copiado: '命令已复制。',
+    reparar: '修复',
+    alternativa: '更改 WolfCore Dev 端口',
+    soloInforma: 'WolfCore Dev 不会自动修改此项：请按照说明手动操作。',
+    dialogo: {
+      titulo: '确认修复',
+      queHara: '将执行以下操作：',
+      admin: 'Windows 将请求管理员权限。',
+      puerto: (p: string | number) => `新端口将为 ${p}。`,
+      aplicar: '应用',
+      cancelar: '取消',
+    },
+    estados: {
+      aplicando: '正在应用…',
+      hecha: '修复已应用。',
+      fallida: '修复失败。',
+    },
+    revisiones: {
+      puertos: '端口',
+      'rangos-reservados': '保留端口范围',
+      ca: '证书颁发机构',
+      certificados: '证书',
+      confianza: 'CA 信任状态',
+      hosts: 'hosts 文件',
+      path: '用户 PATH',
+      vcredist: 'Visual C++',
+      'enlazador-msvc': 'C++ 链接器',
+      antivirus: '杀毒软件',
+      firewall: '防火墙',
+      servicios: '服务',
+    },
+    reparaciones: {
+      cambiar_puerto: '将 WolfCore Dev 端口更改为空闲端口。不会影响其他程序。',
+      puerto_manual:
+        '将 WolfCore Dev 端口移出保留范围。是否释放该范围由您决定，可使用下方显示的命令操作。',
+      detener_iis:
+        '停止 IIS 服务 (W3SVC) 以释放端口。不会禁用该服务，重启 Windows 后会重新启动。',
+      regenerar_ca:
+        '创建新的证书颁发机构，在 Windows 中将其设为受信任（会弹出确认提示），重新签发证书并移除旧 CA。操作前会保留备份。',
+      regenerar_certificados: '重新签发站点证书并重新加载 Nginx。',
+      hosts_reescribir:
+        '以 UTF-8 编码重写 hosts 文件中的 WolfCore Dev 区块，操作前会保留备份。其他行不会被修改。',
+      hosts_solo_lectura: '移除 hosts 文件的只读属性。',
+      path_duplicados:
+        '从用户 PATH 中移除重复的 WolfCore Dev 条目，并备份原值。其他条目不会被修改。',
+      path_ajeno:
+        'PATH 中有其他工具排在前面。WolfCore Dev 不会将其移除，如有需要请手动调整顺序。',
+      instalar_vcredist:
+        '使用 winget 安装 Visual C++ 2015+ x64。Microsoft 安装程序会单独请求权限。',
+      instalar_build_tools:
+        '请使用下方显示的命令安装 Visual Studio Build Tools（包含 C++ 工具）：体积达数 GB 且需要管理员权限，由您自行决定是否安装。',
+      antivirus:
+        '是否将数据文件夹添加到杀毒软件排除项由您决定，可使用下方显示的命令操作。',
+      firewall:
+        '是否移除这些规则由您决定，请在管理员控制台中使用下方显示的命令操作。WolfCore Dev 绝不会修改防火墙。',
+      reintentar_servicio: '重新启动服务。',
+      firefox_confianza:
+        '向每个 Firefox 配置文件的 user.js 添加信任 Windows 证书颁发机构的偏好项（含预先备份）。不修改 prefs.js，且跳过已打开的配置文件。',
+    },
+    confianza: {
+      titulo: 'CA 信任',
+      texto:
+        'Windows 已信任 WolfCore Dev 的证书颁发机构；Node、Python 和 Firefox 各自使用独立的证书库。',
+      sinCa: '尚无证书颁发机构。请先在 HTTPS 区域创建后再使用此功能。',
+      node: {
+        titulo: 'Node',
+        proyectos:
+          '项目进程与内置终端会自动接收包含本 CA 的 NODE_EXTRA_CA_CERTS。',
+        ajena: '您已设置自己的 NODE_EXTRA_CA_CERTS：WolfCore Dev 不会替换它。',
+        global: '同时设为用户环境变量（供其他终端和程序使用）',
+        confirmarActivar:
+          '将把 NODE_EXTRA_CA_CERTS 设为您的用户环境变量。对之后打开的程序生效；关闭此选项后会自动移除。',
+        confirmarDesactivar: '将移除由 WolfCore Dev 设置的 NODE_EXTRA_CA_CERTS 变量。',
+      },
+      python: {
+        titulo: 'Python',
+        texto:
+          '使用 .venv 的项目会收到包含 certifi（或 Windows）根证书以及本 CA 的 REQUESTS_CA_BUNDLE 和 SSL_CERT_FILE，绝不单独覆盖根证书。',
+      },
+      firefox: {
+        titulo: 'Firefox',
+        sinPerfiles: '未找到 Firefox 配置文件。',
+        activo: '已信任',
+        inactivo: '未信任',
+        abierto: '已打开',
+        fuera: '位于 Firefox 文件夹之外',
+        avisoFuera: (lista: string) =>
+          `以下配置文件位于 Firefox 文件夹之外，除非您勾选否则不会修改：${lista}。`,
+        incluirFuera: '同时修改位于 Firefox 文件夹之外的配置文件',
+        resultadoFuera: (n: number) =>
+          `有 ${plural(n, '个位于 Firefox 文件夹之外的配置文件未被修改')}。`,
+        activar: '在 Firefox 中启用',
+        quitar: '从 Firefox 移除',
+        confirmarActivar:
+          '将在每个配置文件的 user.js 中添加位于 WolfCore Dev 标记之间的 security.enterprise_roots.enabled，并在 etc/respaldos 保存备份。不修改 prefs.js。请先关闭 Firefox，运行中的配置文件将被跳过。',
+        confirmarQuitar:
+          '将从每个配置文件的 user.js 中移除 WolfCore Dev 区块（含预先备份）。其他偏好设置保持不变。',
+        resultadoOk: (n: number) => `已在 ${plural(n, '个配置文件')} 中完成。`,
+        resultadoAbiertos: (n: number) =>
+          `因 Firefox 正在运行，已跳过 ${plural(n, '个配置文件')}。请关闭后重试。`,
+        resultadoError: (n: number) =>
+          `有 ${plural(n, '个配置文件')} 无法修改。`,
+      },
+      confirmar: '确认',
+      cancelar: '取消',
+    },
+  },
+  php: {
+    descripcion:
+      '管理每个已安装 PHP 版本的 php.ini 和扩展。保存前会显示差异、使用 php -v 测试并保存带日期的备份；若 PHP 无法重启，将自动恢复先前配置。',
+    rama: 'PHP 版本',
+    sinPhp: '尚未安装 PHP。请在“服务”中安装。',
+    irServicios: '前往服务',
+    pestanas: { ini: 'php.ini', extensiones: '扩展' },
+    rapidosTitulo: '常用快捷项',
+    rapidosAyuda: '将应用到下方文本中；确认差异前不会保存。',
+    aplicarRapidos: '应用到文本',
+    sinValor: '未定义',
+    rapidos: {
+      memory_limit: '单脚本内存上限 (memory_limit)',
+      upload_max_filesize: '单文件上传上限 (upload_max_filesize)',
+      post_max_size: 'POST 最大体积 (post_max_size)',
+      max_execution_time: '最大执行秒数 (max_execution_time)',
+      display_errors: '显示错误 (display_errors)',
+      error_reporting: '错误报告级别 (error_reporting)',
+      'date.timezone': '时区 (date.timezone)',
+      'opcache.enable': 'OPcache (opcache.enable)',
+    },
+    editorTitulo: 'php.ini',
+    editorAyuda: '以 ; 开头的行为注释。',
+    sinCambios: '与已保存内容相比没有更改。',
+    descartar: '放弃更改',
+    revisar: '检查并保存',
+    diffTitulo: (rama: string) => `PHP ${rama} 的 php.ini 更改`,
+    diffAyuda:
+      '将保存带日期的备份，使用 php -v 验证，若 PHP 正在运行则会重启。',
+    guardar: '保存并应用',
+    cancelar: '取消',
+    guardado: (respaldo: string) => `php.ini 已保存。先前备份：${respaldo}`,
+    respaldosTitulo: '历史备份',
+    sinRespaldos: '暂无备份。',
+    restaurar: '恢复',
+    confirmarRestaurar: (nombre: string) =>
+      `恢复 ${nombre}？当前的 php.ini 会先另存一份备份。`,
+    restaurado: '备份已恢复。',
+    recargar: '重新读取',
+    extensiones: {
+      ayuda:
+        '仅启用此编译版本 ext/ 目录中自带的扩展。第三方扩展可从目录安装（匹配此编译变体并校验 SHA-256）。',
+      activa: '已启用',
+      inactiva: '未启用',
+      falta: '缺少文件',
+      catalogo: '目录',
+      instalar: '安装',
+      instalada: (nombre: string) => `${nombre} 已安装并启用。`,
+      cambiada: (nombre: string, activa: boolean) =>
+        activa ? `${nombre} 已启用。` : `${nombre} 已停用。`,
+      buscar: '搜索扩展',
+      vacio: '没有匹配的扩展。',
+    },
+  },
+  agentes: {
+    descripcion:
+      'Claude Code、Codex CLI、Hermes Agent、Opencode、Gemini CLI、Qwen Code、GitHub Copilot CLI 与 Antigravity CLI：检测或安装并在项目中打开。支持 MCP 的智能体可连接至 WolfCore Dev MCP。所有智能体均不会自动启动。',
+    recargar: '重新检测',
+    notaMcp:
+      '已注册的 MCP 仅在通过 WolfCore Dev（“在项目中打开”）启动智能体时进行认证：令牌通过该终端的 WOLFCORE_MCP_TOKEN 环境变量传递，绝不写入智能体配置文件。若在外部打开，智能体虽能看到“wolfcore”条目但无法连接。',
+    sitioElegido: (nombre: string) => `选择一个智能体在 ${nombre} 中打开。`,
+    instalado: '已安装',
+    noInstalado: '未安装',
+    version: (v: string) => `v${v}`,
+    versionDesconocida: '未知版本',
+    verVersion: '查看版本',
+    verVersionAyuda: '使用 --version 运行程序（打开此页面时不会自动执行）。',
+    origen: {
+      propio: '由 WolfCore Dev 安装',
+      'npm-usuario': '用户全局 npm',
+      ejecutable: '系统程序',
+    },
+    mcpRegistrado: '已注册 MCP',
+    mcpSinRegistrar: '未注册 MCP',
+    tokenEscrito:
+      '该智能体配置文件中曾包含明文 MCP 令牌：现已清除，且先前备份已脱敏（***）。建议重新生成 MCP 服务器令牌。',
+    mcpNoSoportado:
+      '其文档不支持从环境变量读取令牌：WolfCore Dev 不会为其注册 MCP（令牌绝不写入文件）。',
+    instalar: '安装',
+    instalando: '正在安装…',
+    guia: '安装指南',
+    soloGuia:
+      'WolfCore Dev 不负责安装（其安装程序无固定校验和）：请参考官方指南。',
+    registrar: '注册 MCP',
+    quitar: '移除 MCP',
+    abrir: '在项目中打开',
+    confirmarInstalar: {
+      titulo: (nombre: string) => `安装 ${nombre}？`,
+      texto: (paquete: string) =>
+        `将使用 WolfCore Dev 自带的 Node，从 registry.npmjs.org 安装最新版 ${paquete} 到数据文件夹中。`,
+      aislado: '不使用您的 npm 配置，也不影响全局 npm。可能需要几分钟。',
+      aceptar: '安装',
+      hecho: (nombre: string) => `${nombre} 已安装。`,
+    },
+    confirmarRegistrar: {
+      titulo: (nombre: string) => `在 ${nombre} 中注册 MCP？`,
+      texto:
+        '仅在此文件中添加（或更新）“wolfcore”条目；其余内容保持不变：',
+      aceptar: '注册',
+      hecho: (nombre: string) => `已在 ${nombre} 中注册 MCP。`,
+    },
+    confirmarQuitar: {
+      titulo: (nombre: string) => `从 ${nombre} 移除 MCP？`,
+      texto: '仅从此文件中移除“wolfcore”条目；其余内容保持不变：',
+      aceptar: '移除',
+      hecho: (nombre: string) => `已从 ${nombre} 移除 MCP。`,
+    },
+    copiaPrevia:
+      '修改前会在文件旁保存带日期的备份（<archivo>.wolfcore-AAAAMMDD-HHmmss.bak），最多保留最近 5 份。若智能体正在运行，请先关闭。',
+    copiaHecha: (ruta: string) => `先前备份：${ruta}`,
+    dialogoAbrir: {
+      titulo: (nombre: string) => `打开 ${nombre}`,
+      proyecto: '项目',
+      sinProyectos: '暂无项目。',
+      proveedor: 'AI 提供商',
+      proveedorPropio: '使用智能体自身配置',
+      proveedorAyuda:
+        '指定提供商时，密钥仅存在于该终端环境中：不会写入文件或命令行。',
+      aceptar: '打开终端',
+      hecho: (nombre: string) => `已在新终端中打开 ${nombre}。`,
+    },
+    costo: {
+      titulo: '打开智能体前须知',
+      texto:
+        'AI 智能体使用您在提供商处的账户：每次请求都会消耗令牌并可能产生费用。同时它可读取和修改项目文件及执行命令。',
+      nunca:
+        'WolfCore Dev 绝不会自行启动智能体，始终由您主动触发。此提示仅显示一次。',
+      aceptar: '我已了解，打开',
+    },
+  },
+  depuracion: {
+    descripcion:
+      '在此查看 PHP 站点的 dump()、dd() 和 wd() 输出，以及 Python 进程的 wolfdump，附带文件与行号。页面正常响应不受影响。',
+    receptor: '转储捕获',
+    escuchando: (direccion: string, puerto: number) => `正在监听 ${direccion}:${puerto}`,
+    apagado: '已关闭',
+    memoria:
+      '转储仅保存在内存中（最多保留最近 500 条），关闭应用后清除。可能包含敏感数据：复制时会自动隐藏已知密钥。',
+    sitios: '站点',
+    sinSitios: '没有 PHP 或 FastAPI 站点。',
+    sinPhp: '请先为该站点选择 PHP 版本。',
+    php: 'PHP',
+    python: 'Python',
+    reiniciarProcesos: '请重启站点进程以加载 wolfdump。',
+    confirmarTitulo: (sitio: string) => `在 ${sitio} 中启用捕获`,
+    confirmarPhp:
+      '此站点的 PHP 会在每次请求前加载一个 WolfCore Dev 文件（auto_prepend_file，仅限本站点），当项目未定义时提供 dump()、dd() 和 wd()。若项目代码声明了同名函数且未检查 function_exists，PHP 会报错，届时请关闭捕获。站点将切换为专用 PHP。',
+    usoPhp:
+      'Laravel 与 Symfony：照常使用 dump($x) 和 dd($x)。CodeIgniter 3 及其他：wd($x) 可直接发送而不输出到页面。',
+    confirmarPython:
+      '此站点的进程将在 PYTHONPATH 中包含 wolfdump 模块（不向项目写入任何文件）。自下次启动进程起生效。',
+    usoPython: 'from wolfdump import dump  →  dump(值)',
+    activar: '启用捕获',
+    cancelar: '取消',
+    filtroSitio: '所有站点',
+    filtroOrigen: '所有来源',
+    buscar: '搜索文本、文件或 URL',
+    limpiar: '清空',
+    confirmarLimpiar: '清除内存中的所有转储？',
+    vacio: '尚未收到任何转储。',
+    vacioApagado: '请先启用捕获并启动站点。',
+    elegir: '请从列表中选择一条转储。',
+    copiar: '复制',
+    copiado: '已复制（已隐藏密钥）',
+    sinSitio: '无站点',
+    total: (n: number) => `内存中 ${n} 条`,
+    archivo: '文件',
+    url: 'URL',
+    pestanaVolcados: '转储',
+    pestanaErrores: '错误',
+    erroresDescripcion:
+      '汇总来自 PHP、Nginx、laravel.log、CodeIgniter 3 和 Python 日志的错误：重复错误合并显示并附带次数。',
+    erroresVacio: '日志中暂无错误。写入后会立即显示于此。',
+    erroresElegir: '请从列表中选择一个错误。',
+    actualizar: '刷新',
+    abrirEditor: '在编辑器中打开',
+    abrirEditorSinSitio: '仅支持打开位于站点文件夹内的文件。',
+    veces: (n: number) => `${n} 次`,
+    primera: '首次出现',
+    ultima: '最近出现',
+    fuente: '日志',
+    traza: '堆栈跟踪（最近一次）',
+    sinTraza: '无堆栈跟踪。',
+  },
+  contenedores: {
+    descripcion:
+      '查看并控制本机上的 Docker 或 Podman 容器。WolfCore Dev 不会创建、删除或拉取容器、镜像或卷。',
+    motor: '引擎',
+    refrescar: '刷新',
+    detectando: '正在检测 Docker 和 Podman…',
+    sinMotorTitulo: '未检测到 Docker 或 Podman',
+    sinMotor:
+      '本机未找到 Docker 或 Podman。WolfCore Dev 不会安装它们：如需使用，请从官网安装后点击“刷新”。',
+    instalarDocker: '安装 Docker',
+    instalarPodman: '安装 Podman',
+    apagadoTitulo: (m: string) => `${m} 无响应`,
+    apagado: (m: string) =>
+      `已安装 ${m}，但其引擎无响应。请打开 Docker Desktop（或运行“podman machine start”启动 Podman）后点击“刷新”。`,
+    remoto:
+      '已忽略远程连接（DOCKER_HOST、CONTAINER_HOST、上下文或默认远程连接）：WolfCore Dev 仅使用本机引擎。',
+    desdePath: '在 PATH 中找到，而非默认安装目录。',
+    version: (v: string) => `版本 ${v}`,
+    vacio: '暂无容器。',
+    columnas: {
+      nombre: '名称',
+      imagen: '镜像',
+      estado: '状态',
+      puertos: '端口',
+      compose: 'Compose',
+      acciones: '操作',
+    },
+    estados: {
+      corriendo: '运行中',
+      detenido: '已停止',
+      pausado: '已暂停',
+      otro: '其他',
+    },
+    codigoSalida: (n: number) => `代码 ${n}`,
+    iniciar: '启动',
+    detener: '停止',
+    reiniciar: '重启',
+    registros: '日志',
+    confirmarDetenerTitulo: '停止容器？',
+    confirmarDetener: (n: string) =>
+      `将停止“${n}”。容器内进程将被中止（引擎会等待数秒）。不会删除任何数据。`,
+    confirmarReiniciarTitulo: '重启容器？',
+    confirmarReiniciar: (n: string) =>
+      `将重启“${n}”。容器内进程会中止并重新启动。不会删除任何数据。`,
+    confirmar: '确认',
+    cancelar: '取消',
+    hecho: {
+      iniciar: (n: string) => `已启动“${n}”。`,
+      detener: (n: string) => `已停止“${n}”。`,
+      reiniciar: (n: string) => `已重启“${n}”。`,
+    },
+    registroTitulo: (n: string) => `“${n}”的日志`,
+    registroEsperando: '等待日志输出…',
+    registroFin: '日志流已结束（容器已停止或引擎断开）。',
+    cerrar: '关闭',
+  },
+  versiones: {
+    pestana: '版本',
+    pestanaServicios: '服务',
+    elegirServicio: '服务',
+    servicios: {
+      php: 'PHP',
+      nginx: 'Nginx',
+      mysql: 'MySQL',
+      mariadb: 'MariaDB',
+      postgresql: 'PostgreSQL',
+      redis: 'Redis',
+      mongodb: 'MongoDB',
+      node: 'Node.js',
+      python: 'Python',
+      composer: 'Composer',
+      mailpit: 'Mailpit',
+      smtp4dev: 'smtp4dev',
+      inbucket: 'Inbucket',
+      papercut: 'Papercut SMTP',
+      ollama: 'Ollama',
+      cloudflared: 'cloudflared',
+      java: 'Java',
+      dotnet: '.NET',
+      go: 'Go',
+      rust: 'Rust',
+      bun: 'Bun',
+      deno: 'Deno',
+      zig: 'Zig',
+      kotlin: 'Kotlin',
+      dart: 'Dart',
+    },
+    ayuda: {
+      instancias:
+        '每个主版本（8.4、17…）都有自己的实例、数据目录和端口：可同时运行多个。星标表示新建项目默认使用的实例。',
+      pool: '每个启动的 PHP 版本都有独立进程；星标表示新建项目的默认版本。',
+      unica:
+        '可安装多个版本，但同一时间仅运行一个：启动另一版本将切换当前活动版本。',
+      ninguno:
+        '无需启动：项目使用其指定的版本或默认版本（星标）。',
+    },
+    filtroRama: '版本',
+    todasRamas: '所有版本',
+    rama: (r: string) => r,
+    cabecera: (servicio: string, r: string) => `${servicio} ${r}`,
+    mostrarTodas: '显示全部',
+    origen: {
+      vivo: '在线',
+      cache: (h: number) => (h < 1 ? '1 小时内的缓存' : `${h} 小时前的缓存`),
+      fija: '离线列表',
+    },
+    actualizarLista: '刷新列表',
+    errorCarga: '无法读取版本列表',
+    vacio: '没有可显示的版本。',
+    soporte: { lts: 'LTS', actual: '当前', fin: '停止维护', preview: '预览版' },
+    finSoporte: (f: string) => `支持至 ${f}`,
+    finSoportePasado: (f: string) => `自 ${f} 起停止维护`,
+    marcas: {
+      instalada: '已安装',
+      encendida: '运行中',
+      actualizacion: (v: string) => `可更新：${v}`,
+      bloqueada: '已锁定',
+      sinHuella: '无公布校验和',
+      huellaDebil: '仅 MD5 校验和',
+      firmada: '含 PGP 签名',
+    },
+    ayudaFirmada:
+      '官方源使用 PGP 签名此下载包：安装前 WolfCore Dev 会用内置公钥验证签名。',
+    ayudaSinHuella:
+      '官方源未提供强校验和（SHA-256 或 SHA-512）：无法验证下载完整性。',
+    instalar: '安装',
+    desinstalar: '卸载',
+    encender: '启动',
+    apagar: '停止',
+    actualizar: '更新',
+    usarEsta: '使用此版本',
+    usarEstaAyuda: (id: string) =>
+      `${id} 当前使用此服务的另一版本：切换前会先备份其数据。`,
+    predeterminada: '新项目默认版本',
+    hacerPredeterminada: '设为新项目默认',
+    predeterminadaHecha: (v: string) => `已将 ${v} 设为默认。`,
+    puerto: '端口',
+    puertoDe: (id: string) => `${id} 的端口`,
+    cambiarPuerto: '更改',
+    puertoCambiado: (p: number) => `端口已更改为 ${p}。`,
+    puertoProyectosTitulo: '仍使用旧端口的项目',
+    puertoProyectos: (viejo: number, nuevo: number, lista: string) =>
+      `以下项目的 .env 仍在使用端口 ${viejo}（未自动修改）：${lista}。请改为 ${nuevo}。`,
+    resolver: '解决',
+    instalada: (v: string) => `已安装 ${v}。`,
+    selector: { etiqueta: '实例', predeterminada: '默认', apagada: '已停止' },
+    dialogoSinHuella: {
+      titulo: (v: string) => `无校验和安装 ${v}`,
+      riesgo:
+        '官方源未为此版本提供校验和：WolfCore Dev 无法确认下载文件是否被篡改。',
+      explicacion:
+        '下载仍通过 HTTPS 来自官方网站，但若网站或连接受损则无法察觉。请仅在确有必要时安装。',
+      alternativa: (v: string) => `该服务有已校验的版本可用：${v}。`,
+      casilla: '我了解风险并仍要在未校验的情况下安装',
+      instalarVerificada: (v: string) => `安装 ${v}（已校验）`,
+      instalarIgual: '仍要安装',
+    },
+    dialogoActualizar: {
+      titulo: (n: string) => `更新 ${n}`,
+      tituloRama: (v: string) => `新版本：${v}`,
+      ninguna: '无',
+      instancia: (id: string) => `即将更新实例 ${id}。在做出任何更改之前：`,
+      pasoInstalar: (v: string) => `在当前版本旁安装 ${v}（不删除旧版本）；`,
+      pasoVolcados: '使用当前版本导出每个数据库；',
+      pasoCopia: '停止服务并完整复制数据目录（冷备份）；',
+      pasoArrancar: '使用新版本启动并检测响应；',
+      pasoVuelta:
+        '若启动失败，将自动回退到旧版本及原数据，并保留备份。',
+      datos: '数据：',
+      respaldo: '备份位置：',
+      espacio: '空间：',
+      espacioLibre: (libres: string, necesarios: string) =>
+        `可用 ${libres}；需要 ${necesarios}`,
+      datosQuedan:
+        '旧数据绝不会被删除：备份和转储将保存在“更新备份”中，直至您手动删除。',
+      sinEspacio: '磁盘空间不足以创建备份：请释放空间后重试。',
+      alLado: (v: string) =>
+        `将安装 ${v}。其他已安装版本不受影响；指定其他版本的项目将继续沿用原版本。`,
+      ramaExplicacion:
+        '新的主版本不会替换旧版本：它会创建一个拥有独立数据目录和端口的新实例，原实例保持不变。',
+      copiarDesdeTitulo: '新实例的数据',
+      copiarDesde: (id: string) =>
+        `从 ${id} 复制数据（导出并恢复；原实例不受影响）`,
+      vacia: '空白启动',
+      ramaNota:
+        '不会复制数据库用户；项目需指向新实例的端口。',
+      crearInstancia: '创建新实例',
+      confirmar: '备份并更新',
+      hecho: (v: string) => `${v} 已更新。`,
+      fallo: '更新失败',
+      ramaCreada: (id: string) => `已创建实例 ${id}。`,
+      copiadas: (l: string) => `已复制：${l}。`,
+      noCopiada: (b: string, m: string) => `未能复制 ${b}：${m}`,
+    },
+    limpieza: {
+      boton: '清理未使用的版本…',
+      titulo: '清理未使用的版本',
+      intro:
+        '仅删除未被任何部分使用的版本程序（bin 文件夹）。绝不会触碰数据库数据、实例或您的项目。',
+      cargando: '正在查找版本…',
+      vacia: '没有已安装的版本。',
+      sinLibres: '所有已安装版本均在使用中：无需清理。',
+      fallo: '清理失败',
+      fallaLista: '无法读取版本列表',
+      bloqueada: '无法勾选',
+      marcadas: (n: number, tam: string) => `${n} 个版本 · ${tam}`,
+      destinoTitulo: '处理方式',
+      papelera: '移至回收站：保留 7 天（期间仍占用磁盘空间）',
+      definitivo: '永久删除：立即释放空间，无法撤销',
+      avisoDefinitivo:
+        '永久删除：如需再次使用这些版本，必须重新下载。',
+      instantanea:
+        '若选择永久删除，操作前会先保存一份环境配置快照；移至回收站的版本可直接恢复。',
+      entiendo: '我明白此操作无法撤销',
+      confirmar: (n: number) => `移除 ${n} 个版本`,
+      motivos: {
+        predeterminada: '当前默认版本',
+        encendida: '正在运行中',
+        sitio: '正被项目使用',
+        instancia: '正被实例使用（即使已停止）',
+        plantilla: '正被模板使用',
+        workspace: '正被工作区使用',
+        runtime: '正被项目使用',
+        tarea: '正被含定时任务的项目使用',
+        duda: '无法确认：未作处理',
+        datos: '存在仅此版本可打开的数据',
+        herramienta: '正被 phpMyAdmin 或 Adminer 使用',
+      },
+      resultadoTitulo: '结果',
+      liberadas: (tam: string) => `已释放 ${tam}。`,
+      enPapelera: (tam: string) => `${tam} 已移入回收站（7 天后自动清空）。`,
+      saltada: (v: string, motivo: string) => `${v}：${motivo}`,
+      pendientes: (n: number) =>
+        `${n} 个版本已移出 bin，但有残留文件，将在下次打开应用时重试清理。`,
+      instantaneaGuardada: '删除前已保存环境快照。',
+      ajeno: (lista: string) =>
+        `包含您自行安装的内容：${lista}。移除后将会丢失。`,
+      incluirAjeno: '即使丢失这些包也移除',
+      sinCatalogo: '已不在目录中：移除后将无法重新下载。',
+      papeleraTitulo: '回收站中',
+      recuperar: '恢复',
+      recuperada: (v: string) => `已恢复 ${v}。`,
+      borradaEl: (f: string) => `删除于 ${f}`,
+      fallaRecuperar: '无法恢复',
+    },
+    dialogoDesinstalar: {
+      titulo: (v: string) => `卸载 ${v}`,
+      binario: '仅移除此版本的程序文件。',
+      instancia: (id: string) =>
+        `正被实例 ${id} 使用：将停止并从实例列表中移除。`,
+      datosQuedan:
+        '数据会保留在磁盘上：若重新安装此版本，实例仍可打开这些数据。',
+      borrarDatos: '同时删除数据',
+      borrarAviso: (id: string) =>
+        `将删除 ${id} 的数据文件夹及其中所有数据库。此操作无法撤销。请输入 "${id}" 以确认。`,
+      escriba: (id: string) => `请输入 ${id} 以确认`,
+      desinstalar: '卸载',
+      desinstalarYBorrar: '卸载并删除数据',
+      unica:
+        '这是当前活动版本：若是唯一已安装版本，可在服务停止后卸载；若有其他版本，请先将另一版本设为活动（星标）。',
+      predeterminada: (id: string) =>
+        `${id} 是默认实例：数据库页面、.env 代码块和工具将切换至另一实例（不同端口）。`,
+      hecho: (v: string) => `已卸载 ${v}。`,
+    },
+    dialogoDesbloquear: {
+      titulo: (id: string) => `解除 ${id} 锁定`,
+      explicacion:
+        '一次更新失败且未能恢复此实例的数据，因此在您选择处理方式前不会启动。未删除任何数据。',
+      fallida: '受影响的数据：',
+      respaldo: '备份：',
+      opciones: '处理方式',
+      devolver: (sello: string, tam: string) =>
+        `恢复备份 ${sello}（${tam}）；当前文件夹会被移至一旁而不会删除`,
+      usarActual: '按原样使用当前数据文件夹',
+      notaActual:
+        '仅当当前文件夹中的数据完整时选择此项；否则请选择备份。',
+      notaDevolver: '先复制并校验备份，确认无误后再放回原位。',
+      escriba: (id: string) => `请输入 ${id} 以确认`,
+      elegirVersion:
+        '无法读取锁定标记：请选择用于打开数据的版本（更新前的版本）。',
+      version: '版本',
+      confirmar: '解除锁定',
+      hecho: (id: string) => `${id} 已解锁，现在可以启动。`,
+    },
+    respaldos: {
+      titulo: '更新备份',
+      descripcion:
+        '更新和安装新版本时留下的备份。各实例正在使用的数据文件夹绝不会显示在此处。',
+      vacio: '暂无备份。',
+      tipos: {
+        respaldo: '冷备份',
+        volcados: '数据库转储',
+        fallida: '失败版本的数据',
+        restaurando: '未完成的恢复',
+        copia: '新版本用转储',
+      },
+      archivos: (n: number) => `${n} 个文件`,
+      borrar: '删除',
+      borrarDe: (n: string) => `删除 ${n}`,
+      confirmarTitulo: '删除备份',
+      confirmar: (n: string, tam: string) =>
+        `将删除 ${n}（${tam}）。此操作无法撤销。实例当前使用的数据不受影响。`,
+      borrado: '备份已删除。',
+    },
+  },
+  navGrupos: {
+    trabajo: '工作',
+    entorno: '环境',
+    utilidades: '实用工具',
+  },
+  avisos: {
+    campana: '通知',
+    campanaConNuevos: (n: number) => `通知：${n} 条未读`,
+    titulo: '通知中心',
+    vacio:
+      '暂无通知。服务异常停止、端口占用和证书即将过期等消息会显示在这里。',
+    marcarTodos: '全部标为已读',
+    limpiar: '清空历史',
+    ver: '查看',
+    actualizar: '更新',
+    verVersiones: '查看版本',
+    cerrar: '关闭',
+    niveles: { info: '信息', aviso: '提示', error: '错误' },
+    sinLeer: '未读',
+  },
+  barra: {
+    paleta: '搜索或执行命令',
+    atajoPaleta: 'Ctrl+K',
+    tema: '切换主题',
+    idioma: '切换语言',
+  },
+  preferencias: {
+    titulo: '外观与语言',
+    descripcion: '更改会立即生效并保存在本机。',
+    tema: '主题',
+    temas: { sistema: '跟随系统', claro: '浅色', oscuro: '深色' },
+    idioma: '语言',
+    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体' },
+    acento: '强调色',
+    acentos: {
+      indigo: '靛蓝',
+      azul: '蓝色',
+      verde: '绿色',
+      violeta: '紫色',
+      naranja: '橙色',
+      rosa: '粉色',
+    },
+    acentoPropio: (color: string) => `自定义 (${color})`,
+    errorGuardar: '无法保存偏好设置',
+    asistente: '首次使用向导',
+    asistenteAyuda:
+      '重新走一遍初始步骤：项目文件夹、基础组件、CA、GitHub 和监控文件夹。',
+    asistenteAbrir: '打开向导',
+  },
+  paleta: {
+    titulo: '命令面板',
+    placeholder: '搜索页面、服务、项目或工具…',
+    sinResultados: '没有匹配的命令。',
+    ayuda: '↑ ↓ 移动 · Enter 执行 · Esc 关闭',
+    grupos: {
+      navegacion: '前往',
+      servicios: '服务',
+      proyectos: '项目',
+      herramientas: '工具',
+      github: 'GitHub',
+      general: '常规',
+    },
+    irA: (pantalla: string) => `前往 ${pantalla}`,
+    encender: (servicio: string) => `启动 ${servicio}`,
+    apagar: (servicio: string) => `停止 ${servicio}`,
+    iniciarTodo: '启动所有服务',
+    detenerTodo: '停止所有服务',
+    iniciarWorkspace: (n: string) => `启动工作区 ${n}`,
+    detenerWorkspace: (n: string) => `停止工作区 ${n}`,
+    abrirSitio: (nombre: string) => `在浏览器中打开 ${nombre}`,
+    traerCambios: (nombre: string) => `拉取 ${nombre} 的更改`,
+    abrirHerramienta: (nombre: string) => `打开 ${nombre}`,
+    clonar: '从 GitHub 克隆仓库',
+    agregarProyecto: '添加项目',
+    nuevoProyecto: '创建新项目',
+    tema: (tema: string) => `主题：${tema}`,
+    idioma: (idioma: string) => `语言：${idioma}`,
+    asistente: '打开首次使用向导',
+  },
+  nuevoProyecto: {
+    titulo: '新建项目',
+    boton: '新建项目',
+    descripcion:
+      '从零创建项目：文件夹、带 HTTPS 的站点、数据库及其连接配置。',
+    pasos: { tipo: '类型', datos: '配置', resumen: '摘要', crear: '创建中' },
+    tipos: {
+      laravel: {
+        nombre: 'Laravel',
+        descripcion: '通过 Composer 创建；含应用密钥、数据库和迁移。',
+      },
+      codeigniter4: { nombre: 'CodeIgniter 4', descripcion: '官方 Appstarter 及 .env 配置。' },
+      codeigniter3: {
+        nombre: 'CodeIgniter 3',
+        descripcion: '经典框架，自动配置 database.php。',
+      },
+      symfony: {
+        nombre: 'Symfony',
+        descripcion: '官方骨架（或 webapp）及 .env.local。',
+      },
+      fastapi: {
+        nombre: 'FastAPI',
+        descripcion: '虚拟环境、requirements.txt 与 uvicorn 进程。',
+      },
+      wordpress: { nombre: 'WordPress', descripcion: '官方下载并预配好 wp-config.php。' },
+      estatico: {
+        nombre: '静态站点',
+        descripcion: '由 Nginx 托管的 HTML 和 CSS，无需数据库。',
+      },
+    },
+    campos: {
+      nombre: '项目名称',
+      nombrePlaceholder: 'my-shop',
+      nombreAyuda: (dominio: string) => `域名将为 ${dominio}：仅限小写字母、数字和连字符。`,
+      carpeta: '父文件夹',
+      elegirCarpeta: '选择文件夹…',
+      cambiarCarpeta: '更改文件夹…',
+      carpetaAyuda:
+        '项目将在此目录内新建同名子文件夹，目标文件夹须为空或尚不存在。',
+      php: 'PHP 版本',
+      python: 'Python 版本',
+      sinInstalada: '尚未安装：请先在“服务”中安装。',
+      conBase: '为项目创建数据库',
+      sinBase: '不创建数据库',
+      instancia: '数据库服务器',
+      apagada: '已停止',
+      apagadaAyuda:
+        '该服务器已停止：创建项目前请先在“服务”中启动。',
+      sinMotores: '尚未安装适用于此项目类型的数据库服务器。',
+      nombreBase: '数据库名称',
+      starterKit: '入门套件',
+      starterKits: { ninguno: '无', react: 'React', vue: 'Vue', livewire: 'Livewire' },
+      symfonyWebapp: '包含 Web 套件 (webapp)',
+      pgvector: '启用 pgvector（向量搜索）',
+    },
+    huella: {
+      titulo: 'WordPress 仅提供弱校验和',
+      riesgo:
+        '公布的校验和为已被视为不安全的 SHA-1，且来自与压缩包相同的网站。',
+      explicacion:
+        '若该站点或连接受损，篡改后的包仍可通过校验。下载仍通过 HTTPS 来自 wordpress.org，仅在信任来源时继续。',
+      leyendo: '正在读取公布的校验和…',
+      noDisponible:
+        '当前无法读取校验和（无网络或源未响应）；创建时会重新读取。',
+      fuente: '来源：wordpress.org',
+      casilla: '我理解校验和较弱，仍要创建项目',
+    },
+    resumen: {
+      titulo: '即将创建以下内容',
+      intro: '开始前请核对。',
+      tipo: '类型',
+      carpeta: '文件夹',
+      sitio: '站点',
+      dominio: '域名',
+      https: 'HTTPS 地址',
+      php: 'PHP',
+      python: 'Python',
+      base: '数据库',
+      env: '连接写入位置',
+      nota: '若某步骤失败不会删除已有内容：您可查看已创建项并重试。',
+    },
+    errores: {
+      nombreVacio: '请输入项目名称。',
+      nombreInvalido:
+        '名称仅能包含小写字母、数字和连字符（最多 40 个字符），且不能以连字符开头或结尾。',
+      sinCarpeta: '请选择项目的父文件夹。',
+      sinPhp: '请选择 PHP 版本（如无请先在“服务”中安装）。',
+      sinPython: '请选择 Python 版本（如无请先在“服务”中安装）。',
+      sinInstancia: '请选择用于创建数据库的服务器，或取消勾选数据库。',
+      baseInvalida: '该引擎不支持此数据库名称。',
+      motorNoVale: 'WordPress 需要 MySQL 或 MariaDB。',
+      pgvectorMotor: 'pgvector 需要 PostgreSQL。',
+      huellaDebil: '请确认您了解 WordPress 校验和较弱。',
+    },
+    acciones: {
+      cambiarCarpeta: '选择其他文件夹',
+      cambiarBase: '更改数据库名称',
+      cambiarNombre: '更改名称',
+      reintentarPaso: '重试该步骤',
+      servicios: '前往服务',
+      confirmarHuella: '检查确认项',
+    },
+    botones: {
+      siguiente: '下一步',
+      atras: '上一步',
+      crear: '创建项目',
+      creando: '创建中…',
+      cerrar: '关闭',
+      abrirEditor: '在编辑器中打开',
+      verSitio: '查看站点',
+      verProyecto: '在项目中查看',
+    },
+    progreso: {
+      titulo: '正在创建项目',
+      listo: '项目已创建。',
+      fallo: (paso: string) =>
+        `步骤“${paso}”失败。未删除任何内容：请重试该步骤或修复后再试。`,
+      quedo: (partes: string) => `已创建：${partes}。`,
+      quedoCarpeta: '文件夹',
+      quedoBase: (nombre: string) => `数据库 ${nombre}`,
+      quedoSitio: '站点',
+      avisos: '提示',
+      sinUsuarioPropio:
+        '系统加密不可用：项目暂使用数据库管理员连接。恢复可用后请在 .env 管理器中使用“使用专用用户”。',
+      editorFallo: '无法打开编辑器。',
+    },
+  },
+  importar: {
+    boton: '导入…',
+    titulo: '从 Laragon、XAMPP 或 Herd 导入',
+    intro:
+      '站点将就地关联：不会移动、复制或修改任何项目文件夹。如有需要也可复制数据库。WolfCore Dev 仅读取其他程序的安装信息。',
+    buscando: '正在搜索安装…',
+    nada: '在常见目录中未找到 Laragon、XAMPP 或 Herd。',
+    errorVista: '无法扫描可导入的内容',
+    programas: { laragon: 'Laragon', xampp: 'XAMPP', herd: 'Herd' },
+    sitios: {
+      titulo: '站点',
+      todos: '全选',
+      ninguno: '取消全选',
+      dominio: (d: string) => `域名 ${d}`,
+      dominioPropuesto: (d: string) => `域名 ${d}（建议）`,
+      php: (v: string) => `PHP ${v}`,
+      phpSe: (de: string, a: string) => `PHP ${de} → ${a}`,
+      sinPhp: 'PHP 版本未确定',
+      base: (nombre: string, motor: string) => `数据库 ${nombre}（${motor}）`,
+      yaVinculado: '已是 WolfCore Dev 站点',
+      dominioEnUso: '其他站点已使用此域名',
+    },
+    avisos: {
+      sin_dominio: '在原程序中没有域名：已建议一个。',
+      dominio_invalido: '原域名无效：已建议一个。',
+      sin_vhost: '没有独立虚拟主机：已建议一个域名。',
+      php_desconocido: '无法确定所用 PHP 版本：已选择已安装版本。',
+      base_no_local: '数据库位于其他服务器：不导入。',
+      base_nombre_invalido: '数据库名无效：不导入。',
+      motor_no_soportado: '数据库不是 MySQL 或 MariaDB：不导入。',
+    },
+    problemas: {
+      titulo: (n: number) => `有 ${n} 项已跳过或无法读取`,
+    },
+    bases: {
+      titulo: '数据库',
+      importarBases: '同时导入数据库',
+      ayuda:
+        '继续前请先启动原程序的数据库服务器：WolfCore Dev 不会启停第三方程序。密码仅用于本次导入且不会保存。',
+      destino: '目标服务器',
+      apagada: '已停止',
+      sinMotores:
+        '未安装 MySQL 或 MariaDB：请先在“服务”中安装以导入数据库。',
+      puerto: '源服务器端口',
+      usuario: '用户名',
+      clave: '密码',
+      claveAyuda: '若该用户无密码请留空（如 Laragon 或 XAMPP 中的 root）。',
+      existe: '目标中已存在',
+      reemplazar: '替换（替换前会先备份）',
+      noSeToca: '未勾选则保持原样。',
+    },
+    pasos: { elegir: '选择', confirmar: '确认' },
+    continuar: '继续',
+    volver: '返回',
+    cancelar: '取消',
+    importar: '导入',
+    cerrar: '关闭',
+    sinSeleccion: '请至少选择一个站点。',
+    origenIncompleto: '请填写源服务器的端口和用户名。',
+    confirmar: {
+      titulo: '确认导入',
+      sitios: (n: number) =>
+        `将就地关联 ${n} 个站点。不会移动、复制或修改任何文件。`,
+      sinConfianza:
+        '在您勾选“我信任此仓库”之前，导入的站点不会自动执行任何安装方案。',
+      hosts:
+        '将更新 Nginx 和 hosts 文件（Windows 可能会请求管理员权限）。',
+      basesNuevas: (nombres: string) => `将复制以下数据库：${nombres}。`,
+      basesReemplazo: (nombres: string) =>
+        `将替换以下已存在的数据库：${nombres}。操作前会逐一备份。`,
+      basesSinTocar: (nombres: string) => `以下已存在数据库保持不变：${nombres}。`,
+      origen: (puerto: number, usuario: string) =>
+        `将从另一程序的服务器导出（127.0.0.1:${puerto}，用户 ${usuario}），仅做只读读取。`,
+      sinBases: '不会导入任何数据库。',
+      proteccion:
+        '导入前会校验每个数据库的结构，并以受限用户写入数据：若失败，原库保持不变。',
+    },
+    resultado: {
+      titulo: '导入结果',
+      importando: '正在导入…',
+      cancelar: '取消导入',
+      restaurada: '原数据库已自动从备份还原，保持不变。',
+      sitioOk: '已导入',
+      sitioFallo: '导入失败',
+      baseOk: (n: string) => `数据库 ${n} 已导入`,
+      baseFallo: (n: string) => `数据库 ${n} 未导入`,
+      copiaPrevia: (ruta: string) => `原数据库备份：${ruta}`,
+      phpDistinto: (v: string) => `已使用 PHP ${v}（未安装原版本）。`,
+      sinAplicar:
+        'Nginx 或 hosts 未能同步更新：请在“项目”中查看提示并重试。',
+      resumen: (s: number, b: number) =>
+        `已导入 ${s} 个站点、${b} 个数据库。`,
+      errorImportar: '导入失败',
+    },
+  },
+  plantillas: {
+    guardarComo: '保存为模板…',
+    dialogo: {
+      titulo: (nombre: string) => `将“${nombre}”保存为模板`,
+      intro:
+        '模板会保存安装方案、PHP 和 Nginx 设置、扩展及数据库结构（仅表结构，不含任何数据行）。绝不保存密码、密钥或业务数据。',
+      nombre: '模板名称',
+      nombrePlaceholder: '我的基础项目',
+      conArchivos: '同时包含项目文件',
+      conArchivosAyuda: '不勾选时仅保存方案、设置和数据库结构。',
+      siempre: '始终排除',
+      siempreLista:
+        '.env 与 .env.*、vendor、node_modules、.git、.venv、日志、转储和文件型数据库（*.sql、*.dump、*.sqlite）、密钥与证书（*.pem、*.key、*.crt…）、wp-config.php 与 wolfcore.yml。包含密钥或密码的文件也会被排除。',
+      extra: '额外排除项（每行一项）',
+      extraAyuda: '相对于项目的名称或路径，例如 uploads 或 public/build。',
+      vista: '将保存的内容',
+      calculando: '计算中…',
+      resumen: (archivos: number, tamano: string) => `${archivos} 个文件 · ${tamano}`,
+      fuera: (n: number) => `已排除 ${n} 项`,
+      sinArchivos: '仅保存方案、设置和结构，不包含文件。',
+      baseVolcado: (nombre: string, servidor: string) =>
+        `仅保存数据库 ${nombre}（服务器 ${servidor}）的表结构，不含任何数据行。`,
+      sinBase: '该项目未声明数据库：不会保存任何结构。',
+      avisoMongodb: '该项目使用 MongoDB：不会保存其结构（集合与索引）。',
+      incluirDeTodosModos: '仍然包含',
+      avisoIncluir: '若该文件包含真实密钥，将会被打包进模板中。',
+      guardar: '保存模板',
+      guardada: (nombre: string) => `模板“${nombre}”已保存。`,
+      errorGuardar: '无法保存模板',
+      errorVista: '无法计算预览',
+      cancelar: '取消',
+    },
+    lista: {
+      titulo: '我的模板',
+      ayuda:
+        '使用已有项目的方案、设置和结构（无数据）快速创建新项目。',
+      vacia:
+        '暂无模板。可在项目卡片菜单中将项目保存为模板。',
+      conArchivosEtiqueta: '含文件',
+      soloEsquema: '方案与结构',
+      conBase: (motor: string) => `${motor} 空结构数据库`,
+      borrarEtiqueta: (nombre: string) => `删除模板 ${nombre}`,
+      borrarTitulo: (nombre: string) => `删除模板 ${nombre}？`,
+      borrarTexto:
+        '仅删除此模板。使用它创建的项目和原项目均不受影响。',
+      borrada: '模板已删除。',
+      errorBorrar: '无法删除模板',
+      errorLista: '无法读取模板列表',
+      desde: (nombre: string) => `模板：${nombre}`,
+      avisoSinBase: '此模板不包含数据库。',
+      importadaEtiqueta: '已导入',
+      avisoImportada:
+        '该模板来自第三方：项目将以非信任状态创建且不自动启动进程，打开站点会执行其代码。请先检查文件。',
+      generadoresTitulo: '从零创建项目',
+    },
+  },
+  env: {
+    accion: '环境变量 .env…',
+    titulo: (nombre: string) => `${nombre} 的 .env`,
+    intro:
+      '敏感值默认脱敏显示。点击“显示”后完整值仅可见 30 秒。保存前会先为当前 .env 创建带日期的备份。',
+    noExiste: '该项目尚无 .env 文件：保存时将自动创建。',
+    tablaEtiqueta: '.env 变量列表',
+    sinVariables: '.env 中没有变量。',
+    secretaEtiqueta: '敏感',
+    duplicadaEtiqueta: '重复',
+    duplicadaAyuda:
+      '此变量在 .env 中出现多次：仅显示和修改最后一条。',
+    soloLecturaEtiqueta: '多行',
+    soloLecturaAyuda: '该变量跨越多行：请在文件中手动编辑。',
+    seQuitara: '保存时将移除',
+    valorNuevo: '新值',
+    valorNuevoDe: (clave: string) => `${clave} 的新值`,
+    valorDe: (clave: string) => `${clave} 的值`,
+    vacio: '（空）',
+    mostrar: '显示',
+    ocultar: '隐藏',
+    mostrarEtiqueta: (clave: string) => `显示 ${clave} 的值`,
+    ocultarEtiqueta: (clave: string) => `隐藏 ${clave} 的值`,
+    cambiar: '修改',
+    deshacer: '撤销',
+    deshacerEtiqueta: (clave: string) => `撤销对 ${clave} 的修改`,
+    quitar: '移除',
+    quitarEtiqueta: (clave: string) => `移除变量 ${clave}`,
+    errorRevelar: '无法显示该值',
+    agregarTitulo: '添加变量',
+    agregarNombre: '变量名',
+    agregarValor: '值',
+    agregar: '添加',
+    nombreInvalido:
+      '仅限字母、数字、下划线和点号，不能以数字开头且不能重复。',
+    comparar: {
+      titulo: '与示例文件对比',
+      sinEjemplo: '项目没有可供对比的 .env.example。',
+      alDia: '.env 与示例文件变量一致。',
+      faltan: (n: number) => `缺少 ${n} 项：`,
+      sobran: (n: number) => `多余 ${n} 项（示例中没有）：`,
+      distintas: (n: number) => `${n} 项与示例值不同：`,
+      agregarFaltantes: '补全缺失项',
+    },
+    bloques: {
+      titulo: '添加变量块',
+      ayuda:
+        '仅补全 .env 中缺失的对应主题变量（已有的保持不变），不含密码或密钥；稍后请在表格中填写。',
+      bd: '数据库',
+      correo: '邮件',
+      ia: 'AI',
+      redis: 'Redis',
+    },
+    usuarioPropio: {
+      titulo: '使用专用用户',
+      ayuda:
+        '仅为本项目创建一个数据库用户（仅拥有该库权限，非管理员）并写入 .env。目前支持 WolfCore Dev 的 MySQL 和 MariaDB。',
+      confirmarTitulo: '为数据库使用专用用户？',
+      confirmarTexto:
+        '将创建带随机密码、仅限本项目数据库权限的新用户，并更新 .env 中的用户名和密码。操作前会备份当前 .env；新密码会写入项目 .env 并加密存于 WolfCore Dev。',
+      confirmar: '创建并使用',
+      hecho: (usuario: string) => `项目现已使用用户 ${usuario}。`,
+      compartirTitulo: '共享另一项目的用户？',
+      compartirTexto: (base: string, proyecto: string) =>
+        `数据库 ${base} 同时被 ${proyecto} 使用。是否共享其用户？本项目将沿用相同的用户名与密码，不会更改密码，${proyecto} 仍可正常连接。`,
+      compartir: '共享用户',
+      error: '无法切换数据库用户',
+    },
+    copias: {
+      titulo: '恢复备份',
+      ninguna: '此 .env 暂无备份。',
+      volver: '恢复此备份',
+      confirmarTitulo: '恢复 .env 备份？',
+      confirmarTexto: (fecha: string) =>
+        `当前 .env 将替换为 ${fecha} 的备份。操作前会先备份当前文件，因此仍可撤销。`,
+      hecho: '已恢复备份。',
+      error: '无法恢复备份',
+    },
+    cambiosPendientes: (n: number) => `${n} 处未保存的更改`,
+    descartar: '放弃更改',
+    guardar: '检查并保存…',
+    cerrar: '关闭',
+    cerrarTitulo: '不保存直接关闭？',
+    cerrarTexto: (n: number) => `有 ${n} 处未保存的更改。关闭后将会丢失。`,
+    cerrarDescartar: '关闭并放弃',
+    seguirEditando: '继续编辑',
+    confirmar: {
+      titulo: '保存 .env 更改',
+      texto:
+        '以下是即将生效的更改（敏感值已脱敏）。保存前会先备份当前 .env，并以原子方式写入。',
+      sinCambios: '没有需要保存的更改。',
+      agregarGitignore: '将 .env 添加到项目的 .gitignore',
+      aceptarVersionado: '我理解风险，仍要保存',
+      guardar: '保存更改',
+      versionado:
+        'Git 已跟踪此项目的 .env：即使在 .gitignore 中，下次提交仍会上传其值。请运行 git rm --cached .env 移出索引。',
+      versionadoDesconocido:
+        '无法检查 Git 是否跟踪此项目的 .env；请单独确认后再保存。',
+    },
+    errorVistaPrevia: '无法准备预览',
+    errorGuardar: '无法保存 .env',
+    guardado: '.env 已保存。',
+    guardadoConCopia: '.env 已保存；旧版本已留存备份。',
+  },
+  asistenteInicio: {
+    titulo: '欢迎使用 WolfCore Dev',
+    subtitulo:
+      '只需五步即可准备好环境。在您点击各步骤按钮之前，不会安装或更改任何内容。',
+    paso: (n: number, total: number) => `第 ${n} 步，共 ${total} 步`,
+    anterior: '上一步',
+    siguiente: '下一步',
+    omitirTodo: '跳过向导',
+    terminar: '完成',
+    hecho: '已完成',
+    reabrir: '您可随时在“设置”中重新打开。',
+    pasos: {
+      carpeta: {
+        titulo: '项目文件夹',
+        texto:
+          '存放项目的目录。新仓库将默认克隆至此，最后一步也将监控此文件夹。',
+        elegir: '选择文件夹',
+        actual: (ruta: string) => `已选文件夹：${ruta}`,
+        guardada: (ruta: string) => `当前文件夹：${ruta}`,
+        ninguna: '未选择：若 C:\\Proyectos 存在则默认使用。',
+      },
+      basicos: {
+        titulo: '安装基础组件',
+        texto:
+          '从官方源下载并校验 Nginx、PHP 8.4、Composer 和 Node LTS。仅在点击对应按钮时安装。',
+        instalado: '已安装',
+        instalar: (version: string) => `安装 ${version}`,
+        sinVersion: '目录中暂无版本',
+        cargando: '正在查找版本…',
+        nombres: { nginx: 'Nginx', php: 'PHP 8.4', composer: 'Composer', node: 'Node LTS' },
+      },
+      ca: {
+        titulo: '信任本地证书颁发机构',
+        texto:
+          '为了让 .test 站点通过 HTTPS 打开且不出现通知，Windows 必须信任 WolfCore Dev 的证书颁发机构。Windows 将请求您确认。',
+        confiar: '信任 CA',
+        confiada: 'Windows 已信任本地证书颁发机构。',
+      },
+      github: {
+        titulo: '连接 GitHub',
+        texto:
+          '用于查看您的仓库并一键克隆。请使用 GitHub CLI 会话或个人访问令牌，令牌将加密保存在本机。',
+      },
+      vigilar: {
+        titulo: '监视文件夹',
+        texto:
+          '当项目文件夹中出现新文件夹时，WolfCore Dev 会建议您挂载它。未经您确认，不会挂载任何内容。',
+        activar: '监视此文件夹',
+        activa: (ruta: string) => `正在监视 ${ruta}`,
+        sinCarpeta: '请先选择项目文件夹（第 1 步）。',
+      },
+    },
+  },
+  /** 导入或导出配置文件的结果 (D26)。 */
+  perfiles: {
+    pantalla: {
+      titulo: '备份与配置文件',
+      descripcion:
+        '配置文件可将您的环境迁移到另一台设备：包括站点、版本、实例、模板和设置。绝不包含密钥、令牌或密码。',
+      aislado: {
+        titulo: '测试文件夹',
+        texto: (ruta: string) =>
+          `WolfCore Dev 正在使用测试数据文件夹（${ruta}）。您在此处进行的任何操作都不会影响您的真实文件夹或设备：不会写入 hosts 文件，也不会安装证书。`,
+      },
+      exportar: {
+        titulo: '导出环境',
+        texto:
+          '保存一个 .wolfperfil 文件，其中包含您的站点、版本、实例、模板和设置。',
+        bases: '包含数据库',
+        basesAyuda:
+          '完整转储（包含您客户的真实数据）将使用密码短语加密传输。',
+        ca: '包含证书颁发机构（CA）',
+        caAyuda: '将使用密码短语加密。仅可在您自己的设备上导入。',
+        certificados: '包含站点证书',
+        certificadosAyuda: '仅与 CA 一同导出并使用其加密。',
+        frase: '密码短语',
+        fraseRepetir: '重复密码短语',
+        fraseAyuda: (minimo: number) =>
+          `至少 ${minimo} 个字符。没有此密码短语将无法恢复数据库和 CA，且它不会保存在任何位置。`,
+        problemas: {
+          frase_corta: (minimo: number) => `密码短语必须至少包含 ${minimo} 个字符。`,
+          frase_distinta: '两次输入的密码短语不一致。',
+          certificados_sin_ca: '证书只能与 CA 一同导出。',
+        },
+        exportar: '导出配置文件…',
+        nota: '配置文件绝不包含密钥、令牌或密码，也不包含快照、回收站、备份或 data 文件夹。',
+        listo: '配置文件已导出',
+        guardado: (archivo: string, tamano: string) => `已保存至 ${archivo}（${tamano}）。`,
+      },
+      importar: {
+        titulo: '导入配置文件',
+        texto:
+          '选择一个 .wolfperfil 文件。在更改任何内容之前，您将看到所有将被替换、移除或待处理的项目，并且系统会先为被替换的内容保存备份。',
+        boton: '导入配置文件…',
+      },
+      instantaneas: {
+        titulo: '环境快照',
+        texto:
+          '在更新 PHP 或 Nginx 以及导入配置文件之前，WolfCore Dev 会保存您的配置、Nginx 和 php.ini 的副本，不包含任何密钥或数据，仅供您本地使用。最多保留最近 10 个快照。',
+        compartidas:
+          '所有原因共享这 10 个名额：创建新快照时将替换最早的快照，手动创建的快照也不例外。',
+        tomar: '立即创建快照',
+        tomada: '快照已保存。',
+        sinNada: '目前还没有可备份的内容。',
+        vacia: '目前还没有快照。',
+        motivos: {
+          actualizar: '更新前',
+          'importar-perfil': '导入配置文件前',
+          'limpiar-versiones': '清理版本前',
+          manual: '手动',
+        },
+      },
+    },
+    reasignar: {
+      titulo: '站点文件夹',
+      texto:
+        '这些文件夹来自另一台设备。请在本机查找它们的位置，或将站点导入为待处理状态：在您选择文件夹之前，该站点将保持无文件夹状态。',
+      sitio: '站点',
+      origen: '配置文件中的文件夹',
+      destino: '本机上的文件夹',
+      existe: '存在',
+      noExiste: '本机上不存在',
+      buscar: '选择文件夹…',
+      cambiar: '更改',
+      comoPendiente: '仍然导入为待处理',
+      prefijo: (viejo: string, nuevo: string) =>
+        `对其他项目使用相同的路径更改（${viejo} → ${nuevo}）`,
+      omitido: '不导入',
+    },
+    asistente: {
+      titulo: '导入配置文件',
+      pasos: {
+        archivo: '文件',
+        revisar: '检查',
+        confirmar: '确认',
+        resultado: '结果',
+      },
+      archivo: {
+        texto:
+          '选择 .wolfperfil 文件。此时不会更改任何内容：您将先查看所有将被替换、移除或留作待处理的项目。',
+        elegir: '选择文件…',
+        cambiar: '选择其他文件',
+        ninguno: '未选择文件',
+        leyendo: '正在读取配置文件…',
+        error: '无法读取配置文件',
+      },
+      origen: (fecha: string, sistema: string) => `于 ${fecha} 在 ${sistema} 上创建。`,
+      ignoradas: (n: number) => `文件中有 ${n} 个条目不属于配置文件，已忽略。`,
+      reemplaza: {
+        titulo: '将被替换的内容',
+        ninguno: '此文件夹中没有数据：将在全新安装上导入。',
+        copia:
+          '替换前会先备份到 respaldos/pre-perfil-… 并创建环境快照；每个被替换的数据库都会有各自的快照。data 文件夹绝不会被删除。',
+        config: '配置文件（config.json）',
+        sitio: (id: string) => `站点 ${id}`,
+        base: (instancia: string, base: string) => `数据库 ${base}（${instancia}）`,
+        plantilla: (id: string) => `模板 ${id}`,
+        ca: '本机的证书颁发机构（CA）',
+      },
+      versiones: {
+        titulo: '版本',
+        ninguna: '此配置文件未包含版本。',
+        instalada: '已安装',
+        descargar: '将在验证指纹后下载',
+        pendienteDebil: '待处理：缺少强指纹，请手动安装',
+        pendienteFuera: '待处理：目录中已不再提供',
+        huellas: {
+          fuerte: 'SHA-256 或 SHA-512 指纹',
+          firmada: '已签名',
+          debil: '弱指纹',
+          ninguna: '无指纹',
+        },
+        descargas: (n: number) =>
+          `将从官方站点下载 ${n} 个版本，每个版本均会验证其指纹或签名。`,
+      },
+      instancias: {
+        titulo: '数据库实例',
+        existente: '已存在：保留其原有端口和版本',
+        nueva: (puerto: number) => `将在端口 ${puerto} 上使用新凭据创建`,
+        reasignada: (de: number, a: number) => `端口 ${de} 已被占用：将改用端口 ${a}`,
+      },
+      bases: {
+        titulo: '数据库',
+        ninguna: '此配置文件未包含数据库。',
+        texto:
+          '将使用仅限各自数据库权限的用户及允许的语句进行恢复。已存在的数据库会先进行备份。',
+        omitir: '不导入数据库',
+      },
+      plantillas: {
+        titulo: '模板',
+        existe: '已存在：将被替换',
+        nueva: '新建',
+      },
+      workspaces: {
+        titulo: '工作区',
+        texto:
+          '仅包含数据库和服务的引用（项目进程不会随配置文件迁移）。系统将根据本机现有环境进行验证，绝不会自动启动。',
+        existe: '已存在相同 ID 的工作区：将保留您现有的工作区',
+        nuevo: '新建',
+        elementos: (n: number) => `${n} 项`,
+        invalidos: (n: number) => `配置文件中有 ${n} 项无效，不会导入。`,
+      },
+      quitado: {
+        titulo: '不会从配置中导入的内容',
+        texto:
+          '此数据文件夹为空：配置文件中指向本机外部的内容不会被导入。',
+      },
+      puertos: {
+        titulo: '端口已被占用',
+        texto: (lista: string) =>
+          `配置文件中的以下端口已被本机其他程序占用：${lista}。导入后请在“服务”中更改。`,
+      },
+      ca: {
+        titulo: '证书颁发机构（CA）',
+        texto:
+          '此配置文件包含加密的 CA。仅当它确实属于您时才导入：导入后，本机将信任由其签发的所有证书。',
+        huella: '配置文件中 CA 的 SHA-256 指纹',
+        comparar: '接受前请将其与源设备上的指纹进行比对。',
+        importar: '导入配置文件中的 CA',
+        noImportar: '如果不导入，本机将继续使用当前 CA 或生成一个新的 CA。',
+        ajena:
+          '此 CA 的名称约束不属于 WolfCore Dev：无法导入。',
+        sinRestricciones:
+          '此 CA 没有名称约束：它可以为任意网站（包括银行和邮箱）签发证书。仅当它确属您本人且指纹完全一致时方可导入。',
+        aceptarSin: '我了解风险：这是我的 CA 且指纹一致',
+        reemplazaLocal:
+          '本机已有 CA。导入配置文件中的 CA 将替换现有 CA（原有 CA 会保留在之前的备份中）。',
+        reemplazar: '替换本机的 CA',
+        noSeInstala: '此 CA 不会自动安装到系统证书存储区中。',
+      },
+      frase: {
+        titulo: '配置文件密码短语',
+        texto: '此配置文件包含加密的数据库或 CA。请输入导出时设置的密码短语。',
+        campo: '密码短语',
+        omitirBases: '不导入数据库',
+        nota: '密码短语仅在此窗口中使用：不会被保存，并在完成或关闭后立即清除。',
+      },
+      env: {
+        titulo: '项目连接',
+        texto:
+          '勾选需要将其 .env 指向各自数据库新专属用户的项目（修改前会先备份 .env）。其余项目保持不变并会列出说明。',
+      },
+      confirmar: {
+        titulo: '确认导入',
+        resumen: (sitios: number, versiones: number, bases: number) =>
+          `将导入 ${sitios} 个站点、${versiones} 个版本和 ${bases} 个数据库。`,
+        importar: '导入',
+        revisar: '检查',
+        volver: '返回',
+        bloqueos: {
+          sitios_sin_carpeta:
+            '请为每个站点选择文件夹，或将其标记为待处理后导入。',
+          frase_requerida: '请输入配置文件密码短语，或选择不导入数据库。',
+          ca_ajena: '无法导入配置文件中的 CA。',
+          ca_sin_restricciones: '请单独确认您要导入无名称约束的 CA。',
+          reemplazar_ca: '请单独确认您要替换本机的 CA。',
+        },
+      },
+      progreso: '正在导入配置文件… 请勿关闭窗口：若包含数据库或下载任务，可能需要一些时间。',
+      fases: {
+        copia: '正在备份将被替换的内容',
+        versiones: '正在安装版本',
+        configuracion: '正在保存配置和站点',
+        plantillas: '正在复制模板',
+        ca: '正在准备 CA 和证书',
+        bases: '正在恢复数据库',
+        env: '正在重写 .env 文件',
+      },
+      avance: (paso: number, de: number) => `第 ${paso} 步，共 ${de} 步`,
+      resultado: {
+        titulo: '导入结果',
+        resumen: (importados: number, pendientes: number, omitidos: number, errores: number) =>
+          `已导入 ${importados} 项，待处理 ${pendientes} 项，已跳过 ${omitidos} 项，出错 ${errores} 项。`,
+        respaldo: (ruta: string) => `已替换内容的备份：${ruta}`,
+        pendientes: '待处理的项目可以手动完成。',
+        error: '无法导入配置文件',
+        secciones: {
+          sitios: '站点',
+          versiones: '版本',
+          instancias: '实例',
+          bases: '数据库',
+          plantillas: '模板',
+          workspaces: '工作区',
+          env: '.env 文件',
+          ca: 'CA',
+        },
+        estados: {
+          importado: '已导入',
+          pendiente: '待处理',
+          omitido: '已跳过',
+          error: '错误',
+          instalada: '已安装',
+          ya_instalada: '此前已安装',
+          creada: '已创建',
+          existente: '已存在',
+          puerto_reasignado: '端口已重新分配',
+          reescrito: '已重写',
+          sin_marcar: '未勾选',
+        },
+        ca: {
+          importada: '已导入 CA',
+          nueva: '已生成新 CA',
+          sin_cambios: 'CA 未更改',
+        },
+        quitarCa: {
+          boton: '移除旧 CA…',
+          titulo: '从信任存储区移除旧 CA',
+          texto:
+            '将从系统证书存储区中移除本机原有的 CA。Windows 可能会请求确认。新 CA 不会自动安装。',
+          si: '移除',
+          hecho: '已从信任存储区移除旧 CA。',
+        },
+        descartadosWorkspace: (lista: string) => `本机不存在，已移除：${lista}`,
+        workspacesInvalidos: (n: number) => `${n} 个无效的工作区未导入。`,
+        puerto: (de: number, a: number) => `端口 ${de} → ${a}`,
+        copiaEnv: (ruta: string) => `.env 备份：${ruta}`,
+      },
+    },
+    /** 预览中的高风险警告：配置文件中的 CA 没有名称约束。 */
+    caSinRestricciones:
+      '此 CA 可为任意网站签发证书；仅当它确属您本人时方可导入，请务必比对指纹。',
+    motivos: {
+      procesos_quitados: '您的进程（来自另一台设备的命令）未导入。',
+      tareas_quitadas:
+        '您的定时任务（来自另一台设备的命令）未导入。请重新创建，或从 wolfcore.yml 采纳。',
+      tunel_con_nombre: '命名隧道不会随配置迁移：已恢复为快速隧道。',
+      php_ini: '部分 php.ini 设置未导入。',
+      xdebug: '您的 Xdebug 设置无效，已移除。',
+      nginx_desactivado:
+        '您的 Nginx 规则已保存但尚未应用：请在编辑器中检查。',
+      carpeta_no_existe: '您的文件夹在本机上不存在：请手动查找。',
+      correo_sin_proveedor: '您的 SMTP 服务商未导入：已改用本地邮件捕获器。',
+      sitio_invalido: '该站点无效。',
+      dominio_invalido: '该域名无效（必须以 .test 结尾）。',
+      ruta_protegida: '该文件夹属于系统或 WolfCore Dev：未导入。',
+      dominio_en_uso: '本机上的另一个站点已在使用该域名。',
+      sitio_repetido: '该站点在配置文件中重复出现。',
+      no_disponible: '该版本已不在目录中。',
+      huella_debil: '该版本没有强指纹：请从“版本”中手动安装。',
+      tope_descargas:
+        '为避免同时进行过多下载，未自动下载此版本：请从“版本”中手动安装。',
+      instancia_pendiente: '其所属实例处于待处理状态。',
+      motor_no_soportado: '此引擎不支持从配置文件导入。',
+      version_pendiente: '其引擎版本处于待处理状态。',
+      danada: '配置文件中的相关文件已损坏。',
+      bases_omitidas: '导入时已跳过数据库。',
+      instancia_apagada: '其所属实例无法启动。',
+      sin_copia_previa: '无法创建前置快照：该数据库未被替换。',
+      sin_base: '其 .env 未指向本地数据库。',
+      base_no_resuelta: '无法确定该数据库属于哪个实例。',
+      error_inesperado: '发生未知错误。',
+    },
+    avisos: {
+      ca_reemplazada:
+        '本机原有的 CA 仍留在系统信任存储区中且不再使用。您可以从此处将其移除。',
+      base_no_incluida: '未包含数据库 {base}（{instancia}）。',
+      sin_ca: '本机没有 CA：导出的配置文件不包含 CA。',
+      ca_no_importada: '未导入配置文件中的 CA：将使用本机现有 CA 或生成新 CA。',
+      certificados: '无法准备证书：{detalle}',
+      aplicar:
+        '导入的站点未能完全应用（Nginx：{nginx}；hosts：{hosts}）。',
+    },
+    quitado: {
+      ia: 'AI 提供商 {id}：使用了自定义 URL。',
+      smtp: 'SMTP 服务商 {id}：其主机不属于已知服务商或缺少用户名。',
+      puerto: '{id} 的端口：超出范围，已恢复默认值。',
+      carpeta_vigilada: '所监视的文件夹来自另一台设备。',
+    },
+  },
+};

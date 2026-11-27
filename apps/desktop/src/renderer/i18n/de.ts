@@ -4435,7 +4435,7 @@ export const de: Textos = {
     tema: 'Design',
     temas: { sistema: 'System', claro: 'Hell', oscuro: 'Dunkel' },
     idioma: 'Sprache',
-    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский' },
+    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体' },
     acento: 'Akzentfarbe',
     acentos: {
       indigo: 'Indigo',
