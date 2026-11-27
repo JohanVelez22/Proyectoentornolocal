@@ -810,7 +810,7 @@ describe('D5: Java, .NET, Go y Rust en el asistente', () => {
     expect(datos.runtimes).toEqual({ go: '1.27.4', java: '21.0.13.1' });
   });
 
-  it('LENGUAJES_RUNTIME son los nueve del núcleo (D5 y D11)', () => {
+  it('LENGUAJES_RUNTIME son los doce del núcleo (D5, D11 y D47)', () => {
     expect([...LENGUAJES_RUNTIME]).toEqual([
       'java',
       'dotnet',
@@ -821,6 +821,9 @@ describe('D5: Java, .NET, Go y Rust en el asistente', () => {
       'zig',
       'kotlin',
       'dart',
+      'ruby',
+      'maven',
+      'gradle',
     ]);
   });
 

@@ -914,6 +914,8 @@ export const fr: Textos = {
       'catalogo.huella_debil':
         '{servicio} {version} n’a qu’une empreinte faible (MD5 ou SHA-1) : confirmez l’installation dans la boîte de dialogue.',
       'catalogo.huella_no_coincide': 'Le téléchargement ne correspond pas à l’empreinte publiée.',
+      'catalogo.paquete_invalido':
+        'Le paquet téléchargé n’est pas sûr (chemins hors du dossier, liens ou taille excessive).',
       'catalogo.redireccion_ajena':
         'Le téléchargement a tenté d’aller vers un site non autorisé ({host}).',
       'catalogo.demasiadas_redirecciones':
@@ -1794,6 +1796,9 @@ export const fr: Textos = {
       wordpress: 'WordPress',
       fastapi: 'FastAPI (port local)',
       node: 'Node / Vite (port local)',
+      rails: 'Rails (port local)',
+      springboot: 'Spring Boot (port local)',
+      aspnet: 'ASP.NET Core (port local)',
     } as Record<string, string>,
     tiposCortos: {
       laravel: 'Laravel',
@@ -1805,6 +1810,9 @@ export const fr: Textos = {
       wordpress: 'WP',
       fastapi: 'FastAPI',
       node: 'Node',
+      rails: 'Rails',
+      springboot: 'Spring Boot',
+      aspnet: 'ASP.NET',
     } as Record<string, string>,
     php: (v: string) => `PHP ${v}`,
     puerto: (p: number) => `→ :${p}`,
@@ -3017,6 +3025,9 @@ export const fr: Textos = {
       zig: 'Zig',
       kotlin: 'Kotlin',
       dart: 'Dart',
+      ruby: 'Ruby',
+      maven: 'Maven',
+      gradle: 'Gradle',
       versionAuto: 'Celle détectée',
       servicios: 'Services',
       serviciosNinguno: 'Aucun',
@@ -4699,6 +4710,10 @@ export const fr: Textos = {
   },
   versiones: {
     pestana: 'Versions',
+    avisoRuby:
+      'Ruby s’installe sans le Devkit (MSYS2) et sans toucher au PATH ni au registre de Windows : il n’y a pas d’installateur. Les gems à extensions natives sans binaire précompilé ont besoin du Devkit. C’est une étape manuelle : ouvrez un terminal depuis le projet et exécutez « ridk install » (cela installe MSYS2 sur votre ordinateur et télécharge depuis Internet).',
+    avisoJdk:
+      'Maven et Gradle s’exécutent avec un JDK de WolfCore Dev et aucun n’est encore installé. Installez Java (Temurin) depuis la liste des services.',
     avisoMeilisearch:
       'Chaque version mineure de Meilisearch a ses propres données. Si vous passez à une autre version mineure (par exemple de 1.58 à 1.59), vos index et la MEILISEARCH_KEY seront nouveaux : vous devrez réindexer et mettre à jour le .env de vos projets.',
     pestanaServicios: 'Services',
@@ -4730,6 +4745,9 @@ export const fr: Textos = {
       zig: 'Zig',
       kotlin: 'Kotlin',
       dart: 'Dart',
+      ruby: 'Ruby',
+      maven: 'Maven',
+      gradle: 'Gradle',
     },
     ayuda: {
       instancias:

@@ -13,8 +13,9 @@ import {
   useNotification,
 } from 'naive-ui';
 import Desplegable from './Desplegable.vue';
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import type { IdServicioDatos, RespaldoDatos, ServicioVersiones } from '../../shared/api';
+import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
 import { formatearTamano } from '../utilidades/bd';
@@ -46,6 +47,21 @@ const notification = useNotification();
 const { ejecutar, ocupado } = useAccion();
 
 const nombre = computed(() => t.servicios[props.servicio]);
+
+// Maven y Gradle se ejecutan con un JDK de WolfCore Dev: se avisa si no hay ninguno instalado.
+const hayJdk = ref(true);
+const necesitaJdk = computed(() => props.servicio === 'maven' || props.servicio === 'gradle');
+async function revisarJdk(): Promise<void> {
+  if (!necesitaJdk.value) return;
+  try {
+    const tabla = await api().catalogo.versiones('java', { todas: true });
+    hayJdk.value = tabla.ramas.some((r) => r.versiones.some((x) => x.instalada));
+  } catch {
+    hayJdk.value = true; // sin dato no se alarma
+  }
+}
+onMounted(revisarJdk);
+watch(() => props.servicio, revisarJdk);
 /** Nombre del servicio del diálogo abierto (no el de la pestaña, que puede cambiar). */
 const nombreDialogo = computed(() => t.servicios[servicioDelDialogo(v.dialogo, props.servicio)]);
 const opcionesServicio = computed(() =>
@@ -183,6 +199,12 @@ function pedirBorrarRespaldo(r: RespaldoDatos): void {
   <div class="versiones">
     <NAlert v-if="servicio === 'meilisearch'" type="info" :show-icon="false" class="aviso-meili">
       {{ t.avisoMeilisearch }}
+    </NAlert>
+    <NAlert v-if="servicio === 'ruby'" type="info" :show-icon="false" class="aviso-meili">
+      {{ t.avisoRuby }}
+    </NAlert>
+    <NAlert v-if="necesitaJdk && !hayJdk" type="warning" :show-icon="false" class="aviso-meili">
+      {{ t.avisoJdk }}
     </NAlert>
     <div class="barra">
       <Desplegable

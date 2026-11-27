@@ -231,6 +231,9 @@ const INSTALABLES = [
   'zig',
   'kotlin',
   'dart',
+  'ruby',
+  'maven',
+  'gradle',
 ] as const;
 
 /** Todo lo que el catálogo puede dejar en bin/ (también herramientas): para `instalados`. */

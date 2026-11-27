@@ -25,6 +25,9 @@ export const TIPOS: readonly TipoSitio[] = [
   'wordpress',
   'fastapi',
   'node',
+  'rails',
+  'springboot',
+  'aspnet',
 ];
 
 /** Tipos que necesitan una versión de PHP (igual que el núcleo). */
@@ -37,7 +40,12 @@ export const usaPhp = (tipo: TipoSitio): boolean =>
 
 /** Tipos que Nginx sirve como proxy hacia un puerto local (igual que el núcleo). */
 export const usaProxy = (tipo: TipoSitio): boolean =>
-  tipo === 'proxy' || tipo === 'fastapi' || tipo === 'node';
+  tipo === 'proxy' ||
+  tipo === 'fastapi' ||
+  tipo === 'node' ||
+  tipo === 'rails' ||
+  tipo === 'springboot' ||
+  tipo === 'aspnet';
 
 export const SUFIJO = '.test';
 

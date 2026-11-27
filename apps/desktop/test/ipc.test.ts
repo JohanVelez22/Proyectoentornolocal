@@ -1079,7 +1079,7 @@ describe('registrarIpc', () => {
         ['bd.revelarBloqueEnv', ['mysql', 'x', 'demo' + String.fromCharCode(10)]],
         ['servicios.revelarSecreto', ['redis']],
         ['servicios.revelarSecreto', ['mysql@8.4']],
-        ['bd.bloqueEnv', ['mysql', 'x', 'rails']],
+        ['bd.bloqueEnv', ['mysql', 'x', 'cobol']],
         ['bd.tieneTablas', ['mongodb', 'x']],
         ['bd.formato', [path.join(carpeta, 'no-existe.sql')]],
         ['bd.formato', [carpeta]],

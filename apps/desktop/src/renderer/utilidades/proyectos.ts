@@ -442,6 +442,9 @@ export const LENGUAJES_RUNTIME = [
   'zig',
   'kotlin',
   'dart',
+  'ruby',
+  'maven',
+  'gradle',
 ] as const;
 
 /** Detección editada en el asistente. */
@@ -460,6 +463,9 @@ export interface DeteccionEditable {
   zig: string | null;
   kotlin: string | null;
   dart: string | null;
+  ruby: string | null;
+  maven: string | null;
+  gradle: string | null;
   servicios: Deteccion['servicios'];
   dominio: string;
   /** Solo para el tipo proxy. */
@@ -483,6 +489,9 @@ export function deteccionEditable(d: Deteccion): DeteccionEditable {
     zig: null,
     kotlin: null,
     dart: null,
+    ruby: null,
+    maven: null,
+    gradle: null,
     servicios: [...d.servicios],
     dominio: d.dominioSugerido,
     puertoProxy: null,

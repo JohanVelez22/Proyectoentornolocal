@@ -376,10 +376,13 @@ describe('D5: pestañas de Java, .NET, Go y Rust', () => {
       'zig',
       'kotlin',
       'dart',
+      'ruby',
+      'maven',
+      'gradle',
     ] as const) {
       expect(SERVICIOS_CON_VERSIONES).toContain(s);
       expect(esServicioConVersiones(s)).toBe(true);
     }
-    expect(SERVICIOS_CON_VERSIONES).toHaveLength(26);
+    expect(SERVICIOS_CON_VERSIONES).toHaveLength(29);
   });
 });

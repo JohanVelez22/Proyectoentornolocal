@@ -97,6 +97,9 @@ const lenguajes = ref<Record<(typeof LENGUAJES_RUNTIME)[number], string[]>>({
   zig: [],
   kotlin: [],
   dart: [],
+  ruby: [],
+  maven: [],
+  gradle: [],
 });
 
 const visible = computed(() => actual.value !== null);

@@ -71,14 +71,17 @@ describe('D5: runtimes de Java, .NET, Go y Rust', () => {
       'zig',
       'kotlin',
       'dart',
+      'ruby',
+      'maven',
+      'gradle',
     ]) {
       expect(tipoRuntime(t)).toBe(t);
       expect(servicioDelCatalogo(t)).toBe(t);
     }
-    for (const mal of ['ruby', '', 'GO', 5, null, '../go']) {
+    for (const mal of ['php', '', 'GO', 5, null, '../go']) {
       expect(() => tipoRuntime(mal)).toThrow('runtime');
     }
-    expect(() => servicioDelCatalogo('ruby')).toThrow('servicio');
+    expect(() => servicioDelCatalogo('cobol')).toThrow('servicio');
   });
 });
 
