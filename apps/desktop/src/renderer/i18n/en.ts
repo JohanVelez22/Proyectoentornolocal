@@ -34,6 +34,13 @@ export const en: Textos = {
     cargando: 'Connecting to the core…',
     conErrores: 'with errors',
     sinConexion: 'No connection to the core',
+    /** Short pill text (always visible, 14 characters at most). */
+    cortoApagado: 'All off',
+    cortoEncendidos: (n: number) => `${n} running`,
+    cortoErrores: (n: number) => plural(n, 'with error', 'with errors'),
+    cortoCargando: 'Connecting…',
+    cortoSinConexion: 'Offline',
+    irAServicios: 'Open Services',
   },
   estado: {
     encendido: 'Running',
@@ -1370,6 +1377,17 @@ export const en: Textos = {
       herramientas: 'Everyday utilities.',
     },
     puerto: 'Port',
+    /** "Start all" with nothing to start. */
+    sinParaEncender: 'There are no installed services to start',
+    /** Strip shown when only external engines exist (D54a). */
+    franjaExternos: {
+      texto: 'You have not installed the web server or PHP yet. External engines were detected automatically.',
+      accion: 'Install Nginx and PHP',
+    },
+    externos: {
+      titulo: 'Detected on your computer',
+      ayuda: 'Another program manages them; WolfCore Dev only shows them.',
+    },
     cambiarPuerto: 'Change port',
     cambiarPuertoDe: (nombre: string) => `Change the ${nombre} port`,
     versionesDe: (nombre: string) => `Versions of ${nombre}`,

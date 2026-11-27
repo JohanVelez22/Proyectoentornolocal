@@ -33,6 +33,13 @@ export const es = {
     cargando: 'Conectando con el núcleo…',
     conErrores: 'con errores',
     sinConexion: 'Sin conexión con el núcleo',
+    /** Texto corto de la pastilla (siempre visible, máx. 14 caracteres). */
+    cortoApagado: 'Todo apagado',
+    cortoEncendidos: (n: number) => plural(n, 'encendido', 'encendidos'),
+    cortoErrores: (n: number) => plural(n, 'con error', 'con errores'),
+    cortoCargando: 'Conectando…',
+    cortoSinConexion: 'Sin conexión',
+    irAServicios: 'Ver Servicios',
   },
   estado: {
     encendido: 'Encendido',
@@ -1382,6 +1389,17 @@ export const es = {
       herramientas: 'Utilidades para el día a día.',
     },
     puerto: 'Puerto',
+    /** «Iniciar todo» sin nada que arrancar. */
+    sinParaEncender: 'No hay servicios instalados que encender',
+    /** Franja cuando solo hay motores externos (D54a). */
+    franjaExternos: {
+      texto: 'Aún no instaló el servidor web ni PHP. Los motores externos se detectaron solos.',
+      accion: 'Instalar Nginx y PHP',
+    },
+    externos: {
+      titulo: 'Detectados en su equipo',
+      ayuda: 'Los gestiona otro programa; WolfCore Dev solo los muestra.',
+    },
     cambiarPuerto: 'Cambiar puerto',
     cambiarPuertoDe: (nombre: string) => `Cambiar el puerto de ${nombre}`,
     versionesDe: (nombre: string) => `Versiones de ${nombre}`,

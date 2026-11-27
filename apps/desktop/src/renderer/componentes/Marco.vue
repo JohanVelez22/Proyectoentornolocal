@@ -116,9 +116,11 @@ const pastilla = computed(() =>
   resumenPastilla({
     cargado: servicios.cargado,
     fallo: falloArranque.value,
-    encendidos: servicios.encendidos,
+    // La misma cuenta que Servicios e Inicio (`servicios.resumen`, sobre los servicios visibles).
+    encendidos: servicios.resumen.encendidos,
     tuneles: tuneles.activos.length,
-    hayError: servicios.lista.some((s) => s.estado === 'error'),
+    hayError: servicios.resumen.conError > 0,
+    conError: servicios.resumen.conError,
   }),
 );
 
@@ -264,15 +266,18 @@ onBeforeUnmount(() => {
             <CampanaAvisos @abrir="panelAvisos = true" />
             <SelectorIdioma compacto />
             <SelectorTema compacto />
-            <div
+            <!-- Estado del entorno siempre con texto corto; al pulsarla lleva a Servicios. -->
+            <button
+              type="button"
               class="pastilla"
               :class="{ viva: pastilla.tono === 'viva', alerta: pastilla.tono === 'alerta' }"
-              role="status"
-              :title="pastilla.texto"
+              :title="`${pastilla.texto} · ${textos.resumenGlobal.irAServicios}`"
+              :aria-label="`${pastilla.texto}. ${textos.resumenGlobal.irAServicios}`"
+              @click="navegar('servicios')"
             >
               <span class="pastilla-punto" aria-hidden="true" />
-              <span class="pastilla-texto">{{ pastilla.texto }}</span>
-            </div>
+              <span class="pastilla-texto" role="status">{{ pastilla.corto }}</span>
+            </button>
           </div>
         </div>
       </NLayoutHeader>
@@ -418,19 +423,12 @@ onBeforeUnmount(() => {
   opacity: 0.76;
 }
 .pastilla-texto {
-  display: none;
   white-space: nowrap;
 }
-/* Ventana ancha: sobra sitio para el texto de la pastilla de estado. */
+/* Ventana ancha: el título y los controles tienen más sitio a los lados. */
 @container (min-width: 1440px) {
   .fila-cabecera {
     --lado: 470px;
-  }
-  .pastilla {
-    padding: 5px 12px;
-  }
-  .pastilla-texto {
-    display: inline;
   }
 }
 /* Ventana estrecha: el buscador pasa a un icono y deja su sitio al título y a los controles. */
@@ -446,17 +444,39 @@ onBeforeUnmount(() => {
   .buscador kbd {
     display: none;
   }
+  /* Solo por debajo de 900 px la pastilla se queda en el punto (el texto sigue en su título). */
+  .pastilla-texto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .pastilla {
+    padding: 8px;
+  }
 }
 .pastilla {
-  margin-left: 6px;
+  margin-left: var(--wc-esp-2);
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px;
-  border-radius: 999px;
-  font-size: 12px;
+  gap: var(--wc-esp-2);
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--wc-radio-completo);
+  font: inherit;
+  font-size: var(--wc-texto-xs);
+  color: inherit;
+  cursor: pointer;
   border: 1px solid rgba(128, 128, 128, 0.22);
   background: rgba(128, 128, 128, 0.07);
+}
+.pastilla:hover {
+  border-color: rgba(var(--acento-rgb), 0.6);
+}
+.pastilla:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
 }
 .pastilla-punto {
   width: 7px;

@@ -39,6 +39,13 @@ export const fr: Textos = {
     cargando: 'Connexion au noyau…',
     conErrores: 'avec des erreurs',
     sinConexion: 'Pas de connexion au noyau',
+    /** Texte court de la pastille (toujours visible, 14 caractères au plus). */
+    cortoApagado: 'Tout éteint',
+    cortoEncendidos: (n: number) => plural(n, 'actif', 'actifs'),
+    cortoErrores: (n: number) => `${n} en erreur`,
+    cortoCargando: 'Connexion…',
+    cortoSinConexion: 'Hors connexion',
+    irAServicios: 'Ouvrir Services',
   },
   estado: {
     encendido: 'Allumé',
@@ -1442,6 +1449,17 @@ export const fr: Textos = {
       herramientas: 'Utilitaires du quotidien.',
     },
     puerto: 'Port',
+    /** « Tout démarrer » sans rien à démarrer. */
+    sinParaEncender: 'Aucun service installé à démarrer',
+    /** Bandeau quand il n’y a que des moteurs externes (D54a). */
+    franjaExternos: {
+      texto: 'Vous n’avez pas encore installé le serveur web ni PHP. Les moteurs externes ont été détectés automatiquement.',
+      accion: 'Installer Nginx et PHP',
+    },
+    externos: {
+      titulo: 'Détectés sur votre ordinateur',
+      ayuda: 'Un autre programme les gère ; WolfCore Dev ne fait que les afficher.',
+    },
     cambiarPuerto: 'Changer le port',
     cambiarPuertoDe: (nombre: string) => `Changer le port de ${nombre}`,
     versionesDe: (nombre: string) => `Versions de ${nombre}`,
