@@ -327,6 +327,34 @@ const TEXTOS = {
     carpetaDatosInvalida:
       'WOLFCORE_DATOS가 올바른 데이터 폴더가 아닙니다. 절대 경로여야 하며, 시스템 폴더가 아니어야 하고, 실제 데이터 폴더(및 이전 폴더)와 달라야 합니다. 아무것도 변경하지 않고 앱을 종료합니다.',
   },
+  hi: {
+    abrir: 'खोलें',
+    iniciarTodo: 'सभी शुरू करें',
+    detenerTodo: 'सभी बंद करें',
+    salir: 'बाहर निकलें',
+    workspaces: 'वर्कस्पेस',
+    workspaceParcial: 'आंशिक',
+    preguntaApagar: 'क्या सेवाएँ बंद करें?',
+    siApagar: 'हाँ, बंद करें',
+    noApagar: 'नहीं, चालू रहने दें',
+    cancelar: 'रद्द करें',
+    cliTitulo: 'टर्मिनल कमांड (wolf)',
+    cliTunelInternet:
+      'एक टर्मिनल कमांड {proveedor} के माध्यम से {dominio} को इंटरनेट पर प्रकाशित करना चाहता है। लिंक वाला कोई भी व्यक्ति इसे देख सकेगा।',
+    cliTunelTailnet:
+      'एक टर्मिनल कमांड {dominio} को आपके tailnet के उपकरणों के साथ साझा करना चाहता है ({proveedor})।',
+    cliPublicoEn: 'सार्वजनिक पता: https://{publico}',
+    cliDatosReales:
+      'चेतावनी: {dominio} में वास्तविक डेटा है। जारी रखने के लिए, नीचे इसका सटीक डोमेन चुनें। यदि आपने यह अनुरोध नहीं किया था, तो रद्द करें।',
+    cliPublicar: 'प्रकाशित करें',
+    cliPhpGlobal:
+      'एक टर्मिनल कमांड सभी टर्मिनलों का PHP संस्करण {version} में बदलना चाहता है।',
+    cliCambiar: 'बदलें',
+    carpetaDatosAislada:
+      'परीक्षण डेटा फ़ोल्डर, बिना hosts, PATH या सिस्टम प्रमाणपत्रों में बदलाव किए',
+    carpetaDatosInvalida:
+      'WOLFCORE_DATOS एक मान्य डेटा फ़ोल्डर नहीं है: यह पूर्ण पथ होना चाहिए, सिस्टम फ़ोल्डर नहीं होना चाहिए और वास्तविक फ़ोल्डर (तथा पिछले फ़ोल्डर) से भिन्न होना चाहिए। ऐप बिना किसी बदलाव के बंद हो रहा है।',
+  },
 } satisfies Record<IdiomaUi, Record<string, string>>;
 
 export type TextosMain = (typeof TEXTOS)['es'];
