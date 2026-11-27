@@ -383,6 +383,34 @@ const TEXTOS = {
     carpetaDatosInvalida:
       'WOLFCORE_DATOS geçerli bir veri klasörü değil: mutlak olmalı, sistem klasörü olmamalı ve gerçek (ve önceki) klasörden farklı olmalıdır. Uygulama hiçbir şeye dokunmadan kapanıyor.',
   },
+  id: {
+    abrir: 'Buka',
+    iniciarTodo: 'Mulai semua',
+    detenerTodo: 'Hentikan semua',
+    salir: 'Keluar',
+    workspaces: 'Workspace',
+    workspaceParcial: 'sebagian',
+    preguntaApagar: 'Hentikan semua layanan?',
+    siApagar: 'Ya, hentikan',
+    noApagar: 'Tidak, biarkan berjalan',
+    cancelar: 'Batal',
+    cliTitulo: 'Perintah terminal (wolf)',
+    cliTunelInternet:
+      'Sebuah perintah terminal ingin memublikasikan {dominio} ke internet menggunakan {proveedor}. Siapa pun yang memiliki tautan dapat melihatnya.',
+    cliTunelTailnet:
+      'Sebuah perintah terminal ingin membagikan {dominio} ke perangkat di tailnet Anda ({proveedor}).',
+    cliPublicoEn: 'Alamat publik: https://{publico}',
+    cliDatosReales:
+      'PERHATIAN: {dominio} berisi DATA NYATA. Untuk melanjutkan, pilih domain persisnya di bawah ini. Jika Anda tidak meminta ini, batalkan.',
+    cliPublicar: 'Publikasikan',
+    cliPhpGlobal:
+      'Sebuah perintah terminal ingin mengubah PHP di semua terminal ke versi {version}.',
+    cliCambiar: 'Ubah',
+    carpetaDatosAislada:
+      'folder data uji coba, tanpa mengubah hosts, PATH, maupun sertifikat sistem',
+    carpetaDatosInvalida:
+      'WOLFCORE_DATOS bukan folder data yang valid: harus berupa jalur absolut, bukan folder sistem, dan berbeda dari folder data asli (maupun sebelumnya). Aplikasi ditutup tanpa mengubah apa pun.',
+  },
 } satisfies Record<IdiomaUi, Record<string, string>>;
 
 export type TextosMain = (typeof TEXTOS)['es'];

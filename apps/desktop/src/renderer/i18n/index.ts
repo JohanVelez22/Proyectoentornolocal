@@ -29,12 +29,14 @@ import { hi } from './hi';
 
 import { tr } from './tr';
 
+import { id } from './id';
+
 export type { Textos } from './es';
 
 export { IDIOMAS, idiomaDeLocale, type InfoIdioma } from '../../shared/idiomas';
 export type Idioma = IdiomaUi;
 
-export const diccionarios: Record<IdiomaUi, Textos> = { es, en, pt, fr, de, it, ru, zh, ja, ko, hi, tr };
+export const diccionarios: Record<IdiomaUi, Textos> = { es, en, pt, fr, de, it, ru, zh, ja, ko, hi, tr, id };
 
 /** Idioma activo (lo fija la tienda de preferencias). */
 export const idioma = ref<Idioma>('es');

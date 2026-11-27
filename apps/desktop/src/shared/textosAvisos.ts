@@ -2208,7 +2208,186 @@ const TR: Diccionario = {
   },
 };
 
-const DICCIONARIOS = { es: ES, en: EN, pt: PT, fr: FR, de: DE, it: IT, ru: RU, zh: ZH, ja: JA, ko: KO, hi: HI, tr: TR } satisfies Record<IdiomaUi, Diccionario>;
+const ID: Diccionario = {
+  porCodigo: {
+    'avisos.servicio_caido': (d) => ({
+      titulo: 'Layanan berhenti karena kesalahan',
+      cuerpo: `${limpio(d['nombre'], 'Sebuah layanan')} berhenti bekerja. Buka WolfCore Dev untuk melihat detailnya.`,
+    }),
+    'avisos.iniciar_todo_fallos': (d) => ({
+      titulo: 'Mulai semua tidak dapat menyalakan semua layanan',
+      cuerpo: `Gagal berjalan: ${limpio(d['nombres'], 'beberapa layanan')}. Buka Layanan untuk melihat detailnya.`,
+    }),
+    'avisos.workspace_fallos': (d) => ({
+      titulo: 'Workspace tidak dapat menyalakan semua elemen',
+      cuerpo: `${limpio(d['nombre'], 'Workspace')}: gagal menyalakan ${limpio(d['nombres'], 'beberapa elemen')}. Buka Beranda untuk melihat apa yang berjalan.`,
+    }),
+    'avisos.workspace_fallos_detener': (d) => ({
+      titulo: 'Workspace tidak dapat mematikan semua elemen',
+      cuerpo: `${limpio(d['nombre'], 'Workspace')}: gagal mematikan ${limpio(d['nombres'], 'beberapa elemen')}. Buka Beranda untuk melihat apa yang masih berjalan.`,
+    }),
+    'avisos.tarea_fallo': (d) => ({
+      titulo:
+        d['motivo'] === 'tiempo'
+          ? 'Tugas terjadwal memakan waktu terlalu lama'
+          : 'Tugas terjadwal gagal',
+      cuerpo: `${limpio(d['nombre'], 'Sebuah tugas')} (${limpio(d['sitio'], 'sebuah proyek')}) ${d['motivo'] === 'tiempo' ? 'melebihi batas waktu maksimumnya dan dihentikan' : 'berakhir dengan kesalahan'}. Buka proyek untuk melihat log-nya.`,
+    }),
+    'avisos.tarea_bloqueada': (d) => ({
+      titulo: 'Tugas terjadwal tidak dijalankan',
+      cuerpo: `${limpio(d['nombre'], 'Sebuah tugas')} (${limpio(d['sitio'], 'sebuah proyek')}): ${
+        {
+          aislado: 'folder data adalah mode uji coba dan eksekusi tugas belum diizinkan',
+          no_confiado: 'proyek belum ditandai sebagai tepercaya',
+          receta_cambio: 'resep proyek berubah sejak Anda memercayainya',
+          sin_confirmar: 'perintahnya belum dikonfirmasi',
+          comando_invalido: 'perintahnya tidak diizinkan',
+          cron_invalida: 'jadwalnya tidak valid',
+          carpeta: 'folder proyek tidak ada',
+        }[String(d['motivo'])] ?? 'ketentuan tidak terpenuhi'
+      }.`,
+    }),
+    'avisos.puerto_ocupado': (d) => ({
+      titulo: 'Port sedang digunakan',
+      cuerpo: `Port ${limpio(d['puerto'], '?')} digunakan oleh ${limpio(d['nombre'], 'program lain')}: layanan tidak dapat dimulai.`,
+    }),
+    'avisos.proceso_error': (d) => ({
+      titulo: 'Proses proyek berakhir dengan kesalahan',
+      cuerpo: `${limpio(d['nombre'], 'Sebuah proses')} berhenti bekerja. Periksa log-nya.`,
+    }),
+    'avisos.proceso_terminado': (d) => ({
+      titulo: 'Proses telah selesai',
+      cuerpo: `${limpio(d['nombre'], 'Sebuah proses')} selesai tanpa kesalahan.`,
+    }),
+    'avisos.proceso_fallo': (d) => ({
+      titulo: 'Proses gagal',
+      cuerpo: `${limpio(d['nombre'], 'Sebuah proses')} berakhir dengan kesalahan${d['codigoSalida'] !== undefined ? ` (kode ${limpio(d['codigoSalida'], '?')})` : ''}. Periksa log-nya.`,
+    }),
+    'avisos.receta_terminada': (d) => ({
+      titulo: 'Resep selesai',
+      cuerpo: `Resep untuk ${limpio(d['sitio'], 'sebuah proyek')} selesai tanpa kesalahan.`,
+    }),
+    'avisos.receta_fallo': (d) => ({
+      titulo: 'Resep gagal',
+      cuerpo: `Resep untuk ${limpio(d['sitio'], 'sebuah proyek')} berhenti karena kesalahan. Buka proyek untuk melihat langkahnya.`,
+    }),
+    'avisos.tunel_caido': (d) => ({
+      titulo: 'Terowongan terputus',
+      cuerpo: `Terowongan untuk ${limpio(d['fuente'], 'sebuah proyek')} berhenti bekerja.`,
+    }),
+    'avisos.contenedor_detenido': (d) => ({
+      titulo: 'Kontainer berhenti',
+      cuerpo: `${limpio(d['nombre'], 'Sebuah kontainer')} (${limpio(d['motor'], 'Docker')}) berhenti tanpa diminta${d['codigoSalida'] !== undefined ? ` (kode ${limpio(d['codigoSalida'], '?')})` : ''}.`,
+    }),
+    'avisos.ca_por_vencer': (d) => ({
+      titulo: 'Otoritas sertifikat (CA) segera kedaluwarsa',
+      cuerpo: `Kedaluwarsa dalam ${limpio(d['dias'], '?')} hari. Buat ulang dan percayai kembali.`,
+    }),
+    'avisos.certificado_por_vencer': (d) => ({
+      titulo: 'Sertifikat segera kedaluwarsa',
+      cuerpo: `Sertifikat untuk ${limpio(d['fuente'], 'sebuah situs')} kedaluwarsa dalam ${limpio(d['dias'], '?')} hari.`,
+    }),
+    'avisos.certificado_vencido': (d) => ({
+      titulo: 'Sertifikat telah kedaluwarsa',
+      cuerpo: `Sertifikat untuk ${limpio(d['fuente'], 'sebuah situs')} tidak lagi valid. Buat ulang.`,
+    }),
+    'avisos.php_sitio_fallo': (d) => ({
+      titulo: 'PHP khusus situs gagal dimulai',
+      cuerpo: `PHP untuk ${limpio(d['fuente'], 'sebuah situs')} gagal dimulai (port-nya mungkin dipakai program lain). Periksa bagian PHP pada kartunya.`,
+    }),
+    'avisos.php_sitio_sin_puertos': (d) => ({
+      titulo: 'Tidak ada port kosong untuk PHP situs',
+      cuerpo: `${limpio(d['fuente'], 'Sebuah situs')} menggunakan PHP bersama untuk versinya tanpa pengaturan khusus: tidak tersisa port kosong untuk PHP sendiri.`,
+    }),
+    'avisos.php_sitio_descartados': (d) => ({
+      titulo: 'Pengaturan PHP diabaikan',
+      cuerpo: `Beberapa pengaturan PHP untuk ${limpio(d['fuente'], 'sebuah situs')} tidak valid dan tidak diterapkan: ${limpio(d['claves'], 'periksa bagian PHP')}.`,
+    }),
+    'avisos.lan_red_cambio': (d) => ({
+      titulo: 'Berbagi di jaringan lokal dihentikan',
+      cuerpo: `Jaringan berubah: berbagi untuk ${limpio(d['fuente'], 'sebuah situs')} dihentikan.`,
+    }),
+    'avisos.vhost_reglas_descartadas': (d) => ({
+      titulo: 'Aturan Nginx diabaikan',
+      cuerpo: `Aturan khusus untuk ${limpio(d['fuente'], 'sebuah situs')} tidak lagi lolos pemeriksaan (folder, domain, atau port berubah) dan dikeluarkan dari vhost. Periksa di bagian Nginx.`,
+    }),
+    'avisos.vhost_manual_descartado': (d) => ({
+      titulo: 'Vhost manual tidak digunakan',
+      cuerpo: `Vhost manual untuk ${limpio(d['fuente'], 'sebuah situs')} tidak lagi lolos pemeriksaan (folder, domain, atau port berubah): menggunakan vhost yang dihasilkan otomatis. Periksa di bagian Nginx.`,
+    }),
+    'avisos.rustup_entrada_ajena': () => ({
+      titulo: 'rustup sudah terpasang di lokasi lain',
+      cuerpo:
+        'Rust milik WolfCore Dev dipasang di foldernya sendiri. Windows sudah memiliki entri penghapusan rustup yang mengarah ke pemasangan lain: entri tersebut tidak diubah.',
+    }),
+    'avisos.version_nueva': (d) => ({
+      titulo: `Tersedia versi baru untuk ${limpio(d['servicio'], 'sebuah layanan')}`,
+      cuerpo: `${limpio(d['nueva'], 'Versi baru')} telah dirilis (Anda menggunakan ${limpio(d['actual'], 'versi lain')}). Buka di Layanan → Versi untuk memperbarui; tidak ada yang dipasang otomatis.`,
+      accion: 'Perbarui',
+    }),
+    'avisos.version_nueva_sin_huella': (d) => ({
+      titulo: `Tersedia versi baru untuk ${limpio(d['servicio'], 'sebuah layanan')}`,
+      cuerpo: `${limpio(d['nueva'], 'Versi baru')} telah dirilis (Anda menggunakan ${limpio(d['actual'], 'versi lain')}), tanpa hash resmi: unduhan tidak dapat diverifikasi. Periksa di Layanan → Versi; pemasangan memerlukan konfirmasi Anda.`,
+    }),
+    'avisos.rama_nueva_sin_huella': (d) => ({
+      titulo: `Versi utama baru untuk ${limpio(d['servicio'], 'sebuah layanan')}`,
+      cuerpo: `${limpio(d['nueva'], 'Versi utama baru')} lebih baru dari yang Anda gunakan (${limpio(d['actual'], '?')}), tanpa hash resmi: unduhan tidak dapat diverifikasi. Periksa di Layanan → Versi; pemasangan memerlukan konfirmasi Anda.`,
+    }),
+    'avisos.rama_nueva': (d) => ({
+      titulo: `Versi utama baru untuk ${limpio(d['servicio'], 'sebuah layanan')}`,
+      cuerpo: `${limpio(d['nueva'], 'Versi utama baru')} lebih baru dari yang Anda gunakan (${limpio(d['actual'], '?')}). Dipasang secara terpisah tanpa menyentuh data Anda.`,
+      accion: 'Perbarui',
+    }),
+    'doctor.hallazgos': (d) => ({
+      titulo: 'Doctor menemukan kesalahan pada lingkungan',
+      cuerpo: `Ada ${limpio(d['errores'], 'beberapa')} masalah yang dapat menghambat kerja lingkungan. Buka Doctor untuk melihat cara memperbaikinya.`,
+    }),
+  },
+  porTipo: {
+    'servicio-caido': {
+      titulo: 'Sebuah layanan berhenti',
+      cuerpo: 'Buka WolfCore Dev untuk melihat detailnya.',
+    },
+    'puerto-ocupado': {
+      titulo: 'Port sedang digunakan',
+      cuerpo: 'Buka WolfCore Dev untuk melihat detailnya.',
+    },
+    'certificado-por-vencer': {
+      titulo: 'Sertifikat segera kedaluwarsa',
+      cuerpo: 'Buka WolfCore Dev untuk melihat detailnya.',
+    },
+    'tunel-caido': {
+      titulo: 'Terowongan terputus',
+      cuerpo: 'Buka WolfCore Dev untuk melihat detailnya.',
+    },
+    'proceso-error': {
+      titulo: 'Proses berakhir dengan kesalahan',
+      cuerpo: 'Buka WolfCore Dev untuk melihat detailnya.',
+    },
+    'proceso-terminado': {
+      titulo: 'Proses selesai',
+      cuerpo: 'Buka WolfCore Dev untuk melihat detailnya.',
+    },
+    'receta-terminada': {
+      titulo: 'Resep selesai',
+      cuerpo: 'Buka WolfCore Dev untuk melihat detailnya.',
+    },
+    doctor: {
+      titulo: 'Doctor menemukan masalah',
+      cuerpo: 'Buka WolfCore Dev untuk meninjaunya.',
+    },
+    'contenedor-detenido': {
+      titulo: 'Kontainer berhenti',
+      cuerpo: 'Buka WolfCore Dev untuk melihat detailnya.',
+    },
+    'version-nueva': {
+      titulo: 'Tersedia versi baru',
+      cuerpo: 'Buka WolfCore Dev untuk memperbarui.',
+    },
+  },
+};
+
+const DICCIONARIOS = { es: ES, en: EN, pt: PT, fr: FR, de: DE, it: IT, ru: RU, zh: ZH, ja: JA, ko: KO, hi: HI, tr: TR, id: ID } satisfies Record<IdiomaUi, Diccionario>;
 
 export const CODIGOS_AVISO = Object.keys(ES.porCodigo);
 
@@ -2226,6 +2405,7 @@ export const CODIGOS_AVISO_POR_IDIOMA: Record<IdiomaUi, string[]> = {
   ko: Object.keys(KO.porCodigo),
   hi: Object.keys(HI.porCodigo),
   tr: Object.keys(TR.porCodigo),
+  id: Object.keys(ID.porCodigo),
 };
 
 export function textoAviso(
