@@ -12,6 +12,7 @@ import {
 } from '@pel/core';
 import type { ProcesoTrabajo } from '../src/main/conversorSupervisor';
 import { crearEjecutorUsoDiscoSupervisado } from '../src/main/discoSupervisor';
+import { registrarIpc, type IpcMainLike, type NucleoIpc, type VentanaLike } from '../src/main/ipc';
 import { es } from '../src/renderer/i18n/es';
 import { en } from '../src/renderer/i18n/en';
 import { fr } from '../src/renderer/i18n/fr';
@@ -287,5 +288,56 @@ describe('textos de D51 en los cuatro idiomas', () => {
     expect(JSON.stringify(fr.herramientas.usoDisco)).not.toMatch(
       /\b(tu|ton|ta|tes|choisis|utilise)\b/i,
     );
+  });
+});
+
+describe('IPC de Uso del disco (D51): el Explorador siempre es un doble, nunca el real', () => {
+  type Manejador = (evento: unknown, ...args: unknown[]) => unknown;
+  function preparar() {
+    const canales = new Map<string, Manejador>();
+    const ipcMain: IpcMainLike = { handle: (c, fn) => void canales.set(c, fn as Manejador) };
+    const usoDisco = {
+      unidades: vi.fn(async () => []),
+      analizar: vi.fn(async () => ({ id: 'd1' })),
+      analizarUnidad: vi.fn(async () => ({ id: 'd2' })),
+      cancelar: vi.fn(() => true),
+      carpetaDe: vi.fn(async () => join(dir, 'real')),
+    };
+    const nucleo = { eventos: { on: () => () => undefined }, usoDisco } as unknown as NucleoIpc;
+    const ventana: VentanaLike = {
+      isDestroyed: () => false,
+      webContents: { send: () => undefined },
+    };
+    const abrirCarpeta = vi.fn();
+    const sistema = {
+      elegirCarpeta: vi.fn(async () => dir),
+      elegirArchivo: vi.fn(async () => null),
+      abrirUrl: vi.fn(),
+      abrirGrabadora: vi.fn(),
+      abrirCarpeta,
+      copiar: vi.fn(),
+      version: vi.fn(async () => '1'),
+      guardarArchivo: vi.fn(async () => null),
+      elegirArchivos: vi.fn(async () => []),
+    };
+    registrarIpc(nucleo, ipcMain, ventana, sistema);
+    const llamar = (c: string, ...a: unknown[]) =>
+      canales.get(`entorno:${c}`)!({}, ...a) as Promise<{ ok: boolean; valor?: unknown }>;
+    return { llamar, usoDisco, abrirCarpeta };
+  }
+
+  it('abrirCarpeta usa la ruta del núcleo (no la de la ventana) y solo llama al doble', async () => {
+    const t = preparar();
+    expect((await t.llamar('discoUso.abrirCarpeta', 'd1', 4)).ok).toBe(true);
+    expect(t.usoDisco.carpetaDe).toHaveBeenCalledWith('d1', 4);
+    expect(t.abrirCarpeta).toHaveBeenCalledWith(join(dir, 'real'));
+    expect((await t.llamar('discoUso.abrirCarpeta', 'd1', 'C:\Windows')).ok).toBe(false);
+    expect(t.abrirCarpeta).toHaveBeenCalledTimes(1);
+  });
+
+  it('analizar solo acepta una carpeta elegida con el diálogo', async () => {
+    const t = preparar();
+    expect((await t.llamar('discoUso.analizar', dir)).ok).toBe(false);
+    expect(t.usoDisco.analizar).not.toHaveBeenCalled();
   });
 });
