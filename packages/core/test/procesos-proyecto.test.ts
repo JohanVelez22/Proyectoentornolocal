@@ -36,14 +36,14 @@ class SupervisorFalso implements SupervisorProcesos {
   readonly mensajes = new Map<string, string>();
   alIniciar?: (def: DefProceso) => Promise<void>;
   private readonly oyentesTermino: Array<
-    (id: string, codigo: number | null, sinCodigo?: boolean) => void
+    (id: string, codigo: number | null, sinCodigo: boolean) => void
   > = [];
 
-  alTerminar(fn: (id: string, codigo: number | null, sinCodigo?: boolean) => void): void {
+  alTerminar(fn: (id: string, codigo: number | null, sinCodigo: boolean) => void): void {
     this.oyentesTermino.push(fn);
   }
   /** Simula la salida definitiva de un proceso. */
-  terminar(id: string, codigo: number | null, sinCodigo?: boolean): void {
+  terminar(id: string, codigo: number | null, sinCodigo = false): void {
     this.estados.delete(id);
     for (const fn of this.oyentesTermino) fn(id, codigo, sinCodigo);
   }
