@@ -331,7 +331,11 @@ export class GestorHttps {
     // está cerrando tras una recarga (el sistema aún le atribuye el socket): no se sabe, y quitar
     // el HTTPS de todos los sitios es peor que dejarlo. Un nginx ajeno real tiene su ruta legible
     // y ya se decidió arriba como «ajeno» (D40).
-    if (/^nginx(\.exe)?$/i.test(dueno.nombre)) return { estado: 'desconocido', dueno };
+    // Lo mismo si el PID ya no existe (la plataforma no le encuentra nombre: 'desconocido'):
+    // un proceso terminado no es «otro programa».
+    if (/^(nginx(\.exe)?|desconocido)$/i.test(dueno.nombre)) {
+      return { estado: 'desconocido', dueno };
+    }
     return { estado: 'ajeno', dueno };
   }
 

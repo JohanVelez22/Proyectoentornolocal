@@ -202,6 +202,10 @@ describe('GestorHttps', () => {
     duenos.set(443, { pid: 11, nombre: 'nginx.exe' });
     expect((await g.estadoPuerto(443)).estado).toBe('desconocido');
     expect(await g.puertoUsable(443)).toBe(true);
+    // El PID que figura ya no existe (la plataforma no le encuentra nombre): tampoco es ajeno.
+    duenos.set(443, { pid: 13, nombre: 'desconocido' });
+    expect((await g.estadoPuerto(443)).estado).toBe('desconocido');
+    expect(await g.puertoUsable(443)).toBe(true);
     // Otro programa sin ruta legible (p. ej. System por HTTP.sys) sí es ajeno.
     duenos.set(443, { pid: 4, nombre: 'System' });
     expect((await g.estadoPuerto(443)).estado).toBe('ajeno');
