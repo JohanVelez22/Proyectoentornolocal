@@ -19,6 +19,8 @@ import { pipeline } from 'node:stream/promises';
 import yauzl from 'yauzl';
 import { leerBaseDelProyecto } from '../bd/baseProyecto';
 import { generarClaveBd, usuarioDeProyecto } from '../bd/usuarioProyecto';
+import { compararVersionesDesc } from '../catalogo/comun';
+import type { VersionDisponible } from '../catalogo/catalogo';
 import { huellaDeFila } from '../catalogo/tablaVersiones';
 import { huellaSha1, huellaSha256, restriccionesDeCa } from '../https/ca';
 import type { HuellaFila } from '../catalogo/tablaVersiones';
@@ -540,12 +542,16 @@ async function planificar(
   for (const v of m.versiones) {
     const instalada = await d.versionInstalada(v.servicio, v.version).catch(() => false);
     const disp = await d.buscarVersion(v.servicio, v.version).catch(() => null);
+    // PHP que ya no está en el catálogo: la última de su misma rama, solo si la rama no está
+    // instalada (una instalación existente nunca se cambia).
+    const sust = !instalada && disp === null ? await ultimaDeRama(d, v.servicio, v.version) : null;
     versiones.push({
       servicio: v.servicio,
       version: v.version,
-      disponible: disp !== null,
+      disponible: disp !== null || sust !== null,
       instalada,
-      huella: disp ? huellaDeFila(disp) : 'ninguna',
+      huella: disp ? huellaDeFila(disp) : sust ? huellaDeFila(sust) : 'ninguna',
+      ...(sust ? { sustituta: sust.version } : {}),
     });
   }
 
@@ -938,14 +944,16 @@ export class Perfiles {
       }
       instaladasAhora++;
       try {
-        const disp = await d.buscarVersion(v.servicio, v.version);
+        const objetivo = v.sustituta ?? v.version;
+        const disp = await d.buscarVersion(v.servicio, objetivo);
         if (!disp || !aceptable(huellaDeFila(disp))) throw new Error('huella');
         await d.instalarVersion(disp);
         versiones.push({
           servicio: v.servicio,
           version: v.version,
           estado: 'instalada',
-          motivo: null,
+          motivo: v.sustituta ? 'version_sustituida' : null,
+          ...(v.sustituta ? { instaladaComo: disp.version } : {}),
         });
       } catch (e) {
         versiones.push({
@@ -1287,6 +1295,29 @@ export class Perfiles {
       ca,
       avisos,
     };
+  }
+}
+
+/** Rama («8.3») de una versión de PHP («8.3.36-1»), o null si no tiene esa forma. */
+const ramaDePhp = (version: string): string | null => /^(\d+\.\d+)\.\d/.exec(version)?.[1] ?? null;
+
+/** La última versión del catálogo de la misma rama de PHP, o null si no procede sustituir. */
+async function ultimaDeRama(
+  d: Pick<DepsPerfiles, 'versionesDeRama' | 'ramaInstalada'>,
+  servicio: string,
+  version: string,
+): Promise<VersionDisponible | null> {
+  const rama = servicio === 'php' ? ramaDePhp(version) : null;
+  if (rama === null || !d.versionesDeRama || !d.ramaInstalada) return null;
+  try {
+    if (await d.ramaInstalada(servicio, rama)) return null;
+    const candidatas = (await d.versionesDeRama(servicio, rama)).filter(
+      (c) => ramaDePhp(c.version) === rama,
+    );
+    candidatas.sort((a, b) => compararVersionesDesc(a.version, b.version));
+    return candidatas[0] ?? null;
+  } catch {
+    return null;
   }
 }
 

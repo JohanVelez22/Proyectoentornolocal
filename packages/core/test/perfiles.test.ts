@@ -1706,6 +1706,73 @@ describe('importarPerfil en otro equipo: se reasigna, se marca y se sigue', () =
     expect(d.reg.instaladas.sort()).toEqual(['mysql@8.4.3', 'php@8.4.3']);
   });
 
+  describe('PHP que ya no está en el catálogo (D40)', () => {
+    const perfilPhp = (version: string) =>
+      perfilManual({}, { versiones: [{ servicio: 'php', version, huella: null }] });
+    const catalogoPhp = (extra: Partial<DepsPerfiles> = {}): Partial<DepsPerfiles> => {
+      const filas = ['8.3.40-1', '8.3.38-1', '8.4.30-1'].map((v) =>
+        versionCatalogo('php', v, 'fuerte'),
+      );
+      return {
+        buscarVersion: async (s, v) => filas.find((f) => f.servicio === s && f.version === v) ?? null,
+        versionesDeRama: async (_s, rama) => filas.filter((f) => f.version.startsWith(`${rama}.`)),
+        ramaInstalada: async () => false,
+        ...extra,
+      };
+    };
+
+    it('instala la última de la misma rama y lo avisa en el resultado', async () => {
+      const archivo = await perfilPhp('8.3.36-1');
+      const d = deps(destino, catalogoPhp());
+      const vista = await new Perfiles(d).vistaPrevia(archivo);
+      expect(vista.versiones[0]).toMatchObject({
+        disponible: true,
+        huella: 'fuerte',
+        sustituta: '8.3.40-1',
+      });
+      expect(vista.descargas).toBe(1);
+      const r = await importar(archivo, d);
+      expect(d.reg.instaladas).toEqual(['php@8.3.40-1']);
+      expect(r.versiones).toEqual([
+        {
+          servicio: 'php',
+          version: '8.3.36-1',
+          estado: 'instalada',
+          motivo: 'version_sustituida',
+          instaladaComo: '8.3.40-1',
+        },
+      ]);
+    });
+
+    it('no sustituye si la rama ya está instalada: no toca una instalación existente', async () => {
+      const archivo = await perfilPhp('8.3.36-1');
+      const d = deps(destino, catalogoPhp({ ramaInstalada: async () => true }));
+      const r = await importar(archivo, d);
+      expect(d.reg.instaladas).toEqual([]);
+      expect(r.versiones[0]).toMatchObject({ estado: 'pendiente', motivo: 'no_disponible' });
+    });
+
+    it('no salta de rama ni sustituye si la última no tiene huella fuerte', async () => {
+      const archivo = await perfilPhp('8.2.1-1');
+      const d = deps(destino, catalogoPhp());
+      const r = await importar(archivo, d);
+      expect(d.reg.instaladas).toEqual([]);
+      expect(r.versiones[0]).toMatchObject({ estado: 'pendiente', motivo: 'no_disponible' });
+
+      const debil = versionCatalogo('php', '8.3.40-1', 'debil');
+      const d2 = deps(
+        destino,
+        catalogoPhp({
+          buscarVersion: async () => debil,
+          versionesDeRama: async () => [debil],
+        }),
+      );
+      const r2 = await importar(await perfilPhp('8.3.36-1'), d2);
+      expect(d2.reg.instaladas).toEqual([]);
+      expect(r2.versiones[0]).toMatchObject({ estado: 'pendiente', motivo: 'huella_debil' });
+    });
+  });
+
   it('las bases de una versión pendiente quedan pendientes (no se restaura nada)', async () => {
     const archivo = await exportar();
     const d = deps(destino, { buscarVersion: async () => null });

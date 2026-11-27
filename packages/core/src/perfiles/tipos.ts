@@ -60,6 +60,13 @@ export interface DepsPerfiles {
   versionesInstaladas(): Promise<{ servicio: string; version: string; huella: string | null }[]>;
   buscarVersion(servicio: string, version: string): Promise<VersionDisponible | null>;
   versionInstalada(servicio: string, version: string): Promise<boolean>;
+  /**
+   * Versiones que el catálogo tiene hoy de una rama de PHP ("8.3"); para ofrecer la última cuando
+   * la exacta del perfil ya no está. Sin esto, no se sustituye nada.
+   */
+  versionesDeRama?(servicio: string, rama: string): Promise<VersionDisponible[]>;
+  /** ¿Hay ya una instalación de esa rama (cualquier parche)? Entonces no se toca. */
+  ramaInstalada?(servicio: string, rama: string): Promise<boolean>;
   /** Instala desde el catálogo con su huella (nunca se llama con huella débil o sin huella). */
   instalarVersion(v: VersionDisponible): Promise<void>;
   /** ¿Se puede escuchar en 127.0.0.1:puerto? */
@@ -249,6 +256,11 @@ export interface VistaPreviaPerfil {
     disponible: boolean;
     instalada: boolean;
     huella: HuellaFila;
+    /**
+     * PHP cuya versión exacta ya no está en el catálogo y cuya rama no está instalada: la última
+     * de esa rama que se instalaría en su lugar (nunca cambia una instalación existente).
+     */
+    sustituta?: string | null;
   }[];
   instancias: { id: string; puerto: number; puertoNuevo: number | null; existente: boolean }[];
   bases: { instancia: string; base: string }[];
@@ -302,6 +314,8 @@ export interface ResultadoImportarPerfil {
     estado: 'instalada' | 'ya_instalada' | 'pendiente' | 'error';
     motivo: string | null;
     detalle?: string;
+    /** Versión que se instaló en lugar de `version` (ya no estaba en el catálogo). */
+    instaladaComo?: string;
   }[];
   instancias: {
     id: string;
