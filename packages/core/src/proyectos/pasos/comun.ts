@@ -318,8 +318,8 @@ export const nombrePrograma = (programa: string): string =>
 export const usaPhp = (programa: string): boolean => nombrePrograma(programa) === 'php';
 
 /**
- * Resuelve el programa de un comando (sin shell): `php`, `node`, `npm`, `npx` y `python` pasan a
- * los del proyecto (python: el del .venv si hay). Rechaza .cmd y .bat, que necesitan una consola.
+ * Resuelve el programa de un comando (sin shell): `php`, `node`, `npm`, `npx`, `python`, `go`,
+ * `ruby`, `dotnet`, `mvn` y `gradle` pasan a los del proyecto (python: el del .venv si hay). Rechaza .cmd y .bat, que necesitan una consola.
  * `h` debe traer PHP si `usaPhp(programa)`.
  */
 export async function resolverPrograma(
@@ -348,6 +348,22 @@ export async function resolverPrograma(
         cmd: (await existe(pythonVenv(carpeta))) ? pythonVenv(carpeta) : pythonExe(d, h),
         args: resto,
       };
+    case 'go': {
+      // `go run .` y `go build`: el go.exe del runtime del proyecto (con la ruta completa el
+      // lanzador reconoce el proceso; con «go» a secas lo rechazaba por no coincidir con go.exe).
+      const version = h.versiones.go;
+      if (!version) {
+        throw new ErrorWolf(
+          'runtimes.falta_runtime',
+          'No hay Go instalado para este proyecto: instálelo desde Servicios.',
+          { nombre: 'Go' },
+        );
+      }
+      return {
+        cmd: path.join(d.runtimes.rutaBin('go', version), 'bin', nombreEjecutable('go')),
+        args: resto,
+      };
+    }
     case 'ruby':
     case 'dotnet': {
       // Mismo aviso claro que Node y Python si el proyecto no tiene ese runtime instalado.

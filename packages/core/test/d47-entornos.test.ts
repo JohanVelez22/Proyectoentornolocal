@@ -325,6 +325,19 @@ describe('D47: Maven y Gradle sin shell', () => {
       /Ruby instalado/,
     );
   });
+  it('resolverPrograma lleva `go` al go.exe del runtime del proyecto (D39)', async () => {
+    // Sin esto `go run .` salía como «go» a secas y el lanzador rechazaba el proceso (go.exe).
+    const rutas = new Rutas(await temp());
+    const d = { runtimes: new Runtimes(rutas) };
+    const h = (versiones: Herramientas['versiones']): Herramientas => ({ env: {}, versiones });
+    const r = await resolverPrograma(['go', 'run', '.'], 'C:\\proy', d, h({ go: '1.27.4' }));
+    expect(r.cmd).toBe(path.join(rutas.bin('go', '1.27.4'), 'bin', 'go.exe'));
+    expect(r.args).toEqual(['run', '.']);
+    await expect(resolverPrograma(['go.exe', 'build'], 'C:\\p', d, h({}))).rejects.toMatchObject({
+      codigo: 'runtimes.falta_runtime',
+      datos: { nombre: 'Go' },
+    });
+  });
 });
 
 describe('D47: runtimes de Ruby, Maven y Gradle', () => {

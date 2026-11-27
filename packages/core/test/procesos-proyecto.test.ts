@@ -776,7 +776,8 @@ describe('D5: proceso de un proyecto Go con su runtime', () => {
     expect(def.env?.GOROOT).toBe(go);
     expect(def.env?.GOPATH).toBe(join(a.base, 'cache', 'go'));
     expect(pathDe(def)[0]).toBe(join(go, 'bin'));
-    expect(def.comando).toBe('go');
+    // D39: la ruta completa del go.exe del runtime (con «go» a secas el lanzador rechazaba el proceso).
+    expect(def.comando).toBe(join(go, 'bin', 'go.exe'));
     expect(def.args).toEqual(['run', '.']);
   });
 });
