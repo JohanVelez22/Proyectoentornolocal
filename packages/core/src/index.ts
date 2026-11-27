@@ -204,3 +204,6 @@ export * from './tareas/comando';
 export * from './tareas/gestor';
 export * from './tareas/programador';
 export * from './proyectos/reverb';
+export * from './clientehttp/tipos';
+export { ClienteHttp, type DepsClienteHttp, type SecretosHttp } from './clientehttp/cliente';
+export { esNombreSecreto } from './clientehttp/sensibles';
