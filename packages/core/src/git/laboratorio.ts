@@ -124,7 +124,13 @@ export const ejecutarGitPorDefecto: EjecutarGit = (cmd, args, o) =>
         resolve({
           codigo,
           stdout: String(stdout ?? ''),
-          stderr: String(stderr ?? '') || (e ? (e.killed ? 'Se agotó el plazo.' : e.message) : ''),
+          stderr:
+            String(stderr ?? '') ||
+            (e === null || typeof e.code === 'number'
+              ? ''
+              : e.killed
+                ? 'Se agotó el plazo.'
+                : 'No se pudo ejecutar git.'),
         });
       },
     );

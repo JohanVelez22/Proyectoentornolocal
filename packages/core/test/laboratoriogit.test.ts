@@ -377,6 +377,7 @@ describe.skipIf(!hayGit)('con git real', () => {
     const m = await run({ cmd: 'merge', nombre: 'rama-a' });
     expect(m.codigo).not.toBe(0);
     expect(m.salida).toMatch(/CONFLICT/);
+    expect(m.salida).not.toMatch(/Command failed|--no-pager/);
     expect((await l.leerArchivo('colores.txt')).contenido).toContain('<<<<<<<');
     await l.escribirArchivo('colores.txt', 'color: rojo\n');
     await run({ cmd: 'add', archivo: 'colores.txt' });
