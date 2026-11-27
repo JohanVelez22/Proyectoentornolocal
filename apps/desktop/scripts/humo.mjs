@@ -326,6 +326,66 @@ try {
   } catch (e) {
     falla(`La guía HTTP (Probar) no funcionó: ${e}`);
   }
+  // Guía de Git (D50): abre la pestaña, entra al laboratorio y ejecuta init y status en la carpeta
+  // de práctica propia de WolfCore (sin red, sin tocar ningún repositorio real).
+  try {
+    await ventana.keyboard.press('Escape');
+    await ventana.waitForSelector('.n-drawer', { state: 'detached', timeout: 15_000 });
+    await ventana.waitForSelector('[data-herramienta="guias"]', { timeout: 30_000 });
+    await ventana.evaluate(() => document.querySelector('[data-herramienta="guias"]')?.click());
+    await ventana.waitForSelector('.n-drawer .n-tabs-tab[data-name="guiaGit"]', {
+      state: 'attached',
+      timeout: 30_000,
+    });
+    await ventana.evaluate(() =>
+      document.querySelector('.n-drawer .n-tabs-tab[data-name="guiaGit"]')?.click(),
+    );
+    await ventana.waitForSelector('[data-testid="git-tema-configuracion"]', {
+      state: 'attached',
+      timeout: 30_000,
+    });
+    await ventana.evaluate(() =>
+      document.querySelector('[data-testid="git-modo-laboratorio"]')?.click(),
+    );
+    await ventana.waitForSelector('[data-testid="lab-status"], [data-testid="lab-sin-git"]', {
+      state: 'attached',
+      timeout: 60_000,
+    });
+    if ((await ventana.locator('[data-testid="lab-sin-git"]').count()) > 0) {
+      registro(
+        'ok   Guía de Git: sin git en este equipo, el laboratorio lo explica y no instala nada',
+      );
+    } else {
+      await ventana.evaluate(() => document.querySelector('[data-testid="lab-init"]')?.click());
+      await ventana.waitForFunction(
+        () =>
+          /git init/.test(document.querySelector('[data-testid="lab-salida"]')?.textContent ?? ''),
+        undefined,
+        { timeout: 60_000 },
+      );
+      await ventana.evaluate(() => document.querySelector('[data-testid="lab-status"]')?.click());
+      await ventana.waitForFunction(
+        () =>
+          /git status/.test(
+            document.querySelector('[data-testid="lab-salida"]')?.textContent ?? '',
+          ),
+        undefined,
+        { timeout: 60_000 },
+      );
+      const salida = await ventana.textContent('[data-testid="lab-salida"]');
+      if (!/On branch main/.test(salida ?? ''))
+        falla(`El laboratorio de Git no mostró «On branch main»: ${salida}`);
+      else registro('ok   Guía de Git: el laboratorio ejecutó init y status en su carpeta propia');
+    }
+  } catch (e) {
+    const vista = await ventana
+      .evaluate(
+        () =>
+          `${document.querySelector('[data-testid="lab-salida"]')?.textContent ?? ''} | ${[...document.querySelectorAll('.n-message')].map((m) => m.textContent).join(' / ')}`,
+      )
+      .catch(() => '');
+    falla(`La guía de Git (laboratorio) no funcionó: ${e} [${vista}]`);
+  }
   await ventana.waitForTimeout(500);
 
   if (consola.length > 0) {
