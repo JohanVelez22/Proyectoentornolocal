@@ -29,19 +29,19 @@ describe('buscador general centrado en la barra superior (D41)', () => {
     expect(plantilla.indexOf('<CampanaAvisos')).toBeGreaterThan(acciones);
   });
 
-  it('la barra es una cuadrícula título | buscador | controles con el buscador de 480 a 560 px', () => {
+  it('la barra es una cuadrícula título | buscador | controles; los controles nunca se encogen y el buscador mide de 480 a 560 px como máximo (D41 + D54a)', () => {
     const r = regla('.fila-cabecera');
     expect(r).toContain('display: grid');
-    // Los dos lados miden lo mismo (--lado): el buscador queda en el centro de la barra.
-    const m =
-      /grid-template-columns:\s*minmax\(var\(--lado\),\s*1fr\)\s*minmax\(0,\s*(\d+)px\)\s*minmax\(var\(--lado\),\s*1fr\)/.exec(
-        r,
-      );
+    // D54a: columnas en fracciones con mínimos; los controles (pastilla con texto) no se encogen,
+    // así nada se solapa con el buscador a ningún ancho.
+    expect(r).toMatch(
+      /grid-template-columns:\s*minmax\(\d+px,\s*1fr\)\s*minmax\(\d+px,\s*2fr\)\s*minmax\(min-content,\s*1fr\)/,
+    );
+    const m = /max-width:\s*(\d+)px/.exec(regla('.buscador'));
     expect(m).not.toBeNull();
     const maximo = Number(m![1]);
     expect(maximo).toBeGreaterThanOrEqual(480);
     expect(maximo).toBeLessThanOrEqual(560);
-    expect(regla('.buscador')).toContain(`max-width: ${maximo}px`);
   });
 
   it('en ventanas estrechas pasa a icono y el título se recorta con puntos suspensivos', () => {
