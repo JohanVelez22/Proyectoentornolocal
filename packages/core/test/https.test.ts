@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import forge from 'node-forge';
@@ -310,6 +310,62 @@ describe('aplicar con HTTPS', () => {
     const r = await g.aplicar();
     expect(r.httpsPendiente).toEqual([]);
     expect(vhost()).toContain('listen 127.0.0.1:443 ssl;');
+  });
+
+  describe('alinearVhosts y el aviso de HTTPS quitado (D40)', () => {
+    const conSsl = async (g: GestorSitios, https: GestorHttps) => {
+      await https.instalarCA();
+      await g.crear(nuevo({}));
+      await g.aplicar();
+      expect(vhost()).toContain('listen 127.0.0.1:443 ssl;');
+    };
+
+    it('si el 443 lo ocupa otro programa, alinear quita el HTTPS y avisa igual que aplicar', async () => {
+      const avisos: { sitios: string[]; puerto: number; ocupadoPor: string }[] = [];
+      const { g, https } = montar((a) => avisos.push(a));
+      await conSsl(g, https);
+      duenos.set(443, { pid: 99, nombre: 'FlyEnv.exe' });
+      await g.alinearVhosts();
+      expect(vhost()).not.toContain('443 ssl');
+      expect(avisos).toEqual([{ sitios: ['a'], puerto: 443, ocupadoPor: 'FlyEnv.exe' }]);
+      // Ya sin ssl en el archivo: no se repite.
+      await g.alinearVhosts();
+      expect(avisos).toHaveLength(1);
+    });
+
+    it('sin CA no se culpa al puerto: no hay aviso', async () => {
+      const avisos: { sitios: string[]; puerto: number; ocupadoPor: string }[] = [];
+      const { g } = montar((a) => avisos.push(a));
+      await g.crear(nuevo({}));
+      await g.aplicar();
+      writeFileSync(
+        rutas.vhost('a'),
+        vhost().replace('listen 127.0.0.1:80;', 'listen 127.0.0.1:443 ssl;'),
+      );
+      duenos.set(443, { pid: 99, nombre: 'FlyEnv.exe' });
+      await g.alinearVhosts();
+      expect(vhost()).not.toContain('443 ssl');
+      expect(avisos).toEqual([]);
+    });
+
+    it('un vhost manual no se toca ni avisa, en cada aplicar', async () => {
+      const avisos: { sitios: string[]; puerto: number; ocupadoPor: string }[] = [];
+      const { g, https } = montar((a) => avisos.push(a));
+      await conSsl(g, https);
+      const manual = `${vhost()}
+# mío
+`;
+      await g.modificarConfig((c) => {
+        c.sitios[0]!.vhostManual = manual;
+      });
+      writeFileSync(rutas.vhost('a'), manual);
+      duenos.set(443, { pid: 99, nombre: 'FlyEnv.exe' });
+      await g.alinearVhosts();
+      await g.aplicar();
+      await g.aplicar();
+      expect(vhost()).toBe(manual);
+      expect(avisos).toEqual([]);
+    });
   });
 
   it('si otro programa ocupa el 443 se quita el HTTPS pero con aviso (D40)', async () => {

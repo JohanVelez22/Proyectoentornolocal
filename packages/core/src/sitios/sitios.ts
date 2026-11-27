@@ -346,14 +346,47 @@ export class GestorSitios {
     // Sin carpeta de vhosts no hay nada antiguo que poner al día: lo crea el primer aplicar.
     if (existentes.length === 0) return;
     const httpsUsable = await this.httpsUsable(cfg);
+    const pierdeHttps: string[] = [];
     for (const s of cfg.sitios) {
       const ruta = this.d.rutas.vhost(s.id);
       const actual = await readFile(ruta, 'utf8').catch(() => null);
       // Sin archivo todavía: lo escribe aplicar, no esto.
       if (actual === null) continue;
       const v = await this.vhostCon(s, cfg, httpsUsable);
+      if (this.pierdeHttps(actual, v)) pierdeHttps.push(s.id);
       if (v.contenido !== actual) await writeFile(ruta, v.contenido, 'utf8');
     }
+    await this.avisarPerdidaHttps(cfg, pierdeHttps);
+  }
+
+  /**
+   * ¿Este vhost deja sin HTTPS a un sitio que lo tenía? Solo si el archivo actual escuchaba con
+   * `ssl`, el nuevo ya no lo hace por culpa del HTTPS pendiente y no es un vhost manual (lo
+   * escribió el usuario: lo que lleve es suyo y repetir el aviso en cada aplicar no sirve).
+   */
+  private pierdeHttps(
+    actual: string | null,
+    v: { contenido: string; modo: ModoVhost | null; httpsPendiente: boolean },
+  ): boolean {
+    const ssl = /^\s*listen\s[^;]*\bssl\b/m;
+    return (
+      v.httpsPendiente && v.modo !== 'manual' && ssl.test(actual ?? '') && !ssl.test(v.contenido)
+    );
+  }
+
+  /**
+   * Avisa de que el puerto HTTPS lo ocupa otro programa, solo si de verdad es así: con la CA sin
+   * crear o sin un dueño ajeno conocido el motivo es otro y no se culpa al puerto.
+   */
+  private async avisarPerdidaHttps(cfg: Config, sitios: string[]): Promise<void> {
+    if (sitios.length === 0 || !this.d.https?.caCreada()) return;
+    const ocupante = await this.d.https.ocupantePuerto?.(cfg.https.puerto).catch(() => null);
+    if (!ocupante) return;
+    this.d.avisarHttpsQuitado?.({
+      sitios,
+      puerto: cfg.https.puerto,
+      ocupadoPor: ocupante.nombre,
+    });
   }
 
   private async httpsUsable(cfg: Config): Promise<boolean> {
@@ -551,12 +584,8 @@ export class GestorSitios {
       const personalizados: { s: Sitio; contenido: string; plano: string; modo: ModoVhost }[] = [];
       for (const s of cfg.sitios) {
         const v = await this.vhostCon(s, cfg, httpsUsable);
-        if (v.httpsPendiente) {
-          httpsPendiente.push(s.id);
-          if (/^\s*listen\s[^;]*\bssl\b/m.test(previo.get(`${s.id}.conf`) ?? '')) {
-            pierdeHttps.push(s.id);
-          }
-        }
+        if (v.httpsPendiente) httpsPendiente.push(s.id);
+        if (this.pierdeHttps(previo.get(`${s.id}.conf`) ?? null, v)) pierdeHttps.push(s.id);
         if (v.modo)
           personalizados.push({ s, contenido: v.contenido, plano: v.plano, modo: v.modo });
         await writeFile(this.d.rutas.vhost(s.id), v.contenido, 'utf8');
@@ -607,14 +636,7 @@ No se pudo restaurar la configuración anterior: ${e instanceof Error ? e.messag
       }
     }
 
-    if (nginx.ok && pierdeHttps.length > 0) {
-      const ocupante = await this.d.https?.ocupantePuerto?.(cfg.https.puerto).catch(() => null);
-      this.d.avisarHttpsQuitado?.({
-        sitios: pierdeHttps,
-        puerto: cfg.https.puerto,
-        ocupadoPor: ocupante?.nombre ?? '',
-      });
-    }
+    if (nginx.ok) await this.avisarPerdidaHttps(cfg, pierdeHttps);
 
     return { nginx, httpsPendiente, sitios: cfg.sitios };
   }
