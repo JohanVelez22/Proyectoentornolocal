@@ -73,6 +73,7 @@ const componentes: Record<Clave, Component> = {
   ),
   guiaTuneles: defineAsyncComponent(() => import('../componentes/herramientas/GuiaTuneles.vue')),
   guiaHttp: defineAsyncComponent(() => import('../componentes/herramientas/GuiaHttp.vue')),
+  guiaGit: defineAsyncComponent(() => import('../componentes/herramientas/GuiaGit.vue')),
   editor: defineAsyncComponent(() => import('../componentes/herramientas/EditorCodigo.vue')),
   diffCarpetas: defineAsyncComponent(() => import('../componentes/herramientas/DiffCarpetas.vue')),
 };

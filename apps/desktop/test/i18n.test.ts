@@ -359,7 +359,14 @@ describe('i18n', () => {
       const RAIZ_SRC = join(__dirname, '../src');
       const RAIZ_NUCLEO = join(__dirname, '../../../packages/core/src');
       /** Lista blanca de archivos que hablan de Git (ramas del repositorio del usuario). */
-      const ARCHIVOS_GIT = new Set(['git/git.ts', 'git/tipos.ts']);
+      const ARCHIVOS_GIT = new Set([
+        'git/git.ts',
+        'git/tipos.ts',
+        // Laboratorio de práctica de Git (D50): sus ramas son las de git, no la palabra «rama» de la app.
+        'git/laboratorio.ts',
+        'renderer/utilidades/conflictoGuiado.ts',
+        'renderer/componentes/herramientas/LaboratorioGit.vue',
+      ]);
       /** Líneas de Git en otros archivos: se justifica cada una aquí, con la palabra de Git. */
       const LINEAS_GIT = [/\bgit (?:fetch|pull)\b/i, /repositorio del proyecto/i];
 

@@ -62,7 +62,7 @@ describe('Herramientas por secciones (D38a)', () => {
   it('las tarjetas unificadas reúnen sus herramientas en pestañas', () => {
     expect(PESTANAS_TARJETA.comparar).toEqual(['diff', 'diffCarpetas']);
     expect(PESTANAS_TARJETA.qr).toEqual(['qr', 'qrWifi']);
-    expect(PESTANAS_TARJETA.guias).toEqual(['guiaHttp', 'guiaTuneles']);
+    expect(PESTANAS_TARJETA.guias).toEqual(['guiaHttp', 'guiaTuneles', 'guiaGit']);
     expect(pestanasDe('puertos')).toEqual([]);
   });
 
@@ -113,12 +113,10 @@ describe('Herramientas por secciones (D38a)', () => {
     expect(vista).toContain('solicitudes.herramienta = null');
   });
 
-  it('deja sitio para la guía de Git (D50) sin crearla', () => {
-    expect(fuente('src', 'renderer', 'utilidades', 'herramientasSecciones.ts')).toContain(
-      'guiaGit',
-    );
-    expect(IDS_HERRAMIENTA).not.toContain('guiaGit');
-    expect(PESTANAS_TARJETA.guias as readonly string[]).not.toContain('guiaGit');
+  it('la guía de Git (D50) es una pestaña de la tarjeta Guías', () => {
+    expect(IDS_HERRAMIENTA).toContain('guiaGit');
+    expect(PESTANAS_TARJETA.guias as readonly string[]).toContain('guiaGit');
+    expect(resolverHerramienta('guiaGit')).toEqual({ tarjeta: 'guias', herramienta: 'guiaGit' });
   });
 
   it('el buscador encuentra una tarjeta por el nombre de cualquiera de sus pestañas', () => {
@@ -128,7 +126,15 @@ describe('Herramientas por secciones (D38a)', () => {
   });
 
   it('los paneles anchos siguen siendo los mismos', () => {
-    for (const h of ['diff', 'diffCarpetas', 'puertos', 'guiaHttp', 'guiaTuneles', 'editor']) {
+    for (const h of [
+      'diff',
+      'diffCarpetas',
+      'puertos',
+      'guiaHttp',
+      'guiaTuneles',
+      'guiaGit',
+      'editor',
+    ]) {
       expect(HERRAMIENTAS_ANCHAS, h).toContain(h);
     }
   });

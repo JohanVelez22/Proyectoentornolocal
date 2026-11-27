@@ -272,6 +272,16 @@ export const en: Textos = {
       'clientehttp.no_existe': 'The item no longer exists.',
       'clientehttp.limite': 'The limit of stored items was reached.',
       'ejemplohttp.no_arranca': 'The example server could not be started.',
+      'laboratoriogit.sin_git': 'Git is not installed on this computer.',
+      'laboratoriogit.orden_invalida': 'That command is not in the lab list.',
+      'laboratoriogit.nombre_invalido':
+        'The name can only contain letters, numbers, hyphens and underscores (up to 30 characters).',
+      'laboratoriogit.mensaje_invalido':
+        'The message must be one line, up to 200 characters, and not start with “-”.',
+      'laboratoriogit.archivo_invalido': 'That file is not one of the practice files.',
+      'laboratoriogit.contenido_invalido': 'The content must be text of up to 2000 characters.',
+      'laboratoriogit.ruta_insegura':
+        'The lab folder is not the expected one, so it is left alone.',
       'herramientas.pid_invalido': 'The PID is not valid.',
       'herramientas.pid_sistema': 'PID {pid} belongs to the system and cannot be ended.',
       'herramientas.proceso_propio': 'You cannot end WolfCore Dev or the process that started it.',
@@ -3540,6 +3550,10 @@ export const en: Textos = {
         nombre: 'HTTP guide',
         descripcion: 'Status codes and methods, with search and examples.',
       },
+      guiaGit: {
+        nombre: 'Git and GitHub guide',
+        descripcion: 'Commands and workflows, with a lab to practise safely.',
+      },
       limpiezaDisco: {
         nombre: 'Disk cleanup',
         descripcion:
@@ -3577,7 +3591,7 @@ export const en: Textos = {
       },
       guias: {
         nombre: 'Guides',
-        descripcion: 'HTTP and tunnels, with examples and commands to copy.',
+        descripcion: 'HTTP, tunnels and Git, with examples and commands to copy.',
       },
     },
     pestanas: {
@@ -3587,6 +3601,7 @@ export const en: Textos = {
       qrWifi: 'Wi-Fi',
       guiaHttp: 'HTTP',
       guiaTuneles: 'Tunnels',
+      guiaGit: 'Git',
     },
     grabar: {
       ayuda:
@@ -5147,6 +5162,114 @@ export const en: Textos = {
         '3xx': '3xx Redirection',
         '4xx': '4xx Client error',
         '5xx': '5xx Server error',
+      },
+    },
+    git: {
+      buscar: 'Search for a topic or command',
+      verGuia: 'Guide',
+      verLaboratorio: 'Lab',
+      todos: 'All',
+      grupos: {
+        basico: 'The basics',
+        ramas: 'Branches',
+        deshacer: 'Undoing',
+        remotos: 'Remotes and tags',
+        github: 'GitHub',
+      },
+      resultados: (n: number) => `${n} ${n === 1 ? 'topic' : 'topics'}`,
+      vacio: 'Nothing matches the search.',
+      ejemplo: 'Example',
+      errores: 'Common mistakes',
+      copiarEjemplo: 'Copy the example',
+      peligroso: 'Dangerous',
+      sinTraduccion: 'Not translated into this language: shown in English.',
+      avisoGithub:
+        'This part is explanation only: WolfCore Dev does not create accounts, sign in to GitHub or use tokens from this guide. The names and values in the examples are made up.',
+      irLaboratorio: 'Practise in the lab',
+      lab: {
+        intro:
+          'A practice repository and a local “remote”, in a folder that belongs to WolfCore Dev. It does not use the internet or GitHub, and it does not touch your projects or your git settings.',
+        sinGit: {
+          titulo: 'Git is not installed',
+          texto:
+            'The lab uses your system’s git and cannot open without it. Install Git and reopen this tab; WolfCore Dev does not install anything for you.',
+        },
+        cargando: 'Preparing the lab…',
+        reiniciar: 'Reset lab',
+        reiniciarAyuda: 'Deletes only the practice folder and leaves it as new.',
+        reiniciado: 'Lab reset.',
+        version: (v: string) => `git ${v}`,
+        ordenes: 'Commands',
+        mensaje: 'Commit message',
+        mensajePorDefecto: 'Practice change',
+        rama: 'Branch',
+        etiqueta: 'Tag',
+        archivo: 'File',
+        grupos: {
+          basico: 'The basics',
+          ramas: 'Branches',
+          guardar: 'Save and undo',
+          remoto: 'Local remote',
+        },
+        archivos: {
+          titulo: 'Practice files',
+          ayuda: 'Only these files can be edited, with text of up to 2000 characters.',
+          guardar: 'Save file',
+          guardado: 'File saved.',
+          areaTexto: (n: string) => `Contents of ${n}`,
+        },
+        salida: 'Output',
+        salidaVacia: 'Press a command to see git’s answer here.',
+        codigo: (n: number) => (n === 0 ? 'Finished fine' : `Finished with code ${n}`),
+        truncada: 'The output was cut short.',
+        historial: 'History',
+        historialVacio: 'There are no commits yet: run git init, git add and git commit.',
+        conflicto: {
+          titulo: 'Guided exercise: a conflict',
+          intro:
+            'Two branches change the same line. You will see how the conflict appears and how to resolve it.',
+          paso: (n: number, total: number) => `Step ${n} of ${total}`,
+          ejecutar: 'Run this step',
+          hecho: 'Done',
+          reempezar: 'Start over',
+          esperado: 'Git reported the conflict: that is expected at this step.',
+          elegir: {
+            mia: 'Keep the one from main (green)',
+            otra: 'Keep the one from rama-a (red)',
+            ambas: 'Keep both',
+          },
+          final: 'Done: you resolved a conflict. Look at the history.',
+          pasos: [
+            {
+              titulo: 'Prepare the lab',
+              texto:
+                'The lab is reset and the first commit is made with colores.txt (“color: azul”).',
+            },
+            {
+              titulo: 'Change the line on rama-a',
+              texto:
+                'The rama-a branch is created, the line becomes “color: rojo” and it is committed.',
+            },
+            {
+              titulo: 'Change the same line on main',
+              texto: 'It goes back to main, the line becomes “color: verde” and it is committed.',
+            },
+            {
+              titulo: 'Try the merge',
+              texto:
+                'rama-a is merged into main. Git cannot tell which line to keep and leaves a conflict.',
+            },
+            {
+              titulo: 'Choose a version',
+              texto:
+                'Choose which version of the line to keep. colores.txt now has the conflict markers.',
+            },
+            {
+              titulo: 'Confirm the resolution',
+              texto: 'colores.txt is staged (add) and the commit that closes the merge is made.',
+            },
+          ],
+        },
       },
     },
   },

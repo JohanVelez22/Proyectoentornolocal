@@ -284,6 +284,17 @@ export const fr: Textos = {
       'clientehttp.no_existe': 'L’élément n’existe plus.',
       'clientehttp.limite': 'La limite d’éléments enregistrés a été atteinte.',
       'ejemplohttp.no_arranca': 'Le serveur d’exemple n’a pas pu démarrer.',
+      'laboratoriogit.sin_git': 'Git n’est pas installé sur cet ordinateur.',
+      'laboratoriogit.orden_invalida': 'Cette commande ne figure pas dans la liste du laboratoire.',
+      'laboratoriogit.nombre_invalido':
+        'Le nom ne peut contenir que des lettres, des chiffres, des tirets et des tirets bas (30 caractères au plus).',
+      'laboratoriogit.mensaje_invalido':
+        'Le message doit tenir sur une ligne, faire 200 caractères au plus et ne pas commencer par « - ».',
+      'laboratoriogit.archivo_invalido': 'Ce fichier n’est pas l’un des fichiers d’exercice.',
+      'laboratoriogit.contenido_invalido':
+        'Le contenu doit être du texte de 2000 caractères au plus.',
+      'laboratoriogit.ruta_insegura':
+        'Le dossier du laboratoire n’est pas celui attendu : on n’y touche pas.',
       'herramientas.pid_invalido': 'Le PID n’est pas valide.',
       'herramientas.pid_sistema': 'Le PID {pid} appartient au système et ne peut pas être terminé.',
       'herramientas.proceso_propio':
@@ -3669,6 +3680,11 @@ export const fr: Textos = {
         nombre: 'Guide HTTP',
         descripcion: 'Codes d’état et méthodes, avec recherche et exemples.',
       },
+      guiaGit: {
+        nombre: 'Guide de Git et GitHub',
+        descripcion:
+          'Commandes et façons de travailler, avec un laboratoire pour s’exercer sans risque.',
+      },
       limpiezaDisco: {
         nombre: 'Nettoyage du disque',
         descripcion:
@@ -3708,7 +3724,7 @@ export const fr: Textos = {
       },
       guias: {
         nombre: 'Guides',
-        descripcion: 'HTTP et tunnels, avec des exemples et des commandes à copier.',
+        descripcion: 'HTTP, tunnels et Git, avec des exemples et des commandes à copier.',
       },
     },
     pestanas: {
@@ -3718,6 +3734,7 @@ export const fr: Textos = {
       qrWifi: 'Wi-Fi',
       guiaHttp: 'HTTP',
       guiaTuneles: 'Tunnels',
+      guiaGit: 'Git',
     },
     grabar: {
       ayuda:
@@ -5314,6 +5331,116 @@ export const fr: Textos = {
         '3xx': '3xx Redirection',
         '4xx': '4xx Erreur du client',
         '5xx': '5xx Erreur du serveur',
+      },
+    },
+    git: {
+      buscar: 'Chercher un sujet ou une commande',
+      verGuia: 'Guide',
+      verLaboratorio: 'Laboratoire',
+      todos: 'Tous',
+      grupos: {
+        basico: 'Les bases',
+        ramas: 'Branches',
+        deshacer: 'Annuler',
+        remotos: 'Dépôts distants et tags',
+        github: 'GitHub',
+      },
+      resultados: (n: number) => `${n} ${n === 1 ? 'sujet' : 'sujets'}`,
+      vacio: 'Rien ne correspond à la recherche.',
+      ejemplo: 'Exemple',
+      errores: 'Erreurs courantes',
+      copiarEjemplo: 'Copier l’exemple',
+      peligroso: 'Dangereux',
+      sinTraduccion: 'Non traduit dans cette langue : affiché en anglais.',
+      avisoGithub:
+        'Cette partie est une simple explication : WolfCore Dev ne crée pas de compte, ne se connecte pas à GitHub et n’utilise pas de jeton depuis ce guide. Les noms et valeurs des exemples sont inventés.',
+      irLaboratorio: 'S’exercer dans le laboratoire',
+      lab: {
+        intro:
+          'Un dépôt d’exercice et un « distant » local, dans un dossier propre à WolfCore Dev. Il n’utilise ni internet ni GitHub et ne touche ni à vos projets ni à votre configuration git.',
+        sinGit: {
+          titulo: 'Git n’est pas installé',
+          texto:
+            'Le laboratoire utilise le git de votre système et ne peut pas s’ouvrir sans lui. Installez Git puis rouvrez cet onglet ; WolfCore Dev n’installe rien à votre place.',
+        },
+        cargando: 'Préparation du laboratoire…',
+        reiniciar: 'Réinitialiser le laboratoire',
+        reiniciarAyuda: 'Supprime uniquement le dossier d’exercice et le remet à neuf.',
+        reiniciado: 'Laboratoire réinitialisé.',
+        version: (v: string) => `git ${v}`,
+        ordenes: 'Commandes',
+        mensaje: 'Message du commit',
+        mensajePorDefecto: 'Modification d’exercice',
+        rama: 'Branche',
+        etiqueta: 'Tag',
+        archivo: 'Fichier',
+        grupos: {
+          basico: 'Les bases',
+          ramas: 'Branches',
+          guardar: 'Mettre de côté et annuler',
+          remoto: 'Distant local',
+        },
+        archivos: {
+          titulo: 'Fichiers d’exercice',
+          ayuda:
+            'Seuls ces fichiers peuvent être modifiés, avec du texte de 2000 caractères au plus.',
+          guardar: 'Enregistrer le fichier',
+          guardado: 'Fichier enregistré.',
+          areaTexto: (n: string) => `Contenu de ${n}`,
+        },
+        salida: 'Sortie',
+        salidaVacia: 'Cliquez sur une commande pour voir ici la réponse de git.',
+        codigo: (n: number) => (n === 0 ? 'Terminé sans erreur' : `Terminé avec le code ${n}`),
+        truncada: 'La sortie a été tronquée.',
+        historial: 'Historique',
+        historialVacio: 'Il n’y a pas encore de commit : faites git init, git add puis git commit.',
+        conflicto: {
+          titulo: 'Exercice guidé : un conflit',
+          intro:
+            'Deux branches modifient la même ligne. Vous verrez comment le conflit apparaît et comment le résoudre.',
+          paso: (n: number, total: number) => `Étape ${n} sur ${total}`,
+          ejecutar: 'Exécuter cette étape',
+          hecho: 'Fait',
+          reempezar: 'Recommencer',
+          esperado: 'Git a signalé le conflit : c’est normal à cette étape.',
+          elegir: {
+            mia: 'Garder celle de main (vert)',
+            otra: 'Garder celle de rama-a (rouge)',
+            ambas: 'Garder les deux',
+          },
+          final: 'Terminé : vous avez résolu un conflit. Regardez l’historique.',
+          pasos: [
+            {
+              titulo: 'Préparer le laboratoire',
+              texto:
+                'Le laboratoire est réinitialisé et le premier commit est créé avec colores.txt (« color: azul »).',
+            },
+            {
+              titulo: 'Modifier la ligne sur rama-a',
+              texto:
+                'La branche rama-a est créée, la ligne devient « color: rojo » et un commit est fait.',
+            },
+            {
+              titulo: 'Modifier la même ligne sur main',
+              texto:
+                'On revient sur main, la ligne devient « color: verde » et un commit est fait.',
+            },
+            {
+              titulo: 'Tenter le merge',
+              texto:
+                'rama-a est fusionnée dans main. Git ne sait pas quelle ligne garder et laisse un conflit.',
+            },
+            {
+              titulo: 'Choisir une version',
+              texto:
+                'Choisissez la version de la ligne à garder. colores.txt contient maintenant les marques du conflit.',
+            },
+            {
+              titulo: 'Confirmer la résolution',
+              texto: 'colores.txt est ajouté (add) et le commit qui termine le merge est fait.',
+            },
+          ],
+        },
       },
     },
   },

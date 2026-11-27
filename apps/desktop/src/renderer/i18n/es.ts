@@ -273,6 +273,16 @@ export const es = {
       'clientehttp.no_existe': 'El elemento ya no existe.',
       'clientehttp.limite': 'Se alcanzó el límite de elementos guardados.',
       'ejemplohttp.no_arranca': 'No se pudo iniciar el servidor de ejemplo.',
+      'laboratoriogit.sin_git': 'No hay git instalado en este equipo.',
+      'laboratoriogit.orden_invalida': 'Esa orden no está en la lista del laboratorio.',
+      'laboratoriogit.nombre_invalido':
+        'El nombre solo puede llevar letras, números, guion y guion bajo (hasta 30 caracteres).',
+      'laboratoriogit.mensaje_invalido':
+        'El mensaje debe ser de una línea, de hasta 200 caracteres y no empezar por «-».',
+      'laboratoriogit.archivo_invalido': 'Ese archivo no es uno de los de práctica.',
+      'laboratoriogit.contenido_invalido': 'El contenido debe ser texto de hasta 2000 caracteres.',
+      'laboratoriogit.ruta_insegura':
+        'La carpeta del laboratorio no es la esperada, así que no se toca.',
       'herramientas.pid_invalido': 'El PID no es válido.',
       'herramientas.pid_sistema': 'El PID {pid} es del sistema y no se puede finalizar.',
       'herramientas.proceso_propio':
@@ -3567,6 +3577,10 @@ export const es = {
         nombre: 'Guía HTTP',
         descripcion: 'Códigos de estado y métodos, con buscador y ejemplos.',
       },
+      guiaGit: {
+        nombre: 'Guía de Git y GitHub',
+        descripcion: 'Comandos y flujos de trabajo, con un laboratorio para practicar sin riesgo.',
+      },
       limpiezaDisco: {
         nombre: 'Limpieza de disco',
         descripcion:
@@ -3604,7 +3618,7 @@ export const es = {
       },
       guias: {
         nombre: 'Guías',
-        descripcion: 'HTTP y túneles, con ejemplos y comandos para copiar.',
+        descripcion: 'HTTP, túneles y Git, con ejemplos y comandos para copiar.',
       },
     },
     pestanas: {
@@ -3614,6 +3628,7 @@ export const es = {
       qrWifi: 'Wi-Fi',
       guiaHttp: 'HTTP',
       guiaTuneles: 'Túneles',
+      guiaGit: 'Git',
     },
     grabar: {
       ayuda:
@@ -5175,6 +5190,113 @@ export const es = {
         '3xx': '3xx Redirección',
         '4xx': '4xx Error del cliente',
         '5xx': '5xx Error del servidor',
+      },
+    },
+    git: {
+      buscar: 'Buscar un tema o comando',
+      verGuia: 'Guía',
+      verLaboratorio: 'Laboratorio',
+      todos: 'Todos',
+      grupos: {
+        basico: 'Lo básico',
+        ramas: 'Ramas',
+        deshacer: 'Deshacer',
+        remotos: 'Remotos y etiquetas',
+        github: 'GitHub',
+      },
+      resultados: (n: number) => `${n} ${n === 1 ? 'tema' : 'temas'}`,
+      vacio: 'Nada coincide con la búsqueda.',
+      ejemplo: 'Ejemplo',
+      errores: 'Errores comunes',
+      copiarEjemplo: 'Copiar el ejemplo',
+      peligroso: 'Peligroso',
+      sinTraduccion: 'Sin traducción a este idioma: se muestra en inglés.',
+      avisoGithub:
+        'Esta parte es solo explicación: WolfCore Dev no crea cuentas, no inicia sesión en GitHub ni usa tokens desde esta guía. Los nombres y valores de los ejemplos son inventados.',
+      irLaboratorio: 'Practicar en el laboratorio',
+      lab: {
+        intro:
+          'Un repositorio de práctica y un «remoto» local, en una carpeta propia de WolfCore Dev. No usa internet ni GitHub y no toca sus proyectos ni su configuración de git.',
+        sinGit: {
+          titulo: 'Git no está instalado',
+          texto:
+            'El laboratorio usa el git de su sistema y no se puede abrir sin él. Instale Git y vuelva a abrir esta pestaña; WolfCore Dev no instala nada por usted.',
+        },
+        cargando: 'Preparando el laboratorio…',
+        reiniciar: 'Reiniciar laboratorio',
+        reiniciarAyuda: 'Borra solo la carpeta de práctica y la deja como nueva.',
+        reiniciado: 'Laboratorio reiniciado.',
+        version: (v: string) => `git ${v}`,
+        ordenes: 'Órdenes',
+        mensaje: 'Mensaje del commit',
+        mensajePorDefecto: 'Cambio de práctica',
+        rama: 'Rama',
+        etiqueta: 'Etiqueta',
+        archivo: 'Archivo',
+        grupos: {
+          basico: 'Lo básico',
+          ramas: 'Ramas',
+          guardar: 'Guardar y deshacer',
+          remoto: 'Remoto local',
+        },
+        archivos: {
+          titulo: 'Archivos de práctica',
+          ayuda: 'Solo se pueden editar estos archivos, con texto de hasta 2000 caracteres.',
+          guardar: 'Guardar archivo',
+          guardado: 'Archivo guardado.',
+          areaTexto: (n: string) => `Contenido de ${n}`,
+        },
+        salida: 'Salida',
+        salidaVacia: 'Pulse una orden para ver aquí lo que responde git.',
+        codigo: (n: number) => (n === 0 ? 'Terminó bien' : `Terminó con el código ${n}`),
+        truncada: 'La salida se recortó.',
+        historial: 'Historial',
+        historialVacio: 'Todavía no hay commits: haga git init, git add y git commit.',
+        conflicto: {
+          titulo: 'Ejercicio guiado: un conflicto',
+          intro:
+            'Dos ramas cambian la misma línea. Verá cómo aparece el conflicto y cómo resolverlo.',
+          paso: (n: number, total: number) => `Paso ${n} de ${total}`,
+          ejecutar: 'Ejecutar este paso',
+          hecho: 'Hecho',
+          reempezar: 'Empezar de nuevo',
+          esperado: 'Git avisó del conflicto: es lo esperado en este paso.',
+          elegir: {
+            mia: 'Quedarme con la de main (verde)',
+            otra: 'Quedarme con la de rama-a (rojo)',
+            ambas: 'Quedarme con las dos',
+          },
+          final: 'Listo: resolvió un conflicto. Mire el historial.',
+          pasos: [
+            {
+              titulo: 'Preparar el laboratorio',
+              texto:
+                'Se reinicia el laboratorio y se crea el primer commit con colores.txt («color: azul»).',
+            },
+            {
+              titulo: 'Cambiar la línea en rama-a',
+              texto: 'Se crea la rama rama-a, la línea pasa a «color: rojo» y se hace commit.',
+            },
+            {
+              titulo: 'Cambiar la misma línea en main',
+              texto: 'Se vuelve a main, la línea pasa a «color: verde» y se hace commit.',
+            },
+            {
+              titulo: 'Intentar el merge',
+              texto:
+                'Se fusiona rama-a en main. Git no sabe qué línea conservar y deja un conflicto.',
+            },
+            {
+              titulo: 'Elegir una versión',
+              texto:
+                'Elija con qué versión de la línea se queda. colores.txt tiene ahora las marcas del conflicto.',
+            },
+            {
+              titulo: 'Confirmar la resolución',
+              texto: 'Se prepara colores.txt (add) y se hace el commit que cierra el merge.',
+            },
+          ],
+        },
       },
     },
   },

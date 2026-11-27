@@ -3,6 +3,7 @@
  * empaqueta con la app por importación estática: no hay red ni lectura de archivos en ejecución.
  */
 import type { IdiomaUi } from '@pel/core';
+import gitJson from '../../../../../docs/contenido/git.json';
 import httpJson from '../../../../../docs/contenido/http.json';
 import tunelesEn from '../../../../../docs/contenido/guia-tuneles.en.md?raw';
 import tunelesEs from '../../../../../docs/contenido/guia-tuneles.md?raw';
@@ -44,6 +45,27 @@ export type Familia = '1xx' | '2xx' | '3xx' | '4xx' | '5xx';
 export const FAMILIAS: readonly Familia[] = ['1xx', '2xx', '3xx', '4xx', '5xx'];
 
 export const contenidoHttp = httpJson as unknown as { metodos: Metodo[]; codigos: Codigo[] };
+
+export interface TextoTema {
+  resumen: string;
+  explicacion: string;
+  ejemplo: string;
+  titulo: string;
+  erroresComunes: string[];
+}
+
+export type GrupoGit = 'basico' | 'ramas' | 'deshacer' | 'remotos' | 'github';
+export const GRUPOS_GIT: readonly GrupoGit[] = ['basico', 'ramas', 'deshacer', 'remotos', 'github'];
+
+export interface TemaGit extends PorIdioma<TextoTema> {
+  id: string;
+  grupo: GrupoGit;
+  /** Comando o concepto, igual en todos los idiomas. */
+  nombre: string;
+  peligroso: boolean;
+}
+
+export const contenidoGit = gitJson as unknown as { temas: TemaGit[] };
 
 const TUNELES: Record<IdiomaUi, string> = {
   es: tunelesEs,
@@ -125,5 +147,23 @@ export function filtrarMetodos(
   return metodos.filter((m) => {
     const t = textoEn(m, idioma).texto;
     return normalizar([m.nombre, t.resumen, t.explicacion].join(' ')).includes(q);
+  });
+}
+
+/** Temas de la guía de Git que coinciden con la búsqueda (nombre, título, resumen, texto y errores) y el grupo. */
+export function filtrarTemasGit(
+  temas: readonly TemaGit[],
+  idioma: IdiomaUi,
+  consulta: string,
+  grupo: GrupoGit | null,
+): TemaGit[] {
+  const q = normalizar(consulta.trim());
+  return temas.filter((x) => {
+    if (grupo && x.grupo !== grupo) return false;
+    if (!q) return true;
+    const t = textoEn(x, idioma).texto;
+    return normalizar(
+      [x.nombre, t.titulo, t.resumen, t.explicacion, t.ejemplo, ...t.erroresComunes].join(' '),
+    ).includes(q);
   });
 }

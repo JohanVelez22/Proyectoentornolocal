@@ -19,9 +19,7 @@ export type SeccionHerramientas = (typeof SECCIONES_HERRAMIENTAS)[number];
 export const PESTANAS_TARJETA = {
   comparar: ['diff', 'diffCarpetas'],
   qr: ['qr', 'qrWifi'],
-  // D50 agrega aquí `guiaGit` (la guía de Git): basta el id nuevo en esta lista, su componente y
-  // su texto en `herramientas.lista`; no hace falta tocar nada más.
-  guias: ['guiaHttp', 'guiaTuneles'],
+  guias: ['guiaHttp', 'guiaTuneles', 'guiaGit'],
 } as const;
 export type TarjetaConPestanas = keyof typeof PESTANAS_TARJETA;
 
@@ -94,6 +92,7 @@ export const HERRAMIENTAS_ANCHAS: readonly string[] = [
   'limpiezaDisco',
   'guiaTuneles',
   'guiaHttp',
+  'guiaGit',
   'clienteHttp',
   'editor',
 ];
