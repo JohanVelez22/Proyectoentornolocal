@@ -12,6 +12,7 @@ import { useHosts } from '../src/renderer/stores/hosts';
 import { categoriaDe, puertoAlternativo, useServicios } from '../src/renderer/stores/servicios';
 import { useSitios } from '../src/renderer/stores/sitios';
 import { useTuneles } from '../src/renderer/stores/tuneles';
+import { calcularAlertas } from '../src/renderer/utilidades/metricas';
 
 type Oyente = (dato: unknown) => void;
 
@@ -411,5 +412,40 @@ describe('stores de la interfaz', () => {
     servicios.aplicar({ ...nginx, id: 'ftp', nombre: 'FTP', categoria: 'herramienta', estado: 'encendido' });
     expect(servicios.resumen).toMatchObject({ propios: 3, encendidos: 2 });
     expect(servicios.porArrancar.map((s) => s.id)).toEqual(['redis']);
+  });
+
+  it('la pastilla y las alertas ven los procesos de proyecto, pero no el Nginx sin instalar (D54a)', () => {
+    const servicios = useServicios();
+    servicios.instalados['nginx'] = [];
+    servicios.hidratar([
+      nginx,
+      { ...nginx, id: 'proy-a-web', nombre: 'web', categoria: 'proyecto', estado: 'error', puertos: [5173] },
+    ]);
+    // Servicios no lista el proceso de proyecto, pero la pastilla sí lo cuenta como error.
+    expect(servicios.visibles).toEqual([]);
+    expect(servicios.vigilados.map((s) => s.id)).toEqual(['proy-a-web']);
+    expect(servicios.resumen.conError).toBe(0);
+    expect(servicios.resumen.conErrorVigilados).toBe(1);
+
+    const ajeno = (puerto: number) => ({
+      puerto,
+      nombre: 'node.exe',
+      pid: 77,
+      propio: false,
+      protocolo: 'TCP' as const,
+      direcciones: ['0.0.0.0'],
+      creado: '1',
+    });
+    // Su conflicto de puerto sale en «Problemas detectados»; el del Nginx sin instalar (80), no.
+    const alertas = calcularAlertas({
+      muestra: null,
+      puertos: [ajeno(5173), ajeno(80)],
+      servicios: servicios.vigilados,
+    });
+    expect(alertas.map((a) => a.clave)).toEqual(['conflicto-proy-a-web-5173']);
+
+    // Con Nginx instalado y apagado sí se vigila.
+    servicios.instalados['nginx'] = ['1.28.0'];
+    expect(servicios.vigilados.map((s) => s.id)).toContain('nginx');
   });
 });

@@ -119,8 +119,9 @@ const pastilla = computed(() =>
     // La misma cuenta que Servicios e Inicio (`servicios.resumen`, sobre los servicios visibles).
     encendidos: servicios.resumen.encendidos,
     tuneles: tuneles.activos.length,
-    hayError: servicios.resumen.conError > 0,
-    conError: servicios.resumen.conError,
+    // Con los procesos de proyecto: uno en error también pone la pastilla en alerta.
+    hayError: servicios.resumen.conErrorVigilados > 0,
+    conError: servicios.resumen.conErrorVigilados,
   }),
 );
 

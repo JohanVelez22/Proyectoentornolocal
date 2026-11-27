@@ -130,13 +130,17 @@ export const useServicios = defineStore('servicios', () => {
   const nginxSinInstalar = computed(() => instalados.value['nginx']?.length === 0);
   // Los procesos de proyecto (categoría 'proyecto') llegan por el mismo evento, pero se muestran
   // en su proyecto y en Inicio, no en la pantalla Servicios.
+  const esNginxFantasma = (s: EstadoServicio): boolean =>
+    s.id === 'nginx' && nginxSinInstalar.value && s.estado === 'apagado';
   const visibles = computed(() =>
-    lista.value.filter(
-      (s) =>
-        s.categoria !== 'proyecto' &&
-        !(s.id === 'nginx' && nginxSinInstalar.value && s.estado === 'apagado'),
-    ),
+    lista.value.filter((s) => s.categoria !== 'proyecto' && !esNginxFantasma(s)),
   );
+  /**
+   * Lo que se vigila para la pastilla y las alertas del panel: los servicios visibles MÁS los
+   * procesos de proyecto (un proceso en error o con su puerto ocupado sí hay que avisarlo), sin
+   * el Nginx sin instalar, que no es nada y daría un aviso falso.
+   */
+  const vigilados = computed(() => lista.value.filter((s) => !esNginxFantasma(s)));
   /** Ya se sabe si Nginx está instalado (hasta entonces Servicios enseña esqueletos). */
   const instaladosListos = computed(() => instalados.value['nginx'] !== undefined);
   /** Motores que corren fuera de WolfCore Dev (se detectan solos; van en su propia franja). */
@@ -172,6 +176,8 @@ export const useServicios = defineStore('servicios', () => {
     propios: propios.value.length,
     encendidos: visibles.value.filter((s) => s.estado === 'encendido').length,
     conError: visibles.value.filter((s) => s.estado === 'error').length,
+    /** Con error entre los vigilados (incluye procesos de proyecto): lo que pinta la pastilla. */
+    conErrorVigilados: vigilados.value.filter((s) => s.estado === 'error').length,
     externos: externos.value.length,
     porArrancar: porArrancar.value.length,
   }));
@@ -283,6 +289,7 @@ export const useServicios = defineStore('servicios', () => {
     redLocalFtp,
     lista,
     visibles,
+    vigilados,
     externos,
     instaladosListos,
     porArrancar,

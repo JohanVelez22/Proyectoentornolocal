@@ -57,8 +57,9 @@ const alertas = computed(() =>
   calcularAlertas({
     muestra: m.value,
     puertos: metricas.puertos,
-    // Los mismos servicios que ve Servicios (sin Nginx sin instalar ni procesos de proyecto).
-    servicios: servicios.visibles,
+    // Servicios y procesos de proyecto (su puerto ocupado también es un problema), sin el Nginx
+    // sin instalar: ese no es nada y daría un aviso falso.
+    servicios: servicios.vigilados,
   }),
 );
 
