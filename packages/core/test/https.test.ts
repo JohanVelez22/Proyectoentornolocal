@@ -204,7 +204,7 @@ describe('GestorHttps', () => {
     pidNginx = null;
     expect(await g.puertoUsable(443)).toBe(true);
     // Un nginx.exe de otra carpeta (FlyEnv) sigue siendo ajeno.
-    rutasProceso.set(11, 'C:\FlyEnv\nginx\nginx.exe');
+    rutasProceso.set(11, 'C:/Otro/nginx/nginx.exe');
     expect(await g.puertoUsable(443)).toBe(false);
   });
 
