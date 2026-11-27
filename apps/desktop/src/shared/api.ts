@@ -1,6 +1,10 @@
 import type {
   AccionContenedor,
   AvisoCurl,
+  EstadoLaboratorio,
+  IdArchivoLaboratorio,
+  OrdenLaboratorio,
+  ResultadoOrdenLaboratorio,
   EntornoHttp,
   EstadoClienteHttp,
   PeticionHttp,
@@ -1528,6 +1532,18 @@ export interface ApiEntorno {
     iniciar(): Promise<{ puerto: number }>;
     detener(): Promise<void>;
   };
+  /**
+   * Laboratorio de práctica de Git (D50): un repositorio de juguete y un remoto local en una
+   * carpeta propia de WolfCore, con git del sistema y una lista cerrada de órdenes. Sin red; no
+   * toca repositorios reales ni la configuración de git del usuario. Ni el MCP ni la CLI lo exponen.
+   */
+  laboratorioGit: {
+    estado(): Promise<EstadoLaboratorio>;
+    ejecutar(orden: OrdenLaboratorio): Promise<ResultadoOrdenLaboratorio>;
+    escribirArchivo(id: IdArchivoLaboratorio, contenido: string): Promise<void>;
+    /** Borra solo la carpeta del laboratorio y la prepara de nuevo. */
+    reiniciar(): Promise<EstadoLaboratorio>;
+  };
   memoria: {
     /**
      * Lista lo que se podría liberar en ese modo (solo lee). `cerrar-programa` viene desmarcado y
@@ -2068,6 +2084,10 @@ export const RUTAS_IPC = [
   'clienteHttp.importarCurl',
   'ejemploHttp.iniciar',
   'ejemploHttp.detener',
+  'laboratorioGit.estado',
+  'laboratorioGit.ejecutar',
+  'laboratorioGit.escribirArchivo',
+  'laboratorioGit.reiniciar',
   'memoria.plan',
   'memoria.aplicar',
   'limpiezaDisco.analizar',

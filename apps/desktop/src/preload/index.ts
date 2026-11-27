@@ -526,6 +526,12 @@ const api: ApiEntorno = {
     iniciar: () => invocar('ejemploHttp.iniciar'),
     detener: () => invocar('ejemploHttp.detener'),
   },
+  laboratorioGit: {
+    estado: () => invocar('laboratorioGit.estado'),
+    ejecutar: (o) => invocar('laboratorioGit.ejecutar', o),
+    escribirArchivo: (id, c) => invocar('laboratorioGit.escribirArchivo', id, c),
+    reiniciar: () => invocar('laboratorioGit.reiniciar'),
+  },
   memoria: {
     plan: (modo) => invocar('memoria.plan', modo),
     aplicar: (planId, ids, confirmado) => invocar('memoria.aplicar', planId, ids, confirmado),

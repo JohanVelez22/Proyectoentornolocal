@@ -1,10 +1,12 @@
 import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import {
   CLAVES_RAPIDAS,
   ClienteHttp,
   ServidorEjemplo,
+  LaboratorioGit,
+  NOMBRE_LABORATORIO,
   ACCIONES_CONTENEDOR,
   esMotorContenedores,
   validarIdContenedor,
@@ -531,6 +533,8 @@ export interface OpcionesIpc {
   clienteHttp?: ClienteHttp;
   /** Servidor de ejemplo de la guía HTTP (D49); sin él se crea uno propio (se apaga con la ventana). */
   servidorEjemplo?: ServidorEjemplo;
+  /** Laboratorio de Git (D50); sin él se crea uno propio en la carpeta temporal del núcleo. */
+  laboratorioGit?: LaboratorioGit;
   metricas?: ControlMetricas;
   /** Captura de pantalla (D35); sin ella, la captura no está disponible. */
   captura?: CapturaIpc;
@@ -556,6 +560,8 @@ type Contexto = ApiSistema & {
   clienteHttp: () => ClienteHttp;
   /** Servidor de ejemplo de la guía HTTP (127.0.0.1): solo la ventana lo usa, ni el MCP ni la CLI. */
   servidorEjemplo: ServidorEjemplo;
+  /** Laboratorio de Git: solo la ventana lo usa, ni el MCP ni la CLI. */
+  laboratorioGit: () => LaboratorioGit;
   metricas: ControlMetricas;
   captura: CapturaIpc;
   seguimientos: Seguimientos;
@@ -1993,6 +1999,12 @@ const TABLA: Record<RutaIpc, Manejador> = {
   // ---- Servidor de ejemplo de la guía HTTP (D49): solo 127.0.0.1, arranca con «Probar». ----
   'ejemploHttp.iniciar': async (_n, s) => ({ puerto: await s.servidorEjemplo.iniciar() }),
   'ejemploHttp.detener': (_n, s) => s.servidorEjemplo.detener(),
+  // ---- Laboratorio de Git (D50): el núcleo valida cada orden contra una lista cerrada. ----
+  'laboratorioGit.estado': (_n, s) => s.laboratorioGit().estado(),
+  'laboratorioGit.ejecutar': (_n, s, orden) => s.laboratorioGit().ejecutar(orden),
+  'laboratorioGit.escribirArchivo': (_n, s, id, contenido) =>
+    s.laboratorioGit().escribirArchivo(id, contenido),
+  'laboratorioGit.reiniciar': (_n, s) => s.laboratorioGit().reiniciar(),
   'memoria.plan': (n, _s, modo) => n.planMemoria(unoDe(modo, MODOS_MEMORIA, 'modo')),
   'memoria.aplicar': (n, _s, planId, ids, confirmacion) =>
     n.aplicarMemoria(
@@ -2312,12 +2324,18 @@ export function registrarIpc(
   const secretos = opciones.secretos ?? SECRETOS_NO_DISPONIBLES;
   let clienteHttp: ClienteHttp | null = opciones.clienteHttp ?? null;
   const servidorEjemplo = opciones.servidorEjemplo ?? new ServidorEjemplo();
+  let laboratorioGit: LaboratorioGit | null = opciones.laboratorioGit ?? null;
   const contexto: Omit<Contexto, 'emisor'> = {
     ...sistema,
     elegidas,
     secretos,
     clienteHttp: () => (clienteHttp ??= crearClienteHttp(nucleo, secretos)),
     servidorEjemplo,
+    laboratorioGit: () =>
+      (laboratorioGit ??= new LaboratorioGit({
+        raiz: join(nucleo.rutas.tmp(), NOMBRE_LABORATORIO),
+        buscarGit: () => nucleo.git.buscar('git'),
+      })),
     metricas: opciones.metricas ?? new ControlMetricas(nucleo),
     captura: opciones.captura ?? CAPTURA_NO_DISPONIBLE,
     seguimientos,
