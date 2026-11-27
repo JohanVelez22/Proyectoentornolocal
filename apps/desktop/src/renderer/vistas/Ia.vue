@@ -32,7 +32,12 @@ import {
 import Desplegable from '../componentes/Desplegable.vue';
 import { computed, h, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import type { ModeloOllama, ProveedorIaPublico } from '../../shared/api';
+import type {
+  CompatibilidadModelo,
+  ModeloOllama,
+  ProveedorIaPublico,
+  SugerenciaEquipo,
+} from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import Agentes from './Agentes.vue';
@@ -45,6 +50,7 @@ import { destinoIa, PESTANAS_IA, type PestanaIa } from '../rutas';
 import { porcentaje, useIa, veredictoEspacio, type DescargaIa } from '../stores/ia';
 import { useServicios } from '../stores/servicios';
 import { formatearTamano } from '../utilidades/bd';
+import { explicacionCompat, textoSugerencia } from '../utilidades/equipo';
 
 /** Igual que `NOMBRE_MODELO_OLLAMA` del núcleo (que vuelve a validar). */
 const NOMBRE_MODELO = /^[a-z0-9][a-z0-9._:/-]{0,127}$/i;
@@ -52,6 +58,7 @@ const NOMBRE_MODELO = /^[a-z0-9][a-z0-9._:/-]{0,127}$/i;
 const t = textos.iaLocal;
 const tn = textos.ia;
 const td = t.descargar;
+const tc = t.compat;
 const tp = t.progreso;
 const router = useRouter();
 const route = useRoute();
@@ -206,6 +213,59 @@ const fecha = (iso: string): string => formatearFecha(iso, { dateStyle: 'short' 
 const sinEtiquetaLatest = (n: string): string => n.toLowerCase().replace(/:latest$/, '');
 const instalado = (nombre: string): boolean =>
   modelos.value.some((m) => sinEtiquetaLatest(m.nombre) === sinEtiquetaLatest(nombre));
+
+// ---- Qué cabe en su equipo (D55): solo informa, nunca bloquea una descarga ----
+const compat = ref<{ sugerencia: SugerenciaEquipo; modelos: CompatibilidadModelo[] } | null>(null);
+const comprobandoCompat = ref(false);
+let pedidoCompat = 0;
+
+async function cargarCompat(): Promise<void> {
+  const nombres = [...new Set([...ia.sugeridos, ...modelos.value.map((m) => m.nombre)])].slice(
+    0,
+    16,
+  );
+  if (!nombres.length) {
+    compat.value = null;
+    return;
+  }
+  const mio = ++pedidoCompat;
+  comprobandoCompat.value = true;
+  try {
+    const r = await api().ia.compatibilidad(nombres);
+    if (mio === pedidoCompat) compat.value = r;
+  } catch {
+    // Es una orientación: si no se pudo comprobar, simplemente no se muestra.
+    if (mio === pedidoCompat) compat.value = null;
+  } finally {
+    if (mio === pedidoCompat) comprobandoCompat.value = false;
+  }
+}
+
+watch(
+  [encendido, () => ia.sugeridos.join('|'), () => modelos.value.map((m) => m.nombre).join('|')],
+  () => {
+    if (encendido.value) void cargarCompat();
+  },
+  { immediate: true },
+);
+
+interface MarcaCompat {
+  nivel: string;
+  etiqueta: string;
+  explicacion: string;
+}
+/** Marca y explicación de cada modelo comprobado, por nombre. */
+const marcas = computed<Record<string, MarcaCompat>>(() => {
+  const res: Record<string, MarcaCompat> = {};
+  for (const m of compat.value?.modelos ?? []) {
+    res[m.nombre] = {
+      nivel: m.nivel,
+      etiqueta: tc.niveles[m.nivel] ?? '',
+      explicacion: explicacionCompat(m, tc),
+    };
+  }
+  return res;
+});
 
 function confirmarBorrar(m: ModeloOllama): void {
   if (ocupado(`borrar-${m.nombre}`)) return;
@@ -486,6 +546,21 @@ const filasConexion = computed(() => [
         </div>
       </div>
 
+      <!-- Qué cabe en su equipo -->
+      <NAlert
+        v-if="encendido && compat"
+        type="info"
+        :show-icon="false"
+        data-testid="ia-compat-sugerencia"
+      >
+        <strong>{{ textoSugerencia(compat.sugerencia, tc) }}</strong>
+        <br />
+        <small>{{ tc.aviso }}</small>
+      </NAlert>
+      <p v-else-if="encendido && comprobandoCompat" class="tenue" role="status">
+        {{ tc.comprobando }}
+      </p>
+
       <!-- Modelos instalados -->
       <section v-if="encendido" class="bloque-ui" :aria-busy="ia.cargandoModelos">
         <header class="cabeza">
@@ -535,6 +610,19 @@ const filasConexion = computed(() => [
         <ul v-else class="modelos">
           <li v-for="m in ia.modelos" :key="m.nombre">
             <span class="modelo-nombre">{{ m.nombre }}</span>
+            <NTooltip v-if="marcas[m.nombre]">
+              <template #trigger>
+                <span
+                  class="marca"
+                  :class="`marca-${marcas[m.nombre]!.nivel}`"
+                  tabindex="0"
+                  :data-testid="`ia-marca-${m.nombre}`"
+                  >{{ marcas[m.nombre]!.etiqueta }}</span
+                >
+              </template>
+              {{ marcas[m.nombre]!.explicacion }}
+            </NTooltip>
+            <span v-else></span>
             <span class="modelo-tamano">{{ formatearTamano(m.tamanoBytes) }}</span>
             <span class="modelo-fecha tenue">{{ fecha(m.modificado) }}</span>
             <span class="modelo-acciones">
@@ -618,9 +706,20 @@ const filasConexion = computed(() => [
                   @click="elegirSugerencia(s)"
                 >
                   {{ s }}
+                  <span
+                    v-if="marcas[s]"
+                    class="marca marca-chip"
+                    :class="`marca-${marcas[s]!.nivel}`"
+                    :data-testid="`ia-marca-${s}`"
+                    >{{ marcas[s]!.etiqueta }}</span
+                  >
                 </NButton>
               </template>
               {{ td.sugerenciaAyuda[s] ?? s }}
+              <template v-if="marcas[s]">
+                <br />
+                {{ marcas[s]!.explicacion }}
+              </template>
             </NTooltip>
           </div>
         </form>
@@ -911,7 +1010,7 @@ const filasConexion = computed(() => [
 }
 .modelos li {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 90px 100px auto;
+  grid-template-columns: minmax(0, 1fr) auto 90px 100px auto;
   align-items: center;
   gap: 12px;
   padding: 8px 0;
@@ -955,6 +1054,30 @@ const filasConexion = computed(() => [
 .error-campo {
   color: var(--texto-error);
   font-size: 12px;
+}
+.marca {
+  display: inline-block;
+  padding: 0 8px;
+  border: 1px solid currentColor;
+  border-radius: 10px;
+  font-size: 11.5px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.marca-chip {
+  margin-left: 6px;
+}
+.marca-recomendado {
+  color: var(--texto-ok);
+}
+.marca-lento {
+  color: var(--texto-aviso);
+}
+.marca-no-cabe {
+  color: var(--texto-error);
+}
+.marca-desconocido {
+  opacity: 0.7;
 }
 .sugerencias {
   display: flex;
@@ -1078,7 +1201,7 @@ const filasConexion = computed(() => [
 }
 @media (max-width: 900px) {
   .modelos li {
-    grid-template-columns: minmax(0, 1fr) 80px auto;
+    grid-template-columns: minmax(0, 1fr) auto 80px auto;
   }
   .modelo-fecha {
     display: none;

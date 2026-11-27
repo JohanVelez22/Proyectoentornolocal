@@ -1,18 +1,22 @@
 <script setup lang="ts">
-import { LockClosed, Refresh } from '@vicons/ionicons5';
+import { Copy, LockClosed, Refresh } from '@vicons/ionicons5';
 import { NButton, NCollapse, NCollapseItem, NIcon, NInput, NSpin, NTooltip } from 'naive-ui';
 import { computed, onMounted, ref } from 'vue';
-import type { EntornoSistema } from '../../../shared/api';
+import type { EntornoSistema, InfoEquipo } from '../../../shared/api';
 import { api } from '../../api';
 import { useAccion } from '../../composables/useAccion';
 import { textos } from '../../i18n';
+import { lineasEquipo, resumenEquipo } from '../../utilidades/equipo';
 
 const t = textos.herramientas.entorno;
+const te = t.equipo;
 const { ejecutar, ocupado } = useAccion();
 
 const version = ref<string | null>(null);
 const entorno = ref<EntornoSistema | null>(null);
 const filtro = ref('');
+const equipo = ref<InfoEquipo | null>(null);
+const lineas = computed(() => (equipo.value ? lineasEquipo(equipo.value, te) : []));
 
 /** Motores (Chrome/Electron) leídos del agente de usuario: el renderer no ve `process`. */
 const motores = (navigator.userAgent.match(/(Chrome|Electron)\/[\d.]+/g) ?? []).join(' · ');
@@ -38,9 +42,23 @@ const variables = computed(() => {
 });
 
 /** Los valores con nombre de secreto ya llegan enmascarados desde el núcleo. */
-async function cargar(): Promise<void> {
+async function cargar(forzar = false): Promise<void> {
+  void cargarEquipo(forzar);
   const r = await ejecutar('cargar', () => api().herramientas.entorno());
   if (r) entorno.value = r;
+}
+
+/** «Mi equipo» (D55): nunca falla; lo que no se lea llega como «desconocido». */
+async function cargarEquipo(forzar: boolean): Promise<void> {
+  const r = await ejecutar('equipo', () => api().herramientas.equipo(forzar));
+  if (r) equipo.value = r;
+}
+
+/** Texto plano para un ticket de soporte: sin números de serie ni identificadores únicos. */
+function copiarResumen(): void {
+  if (!equipo.value) return;
+  const texto = resumenEquipo(equipo.value, te, version.value);
+  void ejecutar('copiarResumen', () => api().sistema.copiar(texto), { exito: te.resumenCopiado });
 }
 
 onMounted(async () => {
@@ -64,8 +82,34 @@ onMounted(async () => {
       </template>
     </dl>
 
+    <div data-testid="mi-equipo">
+      <div class="herr-etiqueta">{{ te.titulo }}</div>
+      <NSpin v-if="!equipo && ocupado('equipo')" :size="18" />
+      <dl v-else-if="equipo" class="herr-datos">
+        <template v-for="(l, i) in lineas" :key="i">
+          <dt>{{ l.etiqueta }}</dt>
+          <dd>{{ l.valor }}</dd>
+        </template>
+      </dl>
+      <div class="herr-fila">
+        <NButton
+          secondary
+          size="small"
+          :disabled="!equipo"
+          data-testid="copiar-resumen"
+          @click="copiarResumen"
+        >
+          <template #icon
+            ><NIcon><Copy /></NIcon
+          ></template>
+          {{ te.copiarResumen }}
+        </NButton>
+        <span class="herr-tenue">{{ te.privacidad }}</span>
+      </div>
+    </div>
+
     <div class="herr-fila">
-      <NButton secondary size="small" :loading="ocupado('cargar')" @click="cargar">
+      <NButton secondary size="small" :loading="ocupado('cargar')" @click="cargar(true)">
         <template #icon
           ><NIcon><Refresh /></NIcon
         ></template>
