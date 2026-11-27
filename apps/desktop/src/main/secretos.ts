@@ -58,6 +58,13 @@ const ID_SITIO_BD = /^[a-z0-9][a-z0-9-]{0,127}$/;
 
 /** Ids del cliente HTTP: 16 caracteres hexadecimales. */
 const ID_HTTP = /^[a-f0-9]{16}$/;
+/** Valores del cliente HTTP (cookies, contraseñas…): UTF-8 sin saltos de línea ni NUL, hasta 16 KB. */
+const MAX_BYTES_HTTP = 16 * 1024;
+const valorHttpValido = (v: string): boolean =>
+  v.length > 0 &&
+  v.isWellFormed() &&
+  !/[\r\n\0]/.test(v) &&
+  Buffer.byteLength(v, 'utf8') <= MAX_BYTES_HTTP;
 
 /** `github` → `github.bin`; `ia:openai` → `ia-openai.bin`. Lanza si el id no es válido. */
 function archivoDe(id: IdSecreto): string {
@@ -166,11 +173,14 @@ export class AlmacenSecretos {
   /** Valida (sin repetirlo en el error) y guarda el secreto cifrado, de forma atómica. */
   async guardar(id: IdSecreto, valor: string): Promise<void> {
     const destino = this.ruta(id);
-    const v = typeof valor === 'string' ? valor.trim() : '';
+    // Los valores del cliente HTTP se guardan tal cual (sin recortar): una cookie o una contraseña
+    // pueden empezar o terminar con espacios.
+    const esHttp = id.startsWith('http:');
+    const v = typeof valor === 'string' ? (esHttp ? valor : valor.trim()) : '';
     if (id === 'github') validarToken(v);
-    else if (
-      !(id.startsWith('smtp:') || id.startsWith('http:') ? VALOR_SMTP : VALOR_VALIDO).test(v)
-    ) {
+    else if (esHttp) {
+      if (!valorHttpValido(v)) throw new Error(MENSAJE_VALOR);
+    } else if (!(id.startsWith('smtp:') ? VALOR_SMTP : VALOR_VALIDO).test(v)) {
       throw new Error(MENSAJE_VALOR);
     }
     this.exigirCifrado();

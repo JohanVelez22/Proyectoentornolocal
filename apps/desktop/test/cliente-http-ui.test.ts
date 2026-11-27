@@ -79,6 +79,26 @@ describe('AlmacenSecretos: valores del cliente HTTP (http:<id>)', () => {
     expect(a.hay('http:0123456789abcdef')).toBe(false);
   });
 
+  it('admite UTF-8 sin saltos de línea, sin recortar y hasta 16 KB; los demás espacios no cambian', async () => {
+    const a = nuevo();
+    const id = 'http:0123456789abcdef' as const;
+    await a.guardar(id, 'a='.concat('x'.repeat(5000)));
+    expect((await a.leer(id))?.length).toBe(5002);
+    await a.guardar(id, 'contraseña');
+    expect(await a.leer(id)).toBe('contraseña');
+    await a.guardar(id, '  con espacios  ');
+    expect(await a.leer(id)).toBe('  con espacios  ');
+    await a.guardar(id, 'ñ'.repeat(8192)); // 16 KB exactos
+    await expect(a.guardar(id, 'x'.repeat(16385))).rejects.toThrowError();
+    for (const malo of ['a\nb', 'a\rb', 'a\0b', '', '\ud800']) {
+      await expect(a.guardar(id, malo)).rejects.toThrowError();
+    }
+    // Las reglas de otros espacios no se tocan.
+    await expect(a.guardar('ia:openai', 'contraseña')).rejects.toThrowError();
+    await expect(a.guardar('ia:openai', 'x'.repeat(5000))).rejects.toThrowError();
+    await expect(a.guardar('smtp:gmail', 'x'.repeat(5000))).rejects.toThrowError();
+  });
+
   it('rechaza ids que no son 16 hexadecimales (nada de rutas)', async () => {
     const a = nuevo();
     for (const id of ['http:', 'http:../x', 'http:ABCDEF0123456789', 'http:0123']) {
