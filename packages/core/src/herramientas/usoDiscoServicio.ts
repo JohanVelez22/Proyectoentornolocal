@@ -116,7 +116,10 @@ export class UsoDisco {
 
   private async raizValida(ruta: unknown): Promise<string> {
     const invalida = (): ErrorWolf =>
-      new ErrorWolf('disco.raiz_invalida', 'Elija una carpeta o unidad que exista y se pueda leer.');
+      new ErrorWolf(
+        'disco.raiz_invalida',
+        'Elija una carpeta o unidad que exista y se pueda leer.',
+      );
     if (
       typeof ruta !== 'string' ||
       ruta.length < 3 ||
@@ -155,10 +158,7 @@ export class UsoDisco {
     return this.ejecutar(unidad.ruta, { total: unidad.total, libre: unidad.libre });
   }
 
-  private async ejecutar(
-    ruta: unknown,
-    unidad: AnalisisDisco['unidad'],
-  ): Promise<AnalisisDisco> {
+  private async ejecutar(ruta: unknown, unidad: AnalisisDisco['unidad']): Promise<AnalisisDisco> {
     const raiz = await this.raizValida(ruta);
     if (this.enCurso) {
       throw new ErrorWolf('disco.ocupado', 'Ya hay un análisis en curso: cancélelo o espere.');

@@ -1,4 +1,11 @@
-import { mkdirSync, readdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { rm } from 'node:fs/promises';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -248,7 +255,8 @@ describe('Uso del disco: solo lectura y alcance', () => {
   });
 
   it('ni el servidor MCP ni la CLI lo exponen', () => {
-    const lee = (...p: string[]): string => readFileSync(path.join(__dirname, '..', 'src', ...p), 'utf8');
+    const lee = (...p: string[]): string =>
+      readFileSync(path.join(__dirname, '..', 'src', ...p), 'utf8');
     for (const f of [lee('mcp', 'servidor.ts'), lee('cli', 'ordenes.ts')]) {
       expect(f).not.toMatch(/usoDisco|UsoDisco|disco\.analizar/);
     }

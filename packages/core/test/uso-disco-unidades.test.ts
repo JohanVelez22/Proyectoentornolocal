@@ -13,16 +13,31 @@ describe('unidadesLocales', () => {
       { id: 'E:', tipo: 5, etiqueta: '', total: 0, libre: 0 },
     ]);
     expect(interpretarUnidades(json)).toEqual([
-      { ruta: 'C:\\', etiqueta: 'Windows', tipo: 'fijo', total: 500_000_000_000, libre: 120_000_000_000 },
+      {
+        ruta: 'C:\\',
+        etiqueta: 'Windows',
+        tipo: 'fijo',
+        total: 500_000_000_000,
+        libre: 120_000_000_000,
+      },
       { ruta: 'D:\\', etiqueta: 'USB', tipo: 'extraible', total: 8_000_000_000, libre: 1_000 },
     ]);
   });
 
   it('acepta un solo objeto, tamaños que faltan y descarta lo que no es una letra', () => {
     expect(
-      interpretarUnidades(JSON.stringify({ id: 'C:', tipo: 3, etiqueta: null, total: null, libre: null })),
+      interpretarUnidades(
+        JSON.stringify({ id: 'C:', tipo: 3, etiqueta: null, total: null, libre: null }),
+      ),
     ).toEqual([{ ruta: 'C:\\', etiqueta: '', tipo: 'fijo', total: null, libre: null }]);
-    expect(interpretarUnidades(JSON.stringify([{ id: '\\srv', tipo: 3 }, { id: 'CC:', tipo: 3 }]))).toEqual([]);
+    expect(
+      interpretarUnidades(
+        JSON.stringify([
+          { id: '\\srv', tipo: 3 },
+          { id: 'CC:', tipo: 3 },
+        ]),
+      ),
+    ).toEqual([]);
   });
 
   it('una salida que no es JSON da una lista vacía, no un error', () => {

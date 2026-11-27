@@ -140,13 +140,11 @@ export interface ProgresoUsoDisco {
 export type MensajeUsoDisco = { op: 'escanear'; raiz: string; lim: LimitesUsoDisco };
 
 export type RespuestaUsoDisco =
-  | { ok: true; datos: ResultadoUsoDisco }
-  | { ok: false; codigo: string; datos?: DatosErrorWolf };
+  { ok: true; datos: ResultadoUsoDisco } | { ok: false; codigo: string; datos?: DatosErrorWolf };
 
 /** Lo que el proceso de trabajo manda mientras recorre (progreso) y al terminar (fin). */
 export type SalidaUsoDisco =
-  | ({ tipo: 'progreso' } & ProgresoUsoDisco)
-  | ({ tipo: 'fin' } & RespuestaUsoDisco);
+  ({ tipo: 'progreso' } & ProgresoUsoDisco) | ({ tipo: 'fin' } & RespuestaUsoDisco);
 
 export interface OpcionesEjecucionUsoDisco {
   plazoMs: number;
@@ -376,7 +374,10 @@ export async function escanearUsoDisco(
       for await (const ent of d) {
         if (ent.isDirectory()) subcarpetas.push(ent.name);
         else if (ent.isSymbolicLink()) anotarEnlace(path.join(dir, ent.name));
-        else if (ent.isFile() || (!ent.isFIFO() && !ent.isSocket() && !ent.isCharacterDevice() && !ent.isBlockDevice())) {
+        else if (
+          ent.isFile() ||
+          (!ent.isFIFO() && !ent.isSocket() && !ent.isCharacterDevice() && !ent.isBlockDevice())
+        ) {
           // Los de tipo desconocido se resuelven con `lstat` (puede ser una carpeta).
           tanda.push(ent.name);
           if (tanda.length >= lim.paralelo) {
@@ -420,7 +421,10 @@ export async function escanearUsoDisco(
   try {
     await (await abrir(m.raiz)).close();
   } catch {
-    throw new ErrorWolf('disco.raiz_invalida', 'Elija una carpeta o unidad que exista y se pueda leer.');
+    throw new ErrorWolf(
+      'disco.raiz_invalida',
+      'Elija una carpeta o unidad que exista y se pueda leer.',
+    );
   }
   const arbol = await recorrer(m.raiz, m.raiz, 0);
   podar(arbol, lim.umbralNodo * arbol.tamano, lim.hijosPorNivel);
