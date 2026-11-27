@@ -1,7 +1,10 @@
 import type { GlobalThemeOverrides } from 'naive-ui';
 
-const FUENTE =
-  "'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
+/**
+ * La pila vive en `estilos.css` (`--fuente`): trae las fuentes del sistema de Windows para
+ * chino, japonés, coreano, hindi y tailandés y las ordena según `<html lang>`.
+ */
+const FUENTE = 'var(--fuente)';
 const FUENTE_MONO = "'Cascadia Mono', 'Cascadia Code', Consolas, 'SF Mono', Menlo, monospace";
 
 const comunes = {

@@ -1,7 +1,14 @@
+/*
+ * Fuentes: solo las del sistema (sin descargas; la CSP no admite fuentes externas). Segoe UI no
+ * trae chino, japonés, coreano, devanagari ni tailandés: se añaden las que Windows sí instala.
+ * El orden importa para los caracteres Han, que se escriben distinto en chino y en japonés; por eso
+ * cada idioma pone primero la suya (`document.documentElement.lang` lo fija `cambiarIdioma`).
+ */
 :root {
   --fuente:
     'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont,
-    'Helvetica Neue', Arial, sans-serif;
+    'Helvetica Neue', Arial, 'Microsoft YaHei UI', 'Microsoft YaHei', 'Yu Gothic UI', 'Yu Gothic',
+    'Malgun Gothic', 'Nirmala UI', 'Leelawadee UI', sans-serif;
   --fuente-mono: 'Cascadia Mono', 'Cascadia Code', Consolas, 'SF Mono', Menlo, monospace;
   /* Acento (App.vue los cambia según el tema y la preferencia). */
   --acento: #4f5bd5;
@@ -36,6 +43,29 @@
   --wc-radio-md: 10px;
   --wc-radio-lg: 14px;
   --wc-radio-completo: 999px;
+}
+
+:root:lang(zh) {
+  --fuente:
+    'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui,
+    sans-serif;
+}
+
+:root:lang(ja) {
+  --fuente:
+    'Segoe UI Variable Text', 'Segoe UI', 'Yu Gothic UI', 'Yu Gothic', Meiryo, system-ui, sans-serif;
+}
+
+:root:lang(ko) {
+  --fuente: 'Segoe UI Variable Text', 'Segoe UI', 'Malgun Gothic', system-ui, sans-serif;
+}
+
+:root:lang(hi) {
+  --fuente: 'Segoe UI Variable Text', 'Segoe UI', 'Nirmala UI', system-ui, sans-serif;
+}
+
+:root:lang(th) {
+  --fuente: 'Segoe UI Variable Text', 'Segoe UI', 'Leelawadee UI', 'Tahoma', system-ui, sans-serif;
 }
 
 html,
