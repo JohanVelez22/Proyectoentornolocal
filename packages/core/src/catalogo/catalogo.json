@@ -226,6 +226,14 @@
       "formato": "zip",
       "subcarpeta": "jdk-21.0.13.1+2",
       "ejecutable": "bin/java.exe"
+    },
+    {
+      "version": "17.0.21.1",
+      "url": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.21.1%2B2/OpenJDK17U-jdk_x64_windows_hotspot_17.0.21.1_2.zip",
+      "sha256": "eafba0944f777abdc74d5aad16049c9b5a1275b6ce99e2939ba9f7f3e6f08c87",
+      "formato": "zip",
+      "subcarpeta": "jdk-17.0.21.1+2",
+      "ejecutable": "bin/java.exe"
     }
   ],
   "dotnet": [
@@ -233,6 +241,13 @@
       "version": "10.0.404",
       "url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.404/dotnet-sdk-10.0.404-win-x64.zip",
       "sha512": "330ddd2665b43cd2e428216a0d8ea1ac7bb19b5434fdc530e62010dc3b52823a620bf95489d628e1ed6f5122401793ee4887cca4a019122361a1231497f632ee",
+      "formato": "zip",
+      "ejecutable": "dotnet.exe"
+    },
+    {
+      "version": "8.0.428",
+      "url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.428/dotnet-sdk-8.0.428-win-x64.zip",
+      "sha512": "cce1dc5cfb2c5b73ddd9d3658f6009deb85be3a58dbec44a6dfe3910bb32b044ad2fc6bb28c77aded70c73270a204d207fe790dcb82ffca6c7b42c1335b51c21",
       "formato": "zip",
       "ejecutable": "dotnet.exe"
     }
@@ -405,6 +420,68 @@
       "sha256": "c75623ba050ddef734ba28a957e92df9ce5b8dfdb1a0569e5071bd6b68a12292",
       "formato": "archivo",
       "zend": true
+    }
+  ],
+  "ruby": [
+    {
+      "version": "4.0.10-1",
+      "url": "https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-4.0.10-1/rubyinstaller-4.0.10-1-x64.7z",
+      "sha256": "0d8f693bb4027378d2c92c285c0bb405f9825623bfbf2caad0d52acabbd4978c",
+      "formato": "7z",
+      "subcarpeta": "rubyinstaller-4.0.10-1-x64",
+      "ejecutable": "bin/ruby.exe"
+    },
+    {
+      "version": "3.4.13-1",
+      "url": "https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-3.4.13-1/rubyinstaller-3.4.13-1-x64.7z",
+      "sha256": "228d698c2311dee6207017634faac64a07b7208cdc7a6a50972c4b19d9153a42",
+      "formato": "7z",
+      "subcarpeta": "rubyinstaller-3.4.13-1-x64",
+      "ejecutable": "bin/ruby.exe"
+    },
+    {
+      "version": "3.3.14-1",
+      "url": "https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-3.3.14-1/rubyinstaller-3.3.14-1-x64.7z",
+      "sha256": "03b6ed68fba9e632f0f6e93af99c1bc55315e1bfad0296a105268296cbcdb8ba",
+      "formato": "7z",
+      "subcarpeta": "rubyinstaller-3.3.14-1-x64",
+      "ejecutable": "bin/ruby.exe"
+    }
+  ],
+  "maven": [
+    {
+      "version": "3.10.2",
+      "url": "https://archive.apache.org/dist/maven/maven-3/3.10.2/binaries/apache-maven-3.10.2-bin.zip",
+      "sha512": "a24007fbf26eb885de8ba07c54fa05bb12e97082d16bfcd37283708b9db60232768435a0165ef0ed7c1309af843c11bf797f9959b9ca0a7343b055a165d8761c",
+      "formato": "zip",
+      "subcarpeta": "apache-maven-3.10.2",
+      "ejecutable": "bin/mvn.cmd"
+    },
+    {
+      "version": "3.9.16",
+      "url": "https://archive.apache.org/dist/maven/maven-3/3.9.16/binaries/apache-maven-3.9.16-bin.zip",
+      "sha512": "ed41650d42485cfc243fad22158caf9cbb5dc408ce7a09ddb94dd42a019de929ca43065bfa450612cf12bf78b5cafa3884b96c090de326ff590448c933454af3",
+      "formato": "zip",
+      "subcarpeta": "apache-maven-3.9.16",
+      "ejecutable": "bin/mvn.cmd"
+    }
+  ],
+  "gradle": [
+    {
+      "version": "9.9.2",
+      "url": "https://services.gradle.org/distributions/gradle-9.9.2-bin.zip",
+      "sha256": "971fcd7150ca4ba04852c0b2ca0d2d0ab9468e14b03473eab19528809914c76b",
+      "formato": "zip",
+      "subcarpeta": "gradle-9.9.2",
+      "ejecutable": "bin/gradle.bat"
+    },
+    {
+      "version": "8.14.8",
+      "url": "https://services.gradle.org/distributions/gradle-8.14.8-bin.zip",
+      "sha256": "94da89692fc3ca6d2d0ce6bb48548762ea0f1897ba444286f5c7f3759c7af651",
+      "formato": "zip",
+      "subcarpeta": "gradle-8.14.8",
+      "ejecutable": "bin/gradle.bat"
     }
   ]
 }

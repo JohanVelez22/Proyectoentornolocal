@@ -626,6 +626,7 @@ export const PARAMETROS_ERROR = {
   'catalogo.sin_huella': ['servicio', 'version'],
   'catalogo.huella_debil': ['servicio', 'version'],
   'catalogo.huella_no_coincide': [],
+  'catalogo.paquete_invalido': [],
   'catalogo.redireccion_ajena': ['host'],
   'catalogo.demasiadas_redirecciones': ['maximo'],
   'catalogo.respuesta_grande': ['maximo'],

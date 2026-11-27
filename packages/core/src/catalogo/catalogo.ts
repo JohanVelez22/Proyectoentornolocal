@@ -39,10 +39,16 @@ export type ServicioInstalable =
   | 'deno'
   | 'zig'
   | 'kotlin'
-  | 'dart';
+  | 'dart'
+  | 'ruby'
+  | 'maven'
+  | 'gradle';
 
-/** Con 'archivo' la descarga se copia tal cual con el nombre de `ejecutable`. */
-export type FormatoPaquete = 'zip' | 'exe' | 'archivo';
+/**
+ * Con 'archivo' la descarga se copia tal cual con el nombre de `ejecutable`. Con '7z' se extrae con
+ * el bsdtar del sistema (RubyInstaller publica un `.7z` sin instalador).
+ */
+export type FormatoPaquete = 'zip' | 'exe' | 'archivo' | '7z';
 
 /** Ruta relativa, dentro del paquete, del binario principal que confirma la instalación. */
 export const EJECUTABLE_POR_SERVICIO: Record<ServicioInstalable, string> = {
@@ -78,6 +84,10 @@ export const EJECUTABLE_POR_SERVICIO: Record<ServicioInstalable, string> = {
   // El compilador de Kotlin es un script `.bat` dentro de `kotlinc/bin`.
   kotlin: 'bin/kotlinc.bat',
   dart: `bin/${nombreEjecutable('dart')}`,
+  ruby: `bin/${nombreEjecutable('ruby')}`,
+  // Maven y Gradle son scripts (`mvn.cmd`, `gradle.bat`): lo que confirma la instalación.
+  maven: 'bin/mvn.cmd',
+  gradle: 'bin/gradle.bat',
 };
 
 export function ejecutableDe(servicio: string): string | undefined {
@@ -133,7 +143,7 @@ const EntradaSchema = z.object({
   version: z.string().min(1),
   url: z.string().refine(urlOficial, 'La URL debe ser https y de un host oficial'),
   sha256: z.string().regex(/^[0-9a-f]{64}$/),
-  formato: z.enum(['zip', 'exe', 'archivo']),
+  formato: z.enum(['zip', 'exe', 'archivo', '7z']),
   subcarpeta: z.string().optional(),
   ejecutable: z.string().min(1),
   /** Versiones de PHP con las que la herramienta funciona (phpMyAdmin: `>=7.2 <8.4`). */
@@ -239,6 +249,9 @@ export const CatalogoSchema = z.object({
   zig: ListaFuerte,
   kotlin: ListaFuerte,
   dart: ListaFuerte,
+  ruby: ListaFuerte,
+  maven: ListaFuerte,
+  gradle: ListaFuerte,
   extensionesPhp: z.array(ExtensionPhpSchema).default([]),
 });
 

@@ -33,6 +33,9 @@ export const HOSTS_PERMITIDOS: readonly string[] = [
   // Zig (zip y firma) y Dart (bucket `dart-archive` de Google Cloud Storage; solo esa ruta).
   'ziglang.org',
   'storage.googleapis.com',
+  // Maven (zip y .sha512 en el archivo de Apache) y Gradle (services.gradle.org redirige a GitHub Releases).
+  'archive.apache.org',
+  'services.gradle.org',
   // Xdebug: DLL oficiales por rama y variante (catálogo de extensiones de PHP).
   'xdebug.org',
 ];

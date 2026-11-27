@@ -27,6 +27,7 @@ import { fuenteDotnet } from './fuentes/dotnet';
 import { fuenteGo } from './fuentes/go';
 import { fuenteJava } from './fuentes/java';
 import { fuenteKotlin } from './fuentes/kotlin';
+import { fuenteRuby } from './fuentes/ruby';
 import { fuenteRust } from './fuentes/rust';
 import { fuenteZig } from './fuentes/zig';
 import {
@@ -71,6 +72,7 @@ export const FUENTES_VERSIONES: Partial<Record<ServicioInstalable, FuenteVersion
   zig: fuenteZig,
   kotlin: fuenteKotlin,
   dart: fuenteDart,
+  ruby: fuenteRuby,
   composer: fuenteComposer,
   mailpit: fuenteMailpit,
   smtp4dev: fuenteSmtp4dev,
@@ -114,7 +116,7 @@ function esquemaVersion(servicio: ServicioInstalable) {
           .regex(/^[0-9a-f]{64}$/)
           .nullable(),
         huella: HuellaSchema.nullable(),
-        formato: z.enum(['zip', 'exe', 'archivo']),
+        formato: z.enum(['zip', 'exe', 'archivo', '7z']),
         subcarpeta: z.string().refine(rutaRelativaSegura, 'Subcarpeta no válida').optional(),
         ejecutable: z.string().refine(rutaRelativaSegura, 'Ejecutable no válido').optional(),
         soporte: z.enum(SOPORTES).optional(),

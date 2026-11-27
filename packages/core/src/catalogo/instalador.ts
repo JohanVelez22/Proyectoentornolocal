@@ -14,11 +14,12 @@ import {
 } from 'node:fs/promises';
 import path from 'node:path';
 import { extraerZip } from './zip';
+import { extraer7z } from './extraer7z';
 import type { Eventos, EventosNucleo } from '../eventos';
 import type { Rutas } from '../rutas';
 import type { ProgresoInstalacion } from '../tipos';
 import { ErrorWolf } from '../errores';
-import { ejecutorPorDefecto } from '../plataforma/win';
+import { ejecutorPorDefecto, rutaTarSistema } from '../plataforma/win';
 import { renombrarConReintentos } from '../https/confianza';
 import { catalogo, ejecutableDe, huellaDeEntrada, type VersionDisponible } from './catalogo';
 import { CerrojosServicio } from './cerrojo';
@@ -77,6 +78,8 @@ export interface OpcionesInstalador {
   vigencia?: VigenciaAnillo;
   /** Clave minisign de un servicio (solo pruebas). Por defecto, la fijada (Zig). */
   claveMinisign?: (servicio: string) => string | null;
+  /** tar.exe con el que se extraen los `.7z` (solo pruebas). Por defecto, el de System32. */
+  rutaTar?: string;
   /** Cerrojo por servicio compartido con los servicios de datos y la limpieza de versiones. */
   cerrojos?: CerrojosServicio;
 }
@@ -451,6 +454,14 @@ export class Instalador {
       let origen = stage;
       if (v.formato === 'zip') {
         await extraerZip(archivo, stage);
+        if (v.subcarpeta) origen = path.join(stage, v.subcarpeta);
+      } else if (v.formato === '7z') {
+        await extraer7z(
+          this.opciones.exec ?? ejecutorPorDefecto,
+          this.opciones.rutaTar ?? rutaTarSistema(),
+          archivo,
+          stage,
+        );
         if (v.subcarpeta) origen = path.join(stage, v.subcarpeta);
       } else {
         // 'exe' y 'archivo': el archivo se copia tal cual con el nombre de `ejecutable`.

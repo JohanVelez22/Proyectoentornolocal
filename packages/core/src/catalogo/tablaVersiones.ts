@@ -37,6 +37,9 @@ export const SERVICIOS_VERSIONES = [
   'zig',
   'kotlin',
   'dart',
+  'ruby',
+  'maven',
+  'gradle',
 ] as const satisfies readonly ServicioInstalable[];
 export type ServicioVersiones = (typeof SERVICIOS_VERSIONES)[number];
 
@@ -49,7 +52,7 @@ export function esServicioVersiones(s: unknown): s is ServicioVersiones {
  * - `instancias`: servicios de datos con varias versiones encendidas a la vez (cada una su puerto);
  * - `pool`: PHP, un pool por rama;
  * - `unica`: Nginx, Mailpit y Ollama, una sola encendida (encender otra cambia la activa);
- * - `ninguno`: Node, Python, Java, .NET, Go, Rust, Bun, Deno, Zig, Kotlin, Dart, Composer y cloudflared (solo instalar, desinstalar y predeterminada).
+ * - `ninguno`: Node, Python, Java, .NET, Go, Rust, Bun, Deno, Zig, Kotlin, Dart, Ruby, Maven, Gradle, Composer y cloudflared (solo instalar, desinstalar y predeterminada).
  */
 export type TipoInterruptor = 'instancias' | 'pool' | 'unica' | 'ninguno';
 
@@ -80,6 +83,9 @@ export const INTERRUPTOR: Record<ServicioVersiones, TipoInterruptor> = {
   zig: 'ninguno',
   kotlin: 'ninguno',
   dart: 'ninguno',
+  ruby: 'ninguno',
+  maven: 'ninguno',
+  gradle: 'ninguno',
 };
 
 /**
