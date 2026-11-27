@@ -20,6 +20,8 @@ import { esErrorWolf } from '../src/errores';
  * 127.0.0.1 con un puerto aleatorio y sobre carpetas temporales con archivos falsos.
  */
 
+/** Fuera de `%LOCALAPPDATA%\\Temp`: compartir rechaza cualquier ruta que pase por `AppData`. */
+const DIR_PRUEBAS = path.resolve(__dirname, '..');
 let base: string;
 let inicio: string;
 let datos: string;
@@ -92,7 +94,7 @@ function pedir(url: string): Promise<{ codigo: number; cuerpo: string }> {
 }
 
 beforeEach(() => {
-  base = realpathSync.native(mkdtempSync(path.join(os.tmpdir(), 'wc-comp-svc-')));
+  base = realpathSync.native(mkdtempSync(path.join(DIR_PRUEBAS, '.tmp-d52-svc-')));
   inicio = path.join(base, 'usuario');
   datos = path.join(base, 'usuario', 'AppData', 'WolfCoreDev');
   sistema = path.join(base, 'Windows');
@@ -611,5 +613,59 @@ describe('dejar de compartir mientras se abre el túnel', () => {
     await iniciar();
     expect(senal!.aborted).toBe(false);
     await c.detener();
+  });
+});
+
+describe('copias de AppData y de perfiles de navegador fuera de la carpeta del usuario', () => {
+  const w = (p: string, c = 'falso') => {
+    mkdirSync(path.dirname(p), { recursive: true });
+    writeFileSync(p, c);
+  };
+
+  it.each([
+    ['Backup', 'Users', 'X', 'AppData', 'Roaming'],
+    [
+      'Backup',
+      'Users',
+      'X',
+      'AppData',
+      'Roaming',
+      'Mozilla',
+      'Firefox',
+      'Profiles',
+      'abcd.default',
+    ],
+    ['Windows.old', 'Users', 'X', 'AppData', 'Local'],
+    ['otra-unidad', 'APPDATA', 'Roaming'],
+  ])('%s se rechaza aunque no esté en la carpeta del usuario', async (...tramos) => {
+    const d = path.join(base, ...tramos);
+    mkdirSync(d, { recursive: true });
+    expect(await codigoDe(iniciar(d))).toBe('compartir.carpeta_perfil');
+    // y un archivo de dentro también
+    w(path.join(d, 'recovery.jsonlz4'));
+    expect(await codigoDe(iniciar(path.join(d, 'recovery.jsonlz4')))).toBe(
+      'compartir.carpeta_perfil',
+    );
+  });
+
+  it('un perfil de Firefox copiado suelto (por su contenido) y un Default de Chrome copiado', async () => {
+    const ff = path.join(base, 'copia', 'abcd.default-release');
+    w(path.join(ff, 'prefs.js'));
+    w(path.join(ff, 'places.sqlite'));
+    expect(await codigoDe(iniciar(ff))).toBe('compartir.carpeta_perfil');
+    const ch = path.join(base, 'copia', 'Default');
+    w(path.join(ch, 'Login Data'));
+    w(path.join(ch, 'Preferences'));
+    mkdirSync(path.join(ch, 'Network'));
+    expect(await codigoDe(iniciar(ch))).toBe('compartir.carpeta_perfil');
+    const ud = path.join(base, 'copia2', 'User Data');
+    mkdirSync(ud, { recursive: true });
+    expect(await codigoDe(iniciar(ud))).toBe('compartir.carpeta_perfil');
+  });
+
+  it('una carpeta normal con un nombre parecido se comparte', async () => {
+    const d = path.join(base, 'Profiles-de-clientes');
+    w(path.join(d, 'a.txt'));
+    expect(await codigoDe(iniciar(d))).toBeNull();
   });
 });

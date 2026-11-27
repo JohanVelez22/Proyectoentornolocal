@@ -1,5 +1,5 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
-import { open, readdir, realpath, lstat, stat, type FileHandle } from 'node:fs/promises';
+import { access, open, readdir, realpath, lstat, stat, type FileHandle } from 'node:fs/promises';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import path from 'node:path';
@@ -9,6 +9,9 @@ import { rutaDentroDe } from '../plataforma/sistema';
 import {
   esBinarioGrande,
   esCarpetaProhibida,
+  firmaCoincide,
+  MARCAS_PERFIL_NAVEGADOR,
+  tramosDePerfilNavegador,
   leerRutaPedida,
   listadoHtml,
   nombreDescarga,
@@ -105,6 +108,41 @@ function ipDe(req: http.IncomingMessage, proveedor: ProveedorIp): string {
   return t && IP_VISIBLE.test(t) ? t : (req.socket.remoteAddress ?? '?');
 }
 
+/** ¿Es una carpeta de perfil de navegador (Firefox o Chromium), aunque sea una copia suelta? */
+export async function esPerfilNavegador(dir: string): Promise<boolean> {
+  for (const grupo of MARCAS_PERFIL_NAVEGADOR) {
+    const hay = await Promise.all(
+      grupo.map((n) =>
+        access(path.join(dir, n)).then(
+          () => true,
+          () => false,
+        ),
+      ),
+    );
+    if (hay.every(Boolean)) return true;
+  }
+  return false;
+}
+
+/** Los primeros bytes de un archivo (para comprobar su firma). */
+async function primerosBytes(fh: FileHandle, n = 16): Promise<Buffer> {
+  const b = Buffer.alloc(n);
+  const { bytesRead } = await fh.read(b, 0, n, 0);
+  return b.subarray(0, bytesRead);
+}
+
+/** ¿Es de verdad un medio o un paquete? Lista blanca de extensión y firma del archivo. */
+async function medioDeVerdad(ruta: string, nombre: string): Promise<boolean> {
+  if (!esBinarioGrande(nombre)) return false;
+  const fh = await open(ruta, 'r').catch(() => null);
+  if (!fh) return false;
+  try {
+    return firmaCoincide(nombre, await primerosBytes(fh));
+  } finally {
+    await fh.close().catch(() => undefined);
+  }
+}
+
 type Destino =
   | { tipo: 'carpeta'; real: string; relativa: string[] }
   | { tipo: 'archivo'; real: string; relativa: string[] };
@@ -198,8 +236,14 @@ export class ServidorCompartir {
         if (o.detector.porRuta(destino.real, info.nlink) || o.detector.porRuta(abs, info.nlink)) {
           return noEncontrado(mostrada);
         }
-        // Lo que pasa del tamaño revisable solo se sirve si es un medio o un paquete.
-        if (info.size > MAX_ANALISIS_BYTES && !esBinarioGrande(tramos[tramos.length - 1] ?? '')) {
+        // El nombre REAL (un nombre corto 8.3 no cambia el tipo ni el tamaño que se permite).
+        const nombre = path.basename(destino.real);
+        // Lo que pasa del tamaño revisable solo se sirve si es un medio o un paquete DE VERDAD:
+        // la extensión de la lista blanca y la firma del archivo tienen que coincidir.
+        if (
+          info.size > MAX_ANALISIS_BYTES &&
+          !(esBinarioGrande(nombre) && firmaCoincide(nombre, await primerosBytes(fh)))
+        ) {
           return noEncontrado(mostrada);
         }
         const leer = Math.min(
@@ -211,16 +255,14 @@ export class ServidorCompartir {
           const { bytesRead } = await fh.read(b, 0, leer, 0);
           if (o.detector.porContenido(b.subarray(0, bytesRead))) return noEncontrado(mostrada);
         }
-        const nombre = path.basename(destino.real);
-        const nombrePedido = tramos[tramos.length - 1] ?? nombre;
-        const { tipo, descarga } = tipoDe(nombrePedido);
+        const { tipo, descarga } = tipoDe(nombre);
         const cabeceras: Record<string, string> = {
           ...CABECERAS_COMUNES,
           'Content-Type': tipo,
           'Content-Length': String(info.size),
         };
         if (descarga) {
-          cabeceras['Content-Disposition'] = nombreDescarga(nombrePedido);
+          cabeceras['Content-Disposition'] = nombreDescarga(nombre);
           cabeceras['Content-Security-Policy'] = "default-src 'none'; sandbox";
         }
         registrar(200, mostrada);
@@ -252,7 +294,7 @@ export class ServidorCompartir {
         }
         return null;
       }
-      if (tramos.some(esCarpetaProhibida)) return null;
+      if (tramos.some(esCarpetaProhibida) || tramosDePerfilNavegador(tramos)) return null;
       const abs = path.join(raiz, ...tramos);
       let real: string;
       try {
@@ -262,19 +304,29 @@ export class ServidorCompartir {
       }
       if (!rutaDentroDe(raiz, real)) return null;
       const rel = path.relative(raiz, real).split(path.sep).filter(Boolean);
-      if (rel.some(esCarpetaProhibida)) return null;
+      if (rel.some(esCarpetaProhibida) || tramosDePerfilNavegador(rel)) return null;
       let info;
       try {
         info = await stat(real);
       } catch {
         return null;
       }
+      if (!info.isDirectory() && !info.isFile()) return null;
+      // Nada que esté dentro de una copia de un perfil de navegador (ni ella misma), a ningún nivel.
+      for (
+        let d = info.isDirectory() ? real : path.dirname(real);
+        rutaDentroDe(raiz, d);
+        d = path.dirname(d)
+      ) {
+        if (await esPerfilNavegador(d)) return null;
+        if (path.dirname(d) === d) break;
+      }
       if (info.isDirectory()) {
         // Una carpeta de un sitio con datos reales (o con nombre de secreto) tampoco se abre.
-        return o.detector.porRuta(real, 0) ? null : { tipo: 'carpeta', real, relativa: tramos };
+        if (o.detector.porRuta(real, 0)) return null;
+        return { tipo: 'carpeta', real, relativa: tramos };
       }
-      if (info.isFile()) return { tipo: 'archivo', real, relativa: tramos };
-      return null;
+      return { tipo: 'archivo', real, relativa: tramos };
     }
 
     async function listar(d: {
@@ -300,11 +352,13 @@ export class ServidorCompartir {
           continue;
         }
         if (!rutaDentroDe(raiz, real)) continue;
-        if (path.relative(raiz, real).split(path.sep).some(esCarpetaProhibida)) continue;
+        const relReal = path.relative(raiz, real).split(path.sep);
+        if (relReal.some(esCarpetaProhibida) || tramosDePerfilNavegador(relReal)) continue;
         const info = await lstat(real).catch(() => null);
         if (!info) continue;
         if (info.isDirectory()) {
           if (o.detector.porRuta(abs, 0) || o.detector.porRuta(real, 0)) continue;
+          if (await esPerfilNavegador(real)) continue;
           entradas.push({ nombre, carpeta: true, bytes: null });
         } else if (info.isFile()) {
           if (o.detector.porRuta(abs, info.nlink) || o.detector.porRuta(real, info.nlink)) continue;
@@ -323,7 +377,9 @@ export class ServidorCompartir {
             nombre,
             carpeta: false,
             bytes: info.size,
-            ...(info.size > MAX_ANALISIS_BYTES && !esBinarioGrande(nombre) ? { grande: true } : {}),
+            ...(info.size > MAX_ANALISIS_BYTES && !(await medioDeVerdad(real, nombre))
+              ? { grande: true }
+              : {}),
           });
         }
         if (entradas.length >= MAX_ENTRADAS_LISTADO) {

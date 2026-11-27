@@ -14,8 +14,14 @@ import {
   esBinarioGrande,
   esCarpetaDeClaves,
   esCarpetaProhibida,
+  tramosDePerfilNavegador,
 } from './contenido';
-import { MAX_ANALISIS_BYTES, ServidorCompartir, type AccesoCompartido } from './servidor';
+import {
+  esPerfilNavegador,
+  MAX_ANALISIS_BYTES,
+  ServidorCompartir,
+  type AccesoCompartido,
+} from './servidor';
 
 /**
  * «Compartir carpeta o archivo» (D52): publica en internet, por un túnel, una carpeta o un archivo
@@ -440,9 +446,16 @@ export class Compartir {
         ? path.relative(base, r).split(path.sep).filter(Boolean)
         : tramos.slice(-1);
       if (propios.some((t) => esCarpetaProhibida(t))) throw perfil();
+      // Una copia de AppData fuera de la carpeta del usuario (un respaldo, Windows.old, otra
+      // unidad) también: `AppData` en CUALQUIER tramo, y los perfiles de Firefox por su sitio.
+      if (tramos.some((t) => t.toLowerCase() === 'appdata') || tramosDePerfilNavegador(tramos)) {
+        throw perfil();
+      }
     }
     const detector = detectorCompartir(crearDetectorSensible(rutasSitios));
     if (info.isDirectory()) {
+      // Una copia suelta de un perfil de navegador (Firefox o Chromium), por su contenido.
+      if (await esPerfilNavegador(real)) throw perfil();
       const nombres = await readdir(real).catch(() => [] as string[]);
       if (
         nombres.some((n) => (CARPETAS_PROHIBIDAS as readonly string[]).includes(n.toLowerCase()))

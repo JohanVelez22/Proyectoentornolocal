@@ -13,7 +13,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { crearDetectorSensible } from '../src/herramientas/archivoSensible';
-import { detectorCompartir } from '../src/compartir/contenido';
+import { detectorCompartir, firmaCoincide } from '../src/compartir/contenido';
+import { execFileSync } from 'node:child_process';
 import { ServidorCompartir, type AccesoCompartido } from '../src/compartir/servidor';
 
 const TOKEN = 'Tok3n_de-prueba_0123456789abc';
@@ -426,7 +427,7 @@ describe('límites', () => {
 
   it('cerrar corta una descarga en curso y libera el puerto', async () => {
     const s = await iniciar();
-    writeFileSync(path.join(raiz, 'grande.mp4'), Buffer.alloc(30 * 1024 * 1024, 1));
+    writeFileSync(path.join(raiz, 'grande.mp4'), medio('mp4', 30 * 1024 * 1024));
     const antes = s.puerto;
     const parte = await new Promise<number>((ok) => {
       http.get({ host: '127.0.0.1', port: antes, path: `/${TOKEN}/grande.mp4` }, (res) => {
@@ -539,8 +540,8 @@ describe('archivos de más de 8 MB', () => {
   it('un texto o tipo desconocido no se sirve y el listado lo marca; un medio o paquete sí', async () => {
     writeFileSync(path.join(raiz, 'volcado.txt'), Buffer.alloc(GRANDE, 65));
     writeFileSync(path.join(raiz, 'datos.bin'), Buffer.alloc(GRANDE, 65));
-    writeFileSync(path.join(raiz, 'copia.zip'), Buffer.alloc(GRANDE, 65));
-    writeFileSync(path.join(raiz, 'video.mp4'), Buffer.alloc(GRANDE, 65));
+    writeFileSync(path.join(raiz, 'copia.zip'), medio('zip', GRANDE));
+    writeFileSync(path.join(raiz, 'video.mp4'), medio('mp4', GRANDE));
     const s = await iniciar();
     expect((await pedir(s.puerto, `/${TOKEN}/volcado.txt`)).codigo).toBe(404);
     expect((await pedir(s.puerto, `/${TOKEN}/datos.bin`)).codigo).toBe(404);
@@ -566,7 +567,7 @@ describe('archivos de más de 8 MB', () => {
 
 describe('lentitud', () => {
   it('un lector que no lee una descarga grande pierde la conexión', async () => {
-    writeFileSync(path.join(raiz, 'enorme.mp4'), Buffer.alloc(60 * 1024 * 1024, 1));
+    writeFileSync(path.join(raiz, 'enorme.mp4'), medio('mp4', 60 * 1024 * 1024));
     const s = await iniciar({ plazoMs: 400 });
     const c = net.connect({ host: '127.0.0.1', port: s.puerto });
     c.pause();
@@ -597,3 +598,221 @@ describe('lentitud', () => {
     expect(cerro).toBe(true);
   }, 15_000);
 });
+
+describe('segunda revisión: nombres, perfiles de navegador, 8.3 y firmas (valores falsos)', () => {
+  it.each([
+    'Cookies-journal',
+    'cookies.sqlite-shm',
+    'logins-backup.json',
+    'signons.sqlite',
+    'recovery.jsonlz4',
+    'recovery.baklz4',
+    'sessionstore.jsonlz4',
+    'sessionstore-backups',
+    'WinSCP.ini',
+    'credentials.xml',
+    'id_rsa_github',
+  ])('%s da 404', async (n) => {
+    writeFileSync(path.join(raiz, n), 'contenido falso inocente');
+    const s = await iniciar();
+    expect((await pedir(s.puerto, `/${TOKEN}/${encodeURIComponent(n)}`)).codigo).toBe(404);
+  });
+
+  it.each(['monkey', 'hotkey', 'turkey.txt', 'id_proyecto', 'id_card.png', 'keyXdb'])(
+    '%s ya no se bloquea de más',
+    async (n) => {
+      writeFileSync(path.join(raiz, n), 'contenido falso inocente');
+      const s = await iniciar();
+      expect((await pedir(s.puerto, `/${TOKEN}/${encodeURIComponent(n)}`)).codigo).toBe(200);
+    },
+  );
+
+  it('perfiles de navegador copiados: carpeta Profiles de Firefox, User Data y un Default de Chrome', async () => {
+    const w = (p: string, c = 'falso') => {
+      mkdirSync(path.dirname(path.join(raiz, p)), { recursive: true });
+      writeFileSync(path.join(raiz, p), c);
+    };
+    w('Firefox/Profiles/abcd.default/sessionstore-backups/recovery.jsonlz4');
+    w('Firefox/Profiles/abcd.default/notas.txt');
+    w('copia-firefox/prefs.js');
+    w('copia-firefox/places.sqlite');
+    w('copia-firefox/otro.txt');
+    w('Chrome/User Data/Default/Network/Cookies-journal');
+    w('Default/Login Data');
+    w('Default/Preferences');
+    mkdirSync(path.join(raiz, 'Default', 'Network'), { recursive: true });
+    w('Default/Network/Cookies');
+    w('Default/leeme.txt');
+    const s = await iniciar();
+    for (const r of [
+      'Firefox/Profiles/abcd.default/sessionstore-backups/recovery.jsonlz4',
+      'Firefox/Profiles/abcd.default/notas.txt',
+      'Firefox/Profiles/',
+      'copia-firefox/otro.txt',
+      'copia-firefox/',
+      'Chrome/User%20Data/Default/Network/Cookies-journal',
+      'Default/leeme.txt',
+      'Default/',
+    ]) {
+      expect((await pedir(s.puerto, `/${TOKEN}/${r}`)).codigo, r).toBe(404);
+    }
+    const l = (await pedir(s.puerto, `/${TOKEN}/`)).cuerpo.toString();
+    for (const oculto of ['Firefox/', 'copia-firefox/', 'Chrome/', 'Default/']) {
+      if (oculto === 'Firefox/' || oculto === 'Chrome/') continue; // padres sin perfil a la vista: se listan
+      expect(l, oculto).not.toContain(`>${oculto}<`);
+    }
+    expect((await pedir(s.puerto, `/${TOKEN}/a.txt`)).codigo).toBe(200);
+  });
+
+  it('un nombre corto 8.3 no esquiva el corte de 8 MB (si el volumen genera nombres cortos)', async () => {
+    const largo = path.join(raiz, 'volcado-con-nombre-largo.txt');
+    writeFileSync(largo, Buffer.alloc(8 * 1024 * 1024 + 1024, 65));
+    let corto = '';
+    try {
+      corto = execFileSync('cmd.exe', ['/d', '/c', `for %I in ("${largo}") do @echo %~sI`], {
+        encoding: 'utf8',
+      }).trim();
+    } catch {
+      return; // no es Windows
+    }
+    if (!corto || corto.toLowerCase() === largo.toLowerCase()) return; // sin nombres 8.3 en este volumen
+    const s = await iniciar();
+    expect((await pedir(s.puerto, `/${TOKEN}/${path.basename(corto)}`)).codigo).toBe(404);
+  });
+
+  it('un texto con nombre de medio o paquete (sin firma) de más de 8 MB no se sirve; con firma, sí', async () => {
+    const G = 8 * 1024 * 1024 + 1024;
+    const falsoZip = Buffer.alloc(G, 65); // texto con nombre .zip
+    writeFileSync(path.join(raiz, 'falso.zip'), falsoZip);
+    writeFileSync(path.join(raiz, 'falso.png'), Buffer.alloc(G, 65));
+    writeFileSync(path.join(raiz, 'falso.pdf'), Buffer.alloc(G, 65));
+    writeFileSync(path.join(raiz, 'falso.mp3'), Buffer.alloc(G, 65));
+    writeFileSync(path.join(raiz, 'disco.iso'), medio('iso', G));
+    writeFileSync(path.join(raiz, 'cinta.tar'), medio('tar', G));
+    writeFileSync(path.join(raiz, 'bueno.zip'), medio('zip', G));
+    writeFileSync(path.join(raiz, 'bueno.pdf'), medio('pdf', G));
+    const s = await iniciar();
+    for (const n of [
+      'falso.zip',
+      'falso.png',
+      'falso.pdf',
+      'falso.mp3',
+      'disco.iso',
+      'cinta.tar',
+    ]) {
+      expect((await pedir(s.puerto, `/${TOKEN}/${n}`, { metodo: 'HEAD' })).codigo, n).toBe(404);
+    }
+    for (const n of ['bueno.zip', 'bueno.pdf']) {
+      expect((await pedir(s.puerto, `/${TOKEN}/${n}`, { metodo: 'HEAD' })).codigo, n).toBe(200);
+    }
+    const l = (await pedir(s.puerto, `/${TOKEN}/`)).cuerpo.toString();
+    expect(l).toMatch(/falso\.zip <em>\(too large to review\)/);
+    expect(l).toMatch(/disco\.iso <em>\(too large to review\)/);
+    expect(l).toContain('href="bueno.zip"');
+  });
+});
+
+describe('firmaCoincide', () => {
+  it.each([
+    'png',
+    'jpg',
+    'jpeg',
+    'gif',
+    'webp',
+    'wav',
+    'bmp',
+    'ico',
+    'avif',
+    'mp4',
+    'mov',
+    'webm',
+    'mkv',
+    'mp3',
+    'ogg',
+    'flac',
+    'zip',
+    'gz',
+    '7z',
+    'pdf',
+  ])('%s: acepta su firma y rechaza un texto', (ext) => {
+    expect(firmaCoincide(`x.${ext}`, medio(ext, 64))).toBe(true);
+    expect(firmaCoincide(`x.${ext}`, Buffer.from('hola, esto es texto plano de relleno'))).toBe(
+      false,
+    );
+  });
+  it('tar, iso y desconocidos no tienen firma de lista blanca', () => {
+    expect(firmaCoincide('x.tar', medio('tar', 70000))).toBe(false);
+    expect(firmaCoincide('x.iso', medio('iso', 70000))).toBe(false);
+    expect(firmaCoincide('x.exe', Buffer.from('MZ'))).toBe(false);
+  });
+});
+
+/** Un archivo de `n` bytes que empieza con la firma de `ext` (el resto, relleno). */
+function medio(ext: string, n: number): Buffer {
+  const b = Buffer.alloc(n, 65);
+  const poner = (desde: number, v: number[] | string) =>
+    (typeof v === 'string' ? Buffer.from(v, 'latin1') : Buffer.from(v)).copy(b, desde);
+  switch (ext) {
+    case 'png':
+      poner(0, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+      break;
+    case 'jpg':
+    case 'jpeg':
+      poner(0, [0xff, 0xd8, 0xff, 0xe0]);
+      break;
+    case 'gif':
+      poner(0, 'GIF89a');
+      break;
+    case 'webp':
+      poner(0, 'RIFF');
+      poner(8, 'WEBP');
+      break;
+    case 'wav':
+      poner(0, 'RIFF');
+      poner(8, 'WAVE');
+      break;
+    case 'bmp':
+      poner(0, 'BM');
+      break;
+    case 'ico':
+      poner(0, [0, 0, 1, 0]);
+      break;
+    case 'avif':
+    case 'mp4':
+    case 'mov':
+      poner(4, 'ftyp');
+      break;
+    case 'webm':
+    case 'mkv':
+      poner(0, [0x1a, 0x45, 0xdf, 0xa3]);
+      break;
+    case 'mp3':
+      poner(0, 'ID3');
+      break;
+    case 'ogg':
+      poner(0, 'OggS');
+      break;
+    case 'flac':
+      poner(0, 'fLaC');
+      break;
+    case 'zip':
+      poner(0, [0x50, 0x4b, 0x03, 0x04]);
+      break;
+    case 'gz':
+      poner(0, [0x1f, 0x8b, 0x08]);
+      break;
+    case '7z':
+      poner(0, [0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c]);
+      break;
+    case 'pdf':
+      poner(0, '%PDF-1.7');
+      break;
+    case 'tar':
+      poner(257, 'ustar');
+      break;
+    case 'iso':
+      poner(0x8001, 'CD001');
+      break;
+  }
+  return b;
+}

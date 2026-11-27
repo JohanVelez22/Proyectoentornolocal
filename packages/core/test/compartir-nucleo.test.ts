@@ -1,19 +1,24 @@
-import { mkdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Nucleo } from '../src/nucleo';
 import { PlataformaFalsa } from '../src/plataforma/falsa';
-import { carpetaTemporal } from './temporales';
 
 let nucleo: Nucleo | null = null;
+let carpeta: string | null = null;
 afterEach(async () => {
   await nucleo?.cerrar({ detenerServicios: true }).catch(() => undefined);
   nucleo = null;
+  // Fuera de %LOCALAPPDATA%\Temp: compartir rechaza cualquier ruta que pase por AppData.
+  if (carpeta) rmSync(carpeta, { recursive: true, force: true });
+  carpeta = null;
 });
 
 describe('Nucleo: Compartir (D52)', () => {
   it('rechaza lo vetado con la plataforma y no abre ningún túnel (cloudflared no está instalado)', async () => {
-    const raiz = realpathSync.native(await carpetaTemporal('pel-d52-nucleo-'));
+    const raiz = (carpeta = realpathSync.native(
+      mkdtempSync(path.join(path.resolve(__dirname, '..'), '.tmp-d52-nucleo-')),
+    ));
     const base = path.join(raiz, 'datos');
     const inicio = path.join(raiz, 'usuario');
     const sistema = path.join(raiz, 'Windows');

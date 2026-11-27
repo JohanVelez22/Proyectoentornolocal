@@ -44,6 +44,8 @@ export const CARPETAS_OCULTAS = [
   '.mozilla',
   '.pki',
   '.terraform.d',
+  'user data',
+  'sessionstore-backups',
 ] as const;
 const OCULTAS = new Set<string>([...CARPETAS_PROHIBIDAS, ...CARPETAS_OCULTAS]);
 
@@ -59,7 +61,7 @@ export const esCarpetaDeClaves = (nombre: string): boolean => PROHIBIDAS.has(nom
  * sin cambiar lo que esa regla decide en el editor, Buscar o el Diff.
  */
 const NOMBRE_SENSIBLE =
-  /^(?:cookies(?:.sqlite.*)?|key[34].db|logins.json|login data(?: for account)?(?:-journal)?|web data(?:-journal)?|sitemanager.xml|recentservers.xml|filezilla.xml|state.vscdb(?:.backup)?|.pypirc|.npmrc|.netrc|_netrc|.pgpass|.git-credentials|.htpasswd|id_[^.]*|.*.(?:kdbx|pfx|p12|ppk|jks|keystore|pem|key))$/i;
+  /^(?:cookies(?:[.-].*)?|key[34]\.db|logins.*\.json|signons\.sqlite|login data(?: for account)?(?:-journal)?|web data(?:-journal)?|sitemanager\.xml|recentservers\.xml|filezilla\.xml|winscp\.ini|credentials\.xml|state\.vscdb(?:\.backup)?|sessionstore.*|.*\.(?:jsonlz4|mozlz4|baklz4)|\.pypirc|\.npmrc|\.netrc|_netrc|\.pgpass|\.git-credentials|\.htpasswd|id_(?:rsa|dsa|ecdsa|ed25519)(?:_[\w-]+)?|.*\.(?:kdbx|pfx|p12|ppk|jks|keystore|pem|key))$/i;
 
 export const nombreSensibleCompartir = (nombre: string): boolean => NOMBRE_SENSIBLE.test(nombre);
 
@@ -92,13 +94,87 @@ const BINARIOS_GRANDES = new Set([
   'mov',
   'zip',
   '7z',
-  'iso',
   'pdf',
   'gz',
-  'tar',
 ]);
 export const esBinarioGrande = (nombre: string): boolean =>
   BINARIOS_GRANDES.has(path.extname(nombre).slice(1).toLowerCase());
+
+const ascii = (b: Buffer, desde: number, texto: string): boolean =>
+  b.length >= desde + texto.length && b.toString('latin1', desde, desde + texto.length) === texto;
+const bytes = (b: Buffer, desde: number, esperado: number[]): boolean =>
+  b.length >= desde + esperado.length && esperado.every((v, i) => b[desde + i] === v);
+
+/**
+ * ¿El comienzo del archivo (sus primeros bytes) corresponde a lo que dice su extensión? Un archivo
+ * de más de 8 MB solo se sirve por ser un medio o un paquete si de verdad lo parece: un texto con
+ * nombre `.zip` no se cuela sin revisar. Extensión que no está en la lista: false.
+ */
+export function firmaCoincide(nombre: string, b: Buffer): boolean {
+  switch (path.extname(nombre).slice(1).toLowerCase()) {
+    case 'png':
+      return bytes(b, 0, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    case 'jpg':
+    case 'jpeg':
+      return bytes(b, 0, [0xff, 0xd8, 0xff]);
+    case 'gif':
+      return ascii(b, 0, 'GIF87a') || ascii(b, 0, 'GIF89a');
+    case 'webp':
+      return ascii(b, 0, 'RIFF') && ascii(b, 8, 'WEBP');
+    case 'wav':
+      return ascii(b, 0, 'RIFF') && ascii(b, 8, 'WAVE');
+    case 'bmp':
+      return ascii(b, 0, 'BM');
+    case 'ico':
+      return bytes(b, 0, [0, 0, 1, 0]);
+    case 'avif':
+    case 'mp4':
+    case 'mov':
+      return ascii(b, 4, 'ftyp');
+    case 'webm':
+    case 'mkv':
+      return bytes(b, 0, [0x1a, 0x45, 0xdf, 0xa3]);
+    case 'mp3':
+      return (
+        ascii(b, 0, 'ID3') || (b.length >= 2 && b[0] === 0xff && ((b[1] ?? 0) & 0xe0) === 0xe0)
+      );
+    case 'ogg':
+      return ascii(b, 0, 'OggS');
+    case 'flac':
+      return ascii(b, 0, 'fLaC');
+    case 'zip':
+      return bytes(b, 0, [0x50, 0x4b, 0x03, 0x04]) || bytes(b, 0, [0x50, 0x4b, 0x05, 0x06]);
+    case 'gz':
+      return bytes(b, 0, [0x1f, 0x8b]);
+    case '7z':
+      return bytes(b, 0, [0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c]);
+    case 'pdf':
+      return ascii(b, 0, '%PDF');
+    default:
+      return false;
+  }
+}
+
+/**
+ * Carpeta de un perfil de navegador por su sitio: `Profiles` dentro de `Firefox` o `Mozilla`.
+ * (`User Data` de Chrome, Edge y Brave ya está en `CARPETAS_OCULTAS`.) Se mira en los tramos de una
+ * ruta; una copia de un perfil suelta se reconoce además por su contenido (ver `esPerfilNavegador`).
+ */
+export function tramosDePerfilNavegador(tramos: readonly string[]): boolean {
+  return tramos.some(
+    (t, i) =>
+      t.toLowerCase() === 'profiles' &&
+      ['firefox', 'mozilla'].includes((tramos[i - 1] ?? '').toLowerCase()),
+  );
+}
+
+/** Archivos que delatan que una carpeta es un perfil de navegador (los de Firefox o los de Chromium). */
+export const MARCAS_PERFIL_NAVEGADOR: readonly (readonly string[])[] = [
+  ['prefs.js'],
+  ['places.sqlite'],
+  ['Login Data'],
+  ['Preferences', 'Network'],
+];
 
 /** Nombres reservados de Windows (con o sin extensión): `CON`, `nul.txt`, `COM1`… */
 const RESERVADO = /^(?:con|prn|aux|nul|conin\$|conout\$|com[0-9¹²³]|lpt[0-9¹²³])(?:\..*)?$/i;
