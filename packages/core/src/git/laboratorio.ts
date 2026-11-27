@@ -163,7 +163,7 @@ function nombreValido(v: unknown, tag: boolean): string {
 }
 
 // eslint-disable-next-line no-control-regex
-const CONTROL = /[0000-001f007f]/;
+const CONTROL = /[\u0000-\u001f\u007f]/;
 
 function mensajeValido(v: unknown): string {
   if (typeof v !== 'string') throw invalida();
