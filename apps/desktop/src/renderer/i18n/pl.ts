@@ -4445,7 +4445,7 @@ export const pl: Textos = {
     tema: 'Motyw',
     temas: { sistema: 'Systemowy', claro: 'Jasny', oscuro: 'Ciemny' },
     idioma: 'Język',
-    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語', ko: '한국어', hi: 'हिन्दी', tr: 'Türkçe', id: 'Bahasa Indonesia', pl: 'Polski' },
+    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語', ko: '한국어', hi: 'हिन्दी', tr: 'Türkçe', id: 'Bahasa Indonesia', pl: 'Polski', nl: 'Nederlands' },
     acento: 'Kolor akcentu',
     acentos: {
       indigo: 'Indygo',

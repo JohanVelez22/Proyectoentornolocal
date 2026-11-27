@@ -2566,7 +2566,183 @@ const PL: Diccionario = {
   },
 };
 
-const DICCIONARIOS = { es: ES, en: EN, pt: PT, fr: FR, de: DE, it: IT, ru: RU, zh: ZH, ja: JA, ko: KO, hi: HI, tr: TR, id: ID, pl: PL } satisfies Record<IdiomaUi, Diccionario>;
+const NL: Diccionario = {
+  porCodigo: {
+    'avisos.servicio_caido': (d) => ({
+      titulo: 'Een dienst is gestopt met een fout',
+      cuerpo: `${limpio(d['nombre'], 'Een dienst')} werkt niet meer. Open WolfCore Dev voor meer details.`,
+    }),
+    'avisos.iniciar_todo_fallos': (d) => ({
+      titulo: 'Alles starten kon niet alles opstarten',
+      cuerpo: `Niet gestart: ${limpio(d['nombres'], 'een dienst')}. Open Diensten voor meer details.`,
+    }),
+    'avisos.workspace_fallos': (d) => ({
+      titulo: 'Een workspace kon niet alles starten',
+      cuerpo: `${limpio(d['nombre'], 'De workspace')}: ${limpio(d['nombres'], 'een onderdeel')} kon niet worden gestart. Open Start om te zien wat actief is.`,
+    }),
+    'avisos.workspace_fallos_detener': (d) => ({
+      titulo: 'Een workspace kon niet alles stoppen',
+      cuerpo: `${limpio(d['nombre'], 'De workspace')}: ${limpio(d['nombres'], 'een onderdeel')} kon niet worden gestopt. Open Start om te zien wat nog actief is.`,
+    }),
+    'avisos.tarea_fallo': (d) => ({
+      titulo:
+        d['motivo'] === 'tiempo'
+          ? 'Een geplande taak duurde te lang'
+          : 'Een geplande taak is mislukt',
+      cuerpo: `${limpio(d['nombre'], 'Een taak')} (${limpio(d['sitio'], 'een project')}) ${d['motivo'] === 'tiempo' ? 'heeft de maximale tijd overschreden en is gestopt' : 'is gestopt met een fout'}. Open het project om het logboek te bekijken.`,
+    }),
+    'avisos.tarea_bloqueada': (d) => ({
+      titulo: 'Een geplande taak is niet uitgevoerd',
+      cuerpo: `${limpio(d['nombre'], 'Een taak')} (${limpio(d['sitio'], 'een project')}): ${
+        {
+          aislado: 'de gegevensmap is een testmap en het uitvoeren van taken is niet toegestaan',
+          no_confiado: 'het project is niet als vertrouwd gemarkeerd',
+          receta_cambio: 'het recept van het project is gewijzigd sinds u het vertrouwde',
+          sin_confirmar: 'de opdracht moet nog worden bevestigd',
+          comando_invalido: 'de opdracht is niet toegestaan',
+          cron_invalida: 'het tijdschema is niet geldig',
+          carpeta: 'de projectmap bestaat niet',
+        }[String(d['motivo'])] ?? 'er wordt niet aan de voorwaarden voldaan'
+      }.`,
+    }),
+    'avisos.puerto_ocupado': (d) => ({
+      titulo: 'Poort in gebruik',
+      cuerpo: `Poort ${limpio(d['puerto'], '?')} wordt gebruikt door ${limpio(d['nombre'], 'een ander programma')}: de dienst kon niet worden gestart.`,
+    }),
+    'avisos.proceso_error': (d) => ({
+      titulo: 'Een projectproces is gestopt met een fout',
+      cuerpo: `${limpio(d['nombre'], 'Een proces')} werkt niet meer. Controleer de logboeken.`,
+    }),
+    'avisos.proceso_terminado': (d) => ({
+      titulo: 'Een proces is voltooid',
+      cuerpo: `${limpio(d['nombre'], 'Een proces')} is zonder fouten voltooid.`,
+    }),
+    'avisos.proceso_fallo': (d) => ({
+      titulo: 'Een proces is mislukt',
+      cuerpo: `${limpio(d['nombre'], 'Een proces')} is gestopt met een fout${d['codigoSalida'] !== undefined ? ` (code ${limpio(d['codigoSalida'], '?')})` : ''}. Controleer de logboeken.`,
+    }),
+    'avisos.receta_terminada': (d) => ({
+      titulo: 'Een recept is voltooid',
+      cuerpo: `Het recept van ${limpio(d['sitio'], 'een project')} is zonder fouten voltooid.`,
+    }),
+    'avisos.receta_fallo': (d) => ({
+      titulo: 'Een recept is mislukt',
+      cuerpo: `Het recept van ${limpio(d['sitio'], 'een project')} is gestopt met een fout. Open het project om de stap te bekijken.`,
+    }),
+    'avisos.tunel_caido': (d) => ({
+      titulo: 'Een tunnel is verbroken',
+      cuerpo: `De tunnel van ${limpio(d['fuente'], 'een project')} werkt niet meer.`,
+    }),
+    'avisos.contenedor_detenido': (d) => ({
+      titulo: 'Een container is gestopt',
+      cuerpo: `${limpio(d['nombre'], 'Een container')} (${limpio(d['motor'], 'Docker')}) is onverwacht gestopt${d['codigoSalida'] !== undefined ? ` (code ${limpio(d['codigoSalida'], '?')})` : ''}.`,
+    }),
+    'avisos.ca_por_vencer': (d) => ({
+      titulo: 'De certificeringsinstantie verloopt binnenkort',
+      cuerpo: `Verloopt over ${limpio(d['dias'], '?')} dagen. Genereer deze opnieuw en vertrouw deze opnieuw.`,
+    }),
+    'avisos.certificado_por_vencer': (d) => ({
+      titulo: 'Een certificaat verloopt binnenkort',
+      cuerpo: `Het certificaat van ${limpio(d['fuente'], 'een site')} verloopt over ${limpio(d['dias'], '?')} dagen.`,
+    }),
+    'avisos.certificado_vencido': (d) => ({
+      titulo: 'Een certificaat is verlopen',
+      cuerpo: `Het certificaat van ${limpio(d['fuente'], 'een site')} is niet meer geldig. Genereer het opnieuw.`,
+    }),
+    'avisos.php_sitio_fallo': (d) => ({
+      titulo: 'De eigen PHP van een site is niet gestart',
+      cuerpo: `De PHP van ${limpio(d['fuente'], 'een site')} is niet gestart (mogelijk wordt de poort gebruikt door een ander programma). Controleer de sectie PHP op de bijbehorende kaart.`,
+    }),
+    'avisos.php_sitio_sin_puertos': (d) => ({
+      titulo: 'Geen poorten beschikbaar voor de PHP van een site',
+      cuerpo: `${limpio(d['fuente'], 'Een site')} gebruikt de gedeelde PHP van deze versie, zonder eigen instellingen: er zijn geen vrije poorten meer voor een eigen PHP.`,
+    }),
+    'avisos.php_sitio_descartados': (d) => ({
+      titulo: 'PHP-instellingen genegeerd',
+      cuerpo: `Enkele PHP-instellingen van ${limpio(d['fuente'], 'een site')} zijn ongeldig en niet toegepast: ${limpio(d['claves'], 'controleer de sectie PHP')}.`,
+    }),
+    'avisos.lan_red_cambio': (d) => ({
+      titulo: 'Delen op het lokale netwerk is gestopt',
+      cuerpo: `Het netwerk is gewijzigd: het delen van ${limpio(d['fuente'], 'een site')} is gestopt.`,
+    }),
+    'avisos.vhost_reglas_descartadas': (d) => ({
+      titulo: 'Nginx-regels genegeerd',
+      cuerpo: `De eigen regels van ${limpio(d['fuente'], 'een site')} komen niet meer door de controle (de map, domeinen of poorten zijn gewijzigd) en zijn uit het vhost weggelaten. Controleer ze in de sectie Nginx.`,
+    }),
+    'avisos.vhost_manual_descartado': (d) => ({
+      titulo: 'Handmatig vhost niet in gebruik',
+      cuerpo: `Het handmatig geschreven vhost van ${limpio(d['fuente'], 'een site')} komt niet meer door de controle (de map, domeinen of poorten zijn gewijzigd): het gegenereerde vhost wordt gebruikt. Controleer het in de sectie Nginx.`,
+    }),
+    'avisos.rustup_entrada_ajena': () => ({
+      titulo: 'Rustup was al op een andere locatie geïnstalleerd',
+      cuerpo:
+        'De Rust-installatie van WolfCore Dev is in een eigen map geplaatst. Windows had al een verwijderingsvermelding voor rustup die naar een andere installatie verwijst: deze is ongemoeid gelaten.',
+    }),
+    'avisos.version_nueva': (d) => ({
+      titulo: `Er is een nieuwe versie van ${limpio(d['servicio'], 'een dienst')}`,
+      cuerpo: `${limpio(d['nueva'], 'Een nieuwe versie')} is nu beschikbaar (u gebruikt ${limpio(d['actual'], 'een andere')}). Open Diensten → Versies om bij te werken; niets wordt automatisch geïnstalleerd.`,
+      accion: 'Bijwerken',
+    }),
+    'avisos.version_nueva_sin_huella': (d) => ({
+      titulo: `Er is een nieuwe versie van ${limpio(d['servicio'], 'een dienst')}`,
+      cuerpo: `${limpio(d['nueva'], 'Een nieuwe versie')} is nu beschikbaar (u gebruikt ${limpio(d['actual'], 'een andere')}), zonder gepubliceerde vingerafdruk: de download kan niet worden geverifieerd. Controleer dit in Diensten → Versies; voor installatie wordt om uw bevestiging gevraagd.`,
+    }),
+    'avisos.rama_nueva_sin_huella': (d) => ({
+      titulo: `Nieuwe hoofdversie van ${limpio(d['servicio'], 'een dienst')}`,
+      cuerpo: `${limpio(d['nueva'], 'Een nieuwe hoofdversie')} is nieuwer dan de versie die u gebruikt (${limpio(d['actual'], '?')}), zonder gepubliceerde vingerafdruk: de download kan niet worden geverifieerd. Controleer dit in Diensten → Versies; voor installatie wordt om uw bevestiging gevraagd.`,
+    }),
+    'avisos.rama_nueva': (d) => ({
+      titulo: `Nieuwe hoofdversie van ${limpio(d['servicio'], 'een dienst')}`,
+      cuerpo: `${limpio(d['nueva'], 'Een nieuwe hoofdversie')} is nieuwer dan de versie die u gebruikt (${limpio(d['actual'], '?')}). Deze wordt afzonderlijk geïnstalleerd, zonder uw gegevens aan te raken.`,
+      accion: 'Bijwerken',
+    }),
+    'doctor.hallazgos': (d) => ({
+      titulo: 'Doctor heeft fouten in de omgeving gevonden',
+      cuerpo: `Er zijn ${limpio(d['errores'], 'meerdere')} problemen die kunnen verhinderen dat de omgeving werkt. Open Doctor om te zien hoe u deze kunt oplossen.`,
+    }),
+  },
+  porTipo: {
+    'servicio-caido': {
+      titulo: 'Een dienst is gestopt',
+      cuerpo: 'Open WolfCore Dev voor meer details.',
+    },
+    'puerto-ocupado': {
+      titulo: 'Poort in gebruik',
+      cuerpo: 'Open WolfCore Dev voor meer details.',
+    },
+    'certificado-por-vencer': {
+      titulo: 'Een certificaat verloopt binnenkort',
+      cuerpo: 'Open WolfCore Dev voor meer details.',
+    },
+    'tunel-caido': { titulo: 'Een tunnel is verbroken', cuerpo: 'Open WolfCore Dev voor meer details.' },
+    'proceso-error': {
+      titulo: 'Een proces is gestopt met een fout',
+      cuerpo: 'Open WolfCore Dev voor meer details.',
+    },
+    'proceso-terminado': {
+      titulo: 'Een proces is voltooid',
+      cuerpo: 'Open WolfCore Dev voor meer details.',
+    },
+    'receta-terminada': {
+      titulo: 'Een recept is voltooid',
+      cuerpo: 'Open WolfCore Dev voor meer details.',
+    },
+    doctor: {
+      titulo: 'Doctor heeft problemen gevonden',
+      cuerpo: 'Open WolfCore Dev om ze te bekijken.',
+    },
+    'contenedor-detenido': {
+      titulo: 'Een container is gestopt',
+      cuerpo: 'Open WolfCore Dev voor meer details.',
+    },
+    'version-nueva': {
+      titulo: 'Er is een nieuwe versie',
+      cuerpo: 'Open WolfCore Dev om bij te werken.',
+    },
+  },
+};
+
+const DICCIONARIOS = { es: ES, en: EN, pt: PT, fr: FR, de: DE, it: IT, ru: RU, zh: ZH, ja: JA, ko: KO, hi: HI, tr: TR, id: ID, pl: PL, nl: NL } satisfies Record<IdiomaUi, Diccionario>;
 
 export const CODIGOS_AVISO = Object.keys(ES.porCodigo);
 
@@ -2586,6 +2762,7 @@ export const CODIGOS_AVISO_POR_IDIOMA: Record<IdiomaUi, string[]> = {
   tr: Object.keys(TR.porCodigo),
   id: Object.keys(ID.porCodigo),
   pl: Object.keys(PL.porCodigo),
+  nl: Object.keys(NL.porCodigo),
 };
 
 export function textoAviso(

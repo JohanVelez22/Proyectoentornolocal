@@ -4425,7 +4425,7 @@ export const tr: Textos = {
     tema: 'Tema',
     temas: { sistema: 'Sistem', claro: 'Açık', oscuro: 'Koyu' },
     idioma: 'Dil',
-    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語', ko: '한국어', hi: 'हिन्दी', tr: 'Türkçe', id: 'Bahasa Indonesia', pl: 'Polski' },
+    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語', ko: '한국어', hi: 'हिन्दी', tr: 'Türkçe', id: 'Bahasa Indonesia', pl: 'Polski', nl: 'Nederlands' },
     acento: 'Vurgu rengi',
     acentos: {
       indigo: 'Çivit',

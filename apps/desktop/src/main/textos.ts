@@ -439,6 +439,34 @@ const TEXTOS = {
     carpetaDatosInvalida:
       'WOLFCORE_DATOS nie jest prawidłowym folderem danych: ścieżka musi być bezwzględna, nie może być folderem systemowym i musi różnić się od rzeczywistego (oraz poprzedniego) folderu. Aplikacja zamknie się bez wprowadzania zmian.',
   },
+  nl: {
+    abrir: 'Openen',
+    iniciarTodo: 'Alles starten',
+    detenerTodo: 'Alles stoppen',
+    salir: 'Afsluiten',
+    workspaces: 'Workspaces',
+    workspaceParcial: 'gedeeltelijk',
+    preguntaApagar: 'De diensten stoppen?',
+    siApagar: 'Ja, stoppen',
+    noApagar: 'Nee, actief laten',
+    cancelar: 'Annuleren',
+    cliTitulo: 'Terminalopdracht (wolf)',
+    cliTunelInternet:
+      'Een terminalopdracht wil {dominio} op internet publiceren met {proveedor}. Iedereen met de link kan dit bekijken.',
+    cliTunelTailnet:
+      'Een terminalopdracht wil {dominio} delen met de apparaten op uw tailnet ({proveedor}).',
+    cliPublicoEn: 'Openbaar adres: https://{publico}',
+    cliDatosReales:
+      'LET OP: {dominio} bevat ECHTE GEGEVENS. Kies hieronder uw exacte domein om door te gaan. Als u dit niet heeft aangevraagd, annuleer dan.',
+    cliPublicar: 'Publiceren',
+    cliPhpGlobal:
+      'Een terminalopdracht wil de PHP-versie voor alle terminals wijzigen naar versie {version}.',
+    cliCambiar: 'Wijzigen',
+    carpetaDatosAislada:
+      'testgegevensmap, zonder hosts, PATH of systeemcertificaten aan te raken',
+    carpetaDatosInvalida:
+      'WOLFCORE_DATOS is geen geldige gegevensmap: deze moet absoluut zijn, geen systeemmap zijn en verschillen van de echte map (en de vorige). De app sluit af zonder iets te wijzigen.',
+  },
 } satisfies Record<IdiomaUi, Record<string, string>>;
 
 export type TextosMain = (typeof TEXTOS)['es'];
