@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { ErrorWolf } from '../errores';
 import { mkdir, readdir, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { nombreDeRuta } from '../rutas/nombreDeRuta';
 import { lanzadorPorDefecto, MENSAJE_CANCELADO } from '../plataforma/lanzar';
 import type { Ejecutor, Lanzador } from '../plataforma/tipos';
 import { ejecutorPorDefecto } from '../plataforma/win';
@@ -59,8 +60,9 @@ const RUTAS_SENSIBLES = [
  * y almacenes de claves, y archivos de credenciales de herramientas comunes.
  */
 export function archivoSensible(ruta: string): boolean {
-  const minus = ruta.toLowerCase();
-  const nombre = minus.split('/').pop()!;
+  // Git da rutas con `/`, pero una ruta de Windows (`\`) también tiene que clasificarse igual.
+  const minus = ruta.toLowerCase().replace(/\\/g, '/');
+  const nombre = nombreDeRuta(minus);
   return (
     nombre.startsWith('.env') ||
     /\.(?:pem|key|p12|pfx|jks|keystore|crt|cer|der|kdbx|asc|gpg)$/.test(nombre) ||
