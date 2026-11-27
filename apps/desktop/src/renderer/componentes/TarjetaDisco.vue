@@ -9,15 +9,15 @@ import { api } from '../api';
 import { solicitudes } from '../composables/solicitudes';
 import { textos } from '../i18n';
 import { useMetricas } from '../stores/metricas';
-import { entradasDisco, peorNivel, type EntradaDisco } from '../utilidades/disco';
+import { entradasDisco, peorNivel, porcentajeDe, type EntradaDisco } from '../utilidades/disco';
 import { formatoBytes } from '../utilidades/metricas';
 import DialogoLimpiarVersiones from './DialogoLimpiarVersiones.vue';
 
 /**
  * Espacio libre de C: y de la unidad de datos de WolfCore Dev (una sola entrada si es la misma),
- * en ámbar por debajo del 15 % libre y en rojo por debajo del 5 %. «Liberar espacio» solo abre lo
- * que ya existe (versiones sin uso, Limpieza de disco y Uso del disco, cada uno con su
- * confirmación): esta tarjeta no borra nada por sí misma.
+ * en ámbar con menos del 15 % y menos de 30 GB libres, y en rojo con menos del 5 % o menos de
+ * 5 GB. «Liberar espacio» solo abre lo que ya existe (versiones sin uso, Limpieza de disco y Uso
+ * del disco, cada uno con su confirmación): esta tarjeta no borra nada por sí misma.
  */
 const t = textos.panel.discos;
 const router = useRouter();
@@ -33,11 +33,11 @@ let temporizador: ReturnType<typeof setInterval> | null = null;
 
 async function leer(): Promise<void> {
   try {
-    const [u, c] = await Promise.all([api().discoUso.unidades(), api().carpetaDatos()]);
-    unidades.value = u;
-    carpetaDatos.value = c;
-  } catch {
-    // Sin lista de unidades se usa la muestra de rendimiento (si la hay).
+    // Cada lectura por su lado: si una falla, la otra sigue valiendo y la muestra de rendimiento
+    // completa lo que falte.
+    const [u, c] = await Promise.allSettled([api().discoUso.unidades(), api().carpetaDatos()]);
+    if (u.status === 'fulfilled') unidades.value = u.value;
+    if (c.status === 'fulfilled') carpetaDatos.value = c.value;
   } finally {
     leido.value = true;
   }
@@ -59,7 +59,7 @@ const entradas = computed<EntradaDisco[]>(() =>
   }),
 );
 const nivel = computed(() => peorNivel(entradas.value));
-const porcentajeLibre = (e: EntradaDisco): number => Math.round(e.fraccionLibre * 100);
+const porcentajeLibre = (e: EntradaDisco): number => porcentajeDe(e.fraccionLibre);
 const rol = (e: EntradaDisco): string =>
   e.rol === 'ambos' ? t.ambos : e.rol === 'sistema' ? t.sistema : t.datos;
 const estadoBarra = (e: EntradaDisco): 'success' | 'warning' | 'error' =>
@@ -95,7 +95,7 @@ function elegir(clave: string | number): void {
       <li v-for="e in entradas" :key="e.rol" class="unidad" :class="`nivel-${e.nivel}`">
         <span class="unidad-rol">{{ rol(e) }}</span>
         <strong class="unidad-libre">{{
-          t.libre(e.unidad, formatoBytes(e.libre), porcentajeLibre(e))
+          t.libre(e.unidad || '—', formatoBytes(e.libre), porcentajeLibre(e))
         }}</strong>
         <NProgress
           type="line"
@@ -108,7 +108,7 @@ function elegir(clave: string | number): void {
     </ul>
     <p v-else class="leyendo">{{ leido ? '—' : t.leyendo }}</p>
     <MenuDesplegable trigger="click" :options="opciones" @select="elegir">
-      <NButton size="small" secondary class="liberar">
+      <NButton size="small" secondary icon-placement="right" class="liberar">
         {{ t.liberar }}
         <template #icon
           ><NIcon><ChevronDown /></NIcon

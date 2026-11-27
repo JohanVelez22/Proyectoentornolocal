@@ -71,6 +71,10 @@ describe('Inicio: avisos agrupados, disco y memoria (D54a)', () => {
     expect(disco).toContain("'limpiezaDisco'");
     expect(disco).toContain("'usoDisco'");
     expect(disco).toContain('discoUso.unidades');
+    // Una lectura que falla no deja la tarjeta en «—»; el botón lleva el icono a la derecha.
+    expect(disco).toContain('Promise.allSettled');
+    expect(disco).not.toContain('Promise.all(');
+    expect(disco).toContain('icon-placement="right"');
     // Ninguna llamada de borrado en esta tarjeta.
     expect(disco).not.toMatch(/limpiar\(|limpiezaVersiones\.limpiar|eliminar|borrar/);
   });

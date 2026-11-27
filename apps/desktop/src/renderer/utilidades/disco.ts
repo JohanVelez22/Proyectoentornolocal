@@ -1,25 +1,40 @@
 import type { UnidadDisco } from '../../shared/api';
 
-/** Por debajo de esta fracción libre la unidad se marca en ámbar. */
+const GB = 1024 ** 3;
+/** Ámbar: queda menos del 15 % libre Y menos de 30 GB (un disco enorme con 14 % libre no apura). */
 export const UMBRAL_DISCO_AVISO = 0.15;
-/** Por debajo de esta fracción libre la unidad se marca en rojo. */
+export const UMBRAL_DISCO_AVISO_BYTES = 30 * GB;
+/** Rojo: queda menos del 5 % libre O menos de 5 GB. */
 export const UMBRAL_DISCO_CRITICO = 0.05;
+export const UMBRAL_DISCO_CRITICO_BYTES = 5 * GB;
 
 export type NivelDisco = 'ok' | 'aviso' | 'critico';
 
-/** Nivel según el espacio libre: ámbar bajo el 15 % y rojo bajo el 5 % (sin total conocido: ok). */
+/**
+ * Nivel según el espacio libre (en bytes): rojo con menos del 5 % o menos de 5 GB; ámbar con menos
+ * del 15 % y menos de 30 GB. Sin total conocido: ok.
+ */
 export function nivelDisco(libre: number, total: number): NivelDisco {
   if (!Number.isFinite(libre) || !Number.isFinite(total) || total <= 0) return 'ok';
-  const fraccion = Math.max(0, libre) / total;
-  if (fraccion < UMBRAL_DISCO_CRITICO) return 'critico';
-  if (fraccion < UMBRAL_DISCO_AVISO) return 'aviso';
+  const bytes = Math.max(0, libre);
+  const fraccion = bytes / total;
+  if (fraccion < UMBRAL_DISCO_CRITICO || bytes < UMBRAL_DISCO_CRITICO_BYTES) return 'critico';
+  if (fraccion < UMBRAL_DISCO_AVISO && bytes < UMBRAL_DISCO_AVISO_BYTES) return 'aviso';
   return 'ok';
+}
+
+/**
+ * Porcentaje entero de una fracción, hacia abajo: así el número y el color coinciden en el límite
+ * (14,9 % se ve «14 %» y en ámbar, no «15 %» en verde). El margen evita que 0,29 · 100 dé 28.
+ */
+export function porcentajeDe(fraccion: number): number {
+  return Math.floor(fraccion * 100 + 1e-9);
 }
 
 export interface EntradaDisco {
   /** `sistema` (C:), `datos` (unidad de la carpeta de datos) o `ambos` si son la misma. */
   rol: 'sistema' | 'datos' | 'ambos';
-  /** Letra de unidad con dos puntos ("C:"). */
+  /** Letra de unidad con dos puntos ("C:"); vacía si solo se conoce la muestra de rendimiento. */
   unidad: string;
   libre: number;
   total: number;
@@ -83,6 +98,14 @@ export function entradasDisco(d: {
   if (letraDatos) {
     if (conTamano(datos)) salida.push(crear('datos', letraDatos, datos.libre, datos.total));
     else if (muestra) salida.push(crear('datos', letraDatos, muestra.libre, muestra.total));
+  } else if (muestra) {
+    // Sin letra de unidad (no se pudo leer la carpeta de datos o no es de Windows) pero con la
+    // muestra de rendimiento: se enseña igual, salvo que sea la misma unidad que el sistema.
+    const igualQueSistema =
+      conTamano(sistema) &&
+      Math.abs(sistema.total - muestra.total) <= muestra.total * 0.01 &&
+      Math.abs(sistema.libre - muestra.libre) <= muestra.total * 0.01;
+    if (!igualQueSistema) salida.push(crear('datos', '', muestra.libre, muestra.total));
   }
   return salida;
 }
