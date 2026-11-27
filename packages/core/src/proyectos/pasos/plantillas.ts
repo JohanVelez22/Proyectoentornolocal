@@ -1,3 +1,5 @@
+import { mkdir, stat } from 'node:fs/promises';
+import path from 'node:path';
 import { motorDe } from '../../bd/basesDeDatos';
 import { ErrorWolf } from '../../errores';
 import type { ImplementacionPaso } from '../pasos';
@@ -18,6 +20,42 @@ function plantillasDe(d: DepsPasos): NonNullable<DepsPasos['plantillas']> {
 }
 
 /**
+ * Carpetas de ejecución que la plantilla deja fuera (`EXCLUSIONES_PLANTILLA`) y que el framework
+ * exige que existan: sin `bootstrap/cache`, `artisan package:discover` (el `post-autoload-dump` de
+ * `composer install`) falla con «must be present and writable». Solo se crean carpetas vacías, bajo
+ * la del proyecto, y solo si el proyecto es de ese framework (por su archivo de arranque).
+ */
+const CARPETAS_DE_EJECUCION: readonly { marca: string; carpetas: readonly string[] }[] = [
+  {
+    marca: 'artisan',
+    carpetas: [
+      'bootstrap/cache',
+      'storage/app/public',
+      'storage/framework/cache/data',
+      'storage/framework/sessions',
+      'storage/framework/testing',
+      'storage/framework/views',
+      'storage/logs',
+    ],
+  },
+  {
+    marca: 'spark',
+    carpetas: ['writable/cache', 'writable/logs', 'writable/session', 'writable/uploads'],
+  },
+];
+
+async function crearCarpetasDeEjecucion(carpeta: string): Promise<void> {
+  for (const { marca, carpetas } of CARPETAS_DE_EJECUCION) {
+    const hay = await stat(path.join(carpeta, marca)).then(
+      (s) => s.isFile(),
+      () => false,
+    );
+    if (!hay) continue;
+    for (const c of carpetas) await mkdir(path.join(carpeta, ...c.split('/')), { recursive: true });
+  }
+}
+
+/**
  * Copia los archivos de la plantilla (`args.plantilla`, un id) a la carpeta del proyecto, que
  * debe estar vacía. Nada se sobrescribe y una plantilla dañada no escribe nada.
  */
@@ -33,6 +71,7 @@ export function pasoRestaurarPlantillaArchivos(d: DepsPasos): ImplementacionPaso
     }
     const r = await plantillasDe(d).restaurarArchivos(id, ctx.carpeta, usoDe(ctx));
     comprobarSenal(ctx);
+    await crearCarpetasDeEjecucion(ctx.carpeta);
     ctx.linea(`Se copiaron ${r.archivos} archivos de la plantilla.`);
   };
 }

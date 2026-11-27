@@ -2110,6 +2110,46 @@ describe('pasos de plantilla de proyecto (D14)', () => {
     expect(lineas.join('\n')).toMatch(/3 archivos/);
   });
 
+  it('una plantilla de Laravel o de CodeIgniter 4 vuelve a tener las carpetas de ejecución que no viajan (D39)', async () => {
+    // La plantilla deja fuera bootstrap/cache, storage/framework, storage/logs y writable: sin esas
+    // carpetas, `artisan package:discover` (post-autoload-dump de composer install) falla.
+    const { a } = await conPlantillas();
+    a.deps.plantillas!.restaurarArchivos = async (_id, destino) => {
+      await escribir(destino, 'artisan', '#!/usr/bin/env php');
+      await escribir(destino, join('bootstrap', 'app.php'), '<?php');
+      return { archivos: 2 };
+    };
+    await correr(a, 'restaurar-plantilla-archivos', { plantilla: 'mi-base-a1b2c3' });
+    for (const d of [
+      'bootstrap/cache',
+      'storage/logs',
+      'storage/app/public',
+      'storage/framework/cache/data',
+      'storage/framework/sessions',
+      'storage/framework/views',
+    ]) {
+      expect((await stat(join(a.carpeta, d))).isDirectory(), d).toBe(true);
+    }
+    const ci4 = await conPlantillas();
+    ci4.a.deps.plantillas!.restaurarArchivos = async (_id, destino) => {
+      await escribir(destino, 'spark', '<?php');
+      return { archivos: 1 };
+    };
+    await correr(ci4.a, 'restaurar-plantilla-archivos', { plantilla: 'mi-base-a1b2c3' });
+    for (const d of ['writable/cache', 'writable/logs', 'writable/session', 'writable/uploads']) {
+      expect((await stat(join(ci4.a.carpeta, d))).isDirectory(), d).toBe(true);
+    }
+    // Un proyecto de otro tipo no recibe carpetas que no le corresponden.
+    const otro = await conPlantillas();
+    otro.a.deps.plantillas!.restaurarArchivos = async (_id, destino) => {
+      await escribir(destino, 'index.html', 'hola');
+      return { archivos: 1 };
+    };
+    await correr(otro.a, 'restaurar-plantilla-archivos', { plantilla: 'mi-base-a1b2c3' });
+    await expect(stat(join(otro.a.carpeta, 'storage'))).rejects.toThrow();
+    await expect(stat(join(otro.a.carpeta, 'writable'))).rejects.toThrow();
+  });
+
   it('no copia sobre una carpeta con archivos y rechaza un id con ..', async () => {
     const { a, copias } = await conPlantillas();
     await escribir(a.carpeta, 'mio.txt', 'MIO');
