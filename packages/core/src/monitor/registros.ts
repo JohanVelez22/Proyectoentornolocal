@@ -5,6 +5,7 @@ import type { Eventos, EventosNucleo } from '../eventos';
 import { idSupervisor } from '../proyectos/procesos';
 import { sanear } from '../proyectos/recetas';
 import { decodificarLinea } from './decodificar';
+import { esFuentePostgres, FiltroLentasPg } from './ocultarLentas';
 
 export { decodificarLinea } from './decodificar';
 import type { Rutas } from '../rutas';
@@ -309,6 +310,8 @@ export class Registros {
     for (const nombre of await archivosLog(r.logs())) {
       const ruta = r.logs(nombre);
       const base = nombre.slice(0, -'.log'.length);
+      // El slow log de MySQL/MariaDB lleva SQL con literales: no es una fuente (vive en logs/lentas/).
+      if (/^lentas/i.test(base)) continue;
       if (base === 'nginx') agregar({ id: 'nginx', nombre: 'Nginx', ruta, grupo: 'nginx' });
       else if (base === 'nginx-error') {
         agregar({ id: 'nginx:error', nombre: 'Nginx (errores)', ruta, grupo: 'nginx' });
@@ -410,9 +413,14 @@ export class Registros {
       entrada = this.colas.get(id);
       if (entrada) entrada.cuenta++;
       else {
+        // PostgreSQL: el SQL de las consultas lentas y sus parámetros no salen por el visor.
+        const filtro = esFuentePostgres(id) ? new FiltroLentasPg() : null;
         const cola = new Cola(
           fuente.ruta,
-          (lineas) => this.d.eventos.emit('registro:lineas', { id, lineas }),
+          (lineas) => {
+            const salen = filtro ? filtro.procesar(lineas) : lineas;
+            if (salen.length > 0) this.d.eventos.emit('registro:lineas', { id, lineas: salen });
+          },
           this.d.intervaloMs ?? 1000,
           this.d.abrir ?? ((r, f) => open(r, f)),
         );
@@ -475,7 +483,8 @@ export class Registros {
         desde = i + 1;
       }
       if (desde < datos.length) partes.push(datos.subarray(desde));
-      return partes.slice(-n).map((l) => lineaDe(l));
+      const texto = partes.slice(-n).map((l) => lineaDe(l));
+      return esFuentePostgres(id) ? new FiltroLentasPg().procesar(texto) : texto;
     } finally {
       await fh.close();
     }
