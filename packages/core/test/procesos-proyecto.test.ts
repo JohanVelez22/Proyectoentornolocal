@@ -834,13 +834,35 @@ describe('D47: precarga de Node y vigilancia de las escuchas', () => {
     proceso({ id, puerto, proxy: true, comando: ['npm', 'run', 'start'] });
   const RAPIDO = { intervaloMs: 1, intervaloLentoMs: 1, rapidoMs: 5 };
   /** `escuchas` falso: lo que devuelve `filas(pid)` por cada PID pedido; cuenta las tomas. */
-  const falsas = (filas: (pid: number, toma: number) => Fila[]) => {
+  const falsas = (
+    filas: (pid: number, toma: number) => Fila[],
+    o: { completa?: (toma: number) => boolean; antes?: () => Promise<void> } = {},
+  ) => {
     const tomas: number[][] = [];
+    let dentro = 0;
+    let maximo = 0;
     return {
       tomas,
+      /** Mayor número de llamadas a la vez (debe ser 1: las pasadas no se solapan). */
+      maximo: () => maximo,
       escuchas: async (pids: number[]) => {
         tomas.push(pids);
-        return new Map(pids.map((p) => [p, filas(p, tomas.length)]));
+        dentro++;
+        maximo = Math.max(maximo, dentro);
+        try {
+          await o.antes?.();
+          return {
+            escuchas: new Map(
+              pids.map((p) => [
+                p,
+                filas(p, tomas.length).map((f) => ({ ...f, nombre: 'java.exe' })),
+              ]),
+            ),
+            completa: o.completa?.(tomas.length) ?? true,
+          };
+        } finally {
+          dentro--;
+        }
       },
     };
   };
@@ -958,19 +980,23 @@ describe('D47: precarga de Node y vigilancia de las escuchas', () => {
   });
 
   it('I2: varios procesos comparten una sola toma por pasada, con todos sus PID', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
     const f = falsas(() => []);
     const a = await armar({
       sitio: { tipo: 'rails' },
       procesos: [vigilado('uno', 8123), vigilado('dos', 8124)],
-      extra: { escuchas: f.escuchas, vigilancia: RAPIDO },
+      extra: {
+        escuchas: f.escuchas,
+        vigilancia: { intervaloMs: 1000, intervaloLentoMs: 1000, rapidoMs: 1e9 },
+      },
     });
     a.sup.pid = (id) => (id.endsWith('uno') ? 1001 : 1002);
     await a.procesos.iniciar('demo', 'uno');
     await a.procesos.iniciar('demo', 'dos');
-    await esperar(40);
-    expect(f.tomas.length).toBeGreaterThan(3);
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(f.tomas.length).toBeGreaterThanOrEqual(4);
     // Cada toma trae los dos PID a la vez (nunca una por proceso).
-    expect(f.tomas.at(-1)!.sort()).toEqual([1001, 1002]);
+    for (const t of f.tomas) expect([...t].sort()).toEqual([1001, 1002]);
   });
 
   it('I2: al apagarse o detenerse el proceso, la vigilancia para', async () => {
@@ -1005,5 +1031,83 @@ describe('D47: precarga de Node y vigilancia de las escuchas', () => {
     await b.procesos.iniciar('demo', 'servidor');
     await esperar(30);
     expect(f.tomas.length).toBe(0);
+  });
+
+  it('M6: un vigilar() durante una pasada lenta no solapa otra pasada ni corta dos veces', async () => {
+    let soltar!: () => void;
+    const lenta = new Promise<void>((r) => (soltar = r));
+    let primera = true;
+    const f = falsas(() => [fila('0.0.0.0', 8123)], {
+      antes: async () => {
+        if (primera) {
+          primera = false;
+          await lenta;
+        }
+      },
+    });
+    const a = await armar({
+      sitio: { tipo: 'rails' },
+      procesos: [vigilado()],
+      extra: { escuchas: f.escuchas, vigilancia: RAPIDO },
+    });
+    await a.procesos.iniciar('demo', 'servidor');
+    await esperar(30); // la primera pasada ya está dentro, esperando
+    // Mientras dura: el proceso se detiene y se vuelve a arrancar (otro vigilar()).
+    await a.procesos.detener('demo', 'servidor');
+    await a.procesos.iniciar('demo', 'servidor');
+    await esperar(30);
+    soltar();
+    await esperar(60);
+    expect(f.maximo()).toBe(1);
+    // El primer arranque ya no era el vigente: solo se corta el segundo, una vez.
+    expect(a.sup.detenidos.filter((d) => d === 'proy-demo-servidor')).toHaveLength(2);
+  });
+
+  it('M8: el mensaje dice qué programa escucha y da la pista de los puertos conocidos', async () => {
+    const casos: [number, RegExp][] = [
+      [8123, /\(java\.exe\)/],
+      [35729, /spring\.devtools\.livereload\.enabled=false/],
+      [9229, /--inspect=127\.0\.0\.1/],
+    ];
+    for (const [puerto, esperado] of casos) {
+      const f = falsas(() => [fila('0.0.0.0', puerto)]);
+      const a = await armar({
+        sitio: { tipo: 'springboot' },
+        procesos: [vigilado()],
+        extra: { escuchas: f.escuchas, vigilancia: RAPIDO },
+      });
+      await a.procesos.iniciar('demo', 'servidor');
+      await esperar(40);
+      const m = (await a.procesos.estados('demo'))[0]!.mensaje!;
+      expect(m, String(puerto)).toMatch(esperado);
+      expect(m).toContain(`0.0.0.0:${puerto}`);
+      expect(a.sup.detenidos).toEqual(['proy-demo-servidor']);
+    }
+  });
+
+  it('M9: sin tabla de procesos avisa una vez, no lo da por bueno y reintenta a ritmo rápido', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    const aviso = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    // Pasadas 1 a 40 sin tabla; la 41 la tiene y trae una escucha pública.
+    const f = falsas((_p, toma) => (toma > 40 ? [fila('0.0.0.0', 8123)] : []), {
+      completa: (toma) => toma > 40,
+    });
+    const a = await armar({
+      sitio: { tipo: 'rails' },
+      procesos: [vigilado()],
+      extra: {
+        escuchas: f.escuchas,
+        // Ritmo lento de 1 hora: si no reintentara a ritmo rápido, no pasaría de 1 toma.
+        vigilancia: { intervaloMs: 1000, intervaloLentoMs: 3_600_000, rapidoMs: 1 },
+      },
+    });
+    await a.procesos.iniciar('demo', 'servidor');
+    await vi.advanceTimersByTimeAsync(45_000);
+    expect(f.tomas.length).toBeGreaterThan(40);
+    expect(aviso.mock.calls.filter((c) => String(c[0]).includes('tabla de procesos'))).toHaveLength(
+      1,
+    );
+    expect(a.sup.detenidos).toEqual(['proy-demo-servidor']);
+    aviso.mockRestore();
   });
 });

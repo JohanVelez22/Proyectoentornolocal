@@ -16,7 +16,7 @@ import {
   type ProcesoProyecto,
   type Sitio,
 } from '../tipos';
-import type { FilaNetstat } from '../plataforma/netstat';
+import type { EscuchaArbol, TomaEscuchas } from '../herramientas/puertos';
 import type { Lanzador } from '../plataforma/tipos';
 import { validarComandoTarea } from '../tareas/comando';
 import { existe } from './archivos';
@@ -100,13 +100,32 @@ export interface DepsProcesosProyecto extends DepsEntorno {
    * Rails, Spring Boot, ASP.NET Core y Node que son destino del proxy se vigilan mientras estén
    * encendidos: cualquier escucha fuera de 127.0.0.1 y ::1 detiene el proceso.
    */
-  escuchas?: (pids: number[]) => Promise<Map<number, FilaNetstat[]>>;
+  escuchas?: (pids: number[]) => Promise<TomaEscuchas>;
   /**
    * Cada cuánto se mira: `intervaloMs` (por omisión 1 s) mientras algún proceso lleve menos de
    * `rapidoMs` (60 s) encendido y `intervaloLentoMs` (12 s) después. Pruebas.
    */
   vigilancia?: { intervaloMs?: number; intervaloLentoMs?: number; rapidoMs?: number };
 }
+
+/** Escuchas de herramientas de desarrollo que se abren solas: cómo cerrarlas. */
+const PISTAS_ESCUCHA: Record<
+  number,
+  {
+    codigo: 'procesos.escucha_publica_livereload' | 'procesos.escucha_publica_inspector';
+    texto: string;
+  }
+> = {
+  35729: {
+    codigo: 'procesos.escucha_publica_livereload',
+    texto:
+      'Es LiveReload de Spring DevTools: desactívelo con spring.devtools.livereload.enabled=false.',
+  },
+  9229: {
+    codigo: 'procesos.escucha_publica_inspector',
+    texto: 'Es el inspector de Node: use --inspect=127.0.0.1.',
+  },
+};
 
 /** Un proceso en vigilancia: su generación de arranque y desde cuándo se vigila. */
 interface Vigilado {
@@ -166,6 +185,11 @@ export class ProcesosProyecto {
   /** Procesos cuya escucha se vigila (ver `vigilar`) y el temporizador único de la vigilancia. */
   private readonly vigilados = new Map<string, Vigilado>();
   private temporizadorVigilancia: ReturnType<typeof setTimeout> | null = null;
+  /** Hay una pasada en curso: no se programa otra hasta que termine (nunca dos a la vez). */
+  private enPasada = false;
+  /** La última pasada no pudo leer todo (sin tabla de procesos): la siguiente va a ritmo rápido. */
+  private reintentoRapido = false;
+  private avisadoSinTabla = false;
 
   constructor(private readonly d: DepsProcesosProyecto) {
     // Salida definitiva (sin reinicio pendiente): el aviso sale con el código, sea 0 o no.
@@ -250,18 +274,23 @@ export class ProcesosProyecto {
   }
 
   private programarVigilancia(): void {
-    if (this.temporizadorVigilancia !== null || this.vigilados.size === 0) return;
+    if (this.enPasada || this.temporizadorVigilancia !== null || this.vigilados.size === 0) return;
     const {
       intervaloMs = 1000,
       intervaloLentoMs = 12_000,
       rapidoMs = 60_000,
     } = this.d.vigilancia ?? {};
     const ahora = Date.now();
-    const joven = [...this.vigilados.values()].some((v) => ahora - v.desde < rapidoMs);
+    const joven =
+      this.reintentoRapido || [...this.vigilados.values()].some((v) => ahora - v.desde < rapidoMs);
     const t = setTimeout(
       () => {
         this.temporizadorVigilancia = null;
-        void this.pasadaVigilancia().finally(() => this.programarVigilancia());
+        this.enPasada = true;
+        void this.pasadaVigilancia().finally(() => {
+          this.enPasada = false;
+          this.programarVigilancia();
+        });
       },
       joven ? intervaloMs : intervaloLentoMs,
     );
@@ -293,16 +322,31 @@ export class ProcesosProyecto {
         if (pid !== null) activos.push({ id, v, pid });
       }
       if (activos.length === 0 || !this.d.escuchas) return;
-      let mapa: Map<number, FilaNetstat[]>;
+      let toma: TomaEscuchas;
       try {
-        mapa = await this.d.escuchas([...new Set(activos.map((a) => a.pid))]);
+        toma = await this.d.escuchas([...new Set(activos.map((a) => a.pid))]);
       } catch {
+        this.reintentoRapido = true;
         return;
       }
+      // Sin la tabla de procesos solo se ven los PID raíz (no sus hijos): no es "todo bien". Se
+      // avisa una vez (sin inundar) y la siguiente pasada va a ritmo rápido.
+      this.reintentoRapido = !toma.completa;
+      if (!toma.completa && !this.avisadoSinTabla) {
+        this.avisadoSinTabla = true;
+        console.warn(
+          'No se pudo leer la tabla de procesos: la vigilancia de escuchas solo ve los procesos principales y reintenta cada segundo.',
+        );
+      }
+      if (toma.completa) this.avisadoSinTabla = false;
       for (const { id, v, pid } of activos) {
         if ((this.generacion.get(id) ?? 0) !== v.gen) continue;
-        const publica = (mapa.get(pid) ?? []).find((f) => !DIRECCIONES_LOCALES.has(f.direccion));
+        const publica = (toma.escuchas.get(pid) ?? []).find(
+          (f) => !DIRECCIONES_LOCALES.has(f.direccion),
+        );
         if (!publica) continue;
+        // Otra pasada o un detener pudo ocuparse de él mientras se esperaba: nunca un doble corte.
+        if (!this.vigilados.has(id)) continue;
         this.vigilados.delete(id);
         await this.cortarPorEscucha(id, v.sitio, v.proceso, publica);
       }
@@ -315,12 +359,15 @@ export class ProcesosProyecto {
     id: string,
     sitio: Sitio,
     proceso: ProcesoProyecto,
-    f: FilaNetstat,
+    f: EscuchaArbol,
   ): Promise<void> {
+    // Puertos conocidos que abren solos: se explica cómo cerrarlos, sin relajar la regla.
+    const pista = PISTAS_ESCUCHA[f.puerto];
+    const programa = f.nombre ?? '?';
     const err = new ErrorWolf(
-      'procesos.escucha_publica',
-      `${nombreProceso(proceso)} escuchaba en ${f.direccion}:${f.puerto}, abierto a la red; se detuvo. Solo puede escuchar en 127.0.0.1.`,
-      { direccion: f.direccion, puerto: f.puerto },
+      pista?.codigo ?? 'procesos.escucha_publica',
+      `${nombreProceso(proceso)} escuchaba en ${f.direccion}:${f.puerto} (${programa}), abierto a la red; se detuvo. Solo puede escuchar en 127.0.0.1.${pista ? ` ${pista.texto}` : ''}`,
+      { direccion: f.direccion, puerto: f.puerto, programa },
     );
     await this.detenerId(id);
     this.fallos.set(id, err.message);

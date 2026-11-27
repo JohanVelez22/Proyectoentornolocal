@@ -220,11 +220,34 @@ describe('D47 revisión I2: una sola toma para varios procesos', () => {
       };
     };
     const h = new HerramientasPuertos({ ejecutar, pidApp: 50, pidPadre: 10 });
-    const m = await h.escuchasTcpDeArboles([3000, 3200]);
+    const { escuchas: m, completa } = await h.escuchasTcpDeArboles([3000, 3200]);
+    expect(completa).toBe(true);
+    expect(m.get(3000)![0]!.nombre).toBe('dotnet.exe');
     expect(m.get(3000)!.map((f) => `${f.direccion}:${f.puerto}`)).toEqual(['0.0.0.0:5000']);
     expect(m.get(3200)!.map((f) => `${f.direccion}:${f.puerto}`)).toEqual(['127.0.0.1:8080']);
     expect(llamadas.filter((c) => c.startsWith('netstat'))).toHaveLength(1);
     expect(llamadas.filter((c) => c.startsWith('powershell'))).toHaveLength(1);
+  });
+});
+
+describe('D47 revisión M9: sin tabla de procesos', () => {
+  it('la toma sale incompleta (solo los PID raíz) para que quien vigila no la dé por buena', async () => {
+    const ejecutar: Ejecutor = async (cmd) => {
+      const exe = path.win32.basename(cmd).toLowerCase();
+      if (exe.startsWith('netstat')) {
+        return {
+          codigo: 0,
+          stdout: '  TCP    0.0.0.0:5000           0.0.0.0:0              LISTENING       3100',
+          stderr: '',
+        };
+      }
+      return { codigo: 1, stdout: '', stderr: 'falló' };
+    };
+    const h = new HerramientasPuertos({ ejecutar, pidApp: 50, pidPadre: 10 });
+    const { escuchas, completa } = await h.escuchasTcpDeArboles([3000]);
+    expect(completa).toBe(false);
+    // El hijo 3100 no se puede atribuir a 3000 sin la tabla.
+    expect(escuchas.get(3000)).toEqual([]);
   });
 });
 

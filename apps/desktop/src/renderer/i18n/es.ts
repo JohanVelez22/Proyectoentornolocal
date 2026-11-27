@@ -878,7 +878,11 @@ export const es = {
       'runtimes.instalacion_incompleta':
         'La instalación de {nombre} está incompleta: reinstálela desde Servicios.',
       'procesos.escucha_publica':
-        'El proceso escucha en {direccion}:{puerto}, abierto a la red. Se detuvo: debe escuchar solo en 127.0.0.1.',
+        'El proceso escucha en {direccion}:{puerto} ({programa}), abierto a la red. Se detuvo: debe escuchar solo en 127.0.0.1.',
+      'procesos.escucha_publica_livereload':
+        'El proceso escucha en {direccion}:{puerto} ({programa}), abierto a la red. Se detuvo: debe escuchar solo en 127.0.0.1. Es LiveReload de Spring DevTools: desactívelo con spring.devtools.livereload.enabled=false.',
+      'procesos.escucha_publica_inspector':
+        'El proceso escucha en {direccion}:{puerto} ({programa}), abierto a la red. Se detuvo: debe escuchar solo en 127.0.0.1. Es el inspector de Node: use --inspect=127.0.0.1.',
       'catalogo.redireccion_ajena': 'La descarga intentó ir a un sitio no permitido ({host}).',
       'catalogo.demasiadas_redirecciones':
         'La descarga hizo demasiadas redirecciones (más de {maximo}).',

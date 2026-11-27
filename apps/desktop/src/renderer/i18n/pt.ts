@@ -883,7 +883,11 @@ export const pt: Textos = {
       'runtimes.instalacion_incompleta':
         'A instalação de {nombre} está incompleta: reinstale-a em Serviços.',
       'procesos.escucha_publica':
-        'O processo escuta em {direccion}:{puerto}, aberto à rede. Foi interrompido: só pode escutar em 127.0.0.1.',
+        'O processo escuta em {direccion}:{puerto} ({programa}), aberto à rede. Foi interrompido: só pode escutar em 127.0.0.1.',
+      'procesos.escucha_publica_livereload':
+        'O processo escuta em {direccion}:{puerto} ({programa}), aberto à rede. Foi interrompido: só pode escutar em 127.0.0.1. É o LiveReload do Spring DevTools: desative-o com spring.devtools.livereload.enabled=false.',
+      'procesos.escucha_publica_inspector':
+        'O processo escuta em {direccion}:{puerto} ({programa}), aberto à rede. Foi interrompido: só pode escutar em 127.0.0.1. É o inspetor do Node: use --inspect=127.0.0.1.',
       'catalogo.redireccion_ajena': 'O download tentou ir para um site não permitido ({host}).',
       'catalogo.demasiadas_redirecciones':
         'O download fez redirecionamentos demais (mais de {maximo}).',

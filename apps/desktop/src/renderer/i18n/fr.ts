@@ -924,7 +924,11 @@ export const fr: Textos = {
       'runtimes.instalacion_incompleta':
         'L’installation de {nombre} est incomplète : réinstallez-la depuis Services.',
       'procesos.escucha_publica':
-        'Le processus écoute sur {direccion}:{puerto}, ouvert au réseau. Il a été arrêté : il ne peut écouter que sur 127.0.0.1.',
+        'Le processus écoute sur {direccion}:{puerto} ({programa}), ouvert au réseau. Il a été arrêté : il ne peut écouter que sur 127.0.0.1.',
+      'procesos.escucha_publica_livereload':
+        'Le processus écoute sur {direccion}:{puerto} ({programa}), ouvert au réseau. Il a été arrêté : il ne peut écouter que sur 127.0.0.1. C’est le LiveReload de Spring DevTools : désactivez-le avec spring.devtools.livereload.enabled=false.',
+      'procesos.escucha_publica_inspector':
+        'Le processus écoute sur {direccion}:{puerto} ({programa}), ouvert au réseau. Il a été arrêté : il ne peut écouter que sur 127.0.0.1. C’est l’inspecteur de Node : utilisez --inspect=127.0.0.1.',
       'catalogo.redireccion_ajena':
         'Le téléchargement a tenté d’aller vers un site non autorisé ({host}).',
       'catalogo.demasiadas_redirecciones':

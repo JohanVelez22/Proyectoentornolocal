@@ -31,6 +31,17 @@ export interface PuertoEnUso {
   creado: string | null;
 }
 
+/** Una escucha TCP de un árbol de procesos, con el nombre de quien la tiene (null si no se sabe). */
+export interface EscuchaArbol extends FilaNetstat {
+  nombre: string | null;
+}
+
+/** Escuchas de varios árboles; `completa` es false si no se pudo leer la tabla de procesos. */
+export interface TomaEscuchas {
+  escuchas: Map<number, EscuchaArbol[]>;
+  completa: boolean;
+}
+
 export interface OpcionesFinalizar {
   /** Permite finalizar procesos propios de WolfCore Dev. NO salta la lista del sistema. */
   forzar?: boolean;
@@ -134,28 +145,32 @@ export class HerramientasPuertos {
   /**
    * Escuchas TCP de cada proceso `pids` y de todo su árbol (los hijos que lanzó: `npm` → `node`,
    * `mvn` → `java`), con **una sola** lectura de netstat y de la tabla de procesos para todos.
-   * Sin la tabla no se pueden saber los hijos y solo cuenta cada PID.
+   * Cada escucha trae el nombre del proceso que la tiene (de la tabla). Sin la tabla no se pueden
+   * saber los hijos: solo cuenta cada PID y la toma sale `completa: false` (quien vigila no debe
+   * darla por buena).
    */
-  async escuchasTcpDeArboles(pids: number[]): Promise<Map<number, FilaNetstat[]>> {
-    const res = new Map<number, FilaNetstat[]>(pids.map((p) => [p, []]));
-    if (pids.length === 0) return res;
+  async escuchasTcpDeArboles(pids: number[]): Promise<TomaEscuchas> {
+    const escuchas = new Map<number, EscuchaArbol[]>(pids.map((p) => [p, []]));
+    if (pids.length === 0) return { escuchas, completa: true };
     const filas = interpretarNetstatTodos(await this.sistema.netstat()).filter(
       (f) => f.protocolo === 'TCP',
     );
     const tabla = await this.tablaProcesos();
     for (const pid of pids) {
       const arbol = this.conDescendientes([pid], tabla);
-      res.set(
+      escuchas.set(
         pid,
-        filas.filter((f) => arbol.has(f.pid)),
+        filas
+          .filter((f) => arbol.has(f.pid))
+          .map((f) => ({ ...f, nombre: tabla?.get(f.pid)?.nombre ?? null })),
       );
     }
-    return res;
+    return { escuchas, completa: tabla !== null };
   }
 
   /** Escuchas TCP del proceso `pid` y de su árbol. */
-  async escuchasTcpDelArbol(pid: number): Promise<FilaNetstat[]> {
-    return (await this.escuchasTcpDeArboles([pid])).get(pid) ?? [];
+  async escuchasTcpDelArbol(pid: number): Promise<EscuchaArbol[]> {
+    return (await this.escuchasTcpDeArboles([pid])).escuchas.get(pid) ?? [];
   }
 
   async puertosEnUso(): Promise<PuertoEnUso[]> {

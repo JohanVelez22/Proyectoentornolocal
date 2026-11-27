@@ -868,7 +868,11 @@ export const en: Textos = {
       'runtimes.instalacion_incompleta':
         'The {nombre} installation is incomplete: reinstall it from Services.',
       'procesos.escucha_publica':
-        'The process listens on {direccion}:{puerto}, open to the network. It was stopped: it may only listen on 127.0.0.1.',
+        'The process listens on {direccion}:{puerto} ({programa}), open to the network. It was stopped: it may only listen on 127.0.0.1.',
+      'procesos.escucha_publica_livereload':
+        'The process listens on {direccion}:{puerto} ({programa}), open to the network. It was stopped: it may only listen on 127.0.0.1. This is Spring DevTools LiveReload: turn it off with spring.devtools.livereload.enabled=false.',
+      'procesos.escucha_publica_inspector':
+        'The process listens on {direccion}:{puerto} ({programa}), open to the network. It was stopped: it may only listen on 127.0.0.1. This is the Node inspector: use --inspect=127.0.0.1.',
       'catalogo.redireccion_ajena':
         'The download tried to go to a site that is not allowed ({host}).',
       'catalogo.demasiadas_redirecciones':
