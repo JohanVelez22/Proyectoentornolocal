@@ -61,6 +61,17 @@ Si compartió un sitio por red local con **Usar HTTPS** y quiere evitar el aviso
 3. Escanee el QR desde el móvil y siga los pasos que aparecen en el diálogo para **Android** o **iPhone o iPad**, **comparando siempre la huella SHA-256 (Android) o SHA-1 (iOS)** antes de confiar.
 4. Instale la CA únicamente en sus propios dispositivos y retírela cuando ya no la necesite.
 
+### 6. Compartir una carpeta o un archivo suelto
+
+Para publicar algo que no es un sitio (por ejemplo, un PDF o una carpeta de capturas) no hace falta crear un proyecto:
+
+1. Abra **Túneles** y pulse el enlace **Compartir carpeta o archivo…** (o abra directamente **Herramientas → Red → Compartir carpeta o archivo**; también hay un acceso con ese nombre en la tarjeta del servicio FTP de **Servicios**, porque el FTP nunca se comparte por túnel).
+2. Elija la carpeta o el archivo, cuánto tiempo debe durar (**15 minutos**, **1 hora** o **4 horas**) y el túnel (**Cloudflare (rápido, sin cuenta)** o **ngrok (con su token)**).
+3. Pulse **Compartir…**, lea la confirmación **Compartir en internet** (muestra la ruta exacta) y confirme.
+4. Copie el **Enlace público** o muestre su **Código QR**. El enlace lleva un código secreto, es de solo lectura y se cierra solo al vencer el plazo. Pulse **Dejar de compartir** para cerrarlo antes.
+
+El detalle de lo que se rechaza por seguridad y del registro de **Accesos** está en [10 · Herramientas](10-herramientas.md).
+
 ## Ejemplo
 
 Necesita mostrar un avance de `mi-tienda.test` a un cliente remoto y probar el diseño en su teléfono:
@@ -74,4 +85,5 @@ Necesita mostrar un avance de `mi-tienda.test` a un cliente remoto y probar el d
 - **«No hay puertos libres entre 8100 y 8199»:** deje de compartir algún otro sitio en red local o cierre el diálogo de la CA móvil y reintente.
 - **El túnel rápido da error al abrir o el enlace deja de responder:** compruebe que Nginx siga encendido y pulse **Renovar (nuevo enlace)** en **Túneles** o en la tarjeta del proyecto.
 - **Cloudflare con nombre dice que registró un dominio distinto:** el dominio no pertenece a la zona autorizada en Cloudflare; elimine el registro incorrecto desde el panel web de Cloudflare y vuelva a autorizar la zona correcta.
+- **Compartir carpeta o archivo dice que ngrok necesita su token:** guarde el token en las opciones del túnel de un sitio (**Opciones del túnel**) y vuelva a intentarlo; solo hay una compartición a la vez.
 - **Quiere aprender más sobre Cloudflare y ngrok:** abra **Herramientas → Red → Guías → Túneles** para consultar la guía completa paso a paso con comandos copiables.
