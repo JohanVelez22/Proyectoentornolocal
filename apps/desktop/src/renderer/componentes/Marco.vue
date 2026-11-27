@@ -338,6 +338,9 @@ onBeforeUnmount(() => {
   opacity: 0.72;
   /* El lema entero, en dos líneas si hace falta: nunca con puntos suspensivos. */
   line-height: 1.25;
+  /* Sin cortes a mitad de palabra en zh y ja; el respaldo parte solo si no cabe. */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 .principal {
   height: 100vh;
