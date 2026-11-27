@@ -90,7 +90,7 @@ function pedir(url: string): Promise<{ codigo: number; cuerpo: string }> {
 }
 
 beforeEach(() => {
-  base = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'wc-comp-svc-')));
+  base = realpathSync.native(mkdtempSync(path.join(os.tmpdir(), 'wc-comp-svc-')));
   inicio = path.join(base, 'usuario');
   datos = path.join(base, 'usuario', 'AppData', 'WolfCoreDev');
   sistema = path.join(base, 'Windows');

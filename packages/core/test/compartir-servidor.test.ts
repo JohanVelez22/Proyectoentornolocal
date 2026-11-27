@@ -82,7 +82,7 @@ async function iniciar(
 }
 
 beforeEach(() => {
-  base = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'wc-compartir-')));
+  base = realpathSync.native(mkdtempSync(path.join(os.tmpdir(), 'wc-compartir-')));
   raiz = path.join(base, 'compartido');
   fuera = path.join(base, 'fuera');
   mkdirSync(path.join(raiz, 'sub', '.git'), { recursive: true });

@@ -108,7 +108,8 @@ export class ServidorCompartir {
   ) {}
 
   static async iniciar(o: OpcionesServidor): Promise<ServidorCompartir> {
-    const raiz = o.raiz;
+    // Siempre canónica (nombres 8.3 y mayúsculas resueltos), igual que lo que devuelve `realpath` de cada petición.
+    const raiz = await realpath(o.raiz);
     const esArchivo = o.tipo === 'archivo';
     const nombreArchivo = esArchivo ? path.basename(raiz) : '';
     const ahora = o.ahora ?? Date.now;
