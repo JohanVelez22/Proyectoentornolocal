@@ -89,7 +89,8 @@ describe('tipoDe', () => {
   it('lista blanca en línea', () => {
     expect(tipoDe('foto.PNG')).toEqual({ tipo: 'image/png', descarga: false });
     expect(tipoDe('a.txt').descarga).toBe(false);
-    expect(tipoDe('a.pdf').descarga).toBe(false);
+    // Un PDF puede llevar scripts del visor: se descarga.
+    expect(tipoDe('a.pdf').descarga).toBe(true);
   });
   it('los tipos activos siempre se descargan', () => {
     for (const n of ['a.html', 'a.HTM', 'a.svg', 'a.xml', 'a.js', 'a.mjs', 'a.css', 'a.xhtml']) {

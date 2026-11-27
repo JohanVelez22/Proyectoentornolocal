@@ -7,6 +7,7 @@ import { pipeline } from 'node:stream';
 import type { DetectorSensible } from '../herramientas/archivoSensible';
 import { rutaDentroDe } from '../plataforma/sistema';
 import {
+  esBinarioGrande,
   esCarpetaProhibida,
   leerRutaPedida,
   listadoHtml,
@@ -50,7 +51,13 @@ export interface AccesoCompartido {
   codigo: number;
 }
 
+export type ProveedorIp = 'cloudflare-rapido' | 'ngrok' | null;
+
 export interface OpcionesServidor {
+  /** De qué cabecera sale la IP que se muestra (ver `ipDe`). Sin túnel, null. */
+  proveedor?: ProveedorIp;
+  /** Plazo de inactividad y de cabeceras en ms (por defecto 60 s y 15 s); solo lo cambian las pruebas. */
+  plazoMs?: number;
   /** Carpeta o archivo compartido, ya con `realpath` y validado. */
   raiz: string;
   tipo: 'carpeta' | 'archivo';
@@ -83,17 +90,19 @@ function igualTiempoConstante(a: string, b: string): boolean {
 
 const IP_VISIBLE = /^[0-9a-fA-F:.]{2,45}$/;
 
-function ipDe(req: http.IncomingMessage): string {
-  const unica = (v: string | string[] | undefined): string | null => {
-    const t = (Array.isArray(v) ? v[0] : v)?.split(',')[0]?.trim();
-    return t && IP_VISIBLE.test(t) ? t : null;
-  };
-  return (
-    unica(req.headers['cf-connecting-ip']) ??
-    unica(req.headers['x-forwarded-for']) ??
-    req.socket.remoteAddress ??
-    '?'
-  );
+/**
+ * IP que se muestra en el registro: solo de la cabecera del proveedor activo (Cloudflare:
+ * `cf-connecting-ip`; ngrok: el último salto de `x-forwarded-for`, el que añadió ngrok) y, sin
+ * túnel, la del socket. Cualquier otra cabecera la puede inventar quien pida. Solo para mostrar.
+ */
+function ipDe(req: http.IncomingMessage, proveedor: ProveedorIp): string {
+  const texto = (v: string | string[] | undefined): string | undefined =>
+    Array.isArray(v) ? v[0] : v;
+  let h: string | undefined;
+  if (proveedor === 'cloudflare-rapido') h = texto(req.headers['cf-connecting-ip']);
+  else if (proveedor === 'ngrok') h = texto(req.headers['x-forwarded-for'])?.split(',').pop();
+  const t = h?.trim();
+  return t && IP_VISIBLE.test(t) ? t : (req.socket.remoteAddress ?? '?');
 }
 
 type Destino =
@@ -116,7 +125,7 @@ export class ServidorCompartir {
 
     const manejar = async (req: http.IncomingMessage, res: http.ServerResponse): Promise<void> => {
       const metodo = (req.method ?? '').slice(0, 16);
-      const ip = ipDe(req);
+      const ip = ipDe(req, o.proveedor ?? null);
       let registrado = false;
       const registrar = (codigo: number, ruta: string | null): void => {
         if (registrado) return;
@@ -187,6 +196,10 @@ export class ServidorCompartir {
         const info = await fh.stat();
         if (!info.isFile()) return noEncontrado(mostrada);
         if (o.detector.porRuta(destino.real, info.nlink) || o.detector.porRuta(abs, info.nlink)) {
+          return noEncontrado(mostrada);
+        }
+        // Lo que pasa del tamaño revisable solo se sirve si es un medio o un paquete.
+        if (info.size > MAX_ANALISIS_BYTES && !esBinarioGrande(tramos[tramos.length - 1] ?? '')) {
           return noEncontrado(mostrada);
         }
         const leer = Math.min(
@@ -306,7 +319,12 @@ export class ServidorCompartir {
               await fh.close().catch(() => undefined);
             }
           }
-          entradas.push({ nombre, carpeta: false, bytes: info.size });
+          entradas.push({
+            nombre,
+            carpeta: false,
+            bytes: info.size,
+            ...(info.size > MAX_ANALISIS_BYTES && !esBinarioGrande(nombre) ? { grande: true } : {}),
+          });
         }
         if (entradas.length >= MAX_ENTRADAS_LISTADO) {
           hayMas = true;
@@ -321,18 +339,25 @@ export class ServidorCompartir {
       return { entradas, hayMas };
     }
 
-    const servidor = http.createServer({ maxHeaderSize: 8192 }, (req, res) => {
-      void manejar(req, res).catch(() => {
-        if (!res.headersSent) {
-          res.writeHead(404, { ...CABECERAS_COMUNES, 'Content-Length': '0' });
-          res.end();
-        } else res.destroy();
-      });
-    });
+    const plazo = o.plazoMs ?? 60_000;
+    const servidor = http.createServer(
+      { maxHeaderSize: 8192, connectionsCheckingInterval: 2000 },
+      (req, res) => {
+        // Un lector que no lee (o tarda más que el plazo sin que pase nada) pierde su conexión.
+        res.setTimeout(plazo, () => res.destroy());
+        void manejar(req, res).catch(() => {
+          if (!res.headersSent) {
+            res.writeHead(404, { ...CABECERAS_COMUNES, 'Content-Length': '0' });
+            res.end();
+          } else res.destroy();
+        });
+      },
+    );
     servidor.maxConnections = o.maxConexiones ?? LIMITE_CONEXIONES;
-    servidor.headersTimeout = 15_000;
-    servidor.requestTimeout = 30_000;
-    servidor.keepAliveTimeout = 5_000;
+    servidor.headersTimeout = Math.min(15_000, plazo);
+    servidor.requestTimeout = Math.min(15_000, plazo);
+    servidor.timeout = plazo;
+    servidor.keepAliveTimeout = Math.min(3_000, plazo);
     servidor.on('clientError', (_e, socket) => socket.destroy());
     await new Promise<void>((ok, mal) => {
       servidor.once('error', mal);

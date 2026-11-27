@@ -1,4 +1,5 @@
 import path from 'node:path';
+import type { DetectorSensible } from '../herramientas/archivoSensible';
 
 /**
  * Piezas puras de «Compartir carpeta o archivo» (D52): qué se sirve, con qué tipo, cómo se escribe
@@ -21,7 +22,83 @@ export const CARPETAS_PROHIBIDAS = [
 ] as const;
 const PROHIBIDAS = new Set<string>(CARPETAS_PROHIBIDAS);
 
-export const esCarpetaProhibida = (nombre: string): boolean => PROHIBIDAS.has(nombre.toLowerCase());
+/**
+ * Carpetas que además no se sirven ni se listan DENTRO de lo compartido (datos y claves de
+ * programas), pero que no impiden compartir una carpeta que las tenga en su raíz (un proyecto con
+ * `.vscode` o `.idea` se puede compartir; esas carpetas simplemente no salen).
+ */
+export const CARPETAS_OCULTAS = [
+  'appdata',
+  '.claude',
+  '.codex',
+  '.gemini',
+  '.config',
+  '.local',
+  '.npm',
+  '.m2',
+  '.gradle',
+  '.cargo',
+  '.nuget',
+  '.vscode',
+  '.idea',
+  '.mozilla',
+  '.pki',
+  '.terraform.d',
+] as const;
+const OCULTAS = new Set<string>([...CARPETAS_PROHIBIDAS, ...CARPETAS_OCULTAS]);
+
+/** ¿Es una carpeta que nunca se sirve dentro de lo compartido ni se elige para compartir? */
+export const esCarpetaProhibida = (nombre: string): boolean => OCULTAS.has(nombre.toLowerCase());
+
+/** ¿Es una carpeta de claves (la lista corta): compartir una carpeta que la tiene en su raíz se rechaza? */
+export const esCarpetaDeClaves = (nombre: string): boolean => PROHIBIDAS.has(nombre.toLowerCase());
+
+/**
+ * Archivos con credenciales o datos de sesión de programas comunes (navegadores, FTP, editores,
+ * gestores de paquetes, claves). Es la regla propia de compartir: se suma a la de `archivoSensible`
+ * sin cambiar lo que esa regla decide en el editor, Buscar o el Diff.
+ */
+const NOMBRE_SENSIBLE =
+  /^(?:cookies(?:.sqlite.*)?|key[34].db|logins.json|login data(?: for account)?(?:-journal)?|web data(?:-journal)?|sitemanager.xml|recentservers.xml|filezilla.xml|state.vscdb(?:.backup)?|.pypirc|.npmrc|.netrc|_netrc|.pgpass|.git-credentials|.htpasswd|id_[^.]*|.*.(?:kdbx|pfx|p12|ppk|jks|keystore|pem|key))$/i;
+
+export const nombreSensibleCompartir = (nombre: string): boolean => NOMBRE_SENSIBLE.test(nombre);
+
+/** La regla de archivo sensible de D43/D44 más los nombres de credenciales de `NOMBRE_SENSIBLE`. */
+export function detectorCompartir(base: DetectorSensible): DetectorSensible {
+  return {
+    porRuta: (ruta, enlaces) =>
+      nombreSensibleCompartir(path.basename(ruta)) || base.porRuta(ruta, enlaces),
+    porContenido: (c) => base.porContenido(c),
+  };
+}
+
+/** Binarios que se sirven aunque pasen del tamaño que se puede revisar: medios y paquetes. */
+const BINARIOS_GRANDES = new Set([
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'webp',
+  'avif',
+  'bmp',
+  'ico',
+  'mp3',
+  'wav',
+  'ogg',
+  'flac',
+  'mp4',
+  'webm',
+  'mkv',
+  'mov',
+  'zip',
+  '7z',
+  'iso',
+  'pdf',
+  'gz',
+  'tar',
+]);
+export const esBinarioGrande = (nombre: string): boolean =>
+  BINARIOS_GRANDES.has(path.extname(nombre).slice(1).toLowerCase());
 
 /** Nombres reservados de Windows (con o sin extensión): `CON`, `nul.txt`, `COM1`… */
 const RESERVADO = /^(?:con|prn|aux|nul|conin\$|conout\$|com[0-9¹²³]|lpt[0-9¹²³])(?:\..*)?$/i;
@@ -72,7 +149,6 @@ const EN_LINEA: Record<string, string> = {
   log: 'text/plain; charset=utf-8',
   csv: 'text/csv; charset=utf-8',
   json: 'application/json',
-  pdf: 'application/pdf',
   png: 'image/png',
   jpg: 'image/jpeg',
   jpeg: 'image/jpeg',
@@ -100,6 +176,7 @@ const DESCARGA: Record<string, string> = {
   js: 'text/javascript',
   mjs: 'text/javascript',
   css: 'text/css',
+  pdf: 'application/pdf',
   zip: 'application/zip',
   gz: 'application/gzip',
   tar: 'application/x-tar',
@@ -153,6 +230,8 @@ export interface EntradaListado {
   nombre: string;
   carpeta: boolean;
   bytes: number | null;
+  /** Pasa del tamaño que se puede revisar y no es un medio o paquete: no se sirve. */
+  grande?: boolean;
 }
 
 const tamano = (b: number): string => {
@@ -180,6 +259,11 @@ export function listadoHtml(
     .map((e) => {
       const href = `${encodeURIComponent(e.nombre)}${e.carpeta ? '/' : ''}`;
       const visible = `${e.nombre}${e.carpeta ? '/' : ''}`;
+      if (e.grande) {
+        return `<tr><td>${escaparHtml(visible)} <em>(too large to review)</em></td><td class="n">${
+          e.bytes === null ? '' : escaparHtml(tamano(e.bytes))
+        }</td></tr>`;
+      }
       return `<tr><td><a href="${escaparHtml(href)}">${escaparHtml(visible)}</a></td><td class="n">${
         e.bytes === null ? '' : escaparHtml(tamano(e.bytes))
       }</td></tr>`;

@@ -13,6 +13,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { crearDetectorSensible } from '../src/herramientas/archivoSensible';
+import { detectorCompartir } from '../src/compartir/contenido';
 import { ServidorCompartir, type AccesoCompartido } from '../src/compartir/servidor';
 
 const TOKEN = 'Tok3n_de-prueba_0123456789abc';
@@ -67,15 +68,19 @@ async function iniciar(
     tipo: 'carpeta' | 'archivo';
     sitios: { carpeta: string; datosReales: boolean }[];
     maxConexiones: number;
+    proveedor: 'cloudflare-rapido' | 'ngrok' | null;
+    plazoMs: number;
   }> = {},
 ): Promise<ServidorCompartir> {
   const s = await ServidorCompartir.iniciar({
     raiz: o.raiz ?? raiz,
     tipo: o.tipo ?? 'carpeta',
     token: TOKEN,
-    detector: crearDetectorSensible(o.sitios ?? []),
+    detector: detectorCompartir(crearDetectorSensible(o.sitios ?? [])),
     alAcceso: (a) => accesos.push(a),
     ...(o.maxConexiones ? { maxConexiones: o.maxConexiones } : {}),
+    ...(o.proveedor !== undefined ? { proveedor: o.proveedor } : {}),
+    ...(o.plazoMs ? { plazoMs: o.plazoMs } : {}),
   });
   servidores.push(s);
   return s;
@@ -386,7 +391,7 @@ describe('registro de accesos', () => {
   });
 
   it('usa cf-connecting-ip si viene del túnel, solo si parece una IP', async () => {
-    const s = await iniciar();
+    const s = await iniciar({ proveedor: 'cloudflare-rapido' });
     await pedir(s.puerto, `/${TOKEN}/a.txt`, { cabeceras: { 'cf-connecting-ip': '203.0.113.9' } });
     await pedir(s.puerto, `/${TOKEN}/a.txt`, { cabeceras: { 'cf-connecting-ip': '<script>' } });
     expect(accesos[0]!.ip).toBe('203.0.113.9');
@@ -421,10 +426,10 @@ describe('límites', () => {
 
   it('cerrar corta una descarga en curso y libera el puerto', async () => {
     const s = await iniciar();
-    writeFileSync(path.join(raiz, 'grande.bin'), Buffer.alloc(30 * 1024 * 1024, 1));
+    writeFileSync(path.join(raiz, 'grande.mp4'), Buffer.alloc(30 * 1024 * 1024, 1));
     const antes = s.puerto;
     const parte = await new Promise<number>((ok) => {
-      http.get({ host: '127.0.0.1', port: antes, path: `/${TOKEN}/grande.bin` }, (res) => {
+      http.get({ host: '127.0.0.1', port: antes, path: `/${TOKEN}/grande.mp4` }, (res) => {
         res.once('data', (d: Buffer) => {
           res.pause();
           ok(d.length);
@@ -444,4 +449,151 @@ describe('límites', () => {
     const x = await pedir(s.puerto, `/${TOKEN}/medio.bin`);
     expect(x.cuerpo.length).toBe(buf.length);
   });
+});
+
+describe('IP del registro según el proveedor (solo la cabecera del proveedor activo)', () => {
+  it('Cloudflare: solo cf-connecting-ip; x-forwarded-for se ignora', async () => {
+    const s = await iniciar({ proveedor: 'cloudflare-rapido' });
+    await pedir(s.puerto, `/${TOKEN}/a.txt`, {
+      cabeceras: { 'x-forwarded-for': '10.9.9.9', 'cf-connecting-ip': '203.0.113.9' },
+    });
+    await pedir(s.puerto, `/${TOKEN}/a.txt`, { cabeceras: { 'x-forwarded-for': '10.9.9.9' } });
+    expect(accesos.map((a) => a.ip)).toEqual(['203.0.113.9', '127.0.0.1']);
+  });
+  it('ngrok: el último salto de x-forwarded-for; cf-connecting-ip no vale', async () => {
+    const s = await iniciar({ proveedor: 'ngrok' });
+    await pedir(s.puerto, `/${TOKEN}/a.txt`, {
+      cabeceras: { 'x-forwarded-for': '10.1.1.1, 198.51.100.4', 'cf-connecting-ip': '203.0.113.9' },
+    });
+    expect(accesos[0]!.ip).toBe('198.51.100.4');
+  });
+  it('sin túnel: la del socket, sea lo que sea lo que diga la petición', async () => {
+    const s = await iniciar({ proveedor: null });
+    await pedir(s.puerto, `/${TOKEN}/a.txt`, {
+      cabeceras: { 'cf-connecting-ip': '203.0.113.9', 'x-forwarded-for': '10.1.1.1' },
+    });
+    expect(accesos[0]!.ip).toBe('127.0.0.1');
+  });
+});
+
+describe('datos de otros programas dentro de lo compartido (valores falsos)', () => {
+  it.each([
+    'cookies.sqlite',
+    'key4.db',
+    'logins.json',
+    'Login Data',
+    'Cookies',
+    'Web Data',
+    'sitemanager.xml',
+    'recentservers.xml',
+    'state.vscdb',
+    '.pypirc',
+    '.npmrc',
+    '.netrc',
+    '_netrc',
+    '.git-credentials',
+    'claves.kdbx',
+    'cert.pfx',
+    'cert.p12',
+    'id_ed25519',
+    'putty.ppk',
+  ])('%s da 404 y no se lista', async (n) => {
+    writeFileSync(path.join(raiz, n), 'contenido falso inocente');
+    const s = await iniciar();
+    expect((await pedir(s.puerto, `/${TOKEN}/${encodeURIComponent(n)}`)).codigo).toBe(404);
+    const l = (await pedir(s.puerto, `/${TOKEN}/`)).cuerpo.toString();
+    expect(l).not.toContain(`>${n}<`);
+  });
+
+  it('un archivo normal vecino sí se sirve (no se esconde de más)', async () => {
+    writeFileSync(path.join(raiz, 'cookies.sqlite'), 'x');
+    const s = await iniciar();
+    expect((await pedir(s.puerto, `/${TOKEN}/a.txt`)).codigo).toBe(200);
+  });
+
+  it.each([
+    'AppData',
+    '.claude',
+    '.codex',
+    '.config',
+    '.npm',
+    '.m2',
+    '.gradle',
+    '.cargo',
+    '.nuget',
+    '.vscode',
+    '.idea',
+    '.mozilla',
+  ])('la carpeta %s dentro de lo compartido no se abre ni se lista', async (n) => {
+    mkdirSync(path.join(raiz, n), { recursive: true });
+    writeFileSync(path.join(raiz, n, 'dentro.txt'), 'x');
+    const s = await iniciar();
+    expect((await pedir(s.puerto, `/${TOKEN}/${n}/dentro.txt`)).codigo).toBe(404);
+    expect((await pedir(s.puerto, `/${TOKEN}/${n}/`)).codigo).toBe(404);
+    expect((await pedir(s.puerto, `/${TOKEN}/`)).cuerpo.toString()).not.toContain(`>${n}/`);
+  });
+});
+
+describe('archivos de más de 8 MB', () => {
+  const GRANDE = 8 * 1024 * 1024 + 1024;
+  it('un texto o tipo desconocido no se sirve y el listado lo marca; un medio o paquete sí', async () => {
+    writeFileSync(path.join(raiz, 'volcado.txt'), Buffer.alloc(GRANDE, 65));
+    writeFileSync(path.join(raiz, 'datos.bin'), Buffer.alloc(GRANDE, 65));
+    writeFileSync(path.join(raiz, 'copia.zip'), Buffer.alloc(GRANDE, 65));
+    writeFileSync(path.join(raiz, 'video.mp4'), Buffer.alloc(GRANDE, 65));
+    const s = await iniciar();
+    expect((await pedir(s.puerto, `/${TOKEN}/volcado.txt`)).codigo).toBe(404);
+    expect((await pedir(s.puerto, `/${TOKEN}/datos.bin`)).codigo).toBe(404);
+    expect((await pedir(s.puerto, `/${TOKEN}/copia.zip`)).cuerpo.length).toBe(GRANDE);
+    expect((await pedir(s.puerto, `/${TOKEN}/video.mp4`, { metodo: 'HEAD' })).codigo).toBe(200);
+    const l = (await pedir(s.puerto, `/${TOKEN}/`)).cuerpo.toString();
+    expect(l).toMatch(/volcado\.txt <em>\(too large to review\)<\/em>/);
+    expect(l).not.toContain('href="volcado.txt"');
+    expect(l).toContain('href="copia.zip"');
+  });
+  it('de 8 MB o menos, un texto sí se sirve', async () => {
+    writeFileSync(path.join(raiz, 'justo.txt'), Buffer.alloc(8 * 1024 * 1024, 65));
+    const s = await iniciar();
+    expect((await pedir(s.puerto, `/${TOKEN}/justo.txt`)).codigo).toBe(200);
+  });
+  it('un PDF se descarga (attachment)', async () => {
+    writeFileSync(path.join(raiz, 'doc.pdf'), 'x');
+    const s = await iniciar();
+    const x = await pedir(s.puerto, `/${TOKEN}/doc.pdf`);
+    expect(x.cabeceras['content-disposition']).toMatch(/^attachment;/);
+  });
+});
+
+describe('lentitud', () => {
+  it('un lector que no lee una descarga grande pierde la conexión', async () => {
+    writeFileSync(path.join(raiz, 'enorme.mp4'), Buffer.alloc(60 * 1024 * 1024, 1));
+    const s = await iniciar({ plazoMs: 400 });
+    const c = net.connect({ host: '127.0.0.1', port: s.puerto });
+    c.pause();
+    c.write(`GET /${TOKEN}/enorme.mp4 HTTP/1.1\r\nHost: x\r\n\r\n`);
+    // El lector no lee durante un rato (más que el plazo); al volver a leer, el servidor ya cortó.
+    await new Promise((r) => setTimeout(r, 1500));
+    let recibido = 0;
+    c.on('data', (d: Buffer) => (recibido += d.length));
+    c.resume();
+    const cerro = await new Promise<boolean>((ok) => {
+      c.once('close', () => ok(true));
+      setTimeout(() => ok(false), 6000);
+    });
+    c.destroy();
+    expect(cerro).toBe(true);
+    expect(recibido).toBeLessThan(60 * 1024 * 1024);
+  }, 15_000);
+
+  it('quien abre la conexión y no manda la petición completa la pierde', async () => {
+    const s = await iniciar({ plazoMs: 400 });
+    const c = net.connect({ host: '127.0.0.1', port: s.puerto });
+    c.write('GET /x HTTP/1.1\r\nHost: x\r\n');
+    const cerro = await new Promise<boolean>((ok) => {
+      c.once('close', () => ok(true));
+      setTimeout(() => ok(false), 6000);
+    });
+    c.destroy();
+    expect(cerro).toBe(true);
+  }, 15_000);
 });
