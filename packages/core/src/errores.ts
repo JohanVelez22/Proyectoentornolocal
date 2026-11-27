@@ -140,6 +140,8 @@ export const PARAMETROS_ERROR = {
   'clientehttp.curl_grande': [],
   'clientehttp.no_existe': [],
   'clientehttp.limite': [],
+  // servidor de ejemplo de la guía HTTP (D49)
+  'ejemplohttp.no_arranca': ['motivo'],
   // herramientas
   'herramientas.pid_invalido': [],
   'herramientas.pid_sistema': ['pid'],
