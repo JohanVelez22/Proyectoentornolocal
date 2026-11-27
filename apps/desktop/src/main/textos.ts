@@ -355,6 +355,34 @@ const TEXTOS = {
     carpetaDatosInvalida:
       'WOLFCORE_DATOS एक मान्य डेटा फ़ोल्डर नहीं है: यह पूर्ण पथ होना चाहिए, सिस्टम फ़ोल्डर नहीं होना चाहिए और वास्तविक फ़ोल्डर (तथा पिछले फ़ोल्डर) से भिन्न होना चाहिए। ऐप बिना किसी बदलाव के बंद हो रहा है।',
   },
+  tr: {
+    abrir: 'Aç',
+    iniciarTodo: 'Tümünü başlat',
+    detenerTodo: 'Tümünü durdur',
+    salir: 'Çık',
+    workspaces: 'Çalışma alanları',
+    workspaceParcial: 'kısmi',
+    preguntaApagar: 'Hizmetler durdurulsun mu?',
+    siApagar: 'Evet, durdur',
+    noApagar: 'Hayır, çalışır bırak',
+    cancelar: 'İptal',
+    cliTitulo: 'Terminal komutu (wolf)',
+    cliTunelInternet:
+      'Bir terminal komutu {dominio} sitesini {proveedor} ile internette yayınlamak istiyor. Bağlantıya sahip herkes görebilir.',
+    cliTunelTailnet:
+      'Bir terminal komutu {dominio} sitesini tailnet cihazlarınızla ({proveedor}) paylaşmak istiyor.',
+    cliPublicoEn: 'Genel adres: https://{publico}',
+    cliDatosReales:
+      'DİKKAT: {dominio} GERÇEK VERİLER içeriyor. Devam etmek için aşağıdan tam alan adını seçin. Bunu siz istemediyseniz iptal edin.',
+    cliPublicar: 'Yayınla',
+    cliPhpGlobal:
+      'Bir terminal komutu tüm terminallerin PHP sürümünü {version} olarak değiştirmek istiyor.',
+    cliCambiar: 'Değiştir',
+    carpetaDatosAislada:
+      'test veri klasörü; hosts, PATH ve sistem sertifikalarına dokunulmaz',
+    carpetaDatosInvalida:
+      'WOLFCORE_DATOS geçerli bir veri klasörü değil: mutlak olmalı, sistem klasörü olmamalı ve gerçek (ve önceki) klasörden farklı olmalıdır. Uygulama hiçbir şeye dokunmadan kapanıyor.',
+  },
 } satisfies Record<IdiomaUi, Record<string, string>>;
 
 export type TextosMain = (typeof TEXTOS)['es'];

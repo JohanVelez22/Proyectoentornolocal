@@ -4433,7 +4433,7 @@ export const it: Textos = {
     tema: 'Tema',
     temas: { sistema: 'Sistema', claro: 'Chiaro', oscuro: 'Scuro' },
     idioma: 'Lingua',
-    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語', ko: '한국어', hi: 'हिन्दी' },
+    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語', ko: '한국어', hi: 'हिन्दी', tr: 'Türkçe' },
     acento: 'Colore principale',
     acentos: {
       indigo: 'Indaco',

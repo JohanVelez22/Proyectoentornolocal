@@ -2029,7 +2029,186 @@ const HI: Diccionario = {
   },
 };
 
-const DICCIONARIOS = { es: ES, en: EN, pt: PT, fr: FR, de: DE, it: IT, ru: RU, zh: ZH, ja: JA, ko: KO, hi: HI } satisfies Record<IdiomaUi, Diccionario>;
+const TR: Diccionario = {
+  porCodigo: {
+    'avisos.servicio_caido': (d) => ({
+      titulo: 'Bir hizmet hatayla durdu',
+      cuerpo: `${limpio(d['nombre'], 'Bir hizmet')} çalışmayı durdurdu. Ayrıntılar için WolfCore Dev uygulamasını açın.`,
+    }),
+    'avisos.iniciar_todo_fallos': (d) => ({
+      titulo: 'Tümünü başlat her şeyi başlatamadı',
+      cuerpo: `Başlatılamadı: ${limpio(d['nombres'], 'bazı hizmetler')}. Ayrıntılar için Hizmetler bölümünü açın.`,
+    }),
+    'avisos.workspace_fallos': (d) => ({
+      titulo: 'Bir çalışma alanı her şeyi başlatamadı',
+      cuerpo: `${limpio(d['nombre'], 'Çalışma alanı')}: ${limpio(d['nombres'], 'bazı öğeler')} başlatılamadı. Durumu görmek için Başlangıç ekranını açın.`,
+    }),
+    'avisos.workspace_fallos_detener': (d) => ({
+      titulo: 'Bir çalışma alanı her şeyi durduramadı',
+      cuerpo: `${limpio(d['nombre'], 'Çalışma alanı')}: ${limpio(d['nombres'], 'bazı öğeler')} durdurulamadı. Çalışanları görmek için Başlangıç ekranını açın.`,
+    }),
+    'avisos.tarea_fallo': (d) => ({
+      titulo:
+        d['motivo'] === 'tiempo'
+          ? 'Zamanlanmış bir görev çok uzun sürdü'
+          : 'Zamanlanmış bir görev başarısız oldu',
+      cuerpo: `${limpio(d['nombre'], 'Bir görev')} (${limpio(d['sitio'], 'bir proje')}) ${d['motivo'] === 'tiempo' ? 'en fazla çalışma süresini aştı ve durduruldu' : 'hatayla sonlandı'}. Kaydı görmek için projeyi açın.`,
+    }),
+    'avisos.tarea_bloqueada': (d) => ({
+      titulo: 'Zamanlanmış bir görev çalıştırılmadı',
+      cuerpo: `${limpio(d['nombre'], 'Bir görev')} (${limpio(d['sitio'], 'bir proje')}): ${
+        {
+          aislado: 'test veri klasörü kullanılıyor ve görevlere izin verilmedi',
+          no_confiado: 'proje güvenilir olarak işaretlenmemiş',
+          receta_cambio: 'proje reçetesi güvendiğinizden beri değişti',
+          sin_confirmar: 'komutu henüz onaylanmadı',
+          comando_invalido: 'komutuna izin verilmiyor',
+          cron_invalida: 'zamanlaması geçerli değil',
+          carpeta: 'proje klasörü mevcut değil',
+        }[String(d['motivo'])] ?? 'koşullar sağlanmadı'
+      }.`,
+    }),
+    'avisos.puerto_ocupado': (d) => ({
+      titulo: 'Bağlantı noktası kullanımda',
+      cuerpo: `${limpio(d['puerto'], '?')} bağlantı noktasını ${limpio(d['nombre'], 'başka bir program')} kullanıyor: hizmet başlatılamadı.`,
+    }),
+    'avisos.proceso_error': (d) => ({
+      titulo: 'Bir proje işlemi hatayla sonlandı',
+      cuerpo: `${limpio(d['nombre'], 'Bir işlem')} çalışmayı durdurdu. Kayıtlarını inceleyin.`,
+    }),
+    'avisos.proceso_terminado': (d) => ({
+      titulo: 'Bir işlem tamamlandı',
+      cuerpo: `${limpio(d['nombre'], 'Bir işlem')} hatasız tamamlandı.`,
+    }),
+    'avisos.proceso_fallo': (d) => ({
+      titulo: 'Bir işlem başarısız oldu',
+      cuerpo: `${limpio(d['nombre'], 'Bir işlem')} hatayla sonlandı${d['codigoSalida'] !== undefined ? ` (kod ${limpio(d['codigoSalida'], '?')})` : ''}. Kayıtlarını inceleyin.`,
+    }),
+    'avisos.receta_terminada': (d) => ({
+      titulo: 'Bir reçete tamamlandı',
+      cuerpo: `${limpio(d['sitio'], 'Bir projenin')} reçetesi hatasız tamamlandı.`,
+    }),
+    'avisos.receta_fallo': (d) => ({
+      titulo: 'Bir reçete başarısız oldu',
+      cuerpo: `${limpio(d['sitio'], 'Bir projenin')} reçetesi hatayla durdu. Adımı görmek için projeyi açın.`,
+    }),
+    'avisos.tunel_caido': (d) => ({
+      titulo: 'Bir tünel kesildi',
+      cuerpo: `${limpio(d['fuente'], 'Bir projenin')} tüneli çalışmayı durdurdu.`,
+    }),
+    'avisos.contenedor_detenido': (d) => ({
+      titulo: 'Bir konteyner durdu',
+      cuerpo: `${limpio(d['nombre'], 'Bir konteyner')} (${limpio(d['motor'], 'Docker')}) beklenmedik şekilde durdu${d['codigoSalida'] !== undefined ? ` (kod ${limpio(d['codigoSalida'], '?')})` : ''}.`,
+    }),
+    'avisos.ca_por_vencer': (d) => ({
+      titulo: 'Sertifika otoritesinin süresi yakında doluyor',
+      cuerpo: `${limpio(d['dias'], '?')} gün içinde sona eriyor. Yeniden oluşturup tekrar güvenin.`,
+    }),
+    'avisos.certificado_por_vencer': (d) => ({
+      titulo: 'Bir sertifikanın süresi yakında doluyor',
+      cuerpo: `${limpio(d['fuente'], 'Bir sitenin')} sertifikası ${limpio(d['dias'], '?')} gün içinde sona eriyor.`,
+    }),
+    'avisos.certificado_vencido': (d) => ({
+      titulo: 'Bir sertifikanın süresi doldu',
+      cuerpo: `${limpio(d['fuente'], 'Bir sitenin')} sertifikası artık geçerli değil. Yeniden oluşturun.`,
+    }),
+    'avisos.php_sitio_fallo': (d) => ({
+      titulo: 'Bir sitenin özel PHP’si başlatılamadı',
+      cuerpo: `${limpio(d['fuente'], 'Bir sitenin')} PHP’si başlatılamadı (bağlantı noktası başka bir programca kullanılıyor olabilir). Kartındaki PHP bölümünü inceleyin.`,
+    }),
+    'avisos.php_sitio_sin_puertos': (d) => ({
+      titulo: 'Bir sitenin PHP’si için boş bağlantı noktası yok',
+      cuerpo: `${limpio(d['fuente'], 'Bir site')} özel ayarları olmadan sürümünün paylaşılan PHP’sini kullanıyor: özel PHP için boş bağlantı noktası kalmadı.`,
+    }),
+    'avisos.php_sitio_descartados': (d) => ({
+      titulo: 'PHP ayarları yok sayıldı',
+      cuerpo: `${limpio(d['fuente'], 'Bir sitenin')} bazı PHP ayarları geçersiz olduğundan uygulanmadı: ${limpio(d['claves'], 'PHP bölümünü inceleyin')}.`,
+    }),
+    'avisos.lan_red_cambio': (d) => ({
+      titulo: 'Yerel ağ paylaşımı durduruldu',
+      cuerpo: `Ağ değişti: ${limpio(d['fuente'], 'bir sitenin')} paylaşımı durduruldu.`,
+    }),
+    'avisos.vhost_reglas_descartadas': (d) => ({
+      titulo: 'Nginx kuralları yok sayıldı',
+      cuerpo: `${limpio(d['fuente'], 'Bir sitenin')} özel kuralları artık doğrulamadan geçmiyor (klasör, alan adı veya bağlantı noktaları değişti) ve vhost dışında bırakıldı. Nginx bölümünde inceleyin.`,
+    }),
+    'avisos.vhost_manual_descartado': (d) => ({
+      titulo: 'Elle yazılan vhost kullanılmıyor',
+      cuerpo: `${limpio(d['fuente'], 'Bir sitenin')} elle yazılan vhost dosyası artık doğrulamadan geçmiyor: otomatik oluşturulan kullanılıyor. Nginx bölümünde inceleyin.`,
+    }),
+    'avisos.rustup_entrada_ajena': () => ({
+      titulo: 'Rustup zaten başka bir konumda yüklüydü',
+      cuerpo:
+        'WolfCore Dev Rust kendi klasörüne yüklendi. Windows’ta başka bir kuruluma işaret eden mevcut rustup kaldırma girdisine dokunulmadı.',
+    }),
+    'avisos.version_nueva': (d) => ({
+      titulo: `${limpio(d['servicio'], 'Bir hizmet')} için yeni sürüm mevcut`,
+      cuerpo: `${limpio(d['nueva'], 'Yeni bir sürüm')} yayınlandı (sizde ${limpio(d['actual'], 'başka bir sürüm')} var). Güncellemek için Hizmetler → Sürümler bölümünü açın; hiçbir şey otomatik yüklenmez.`,
+      accion: 'Güncelle',
+    }),
+    'avisos.version_nueva_sin_huella': (d) => ({
+      titulo: `${limpio(d['servicio'], 'Bir hizmet')} için yeni sürüm mevcut`,
+      cuerpo: `${limpio(d['nueva'], 'Yeni bir sürüm')} yayınlandı (sizde ${limpio(d['actual'], 'başka bir sürüm')} var), ancak yayınlanmış özet yok: indirme doğrulanamaz. Hizmetler → Sürümler bölümünden inceleyin; yükleme onayınızı ister.`,
+    }),
+    'avisos.rama_nueva_sin_huella': (d) => ({
+      titulo: `${limpio(d['servicio'], 'Bir hizmet')} için yeni ana sürüm`,
+      cuerpo: `${limpio(d['nueva'], 'Yeni bir ana sürüm')} kullandığınızdan (${limpio(d['actual'], '?')}) daha yeni, ancak yayınlanmış özet yok: indirme doğrulanamaz. Hizmetler → Sürümler bölümünden inceleyin.`,
+    }),
+    'avisos.rama_nueva': (d) => ({
+      titulo: `${limpio(d['servicio'], 'Bir hizmet')} için yeni ana sürüm`,
+      cuerpo: `${limpio(d['nueva'], 'Yeni bir ana sürüm')} kullandığınızdan (${limpio(d['actual'], '?')}) daha yeni. Verilerinize dokunulmadan ayrı olarak yüklenir.`,
+      accion: 'Güncelle',
+    }),
+    'doctor.hallazgos': (d) => ({
+      titulo: 'Doctor ortamda hatalar buldu',
+      cuerpo: `Ortamın çalışmasını engelleyebilecek ${limpio(d['errores'], 'birkaç')} sorun var. Nasıl onaracağınızı görmek için Doctor bölümünü açın.`,
+    }),
+  },
+  porTipo: {
+    'servicio-caido': {
+      titulo: 'Bir hizmet durdu',
+      cuerpo: 'Ayrıntılar için WolfCore Dev uygulamasını açın.',
+    },
+    'puerto-ocupado': {
+      titulo: 'Bağlantı noktası kullanımda',
+      cuerpo: 'Ayrıntılar için WolfCore Dev uygulamasını açın.',
+    },
+    'certificado-por-vencer': {
+      titulo: 'Bir sertifikanın süresi yakında doluyor',
+      cuerpo: 'Ayrıntılar için WolfCore Dev uygulamasını açın.',
+    },
+    'tunel-caido': {
+      titulo: 'Bir tünel kesildi',
+      cuerpo: 'Ayrıntılar için WolfCore Dev uygulamasını açın.',
+    },
+    'proceso-error': {
+      titulo: 'Bir işlem hatayla sonlandı',
+      cuerpo: 'Ayrıntılar için WolfCore Dev uygulamasını açın.',
+    },
+    'proceso-terminado': {
+      titulo: 'Bir işlem tamamlandı',
+      cuerpo: 'Ayrıntılar için WolfCore Dev uygulamasını açın.',
+    },
+    'receta-terminada': {
+      titulo: 'Bir reçete tamamlandı',
+      cuerpo: 'Ayrıntılar için WolfCore Dev uygulamasını açın.',
+    },
+    doctor: {
+      titulo: 'Doctor sorunlar buldu',
+      cuerpo: 'İncelemek için WolfCore Dev uygulamasını açın.',
+    },
+    'contenedor-detenido': {
+      titulo: 'Bir konteyner durdu',
+      cuerpo: 'Ayrıntılar için WolfCore Dev uygulamasını açın.',
+    },
+    'version-nueva': {
+      titulo: 'Yeni bir sürüm mevcut',
+      cuerpo: 'Güncellemek için WolfCore Dev uygulamasını açın.',
+    },
+  },
+};
+
+const DICCIONARIOS = { es: ES, en: EN, pt: PT, fr: FR, de: DE, it: IT, ru: RU, zh: ZH, ja: JA, ko: KO, hi: HI, tr: TR } satisfies Record<IdiomaUi, Diccionario>;
 
 export const CODIGOS_AVISO = Object.keys(ES.porCodigo);
 
@@ -2046,6 +2225,7 @@ export const CODIGOS_AVISO_POR_IDIOMA: Record<IdiomaUi, string[]> = {
   ja: Object.keys(JA.porCodigo),
   ko: Object.keys(KO.porCodigo),
   hi: Object.keys(HI.porCodigo),
+  tr: Object.keys(TR.porCodigo),
 };
 
 export function textoAviso(

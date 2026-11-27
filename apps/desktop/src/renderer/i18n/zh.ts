@@ -4424,7 +4424,7 @@ export const zh: Textos = {
     tema: '主题',
     temas: { sistema: '跟随系统', claro: '浅色', oscuro: '深色' },
     idioma: '语言',
-    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語', ko: '한국어', hi: 'हिन्दी' },
+    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語', ko: '한국어', hi: 'हिन्दी', tr: 'Türkçe' },
     acento: '强调色',
     acentos: {
       indigo: '靛蓝',
