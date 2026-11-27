@@ -137,7 +137,7 @@ const ES: Diccionario = {
     }),
     'avisos.https_quitado': (d) => ({
       titulo: 'Sitios sin HTTPS',
-      cuerpo: `${limpio(d['fuente'], 'Algunos sitios')} pasó a HTTP: el puerto ${limpio(d['puerto'], '443')} lo ocupa ${limpio(d['ocupadoPor'], 'otro programa')}. Ciérrelo o cambie el puerto HTTPS en Ajustes y el HTTPS volverá al aplicar.`,
+      cuerpo: `Sin HTTPS: ${limpio(d['fuente'], 'Algunos sitios')}. El puerto ${limpio(d['puerto'], '443')} lo ocupa ${limpio(d['ocupadoPor'], 'otro programa')}. Ciérrelo o cambie el puerto HTTPS en Ajustes y el HTTPS volverá al aplicar.`,
     }),
     'avisos.vhost_reglas_descartadas': (d) => ({
       titulo: 'Reglas de Nginx descartadas',
@@ -324,7 +324,7 @@ const EN: Diccionario = {
     }),
     'avisos.https_quitado': (d) => ({
       titulo: 'Sites without HTTPS',
-      cuerpo: `${limpio(d['fuente'], 'Some sites')} fell back to HTTP: port ${limpio(d['puerto'], '443')} is used by ${limpio(d['ocupadoPor'], 'another program')}. Close it or change the HTTPS port in Settings and HTTPS will return on the next apply.`,
+      cuerpo: `No HTTPS: ${limpio(d['fuente'], 'Some sites')}. Port ${limpio(d['puerto'], '443')} is used by ${limpio(d['ocupadoPor'], 'another program')}. Close it or change the HTTPS port in Settings and HTTPS will return on the next apply.`,
     }),
     'avisos.vhost_reglas_descartadas': (d) => ({
       titulo: 'Custom Nginx rules discarded',
@@ -504,7 +504,7 @@ const PT: Diccionario = {
     }),
     'avisos.https_quitado': (d) => ({
       titulo: 'Sites sem HTTPS',
-      cuerpo: `${limpio(d['fuente'], 'Alguns sites')} voltou para HTTP: a porta ${limpio(d['puerto'], '443')} está ocupada por ${limpio(d['ocupadoPor'], 'outro programa')}. Feche-o ou mude a porta HTTPS em Configurações e o HTTPS volta ao aplicar.`,
+      cuerpo: `Sem HTTPS: ${limpio(d['fuente'], 'Alguns sites')}. A porta ${limpio(d['puerto'], '443')} está ocupada por ${limpio(d['ocupadoPor'], 'outro programa')}. Feche-o ou mude a porta HTTPS em Configurações e o HTTPS volta ao aplicar.`,
     }),
     'avisos.vhost_reglas_descartadas': (d) => ({
       titulo: 'Regras do Nginx descartadas',
@@ -697,7 +697,7 @@ const FR: Diccionario = {
     }),
     'avisos.https_quitado': (d) => ({
       titulo: 'Sites sans HTTPS',
-      cuerpo: `${limpio(d['fuente'], 'Certains sites')} est repassé en HTTP : le port ${limpio(d['puerto'], '443')} est utilisé par ${limpio(d['ocupadoPor'], 'un autre programme')}. Fermez-le ou changez le port HTTPS dans les Réglages et le HTTPS reviendra à la prochaine application.`,
+      cuerpo: `Sans HTTPS : ${limpio(d['fuente'], 'Certains sites')}. Le port ${limpio(d['puerto'], '443')} est utilisé par ${limpio(d['ocupadoPor'], 'un autre programme')}. Fermez-le ou changez le port HTTPS dans les Réglages et le HTTPS reviendra à la prochaine application.`,
     }),
     'avisos.vhost_reglas_descartadas': (d) => ({
       titulo: 'Règles Nginx ignorées',
@@ -924,7 +924,7 @@ const DE: Diccionario = {
     }),
     'avisos.https_quitado': (d) => ({
       titulo: 'Websites ohne HTTPS',
-      cuerpo: `${limpio(d['fuente'], 'Einige Websites')} sind auf HTTP zurückgefallen: Port ${limpio(d['puerto'], '443')} wird von ${limpio(d['ocupadoPor'], 'einem anderen Programm')} verwendet. Schließen Sie es oder ändern Sie den HTTPS-Port in den Einstellungen, dann kehrt HTTPS beim nächsten Anwenden zurück.`,
+      cuerpo: `Ohne HTTPS: ${limpio(d['fuente'], 'Einige Websites')}. Port ${limpio(d['puerto'], '443')} wird von ${limpio(d['ocupadoPor'], 'einem anderen Programm')} verwendet. Schließen Sie es oder ändern Sie den HTTPS-Port in den Einstellungen, dann kehrt HTTPS beim nächsten Anwenden zurück.`,
     }),
   },
   porTipo: {
@@ -1116,7 +1116,7 @@ const IT: Diccionario = {
     }),
     'avisos.https_quitado': (d) => ({
       titulo: 'Siti senza HTTPS',
-      cuerpo: `${limpio(d['fuente'], 'Alcuni siti')} sono tornati a HTTP: la porta ${limpio(d['puerto'], '443')} è usata da ${limpio(d['ocupadoPor'], 'un altro programma')}. Lo chiuda o cambi la porta HTTPS in Impostazioni e HTTPS tornerà alla prossima applicazione.`,
+      cuerpo: `Senza HTTPS: ${limpio(d['fuente'], 'Alcuni siti')}. La porta ${limpio(d['puerto'], '443')} è usata da ${limpio(d['ocupadoPor'], 'un altro programma')}. Lo chiuda o cambi la porta HTTPS in Impostazioni e HTTPS tornerà alla prossima applicazione.`,
     }),
   },
   porTipo: {
@@ -1308,7 +1308,7 @@ const RU: Diccionario = {
     }),
     'avisos.https_quitado': (d) => ({
       titulo: 'Сайты без HTTPS',
-      cuerpo: `${limpio(d['fuente'], 'Некоторые сайты')} переключились на HTTP: порт ${limpio(d['puerto'], '443')} занят программой ${limpio(d['ocupadoPor'], 'другая программа')}. Закройте её или измените порт HTTPS в настройках, и HTTPS вернётся при следующем применении.`,
+      cuerpo: `Без HTTPS: ${limpio(d['fuente'], 'Некоторые сайты')}. Порт ${limpio(d['puerto'], '443')} занят программой ${limpio(d['ocupadoPor'], 'другая программа')}. Закройте её или измените порт HTTPS в настройках, и HTTPS вернётся при следующем применении.`,
     }),
   },
   porTipo: {
@@ -1497,7 +1497,7 @@ const ZH: Diccionario = {
     }),
     'avisos.https_quitado': (d) => ({
       titulo: '站点未启用 HTTPS',
-      cuerpo: `${limpio(d['fuente'], '部分站点')} 已回退到 HTTP：端口 ${limpio(d['puerto'], '443')} 被 ${limpio(d['ocupadoPor'], '其他程序')} 占用。请关闭该程序，或在设置中更改 HTTPS 端口，下次应用时 HTTPS 将恢复。`,
+      cuerpo: `未启用 HTTPS：${limpio(d['fuente'], '部分站点')}。端口 ${limpio(d['puerto'], '443')} 被 ${limpio(d['ocupadoPor'], '其他程序')} 占用。请关闭该程序，或在设置中更改 HTTPS 端口，下次应用时 HTTPS 将恢复。`,
     }),
   },
   porTipo: {
@@ -1689,7 +1689,7 @@ const JA: Diccionario = {
     }),
     'avisos.https_quitado': (d) => ({
       titulo: 'HTTPS が使えないサイト',
-      cuerpo: `${limpio(d['fuente'], '一部のサイト')} は HTTP に切り替わりました。ポート ${limpio(d['puerto'], '443')} は ${limpio(d['ocupadoPor'], '別のプログラム')} が使用しています。そのプログラムを閉じるか、設定で HTTPS のポートを変更すると、次回の適用時に HTTPS が戻ります。`,
+      cuerpo: `HTTPS なし: ${limpio(d['fuente'], '一部のサイト')}。ポート ${limpio(d['puerto'], '443')} は ${limpio(d['ocupadoPor'], '別のプログラム')} が使用しています。そのプログラムを閉じるか、設定で HTTPS のポートを変更すると、次回の適用時に HTTPS が戻ります。`,
     }),
   },
   porTipo: {
@@ -1881,7 +1881,7 @@ const KO: Diccionario = {
     }),
     'avisos.https_quitado': (d) => ({
       titulo: 'HTTPS를 사용하지 않는 사이트',
-      cuerpo: `${limpio(d['fuente'], '일부 사이트')}이(가) HTTP로 전환되었습니다. 포트 ${limpio(d['puerto'], '443')}을(를) ${limpio(d['ocupadoPor'], '다른 프로그램')}이(가) 사용 중입니다. 해당 프로그램을 닫거나 설정에서 HTTPS 포트를 변경하면 다음 적용 시 HTTPS가 복구됩니다.`,
+      cuerpo: `HTTPS 없음: ${limpio(d['fuente'], '일부 사이트')}. 포트 ${limpio(d['puerto'], '443')}을(를) ${limpio(d['ocupadoPor'], '다른 프로그램')}이(가) 사용 중입니다. 해당 프로그램을 닫거나 설정에서 HTTPS 포트를 변경하면 다음 적용 시 HTTPS가 복구됩니다.`,
     }),
   },
   porTipo: {
@@ -2073,7 +2073,7 @@ const HI: Diccionario = {
     }),
     'avisos.https_quitado': (d) => ({
       titulo: 'बिना HTTPS वाली साइटें',
-      cuerpo: `${limpio(d['fuente'], 'कुछ साइटें')} HTTP पर लौट गईं: पोर्ट ${limpio(d['puerto'], '443')} का उपयोग ${limpio(d['ocupadoPor'], 'कोई अन्य प्रोग्राम')} कर रहा है। उसे बंद करें या सेटिंग्स में HTTPS पोर्ट बदलें, तो अगली बार लागू करने पर HTTPS वापस आ जाएगा।`,
+      cuerpo: `HTTPS के बिना: ${limpio(d['fuente'], 'कुछ साइटें')}। पोर्ट ${limpio(d['puerto'], '443')} का उपयोग ${limpio(d['ocupadoPor'], 'कोई अन्य प्रोग्राम')} कर रहा है। उसे बंद करें या सेटिंग्स में HTTPS पोर्ट बदलें, तो अगली बार लागू करने पर HTTPS वापस आ जाएगा।`,
     }),
   },
   porTipo: {
@@ -2265,7 +2265,7 @@ const TR: Diccionario = {
     }),
     'avisos.https_quitado': (d) => ({
       titulo: 'HTTPS’siz siteler',
-      cuerpo: `${limpio(d['fuente'], 'Bazı siteler')} HTTP’ye döndü: ${limpio(d['puerto'], '443')} numaralı bağlantı noktası ${limpio(d['ocupadoPor'], 'başka bir program')} tarafından kullanılıyor. Onu kapatın veya Ayarlar’dan HTTPS bağlantı noktasını değiştirin; bir sonraki uygulamada HTTPS geri gelir.`,
+      cuerpo: `HTTPS yok: ${limpio(d['fuente'], 'Bazı siteler')}. ${limpio(d['puerto'], '443')} numaralı bağlantı noktası ${limpio(d['ocupadoPor'], 'başka bir program')} tarafından kullanılıyor. Onu kapatın veya Ayarlar’dan HTTPS bağlantı noktasını değiştirin; bir sonraki uygulamada HTTPS geri gelir.`,
     }),
   },
   porTipo: {
@@ -2457,7 +2457,7 @@ const ID: Diccionario = {
     }),
     'avisos.https_quitado': (d) => ({
       titulo: 'Situs tanpa HTTPS',
-      cuerpo: `${limpio(d['fuente'], 'Beberapa situs')} kembali ke HTTP: port ${limpio(d['puerto'], '443')} dipakai oleh ${limpio(d['ocupadoPor'], 'program lain')}. Tutup program tersebut atau ubah port HTTPS di Pengaturan, dan HTTPS akan kembali pada penerapan berikutnya.`,
+      cuerpo: `Tanpa HTTPS: ${limpio(d['fuente'], 'Beberapa situs')}. Port ${limpio(d['puerto'], '443')} dipakai oleh ${limpio(d['ocupadoPor'], 'program lain')}. Tutup program tersebut atau ubah port HTTPS di Pengaturan, dan HTTPS akan kembali pada penerapan berikutnya.`,
     }),
   },
   porTipo: {
@@ -2649,7 +2649,7 @@ const PL: Diccionario = {
     }),
     'avisos.https_quitado': (d) => ({
       titulo: 'Strony bez HTTPS',
-      cuerpo: `${limpio(d['fuente'], 'Niektóre strony')} wróciły do HTTP: port ${limpio(d['puerto'], '443')} jest używany przez ${limpio(d['ocupadoPor'], 'inny program')}. Zamknij go lub zmień port HTTPS w Ustawieniach, a HTTPS wróci przy następnym zastosowaniu.`,
+      cuerpo: `Bez HTTPS: ${limpio(d['fuente'], 'Niektóre strony')}. Port ${limpio(d['puerto'], '443')} jest używany przez ${limpio(d['ocupadoPor'], 'inny program')}. Należy go zamknąć lub zmienić port HTTPS w Ustawieniach, a HTTPS wróci przy następnym zastosowaniu.`,
     }),
   },
   porTipo: {
@@ -2841,7 +2841,7 @@ const NL: Diccionario = {
     }),
     'avisos.https_quitado': (d) => ({
       titulo: 'Sites zonder HTTPS',
-      cuerpo: `${limpio(d['fuente'], 'Sommige sites')} zijn teruggevallen op HTTP: poort ${limpio(d['puerto'], '443')} wordt gebruikt door ${limpio(d['ocupadoPor'], 'een ander programma')}. Sluit dat af of wijzig de HTTPS-poort bij Instellingen, en HTTPS keert terug bij de volgende toepassing.`,
+      cuerpo: `Zonder HTTPS: ${limpio(d['fuente'], 'Sommige sites')}. Poort ${limpio(d['puerto'], '443')} wordt gebruikt door ${limpio(d['ocupadoPor'], 'een ander programma')}. Sluit dat af of wijzig de HTTPS-poort bij Instellingen, en HTTPS keert terug bij de volgende toepassing.`,
     }),
   },
   porTipo: {
@@ -3033,7 +3033,7 @@ const UK: Diccionario = {
     }),
     'avisos.https_quitado': (d) => ({
       titulo: 'Сайти без HTTPS',
-      cuerpo: `${limpio(d['fuente'], 'Деякі сайти')} повернулися до HTTP: порт ${limpio(d['puerto'], '443')} використовує ${limpio(d['ocupadoPor'], 'інша програма')}. Закрийте її або змініть порт HTTPS у налаштуваннях, і HTTPS повернеться під час наступного застосування.`,
+      cuerpo: `Без HTTPS: ${limpio(d['fuente'], 'Деякі сайти')}. Порт ${limpio(d['puerto'], '443')} використовує ${limpio(d['ocupadoPor'], 'інша програма')}. Закрийте цю програму або змініть порт HTTPS у налаштуваннях, і HTTPS повернеться під час наступного застосування.`,
     }),
   },
   porTipo: {
