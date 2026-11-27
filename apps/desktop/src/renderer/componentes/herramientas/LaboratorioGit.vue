@@ -491,7 +491,8 @@ const ELECCIONES: Eleccion[] = ['mia', 'otra', 'ambas'];
 }
 .campos {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* Sin recortar el mensaje del commit en una ventana estrecha: pasa a dos filas. */
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 8px;
 }
 .campos label {

@@ -418,6 +418,9 @@ const filas = computed(() => {
 .tenue {
   opacity: 0.72;
 }
+.compartir-nota small {
+  font-size: 12px;
+}
 .compartir-nota {
   display: flex;
   flex-wrap: wrap;
