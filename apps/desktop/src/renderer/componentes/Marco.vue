@@ -343,7 +343,8 @@ onBeforeUnmount(() => {
 }
 /*
  * Título a la izquierda, buscador centrado y controles a la derecha. Las dos columnas de los lados
- * miden lo mismo (--lado), así el buscador queda en el centro de la barra y no del hueco que sobra.
+ * reparten el sitio por igual (1fr), así el buscador queda en el centro de la barra salvo que los
+ * controles necesiten más.
  */
 .cabecera {
   height: 60px;
@@ -353,9 +354,12 @@ onBeforeUnmount(() => {
   -webkit-app-region: drag;
 }
 .fila-cabecera {
-  --lado: 280px;
   display: grid;
-  grid-template-columns: minmax(var(--lado), 1fr) minmax(0, 520px) minmax(var(--lado), 1fr);
+  /*
+   * Los controles de la derecha nunca se encogen (min-content): su ancho depende del idioma y de
+   * la pastilla de estado. El título y el buscador ceden el sitio, así nada se solapa a ningún ancho.
+   */
+  grid-template-columns: minmax(0, 1fr) minmax(34px, 520px) minmax(min-content, 1fr);
   align-items: center;
   column-gap: 16px;
   height: 100%;
@@ -425,10 +429,10 @@ onBeforeUnmount(() => {
 .pastilla-texto {
   white-space: nowrap;
 }
-/* Ventana ancha: el título y los controles tienen más sitio a los lados. */
-@container (min-width: 1440px) {
-  .fila-cabecera {
-    --lado: 470px;
+/* Sitio justo: el buscador conserva el texto y cede el atajo, que no es imprescindible. */
+@container (max-width: 1240px) {
+  .buscador kbd {
+    display: none;
   }
 }
 /* Ventana estrecha: el buscador pasa a un icono y deja su sitio al título y a los controles. */
