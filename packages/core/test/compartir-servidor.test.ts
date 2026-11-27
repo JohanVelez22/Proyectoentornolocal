@@ -816,3 +816,73 @@ function medio(ext: string, n: number): Buffer {
   }
   return b;
 }
+
+describe('tercera revisión: sesiones, identidades, AppData normalizado y perfiles', () => {
+  it.each([
+    'webappsstore.sqlite',
+    'formhistory.sqlite',
+    'identity',
+    'identity.bak',
+    'identity.old',
+  ])('%s da 404', async (n) => {
+    writeFileSync(path.join(raiz, n), 'falso');
+    const s = await iniciar();
+    expect((await pedir(s.puerto, `/${TOKEN}/${n}`)).codigo).toBe(404);
+  });
+
+  it('identity.pub (la clave pública) sí se sirve', async () => {
+    writeFileSync(path.join(raiz, 'identity.pub'), 'ssh-ed25519 AAAAfalsa');
+    const s = await iniciar();
+    expect((await pedir(s.puerto, `/${TOKEN}/identity.pub`)).codigo).toBe(200);
+  });
+
+  it.each([
+    'Local Storage',
+    'Session Storage',
+    'IndexedDB',
+    'sessions',
+    'ImapMail',
+    'App Data',
+    'appdata.old',
+    'AppData.bak',
+  ])('la carpeta %s no se abre ni se lista, a ningún nivel', async (n) => {
+    mkdirSync(path.join(raiz, 'sub', n), { recursive: true });
+    writeFileSync(path.join(raiz, 'sub', n, 'dentro.txt'), 'falso');
+    const s = await iniciar();
+    expect(
+      (await pedir(s.puerto, `/${TOKEN}/sub/${encodeURIComponent(n)}/dentro.txt`)).codigo,
+    ).toBe(404);
+    expect((await pedir(s.puerto, `/${TOKEN}/sub/`)).cuerpo.toString()).not.toContain(`>${n}/`);
+  });
+
+  it.each(['Thunderbird', 'Waterfox', 'LibreWolf', 'Mozilla', 'Firefox'])(
+    'Profiles bajo %s no se abre',
+    async (padre) => {
+      mkdirSync(path.join(raiz, padre, 'Profiles', 'abcd'), { recursive: true });
+      writeFileSync(path.join(raiz, padre, 'Profiles', 'abcd', 'notas.txt'), 'falso');
+      const s = await iniciar();
+      expect((await pedir(s.puerto, `/${TOKEN}/${padre}/Profiles/abcd/notas.txt`)).codigo).toBe(
+        404,
+      );
+    },
+  );
+
+  it('un prefs.js suelto en un proyecto no marca la carpeta; con times.json o compatibility.ini, sí', async () => {
+    mkdirSync(path.join(raiz, 'proyecto'));
+    writeFileSync(path.join(raiz, 'proyecto', 'prefs.js'), 'module.exports = {}');
+    writeFileSync(path.join(raiz, 'proyecto', 'index.txt'), 'hola');
+    for (const extra of ['times.json', 'compatibility.ini']) {
+      const d = path.join(raiz, `perfil-${extra}`);
+      mkdirSync(d);
+      writeFileSync(path.join(d, 'prefs.js'), 'user_pref("a", 1);');
+      writeFileSync(path.join(d, extra), 'falso');
+      writeFileSync(path.join(d, 'otro.txt'), 'falso');
+    }
+    const s = await iniciar();
+    expect((await pedir(s.puerto, `/${TOKEN}/proyecto/index.txt`)).codigo).toBe(200);
+    expect((await pedir(s.puerto, `/${TOKEN}/proyecto/prefs.js`)).codigo).toBe(200);
+    for (const extra of ['times.json', 'compatibility.ini']) {
+      expect((await pedir(s.puerto, `/${TOKEN}/perfil-${extra}/otro.txt`)).codigo, extra).toBe(404);
+    }
+  });
+});

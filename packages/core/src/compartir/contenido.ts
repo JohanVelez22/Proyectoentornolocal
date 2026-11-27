@@ -46,11 +46,20 @@ export const CARPETAS_OCULTAS = [
   '.terraform.d',
   'user data',
   'sessionstore-backups',
+  'local storage',
+  'session storage',
+  'indexeddb',
+  'sessions',
+  'imapmail',
 ] as const;
+/** `AppData`, `App Data` o `appdata.old`, `AppData.bak`…: una copia de los datos de programas. */
+export const esAppData = (nombre: string): boolean => /^app ?data(?:\..*)?$/i.test(nombre);
+
 const OCULTAS = new Set<string>([...CARPETAS_PROHIBIDAS, ...CARPETAS_OCULTAS]);
 
 /** ¿Es una carpeta que nunca se sirve dentro de lo compartido ni se elige para compartir? */
-export const esCarpetaProhibida = (nombre: string): boolean => OCULTAS.has(nombre.toLowerCase());
+export const esCarpetaProhibida = (nombre: string): boolean =>
+  OCULTAS.has(nombre.toLowerCase()) || esAppData(nombre);
 
 /** ¿Es una carpeta de claves (la lista corta): compartir una carpeta que la tiene en su raíz se rechaza? */
 export const esCarpetaDeClaves = (nombre: string): boolean => PROHIBIDAS.has(nombre.toLowerCase());
@@ -61,7 +70,7 @@ export const esCarpetaDeClaves = (nombre: string): boolean => PROHIBIDAS.has(nom
  * sin cambiar lo que esa regla decide en el editor, Buscar o el Diff.
  */
 const NOMBRE_SENSIBLE =
-  /^(?:cookies(?:[.-].*)?|key[34]\.db|logins.*\.json|signons\.sqlite|login data(?: for account)?(?:-journal)?|web data(?:-journal)?|sitemanager\.xml|recentservers\.xml|filezilla\.xml|winscp\.ini|credentials\.xml|state\.vscdb(?:\.backup)?|sessionstore.*|.*\.(?:jsonlz4|mozlz4|baklz4)|\.pypirc|\.npmrc|\.netrc|_netrc|\.pgpass|\.git-credentials|\.htpasswd|id_(?:rsa|dsa|ecdsa|ed25519)(?:_[\w-]+)?|.*\.(?:kdbx|pfx|p12|ppk|jks|keystore|pem|key))$/i;
+  /^(?:cookies(?:[.-].*)?|key[34]\.db|logins.*\.json|signons\.sqlite|login data(?: for account)?(?:-journal)?|web data(?:-journal)?|sitemanager\.xml|recentservers\.xml|filezilla\.xml|winscp\.ini|webappsstore\.sqlite|formhistory\.sqlite|identity(?:\.(?!pub$).+)?|credentials\.xml|state\.vscdb(?:\.backup)?|sessionstore.*|.*\.(?:jsonlz4|mozlz4|baklz4)|\.pypirc|\.npmrc|\.netrc|_netrc|\.pgpass|\.git-credentials|\.htpasswd|id_(?:rsa|dsa|ecdsa|ed25519)(?:_[\w-]+)?|.*\.(?:kdbx|pfx|p12|ppk|jks|keystore|pem|key))$/i;
 
 export const nombreSensibleCompartir = (nombre: string): boolean => NOMBRE_SENSIBLE.test(nombre);
 
@@ -164,13 +173,18 @@ export function tramosDePerfilNavegador(tramos: readonly string[]): boolean {
   return tramos.some(
     (t, i) =>
       t.toLowerCase() === 'profiles' &&
-      ['firefox', 'mozilla'].includes((tramos[i - 1] ?? '').toLowerCase()),
+      ['firefox', 'mozilla', 'thunderbird', 'waterfox', 'librewolf'].includes(
+        (tramos[i - 1] ?? '').toLowerCase(),
+      ),
   );
 }
 
 /** Archivos que delatan que una carpeta es un perfil de navegador (los de Firefox o los de Chromium). */
 export const MARCAS_PERFIL_NAVEGADOR: readonly (readonly string[])[] = [
-  ['prefs.js'],
+  // Un `prefs.js` solo, en un proyecto cualquiera, no es un perfil: va con algo propio de Firefox.
+  ['prefs.js', 'times.json'],
+  ['prefs.js', 'compatibility.ini'],
+  ['prefs.js', 'places.sqlite'],
   ['places.sqlite'],
   ['Login Data'],
   ['Preferences', 'Network'],

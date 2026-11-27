@@ -530,7 +530,9 @@ describe('datos de los programas del usuario (AppData y carpetas de configuraci�
 
   it('un archivo de texto de más de 8 MB no se comparte; un paquete sí', async () => {
     writeFileSync(path.join(compartido, 'volcado.txt'), Buffer.alloc(8 * 1024 * 1024 + 10, 65));
-    writeFileSync(path.join(compartido, 'copia.zip'), Buffer.alloc(8 * 1024 * 1024 + 10, 65));
+    const zip = Buffer.alloc(8 * 1024 * 1024 + 10, 65);
+    Buffer.from([0x50, 0x4b, 0x03, 0x04]).copy(zip, 0);
+    writeFileSync(path.join(compartido, 'copia.zip'), zip);
     expect(await codigoDe(iniciar(path.join(compartido, 'volcado.txt')))).toBe(
       'compartir.archivo_grande',
     );
@@ -666,5 +668,44 @@ describe('copias de AppData y de perfiles de navegador fuera de la carpeta del u
     const d = path.join(base, 'Profiles-de-clientes');
     w(path.join(d, 'a.txt'));
     expect(await codigoDe(iniciar(d))).toBeNull();
+  });
+});
+
+describe('tercera revisión: validar coincide con el servidor', () => {
+  const G = 8 * 1024 * 1024 + 1024;
+  it('un dump.zip de más de 8 MB que en realidad es texto se rechaza', async () => {
+    writeFileSync(path.join(compartido, 'dump.zip'), Buffer.alloc(G, 65));
+    expect(await codigoDe(iniciar(path.join(compartido, 'dump.zip')))).toBe(
+      'compartir.archivo_grande',
+    );
+  });
+  it('con la firma de un zip de verdad, se acepta', async () => {
+    const b = Buffer.alloc(G, 65);
+    Buffer.from([0x50, 0x4b, 0x03, 0x04]).copy(b, 0);
+    writeFileSync(path.join(compartido, 'real.zip'), b);
+    expect(await codigoDe(iniciar(path.join(compartido, 'real.zip')))).toBeNull();
+  });
+  it('AppData con espacio o sufijo y Profiles de Thunderbird se rechazan aunque estén fuera del usuario', async () => {
+    for (const tramos of [
+      ['copia', 'App Data', 'x'],
+      ['copia', 'appdata.old', 'x'],
+      ['copia', 'Thunderbird', 'Profiles', 'abcd'],
+    ]) {
+      const d = path.join(base, ...tramos);
+      mkdirSync(d, { recursive: true });
+      expect(await codigoDe(iniciar(d)), tramos.join('/')).toBe('compartir.carpeta_perfil');
+    }
+  });
+  it('un prefs.js suelto no hace de la carpeta un perfil; con times.json, sí', async () => {
+    const p = path.join(base, 'proyecto-web');
+    mkdirSync(p, { recursive: true });
+    writeFileSync(path.join(p, 'prefs.js'), 'module.exports = {}');
+    expect(await codigoDe(iniciar(p))).toBeNull();
+    await c.detener();
+    const f = path.join(base, 'perfil-firefox');
+    mkdirSync(f, { recursive: true });
+    writeFileSync(path.join(f, 'prefs.js'), 'user_pref("a", 1);');
+    writeFileSync(path.join(f, 'times.json'), '{}');
+    expect(await codigoDe(iniciar(f))).toBe('compartir.carpeta_perfil');
   });
 });

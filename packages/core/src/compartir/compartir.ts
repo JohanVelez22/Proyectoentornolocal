@@ -11,7 +11,9 @@ import { rutaComparable, rutaDentroDe } from '../plataforma/sistema';
 import {
   CARPETAS_PROHIBIDAS,
   detectorCompartir,
+  esAppData,
   esBinarioGrande,
+  firmaCoincide,
   esCarpetaDeClaves,
   esCarpetaProhibida,
   tramosDePerfilNavegador,
@@ -448,7 +450,7 @@ export class Compartir {
       if (propios.some((t) => esCarpetaProhibida(t))) throw perfil();
       // Una copia de AppData fuera de la carpeta del usuario (un respaldo, Windows.old, otra
       // unidad) también: `AppData` en CUALQUIER tramo, y los perfiles de Firefox por su sitio.
-      if (tramos.some((t) => t.toLowerCase() === 'appdata') || tramosDePerfilNavegador(tramos)) {
+      if (tramos.some(esAppData) || tramosDePerfilNavegador(tramos)) {
         throw perfil();
       }
     }
@@ -470,12 +472,6 @@ export class Compartir {
         'Ese archivo parece guardar un secreto o datos reales: no se comparte.',
       );
     if (rutas.some((r) => detector.porRuta(r, info.nlink))) throw sensible();
-    if (info.size > MAX_ANALISIS_BYTES && !esBinarioGrande(path.basename(ruta))) {
-      throw new ErrorWolf(
-        'compartir.archivo_grande',
-        'Ese archivo es demasiado grande para revisarlo y no es un medio ni un paquete: no se comparte.',
-      );
-    }
     const fh = await open(real, 'r').catch(() => null);
     if (!fh) throw invalida();
     try {
@@ -483,6 +479,18 @@ export class Compartir {
       const b = Buffer.alloc(n);
       const { bytesRead } = n > 0 ? await fh.read(b, 0, n, 0) : { bytesRead: 0 };
       if (detector.porContenido(b.subarray(0, bytesRead))) throw sensible();
+      // Igual que el servidor: lo que pasa de 8 MB solo se comparte si es un medio o un paquete DE
+      // VERDAD (extensión de la lista blanca y firma del archivo, con el nombre real).
+      const nombre = path.basename(real);
+      if (
+        info.size > MAX_ANALISIS_BYTES &&
+        !(esBinarioGrande(nombre) && firmaCoincide(nombre, b.subarray(0, Math.min(bytesRead, 64))))
+      ) {
+        throw new ErrorWolf(
+          'compartir.archivo_grande',
+          'Ese archivo es demasiado grande para revisarlo y no es un medio ni un paquete: no se comparte.',
+        );
+      }
     } finally {
       await fh.close().catch(() => undefined);
     }

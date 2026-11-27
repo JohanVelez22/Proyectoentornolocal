@@ -9,3 +9,4 @@ coverage/
 .vite/
 *.tsbuildinfo
 .superpowers/
+packages/core/.tmp-d52-*/
