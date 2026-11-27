@@ -114,7 +114,10 @@ import type {
   FormatoRespaldo,
   IdCaptador,
   IdServicioDatos,
+  CompatibilidadModelo,
   InfoDescargaOllama,
+  InfoEquipo,
+  SugerenciaEquipo,
   ModeloOllama,
   MotorBd,
   OpcionesCrearBase,
@@ -366,7 +369,10 @@ export type {
   FormatoRespaldo,
   IdCaptador,
   IdServicioDatos,
+  CompatibilidadModelo,
   InfoDescargaOllama,
+  InfoEquipo,
+  SugerenciaEquipo,
   ModeloOllama,
   MotorBd,
   OpcionesCrearBase,
@@ -1034,6 +1040,14 @@ export interface ApiEntorno {
     espacioUsado(): Promise<number>;
     /** Tamaño del modelo (registro de Ollama) y espacio libre, antes de descargar; null = no se pudo saber. */
     infoDescarga(nombre: string): Promise<InfoDescargaOllama>;
+    /**
+     * «¿Qué modelo cabe en su equipo?»: clasifica cada modelo (recomendado, puede ir lento, no cabe)
+     * y sugiere un tamaño. Solo avisa; no bloquea nada. Hasta 16 nombres.
+     */
+    compatibilidad(nombres: string[]): Promise<{
+      sugerencia: SugerenciaEquipo;
+      modelos: CompatibilidadModelo[];
+    }>;
     bloqueEnv(): Promise<string>;
     sugeridos(): Promise<string[]>;
     /* ── IA en la nube (la clave nunca vuelve a la interfaz) ── */
@@ -1484,6 +1498,11 @@ export interface ApiEntorno {
     emitirCertificado(dominios: string[], destino: string): Promise<CertificadoGuardado>;
     /** PATH, versiones de las herramientas y variables (los valores secretos llegan enmascarados). */
     entorno(): Promise<EntornoSistema>;
+    /**
+     * Datos del equipo (SO, CPU, RAM, GPU, discos, placa) sin números de serie ni identificadores.
+     * Lo que no se pueda leer llega como `null`; nunca falla. `forzar` ignora la caché.
+     */
+    equipo(forzar?: boolean): Promise<InfoEquipo>;
     /**
      * Imagen elegida con `sistema.elegirArchivo`: bytes más dimensiones y tipo leídos de la
      * cabecera. Rechaza lo que pesa más de 30 MB o supera 12000 px por lado (bombas de
@@ -1992,6 +2011,7 @@ export const RUTAS_IPC = [
   'ia.probar',
   'ia.espacioUsado',
   'ia.infoDescarga',
+  'ia.compatibilidad',
   'ia.bloqueEnv',
   'ia.sugeridos',
   'ia.proveedores',
@@ -2142,6 +2162,7 @@ export const RUTAS_IPC = [
   'herramientas.limpiarBom',
   'herramientas.emitirCertificado',
   'herramientas.entorno',
+  'herramientas.equipo',
   'herramientas.leerImagen',
   'herramientas.guardarImagen',
   'herramientas.comprimirZip',

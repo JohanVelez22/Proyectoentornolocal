@@ -447,6 +447,14 @@ export function nombreModelo(v: unknown): string {
   return v;
 }
 
+/** Hasta 16 nombres de modelo de Ollama (la comprobación de «qué cabe en su equipo»). */
+export function nombresModelo(v: unknown): string[] {
+  if (!Array.isArray(v) || v.length === 0 || v.length > 16) {
+    throw new Error('Argumento no válido: modelos');
+  }
+  return v.map(nombreModelo);
+}
+
 export function idServicioDatos(v: unknown): IdServicioDatos {
   if (typeof v !== 'string' || !(IDS_SERVICIO_DATOS as readonly string[]).includes(v)) {
     throw new Error('Argumento no válido: servicio');

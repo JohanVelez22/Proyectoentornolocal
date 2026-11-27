@@ -137,6 +137,7 @@ import {
   motorBd,
   nombreBase,
   nombreModelo,
+  nombresModelo,
   objetoPlano,
   modoCaptura,
   puertoHttps,
@@ -1272,6 +1273,7 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'ia.modelos': (n) => n.modelosIa(),
   'ia.descargar': (n, _s, nombre) => n.descargarModelo(nombreModelo(nombre)),
   'ia.infoDescarga': (n, _s, nombre) => n.infoDescargaModelo(nombreModelo(nombre)),
+  'ia.compatibilidad': (n, _s, nombres) => n.compatibilidadModelos(nombresModelo(nombres)),
   'ia.cancelar': (n, _s, nombre) => n.cancelarDescargaModelo(nombreModelo(nombre)),
   'ia.borrar': (n, _s, nombre) => n.borrarModelo(nombreModelo(nombre)),
   'ia.probar': (n, _s, nombre, prompt) =>
@@ -1933,6 +1935,8 @@ const TABLA: Record<RutaIpc, Manejador> = {
   },
   // Sin argumentos; el núcleo ya enmascara los valores con nombre de secreto.
   'herramientas.entorno': (n) => n.entornoSistema(),
+  'herramientas.equipo': (n, _s, forzar) =>
+    n.infoEquipo(forzar === undefined ? false : booleano(forzar, 'forzar')),
   // Imágenes, ZIP y PDF (D33): toda ruta sale de un diálogo (lectura = abrir; escritura = guardar)
   // y el núcleo nunca pisa un archivo existente. Los bytes de la imagen tienen tope.
   'herramientas.leerImagen': (n, s, ruta) => n.leerImagen(s.elegidas.exigir(ruta, 'archivo')),

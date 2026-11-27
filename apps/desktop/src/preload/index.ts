@@ -227,6 +227,7 @@ const api: ApiEntorno = {
     probar: (nombre, texto) => invocar('ia.probar', nombre, texto),
     espacioUsado: () => invocar('ia.espacioUsado'),
     infoDescarga: (nombre) => invocar('ia.infoDescarga', nombre),
+    compatibilidad: (nombres) => invocar('ia.compatibilidad', nombres),
     bloqueEnv: () => invocar('ia.bloqueEnv'),
     sugeridos: () => invocar('ia.sugeridos'),
     proveedores: () => invocar('ia.proveedores'),
@@ -501,6 +502,7 @@ const api: ApiEntorno = {
     emitirCertificado: (dominios, destino) =>
       invocar('herramientas.emitirCertificado', dominios, destino),
     entorno: () => invocar('herramientas.entorno'),
+    equipo: (forzar) => invocar('herramientas.equipo', forzar),
     leerImagen: (ruta) => invocar('herramientas.leerImagen', ruta),
     guardarImagen: (destino, datos) => invocar('herramientas.guardarImagen', destino, datos),
     comprimirZip: (origenes, destino) => invocar('herramientas.comprimirZip', origenes, destino),
