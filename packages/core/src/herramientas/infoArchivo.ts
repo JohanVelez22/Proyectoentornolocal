@@ -58,7 +58,8 @@ export function validarRutaInfo(ruta: unknown): string {
 
 /** Archivos con credenciales o claves: de ellos solo se muestran los metadatos. */
 export function esArchivoSensible(ruta: string): boolean {
-  const nombre = path.basename(ruta);
+  // Nombre tras la última barra, sea `\` o `/`: `path.basename` del sistema no separa por `\` fuera de Windows.
+  const nombre = ruta.split(/[\\/]/).pop() ?? ruta;
   return (
     esNombreArchivoEnv(nombre) || NOMBRE_SECRETO.test(nombre) || nombreSensibleCompartir(nombre)
   );
