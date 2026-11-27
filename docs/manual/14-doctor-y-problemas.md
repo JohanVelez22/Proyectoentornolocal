@@ -23,12 +23,25 @@ WolfCore Dev incluye tres pantallas en el grupo **Utilidades** para diagnosticar
 
 ### 2. Revisar el cortafuegos y quitar reglas peligrosas
 
-En la revisión **Cortafuegos**, Doctor lee las reglas de entrada de Windows y le avisa cuando alguna deja programas de WolfCore Dev (nginx, PHP o bases de datos) abiertos a la red:
+La revisión **Cortafuegos** de Doctor lee las reglas de entrada del Firewall de Windows. Una regla de entrada que permite conexiones a un programa de WolfCore Dev (nginx, PHP o una base de datos) en los perfiles de red indicados deja ese programa **abierto a toda la red**, no solo a su equipo. Doctor separa lo que ve en cuatro grupos, que aparecen como **Lo que se vio**:
 
-1. Pulse **Reparar** en el hallazgo de cortafuegos. Se abre **Confirmar la reparación** con la lista **Reglas afectadas: desmarque las que no quiera tocar** y el botón **Aplicar**.
-2. La reparación **Quitar esas reglas de entrada del cortafuegos** elimina las reglas peligrosas una por una y por su nombre exacto. Antes se guarda una copia protegida en el registro de Windows (`HKLM\SOFTWARE\WolfCoreDev\Cortafuegos`, que solo puede modificar un administrador) para poder recrearlas, y Windows pide permiso de administrador. Nada cambia hasta que confirme.
-3. Las reglas de **otros programas** (FlyEnv, Laragon, XAMPP u otros) y las **acotadas a la red local** solo se muestran: **nunca se quitan desde aquí**.
-4. Si antes quitó reglas, el hallazgo **Reglas quitadas que se pueden restaurar** permite volver a crearlas con los mismos programa, perfil, protocolo, puertos y direcciones a partir de la copia protegida.
+- **WolfCore Dev:** reglas de programas de WolfCore Dev abiertas a la red, junto con los **restos de pruebas de WolfCore**, si los hay. Son las únicas que Doctor puede quitar.
+- **Reglas acotadas a la red local:** reglas de programas de WolfCore Dev limitadas al perfil privado, a la subred local y a puertos concretos (como las que la propia aplicación recomienda al compartir un sitio en la red local). Solo se muestran: no se quitan desde aquí.
+- **Reglas de otros programas:** reglas de FlyEnv, Laragon, XAMPP u otros con nginx, PHP o bases de datos. No son de WolfCore Dev: solo se muestran, **nunca se quitan desde aquí**.
+- **Reglas quitadas que se pueden restaurar:** las que Doctor quitó antes y de las que guardó una copia.
+
+Para quitar las reglas de WolfCore Dev abiertas a la red:
+
+1. Pulse **Reparar** en el hallazgo de cortafuegos. Se abre **Confirmar la reparación** con la lista **Reglas afectadas: desmarque las que no quiera tocar** (debe dejar marcada al menos una) y el botón **Aplicar**.
+2. La reparación **Quitar esas reglas de entrada del cortafuegos** elimina las reglas una por una y por su nombre exacto. Antes de tocar cada regla comprueba que sigue siendo la misma que se mostró; si cambió, la salta. Antes de quitarlas se guarda una copia protegida en el registro de Windows (`HKLM\SOFTWARE\WolfCoreDev\Cortafuegos`, que solo puede modificar un administrador) para poder recrearlas, y Windows pide permiso de administrador. Nada cambia hasta que confirme.
+3. Si antes quitó reglas, el hallazgo **Reglas quitadas que se pueden restaurar** permite volver a crearlas, las que usted marque, con los mismos programa, perfil, protocolo, puertos y direcciones, a partir de la copia protegida. Tenga presente que esos programas volverán a poder recibir conexiones de la red.
+
+Resultados y avisos posibles de esta revisión:
+
+- **No se pudo comprobar el cortafuegos de Windows (puede hacer falta administrador):** Doctor no pudo leer las reglas; no cambia nada.
+- **Se quitaron algunas reglas, pero otras no:** cambiaron desde que se mostró la lista, no eran de WolfCore Dev o Windows no dejó quitarlas. Vuelva a revisar.
+- **No se cambió ninguna regla:** ya no coinciden con lo que se mostró o no se pudieron cambiar.
+- **La copia protegida de las reglas no es de fiar:** sus permisos o contenido no son los esperados; en ese caso no se crea ni se cambia ninguna regla.
 
 ### 3. Configurar Confianza de la CA en Node, Python y Firefox
 
