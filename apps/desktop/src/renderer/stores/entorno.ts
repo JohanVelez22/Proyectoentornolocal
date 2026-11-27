@@ -29,7 +29,12 @@ export async function iniciarEntorno(): Promise<void> {
   proyectos.iniciar();
   void proyectos.cargarSugerencias().catch(() => undefined);
   try {
-    const general = await api().estadoGeneral();
+    // Qué hay instalado se sabe antes de pintar: así ninguna pantalla muestra Nginx un instante
+    // y lo quita después (misma fuente para Servicios, Inicio y la pastilla).
+    const [general] = await Promise.all([
+      api().estadoGeneral(),
+      servicios.cargarInstalados('nginx').catch(() => undefined),
+    ]);
     servicios.hidratar(general.servicios);
     sitios.hidratar(general.sitios);
     tuneles.hidratar(general.tuneles);

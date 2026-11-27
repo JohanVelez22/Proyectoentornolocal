@@ -76,7 +76,9 @@ function apiFalsa(general: Partial<EstadoGeneral> = {}) {
     instalador: {
       listarVersiones: vi.fn(async () => []),
       instalar: vi.fn(),
-      instalados: vi.fn(async (s: string) => (s === 'php' ? ['8.3', '8.4'] : [])),
+      instalados: vi.fn(async (s: string) =>
+        s === 'php' ? ['8.3', '8.4'] : s === 'nginx' ? ['1.28.0'] : [],
+      ),
     },
     on: vi.fn((nombre: string, fn: Oyente) => {
       const set = oyentes.get(nombre) ?? new Set<Oyente>();

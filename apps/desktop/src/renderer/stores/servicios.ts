@@ -137,6 +137,8 @@ export const useServicios = defineStore('servicios', () => {
         !(s.id === 'nginx' && nginxSinInstalar.value && s.estado === 'apagado'),
     ),
   );
+  /** Ya se sabe si Nginx está instalado (hasta entonces Servicios enseña esqueletos). */
+  const instaladosListos = computed(() => instalados.value['nginx'] !== undefined);
   /** Motores que corren fuera de WolfCore Dev (se detectan solos; van en su propia franja). */
   const externos = computed(() => visibles.value.filter((s) => s.estado === 'externo'));
   /**
@@ -270,6 +272,7 @@ export const useServicios = defineStore('servicios', () => {
     lista,
     visibles,
     externos,
+    instaladosListos,
     porArrancar,
     resumen,
     nadaInstalado,
