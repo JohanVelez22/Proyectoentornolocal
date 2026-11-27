@@ -539,12 +539,39 @@ async function planificar(
 
   // Versiones: del catálogo de este equipo (nunca la huella que dice el perfil).
   const versiones: VistaPreviaPerfil['versiones'] = [];
+  const consultadas: {
+    v: (typeof m.versiones)[number];
+    instalada: boolean;
+    disp: Awaited<ReturnType<typeof d.buscarVersion>>;
+  }[] = [];
   for (const v of m.versiones) {
-    const instalada = await d.versionInstalada(v.servicio, v.version).catch(() => false);
-    const disp = await d.buscarVersion(v.servicio, v.version).catch(() => null);
+    consultadas.push({
+      v,
+      instalada: await d.versionInstalada(v.servicio, v.version).catch(() => false),
+      disp: await d.buscarVersion(v.servicio, v.version).catch(() => null),
+    });
+  }
+  // Ramas que el perfil ya cubre con una versión del catálogo, y ramas que ya tienen sustituta.
+  const claveRama = (servicio: string, version: string): string | null => {
+    const r = servicio === 'php' ? ramaDePhp(version) : null;
+    return r === null ? null : `${servicio}@${r}`;
+  };
+  const cubiertas = new Set<string>();
+  for (const { v, disp } of consultadas) {
+    const k = claveRama(v.servicio, v.version);
+    if (k !== null && disp !== null) cubiertas.add(k);
+  }
+  const conSustituta = new Set<string>();
+  for (const { v, instalada, disp } of consultadas) {
     // PHP que ya no está en el catálogo: la última de su misma rama, solo si la rama no está
-    // instalada (una instalación existente nunca se cambia).
-    const sust = !instalada && disp === null ? await ultimaDeRama(d, v.servicio, v.version) : null;
+    // instalada (una instalación existente nunca se cambia), el perfil no trae ya otra versión de
+    // esa rama que esté en el catálogo y no hay otra sustituta de la misma rama.
+    const k = claveRama(v.servicio, v.version);
+    const sust =
+      !instalada && disp === null && k !== null && !cubiertas.has(k) && !conSustituta.has(k)
+        ? await ultimaDeRama(d, v.servicio, v.version)
+        : null;
+    if (sust && k !== null) conSustituta.add(k);
     versiones.push({
       servicio: v.servicio,
       version: v.version,

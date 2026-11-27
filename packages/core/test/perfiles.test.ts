@@ -1753,6 +1753,40 @@ describe('importarPerfil en otro equipo: se reasigna, se marca y se sigue', () =
       expect(r.versiones[0]).toMatchObject({ estado: 'pendiente', motivo: 'no_disponible' });
     });
 
+    it('no ofrece sustituta si el perfil ya trae otra versión de esa rama que sí está en el catálogo', async () => {
+      const archivo = await perfilManual(
+        {},
+        {
+          versiones: [
+            { servicio: 'php', version: '8.3.36-1', huella: null },
+            { servicio: 'php', version: '8.3.38-1', huella: null },
+          ],
+        },
+      );
+      const d = deps(destino, catalogoPhp());
+      const vista = await new Perfiles(d).vistaPrevia(archivo);
+      expect(vista.versiones.find((v) => v.version === '8.3.36-1')?.sustituta).toBeUndefined();
+      await importar(archivo, d);
+      expect(d.reg.instaladas).toEqual(['php@8.3.38-1']);
+    });
+
+    it('con varias fuera del catálogo de la misma rama, solo una lleva sustituta', async () => {
+      const archivo = await perfilManual(
+        {},
+        {
+          versiones: [
+            { servicio: 'php', version: '8.3.36-1', huella: null },
+            { servicio: 'php', version: '8.3.35-1', huella: null },
+          ],
+        },
+      );
+      const d = deps(destino, catalogoPhp());
+      const vista = await new Perfiles(d).vistaPrevia(archivo);
+      expect(vista.versiones.map((v) => v.sustituta)).toEqual(['8.3.40-1', undefined]);
+      await importar(archivo, d);
+      expect(d.reg.instaladas).toEqual(['php@8.3.40-1']);
+    });
+
     it('no salta de rama ni sustituye si la última no tiene huella fuerte', async () => {
       const archivo = await perfilPhp('8.2.1-1');
       const d = deps(destino, catalogoPhp());
