@@ -339,6 +339,11 @@ export interface CapacidadesPlataforma {
   /** ¿Se ejecuta con permisos de administrador? Solo consulta; nunca pide elevación. */
   esAdministrador(): Promise<boolean>;
   /**
+   * Unidades locales que se pueden analizar en «Uso del disco» (D51): discos fijos y extraíbles,
+   * con su etiqueta y su espacio. Solo consulta; si no se puede saber, una lista vacía.
+   */
+  unidadesLocales(): Promise<UnidadDisco[]>;
+  /**
    * Manda un archivo a la papelera del sistema. La papelera la pone la app (en Electron,
    * `shell.trashItem` desde main) con `registrarPapelera`. Devuelve false si no hay papelera o
    * no se pudo: en ese caso quien llama NO borra el archivo.
@@ -433,6 +438,15 @@ export interface EstadoCaptura {
 export interface InstalacionAjena {
   programa: 'laragon' | 'xampp' | 'herd';
   raiz: string;
+}
+
+/** Una unidad local que «Uso del disco» puede analizar (en Windows, `C:\`). */
+export interface UnidadDisco {
+  ruta: string;
+  etiqueta: string;
+  tipo: 'fijo' | 'extraible';
+  total: number | null;
+  libre: number | null;
 }
 
 export interface Plataforma extends Partial<CapacidadesPlataforma> {

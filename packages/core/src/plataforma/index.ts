@@ -31,6 +31,7 @@ export type {
   PerfilFirefoxSistema,
   Plataforma,
   PlataformaCompleta,
+  UnidadDisco,
   RangoPuertos,
   ResultadoEscritura,
   MuestraPlataforma,
@@ -118,6 +119,7 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'rutasLimpieza',
   'navegadoresAbiertos',
   'esAdministrador',
+  'unidadesLocales',
   'aPapelera',
   'registrarPapelera',
 ];

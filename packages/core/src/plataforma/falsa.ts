@@ -37,6 +37,7 @@ import type {
   ResultadoEscritura,
   ServicioSistema,
   TerminalDisponible,
+  UnidadDisco,
 } from './tipos';
 
 export interface OpcionesPlataformaFalsa {
@@ -498,6 +499,13 @@ export class PlataformaFalsa implements PlataformaCompleta {
 
   async esAdministrador(): Promise<boolean> {
     return this.administrador;
+  }
+
+  /** Lo que devuelve `unidadesLocales` (la prueba pone aquí sus unidades). */
+  unidades: UnidadDisco[] = [];
+
+  async unidadesLocales(): Promise<UnidadDisco[]> {
+    return this.unidades.map((u) => ({ ...u }));
   }
 
   async aPapelera(ruta: string): Promise<boolean> {

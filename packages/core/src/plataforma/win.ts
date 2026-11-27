@@ -69,6 +69,7 @@ import {
   rutaSistema32,
 } from './procesosWin';
 import { ProcesosUsuarioWindows } from './procesosUsuarioWin';
+import { interpretarUnidades, SCRIPT_UNIDADES } from './unidadesWin';
 import {
   type AnclasLimpieza,
   interpretarAnclas,
@@ -119,6 +120,7 @@ import type {
   RangoPuertos,
   ResultadoEscritura,
   ServicioSistema,
+  UnidadDisco,
   UsoProceso,
 } from './tipos';
 
@@ -1032,6 +1034,19 @@ export class PlataformaWindows implements PlataformaCompleta {
   async navegadoresAbiertos(): Promise<NavegadorLimpieza[]> {
     const procesos = await this.procesosUsuario().listar();
     return navegadoresDeProcesos(procesos.map((p) => p.nombre));
+  }
+
+  async unidadesLocales(): Promise<UnidadDisco[]> {
+    try {
+      const r = await this.ejecutar(
+        rutaPowerShell(this.entorno),
+        codificarPowerShell(SCRIPT_UNIDADES),
+        { timeoutMs: 20_000 },
+      );
+      return r.codigo === 0 ? interpretarUnidades(r.stdout) : [];
+    } catch {
+      return [];
+    }
   }
 
   async esAdministrador(): Promise<boolean> {

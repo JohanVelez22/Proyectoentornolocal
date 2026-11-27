@@ -20,6 +20,7 @@ export const RESPALDO_MEMORIA_NEUTRO: Pick<
   | 'rutasLimpieza'
   | 'navegadoresAbiertos'
   | 'esAdministrador'
+  | 'unidadesLocales'
   | 'aPapelera'
   | 'registrarPapelera'
 > = {
@@ -40,6 +41,7 @@ export const RESPALDO_MEMORIA_NEUTRO: Pick<
   rutasLimpieza: async () => [],
   navegadoresAbiertos: async () => [],
   esAdministrador: async () => false,
+  unidadesLocales: async () => [],
   aPapelera: async () => false,
   registrarPapelera: () => undefined,
 };
