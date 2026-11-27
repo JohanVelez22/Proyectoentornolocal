@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   SCRIPT_EQUIPO,
-  SCRIPT_NVIDIA_SMI,
   combinarGpus,
   esGpuIntegrada,
   interpretarEquipo,
   interpretarNvidiaSmi,
+  rutasNvidiaSmi,
+  scriptNvidiaSmi,
 } from '../src/plataforma/equipoWin';
 import { equipoDesconocido } from '../src/equipo/tipos';
 
@@ -271,12 +272,28 @@ describe('interpretarNvidiaSmi', () => {
 
 describe('scripts', () => {
   it('solo consultan: sin escritura ni elevación, y sin leer números de serie', () => {
-    for (const s of [SCRIPT_EQUIPO, SCRIPT_NVIDIA_SMI]) {
+    const SMI = scriptNvidiaSmi(rutasNvidiaSmi({}));
+    for (const s of [SCRIPT_EQUIPO, SMI]) {
       expect(s).not.toMatch(/Set-|Remove-|New-Item|Start-Process|-Verb|RunAs|Invoke-Expression/i);
     }
     expect(SCRIPT_EQUIPO).not.toMatch(/SerialNumber|UUID|ProcessorId|PNPDeviceID|MACAddress/i);
     expect(SCRIPT_EQUIPO).toContain('qwMemorySize');
     expect(SCRIPT_EQUIPO).toContain('MediaType');
-    expect(SCRIPT_NVIDIA_SMI).toContain('nvidia-smi');
+    expect(SMI).toContain('nvidia-smi');
+  });
+  it('nvidia-smi solo se busca en System32 y en NVSMI, nunca por el PATH', () => {
+    const env = { SystemRoot: 'D:\\Win', ProgramFiles: 'E:\\PF', Path: 'C:\\proyecto' };
+    expect(rutasNvidiaSmi(env)).toEqual([
+      'D:\\Win\\System32\\nvidia-smi.exe',
+      'E:\\PF\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe',
+    ]);
+    const s = scriptNvidiaSmi(rutasNvidiaSmi(env));
+    expect(s).not.toMatch(/Get-Command|\$env:/i);
+    expect(s).toContain("'D:\\Win\\System32\\nvidia-smi.exe'");
+    expect(s).toContain("'E:\\PF\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe'");
+  });
+  it('las rutas por omisión son las de Windows estándar y las comillas se escapan', () => {
+    expect(rutasNvidiaSmi({})[0]).toBe('C:\\Windows\\System32\\nvidia-smi.exe');
+    expect(scriptNvidiaSmi(["C:\\o'x\\a.exe"])).toContain("'C:\\o''x\\a.exe'");
   });
 });

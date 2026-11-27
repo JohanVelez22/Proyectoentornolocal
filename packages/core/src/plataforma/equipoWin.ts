@@ -1,3 +1,4 @@
+import path from 'node:path';
 import {
   equipoDesconocido,
   type DiscoEquipo,
@@ -14,7 +15,8 @@ import {
  *
  * La VRAM: `Win32_VideoController.AdapterRAM` es de 32 bits y se queda en 4 GB; por eso se lee la
  * clave `HardwareInformation.qwMemorySize` (64 bits) del adaptador en el registro y, si hay
- * `nvidia-smi` en el PATH, su valor manda (script aparte, con su propio plazo).
+ * `nvidia-smi` en una de las dos rutas fijas del controlador (nunca por el PATH), su valor manda
+ * (script aparte, con su propio plazo).
  */
 export const SCRIPT_EQUIPO = [
   "$ErrorActionPreference = 'SilentlyContinue'",
@@ -58,13 +60,30 @@ export const SCRIPT_EQUIPO = [
   '[Console]::Out.Write((ConvertTo-Json -InputObject $r -Depth 4 -Compress))',
 ].join('\n');
 
-/** `nombre, MiB` por tarjeta, solo si `nvidia-smi` está en el PATH; si no, no imprime nada. */
-export const SCRIPT_NVIDIA_SMI = [
-  "$ErrorActionPreference = 'SilentlyContinue'",
-  '$c = Get-Command -Name nvidia-smi -CommandType Application | Select-Object -First 1',
-  'if ($null -eq $c) { exit 0 }',
-  "& $c.Source '--query-gpu=name,memory.total' '--format=csv,noheader,nounits'",
-].join('\n');
+/**
+ * Rutas donde el controlador de NVIDIA deja `nvidia-smi.exe`: System32 y la carpeta NVSMI de
+ * Archivos de programa. Nunca se busca en el PATH (podría apuntar a un programa del proyecto).
+ */
+export function rutasNvidiaSmi(env: NodeJS.ProcessEnv): string[] {
+  const raiz = env.SystemRoot ?? env.SYSTEMROOT ?? 'C:\\Windows';
+  const pf = env.ProgramFiles ?? 'C:\\Program Files';
+  return [
+    path.win32.join(raiz, 'System32', 'nvidia-smi.exe'),
+    path.win32.join(pf, 'NVIDIA Corporation', 'NVSMI', 'nvidia-smi.exe'),
+  ];
+}
+
+const literal = (ruta: string): string => `'${ruta.replace(/'/g, "''")}'`;
+
+/** `nombre, MiB` por tarjeta con la primera de `rutas` que exista; si no hay ninguna, no imprime nada. */
+export function scriptNvidiaSmi(rutas: readonly string[]): string {
+  return [
+    "$ErrorActionPreference = 'SilentlyContinue'",
+    `$exe = @(${rutas.map(literal).join(', ')}) | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1`,
+    'if ($null -eq $exe) { exit 0 }',
+    "& $exe '--query-gpu=name,memory.total' '--format=csv,noheader,nounits'",
+  ].join('\n');
+}
 
 /** Textos de relleno que los fabricantes dejan sin cambiar: no dicen nada. */
 const RELLENO =

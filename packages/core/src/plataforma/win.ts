@@ -75,7 +75,8 @@ import {
   interpretarEquipo,
   interpretarNvidiaSmi,
   SCRIPT_EQUIPO,
-  SCRIPT_NVIDIA_SMI,
+  rutasNvidiaSmi,
+  scriptNvidiaSmi,
   type GpuNvidia,
 } from './equipoWin';
 import { equipoDesconocido, type InfoEquipo } from '../equipo/tipos';
@@ -1106,7 +1107,9 @@ export class PlataformaWindows implements PlataformaCompleta {
       const [principal, smi] = await Promise.all([
         this.ejecutar(ps, codificarPowerShell(SCRIPT_EQUIPO), { timeoutMs: 25_000 }),
         // nvidia-smi puede tardar o no existir: con su propio plazo, y sin él se sigue igual.
-        this.ejecutar(ps, codificarPowerShell(SCRIPT_NVIDIA_SMI), { timeoutMs: 8_000 }).then(
+        this.ejecutar(ps, codificarPowerShell(scriptNvidiaSmi(rutasNvidiaSmi(this.entorno))), {
+          timeoutMs: 8_000,
+        }).then(
           (r): GpuNvidia[] => (r.codigo === 0 ? interpretarNvidiaSmi(r.stdout) : []),
           (): GpuNvidia[] => [],
         ),
