@@ -15,6 +15,8 @@ import {
 } from '../src/renderer/utilidades/herramientasSecciones';
 
 const fuente = (...p: string[]): string => readFileSync(path.join(__dirname, '..', ...p), 'utf8');
+/** Nombres de la tecla Mayús según el idioma (inglés, francés, alemán, italiano, español). */
+const MAYUS = 'Shift|Maj|Umschalt|Maiusc|Mayús';
 const IDS_HERRAMIENTA = Object.keys(es.herramientas.lista);
 
 describe('Herramientas por secciones (D38a)', () => {
@@ -171,7 +173,7 @@ describe('Grabar pantalla en Herramientas (D38a)', () => {
     expect(sistemaDe('')).toBe('linux');
   });
 
-  it('hay guía de Windows, macOS y Linux en los 4 idiomas, con los atajos que pide el plan', () => {
+  it('hay guía de Windows, macOS y Linux en los 16 idiomas, con los atajos que pide el plan', () => {
     for (const [id, d] of Object.entries(diccionarios)) {
       const g = d.herramientas.grabar;
       expect(g.abrir, id).toBeTruthy();
@@ -180,13 +182,10 @@ describe('Grabar pantalla en Herramientas (D38a)', () => {
         expect(g.guias[s].pasos.length, `${id}:${s}`).toBeGreaterThan(0);
       }
       const windows = g.guias.windows.pasos.join(' ');
-      expect(windows, id).toContain(
-        'Win + Shift + R'.replace('Shift', id === 'fr' ? 'Maj' : 'Shift'),
-      );
+      // «Win», la tecla R y una tecla de mayúsculas, con el nombre que use cada idioma.
+      expect(windows, id).toMatch(new RegExp(`Win [+] (?:${MAYUS}) [+] R`));
       expect(windows, id).toContain('Win + Alt + R');
-      expect(g.guias.macos.pasos.join(' '), id).toContain(
-        id === 'fr' ? 'Cmd + Maj + 5' : 'Cmd + Shift + 5',
-      );
+      expect(g.guias.macos.pasos.join(' '), id).toMatch(new RegExp(`Cmd [+] (?:${MAYUS}) [+] 5`));
     }
   });
 

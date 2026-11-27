@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { diccionarios } from '../src/renderer/i18n';
+import { anchoVisual, grafemas, minimo } from './ayudas-i18n';
 import { SECCIONES_NAV } from '../src/renderer/navegacion';
 import { PASOS_RECORRIDO } from '../src/renderer/utilidades/recorrido';
 
@@ -18,12 +19,12 @@ describe('Recorrido de bienvenida (D38b)', () => {
     }
   });
 
-  it('cada paso tiene título y texto en los 4 idiomas', () => {
+  it('cada paso tiene título y texto en los 16 idiomas (mínimo menor en zh, ja y ko)', () => {
     for (const [id, d] of Object.entries(diccionarios)) {
       for (const p of PASOS_RECORRIDO) {
         const x = d.asistenteInicio.pasos[p.id];
-        expect(x.titulo.length, `${id}/${p.id}`).toBeGreaterThan(2);
-        expect(x.texto.length, `${id}/${p.id}`).toBeGreaterThan(20);
+        expect(grafemas(x.titulo), `${id}/${p.id}`).toBeGreaterThan(minimo(id, 2, 1));
+        expect(grafemas(x.texto), `${id}/${p.id}`).toBeGreaterThan(minimo(id, 20, 6));
       }
       expect(d.asistenteInicio.paso(2, 7), id).toContain('7');
     }
@@ -45,7 +46,8 @@ describe('Recorrido de bienvenida (D38b)', () => {
     expect(vue).toMatch(/\.botones :deep\(\.n-button\) \{[^}]*white-space: nowrap/);
     // «Saltar» es una palabra; el resto del pie conserva su texto completo.
     for (const [id, d] of Object.entries(diccionarios)) {
-      expect(d.asistenteInicio.saltar.length, id).toBeLessThanOrEqual(8);
+      // Ancho visual (CJK cuenta doble): con 4 botones y «Ir a…» en 480 px de tarjeta no hay margen para más.
+      expect(anchoVisual(d.asistenteInicio.saltar), id).toBeLessThanOrEqual(8);
       expect(d.asistenteInicio.saltar, id).not.toMatch(/\s/);
     }
   });

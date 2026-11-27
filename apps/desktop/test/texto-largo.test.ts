@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { diccionarios } from '../src/renderer/i18n';
+import { grafemas, minimo } from './ayudas-i18n';
 import { partirParaRecorte } from '../src/renderer/utilidades/recorte';
 
 const fuente = (...p: string[]): string =>
@@ -63,10 +64,10 @@ describe('TextoLargo: legible entero con teclado y copiable', () => {
     expect(v).toMatch(/\.fin \{[^}]*flex-shrink: 0/);
   });
 
-  it('el botón copiar tiene etiqueta en los 4 idiomas', () => {
+  it('el botón copiar tiene etiqueta en los 16 idiomas (mínimo menor en zh, ja y ko)', () => {
     expect(v).toContain('api().sistema.copiar(props.texto)');
     for (const [id, d] of Object.entries(diccionarios)) {
-      expect(d.acciones.copiarCompleto.length, id).toBeGreaterThan(5);
+      expect(grafemas(d.acciones.copiarCompleto), id).toBeGreaterThan(minimo(id, 5));
     }
   });
 
