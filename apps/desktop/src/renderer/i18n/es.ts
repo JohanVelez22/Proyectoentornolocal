@@ -5,7 +5,7 @@ const plural = (n: number, uno: string, varios: string): string => `${n} ${n ===
 export const es = {
   app: {
     nombre: 'WolfCore Dev',
-    lema: 'PHP y Nginx sin complicaciones',
+    lema: 'Su entorno local, listo para trabajar',
     version: 'Versión',
   },
   nav: {
@@ -1450,7 +1450,7 @@ export const es = {
       interruptor: 'Servidor FTP',
       redLocal: 'Permitir conexiones de la red local',
       redLocalAyuda:
-        'Apagado, solo este equipo puede conectarse (127.0.0.1). Cada sitio activa su acceso en Sitios.',
+        'Apagado, solo este equipo puede conectarse (127.0.0.1). Cada proyecto activa su acceso en Proyectos.',
       avisoTitulo: 'Abrir el FTP a la red local',
       avisoTexto:
         'El FTP envía usuarios, claves y archivos sin cifrar. Cualquier equipo de su red podrá intentar conectarse. Úselo solo en una red de confianza.',
@@ -2070,7 +2070,7 @@ export const es = {
     columnas: { sitio: 'Sitio', estado: 'Estado', url: 'Enlace', acciones: 'Acciones' },
     vacioTitulo: 'No hay túneles abiertos',
     vacio: 'Encienda el interruptor de túnel de un sitio para obtener un enlace público.',
-    irASitios: 'Ir a Sitios',
+    irAProyectos: 'Ir a Proyectos',
     sinNombre: 'Sitio borrado',
     compartir: {
       enlace: 'Compartir carpeta o archivo…',
@@ -3771,7 +3771,19 @@ export const es = {
       jsonInvalido: (linea: number, columna: number) =>
         `JSON no válido: revise la línea ${linea}, columna ${columna}.`,
       banderas: 'Banderas no válidas: use solo d, g, i, m, s, u, v o y, sin repetir.',
-      regex: (detalle: string) => `Expresión no válida (${detalle}).`,
+      regex: (detalle: string | null) =>
+        detalle ? `Expresión no válida: ${detalle}` : 'Expresión no válida.',
+      regexDetalle: {
+        corchete: 'falta cerrar un corchete «[».',
+        parentesis: 'falta cerrar un paréntesis «(».',
+        parentesisSobra: 'hay un paréntesis de cierre «)» sin su apertura.',
+        nadaQueRepetir: 'un cuantificador («*», «+», «?» o «{}») no tiene nada que repetir.',
+        barraAlFinal: 'el patrón no puede terminar en una barra invertida.',
+        rangoInvertido: 'un rango de una clase de caracteres está al revés (por ejemplo «z-a»).',
+        cuantificador: 'el cuantificador «{}» está incompleto o tiene los números al revés.',
+        grupo: 'el nombre o la forma de un grupo no es válido.',
+        escape: 'una secuencia de escape con barra invertida no es válida.',
+      },
       trabajador: 'No se pudo ejecutar la operación en segundo plano.',
       diffLento: 'Los textos son demasiado distintos para compararlos a tiempo.',
       base64: 'Base64 no válido.',
@@ -5332,16 +5344,16 @@ export const es = {
     tituloBoton: 'Optimizar la memoria',
     titulo: 'Optimizador de memoria',
     intro:
-      'Elige un modo y revisa la lista. No se cierra ni se detiene nada hasta que lo confirmes, y nunca se ejecuta solo.',
+      'Elija un modo y revise la lista. No se cierra ni se detiene nada hasta que usted lo confirme, y nunca se ejecuta solo.',
     modo: 'Modo',
     modos: { liviano: 'Liviano', moderado: 'Moderado', profundo: 'Profundo' },
     descripciones: {
       liviano:
-        'Solo vacía la caché de la sesión de la aplicación: libera disco, no RAM. No detiene ni cierra nada.',
+        'Vacía la caché de la aplicación. Libera espacio en disco; no cierra ni detiene nada.',
       moderado:
         'Además propone dejar un solo trabajador de PHP y detener servicios de WolfCore Dev sin actividad ni conexiones. Los servicios salen desmarcados.',
       profundo:
-        'Además lista programas tuyos que usan mucha memoria para pedirles que cierren su ventana. Salen desmarcados.',
+        'Además lista programas suyos que usan mucha memoria para pedirles que cierren su ventana. Salen desmarcados.',
     },
     ver: 'Ver la lista',
     revisando: 'Revisando…',
@@ -5365,7 +5377,7 @@ export const es = {
     avisoDetener:
       'Los servicios sin actividad salen desmarcados: detener uno corta lo que lo use. Solo aparecen los que no tienen conexiones ahora.',
     avisoCerrar:
-      'A los programas solo se les pide cerrar su ventana, como al pulsar la X: pueden preguntarte si guardas. Nunca se fuerza ni se termina un programa.',
+      'A los programas solo se les pide cerrar su ventana, como al pulsar la X: pueden preguntarle si quiere guardar. Nunca se fuerza ni se termina un programa.',
     protegidos:
       'Nunca aparecen programas del sistema, servicios de Windows, programas elevados, de otros usuarios, FlyEnv, PhpWebStudy ni WolfCore Dev (ni lo que ellos lanzan).',
     aplicar: 'Aplicar lo marcado',
@@ -5536,18 +5548,18 @@ export const es = {
   },
   editorCodigo: {
     intro: (mb: number) =>
-      `Editor ligero con resaltado para archivos de texto de hasta ${mb} MB. Elige el archivo en el diálogo del sistema; guardar siempre pide confirmación y deja antes una copia en la carpeta de datos de WolfCore Dev.`,
+      `Editor ligero con resaltado para archivos de texto de hasta ${mb} MB. Elija el archivo en el diálogo del sistema; guardar siempre pide confirmación y deja antes una copia en la carpeta de datos de WolfCore Dev.`,
     abrir: 'Abrir archivo…',
     abriendo: 'Abriendo…',
     guardar: 'Guardar',
     guardando: 'Guardando…',
     recargar: 'Recargar del disco',
-    vacio: 'Abre un archivo para empezar a editar.',
+    vacio: 'Abra un archivo para empezar a editar.',
     sinCambios: 'Sin cambios',
     conCambios: 'Cambios sin guardar',
     posicion: (linea: number, columna: number) => `Línea ${linea}, columna ${columna}`,
     areaTexto: (nombre: string) => `Editor de código: ${nombre}`,
-    salirTeclado: 'Para salir del editor con el teclado, pulsa Esc y después Tab.',
+    salirTeclado: 'Para salir del editor con el teclado, pulse Esc y después Tab.',
     guardado: 'Archivo guardado.',
     copiaPrevia: (ruta: string) => `Copia previa: ${ruta}`,
     cancelar: 'Cancelar',
@@ -5626,7 +5638,7 @@ export const es = {
   },
   limpiezaDisco: {
     intro:
-      'Primero se analiza y se ve cuánto ocupa cada cosa. No se borra nada hasta que lo confirmes, y nunca corre sola ni en segundo plano.',
+      'Primero se analiza y se ve cuánto ocupa cada cosa. No se borra nada hasta que usted lo confirme, y nunca corre sola ni en segundo plano.',
     analizar: 'Analizar',
     analizando: 'Analizando…',
     cancelarAnalisis: 'Cancelar',

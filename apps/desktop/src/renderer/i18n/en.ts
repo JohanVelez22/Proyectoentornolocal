@@ -6,7 +6,7 @@ const plural = (n: number, one: string, many: string): string => `${n} ${n === 1
 export const en: Textos = {
   app: {
     nombre: 'WolfCore Dev',
-    lema: 'PHP and Nginx made simple',
+    lema: 'Your local stack, ready to work',
     version: 'Version',
   },
   nav: {
@@ -1439,7 +1439,7 @@ export const en: Textos = {
       interruptor: 'FTP server',
       redLocal: 'Allow connections from the local network',
       redLocalAyuda:
-        'When off, only this computer can connect (127.0.0.1). Each site enables its access in Sites.',
+        'When off, only this computer can connect (127.0.0.1). Each project enables its access in Projects.',
       avisoTitulo: 'Open FTP to the local network',
       avisoTexto:
         'FTP sends users, passwords and files unencrypted. Any computer on your network will be able to try to connect. Only use it on a trusted network.',
@@ -2053,7 +2053,7 @@ export const en: Textos = {
     columnas: { sitio: 'Site', estado: 'Status', url: 'Link', acciones: 'Actions' },
     vacioTitulo: 'No tunnels open',
     vacio: "Turn on a site's tunnel switch to get a public link.",
-    irASitios: 'Go to Sites',
+    irAProyectos: 'Go to Projects',
     sinNombre: 'Deleted site',
     compartir: {
       enlace: 'Share folder or file…',
@@ -3743,7 +3743,19 @@ export const en: Textos = {
       jsonInvalido: (linea: number, columna: number) =>
         `Invalid JSON: check line ${linea}, column ${columna}.`,
       banderas: 'Invalid flags: use only d, g, i, m, s, u, v or y, without repeats.',
-      regex: (detalle: string) => `Invalid expression (${detalle}).`,
+      regex: (detalle: string | null) =>
+        detalle ? `Invalid expression: ${detalle}` : 'Invalid expression.',
+      regexDetalle: {
+        corchete: 'a bracket “[” is not closed.',
+        parentesis: 'a parenthesis “(” is not closed.',
+        parentesisSobra: 'a closing parenthesis “)” has no opening one.',
+        nadaQueRepetir: 'a quantifier (“*”, “+”, “?” or “{}”) has nothing to repeat.',
+        barraAlFinal: 'the pattern cannot end with a backslash.',
+        rangoInvertido: 'a range in a character class is reversed (for example “z-a”).',
+        cuantificador: 'the “{}” quantifier is incomplete or its numbers are reversed.',
+        grupo: 'the name or form of a group is not valid.',
+        escape: 'a backslash escape sequence is not valid.',
+      },
       trabajador: 'Could not run the operation in the background.',
       diffLento: 'The texts are too different to compare in time.',
       base64: 'Invalid Base64.',
@@ -5307,8 +5319,7 @@ export const en: Textos = {
     modo: 'Mode',
     modos: { liviano: 'Light', moderado: 'Moderate', profundo: 'Deep' },
     descripciones: {
-      liviano:
-        'Only clears the app session cache: it frees disk, not RAM. It stops and closes nothing.',
+      liviano: 'Clears the app cache. It frees disk space; it does not close or stop anything.',
       moderado:
         'Also offers to leave a single PHP worker and to stop WolfCore Dev services with no activity or connections. Services start unchecked.',
       profundo:

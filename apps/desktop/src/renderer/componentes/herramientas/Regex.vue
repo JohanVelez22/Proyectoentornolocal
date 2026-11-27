@@ -18,6 +18,8 @@ const banderas = ref('g');
 const texto = ref('ana@ejemplo.com, luis@correo.com');
 const resultado = ref<ResultadoRegex | null>(null);
 const error = ref<string | null>(null);
+/** Mensaje original del motor, para el `title` del aviso (no se muestra como texto). */
+const errorMotor = ref<string | null>(null);
 const ocupado = ref(false);
 
 let turno = 0;
@@ -28,6 +30,7 @@ async function probar(): Promise<void> {
   if (!patron.value) {
     resultado.value = null;
     error.value = null;
+    errorMotor.value = null;
     return;
   }
   ocupado.value = true;
@@ -40,9 +43,11 @@ async function probar(): Promise<void> {
   ocupado.value = false;
   if (r.estado === 'ok') {
     error.value = r.resultado.error ?? null;
+    errorMotor.value = r.resultado.errorMotor ?? null;
     resultado.value = r.resultado.error ? null : r.resultado;
   } else {
     resultado.value = null;
+    errorMotor.value = null;
     error.value = r.estado === 'tiempo' ? t.tiempo : r.mensaje;
   }
 }
@@ -67,7 +72,7 @@ const segmentos = computed(() =>
     <div class="herr-fila">
       <div class="campo-patron">
         <div class="herr-etiqueta">{{ t.patron }}</div>
-        <NInput v-model:value="patron" class="herr-mono">
+        <NInput v-model:value="patron" class="herr-mono" :status="errorMotor ? 'error' : undefined">
           <template #prefix>/</template>
           <template #suffix>/</template>
         </NInput>
@@ -87,7 +92,7 @@ const segmentos = computed(() =>
       />
     </div>
 
-    <p v-if="error" class="herr-error" role="alert">{{ error }}</p>
+    <p v-if="error" class="herr-error" role="alert" :title="errorMotor ?? undefined">{{ error }}</p>
     <template v-else-if="resultado">
       <p class="herr-tenue" aria-live="polite">
         {{

@@ -228,7 +228,7 @@ const columnas: DataTableColumns<Fila> = [
         </template>
         <template #extra>
           <NButton type="primary" @click="router.push({ name: 'proyectos' })">{{
-            t.irASitios
+            t.irAProyectos
           }}</NButton>
         </template>
       </NEmpty>

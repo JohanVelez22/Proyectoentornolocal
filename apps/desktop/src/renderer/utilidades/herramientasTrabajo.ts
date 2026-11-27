@@ -18,6 +18,38 @@ export interface ResultadoRegex {
   coincidencias: Coincidencia[];
   truncado: boolean;
   error?: string;
+  /** Mensaje original del motor (en inglés) cuando se tradujo `error`; para el `title` del campo. */
+  errorMotor?: string;
+}
+
+type ClavesRegex = keyof typeof t.regexDetalle;
+
+/** Reconocimiento de los mensajes más comunes del motor regex (V8), por orden de especificidad. */
+const MENSAJES_MOTOR: [RegExp, ClavesRegex][] = [
+  [/Unterminated character class/i, 'corchete'],
+  [/Unterminated group/i, 'parentesis'],
+  [/Unmatched '?\)'?/i, 'parentesisSobra'],
+  [/Nothing to repeat/i, 'nadaQueRepetir'],
+  [/\\ at end of pattern/i, 'barraAlFinal'],
+  [/Range out of order/i, 'rangoInvertido'],
+  [/Incomplete quantifier|numbers out of order|Lone quantifier/i, 'cuantificador'],
+  [/Invalid group|Invalid capture group name|Invalid named/i, 'grupo'],
+  [/Invalid escape|Invalid Unicode escape|Invalid property name|Invalid class escape/i, 'escape'],
+];
+
+/**
+ * Traduce el mensaje del motor de expresiones regulares a una frase corta en el idioma de la
+ * interfaz. Devuelve `null` si no lo reconoce (la interfaz dice solo «Expresión no válida.»).
+ */
+export function detalleRegex(
+  mensajeMotor: string,
+  detalles: Record<string, string>,
+): string | null {
+  const sinPrefijo = mensajeMotor.replace(/^Invalid regular expression: \/.*\/[a-z]*:? ?/s, '');
+  for (const [re, clave] of MENSAJES_MOTOR) {
+    if (re.test(sinPrefijo)) return detalles[clave] ?? null;
+  }
+  return null;
 }
 
 /** Todas las coincidencias (hasta `max`). Corre dentro del Worker: un patrón malo no congela. */
@@ -34,7 +66,13 @@ export function buscarCoincidencias(
   try {
     re = new RegExp(patron, `${banderas.replace('g', '')}g`);
   } catch (e) {
-    return { coincidencias: [], truncado: false, error: t.regex((e as Error).message) };
+    const motor = (e as Error).message;
+    return {
+      coincidencias: [],
+      truncado: false,
+      error: t.regex(detalleRegex(motor, t.regexDetalle)),
+      errorMotor: motor,
+    };
   }
   const coincidencias: Coincidencia[] = [];
   let m: RegExpExecArray | null;

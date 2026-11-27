@@ -23,7 +23,7 @@ function hojas(v: unknown, ruta = ''): [string, string][] {
 
 const TUTEO: Record<string, RegExp> = {
   // Solo formas inequívocas del tuteo: «abre» o «crea» también son verbos en tercera persona.
-  es: /(?<![\p{L}])(puedes|tienes|quieres|necesitas|tu|tus|contigo|abriste|vuelve a (analizar|abrirlo|verla))(?![\p{L}])/iu,
+  es: /(?<![\p{L}])(puedes|tienes|quieres|necesitas|tu|tus|contigo|abriste|confirmes|(?<!usted )pulsa|preguntarte|vuelve a (analizar|abrirlo|verla))(?![\p{L}])|(?<=^|[.:;]\s*)(elige|revisa la lista|abre un archivo)(?![\p{L}])/iu,
   fr: /(?<![\p{L}])(tu|toi|ton|ta|tes|te|t’|t')(?![\p{L}])/iu,
   pt: /(?<![\p{L}])(tu|teu|tua|teus|tuas|contigo)(?![\p{L}])/iu,
 };
@@ -171,5 +171,48 @@ describe('Tono del contenido de las guías: usted, «você» y «vous» (D50)', 
       }
     }
     expect(malos).toEqual([]);
+  });
+});
+
+describe('Textos del pulido de diseño (D54a, I7)', () => {
+  it('el control del TUTEO detecta los casos nuevos y no confunde la tercera persona', () => {
+    const re = TUTEO.es!;
+    for (const malo of [
+      'Elige un modo y revisa la lista.',
+      'hasta que lo confirmes',
+      'pueden preguntarte si guardas',
+      'Para salir, pulsa Esc y después Tab.',
+      'Abre un archivo para empezar.',
+    ]) {
+      expect(re.test(malo), malo).toBe(true);
+    }
+    for (const bueno of [
+      'Elija un modo y revise la lista.',
+      'Si elige el borrado definitivo, se guarda una copia.',
+      'El Doctor revisa puertos y hosts.',
+      'si usted pulsa «Mostrar» en esa variable',
+      'Abra un archivo para empezar a editar.',
+    ]) {
+      expect(re.test(bueno), bueno).toBe(false);
+    }
+  });
+
+  it('los nombres viejos ya no están: «Proyectos» y no «Sitios» en el enlace de Túneles y en FTP', () => {
+    for (const [id, d] of Object.entries(diccionarios)) {
+      expect(d.tuneles.irAProyectos, id).toMatch(/Project|Projet|Projeto|Proyecto/);
+      expect(d.tuneles.irAProyectos, id).not.toMatch(/Sites?\b|Sitios/);
+      expect(d.app.lema, id).not.toMatch(/PHP|Nginx/);
+    }
+    expect(diccionarios.es.app.lema).toBe('Su entorno local, listo para trabajar');
+    expect(diccionarios.en.app.lema).toBe('Your local stack, ready to work');
+  });
+
+  it('Memoria › Liviano no dice «no RAM» y aclara que libera disco sin cerrar nada', () => {
+    for (const [id, d] of Object.entries(diccionarios)) {
+      expect(d.memoria.descripciones.liviano, id).not.toMatch(/\bRAM\b/);
+    }
+    expect(diccionarios.es.memoria.descripciones.liviano).toBe(
+      'Vacía la caché de la aplicación. Libera espacio en disco; no cierra ni detiene nada.',
+    );
   });
 });

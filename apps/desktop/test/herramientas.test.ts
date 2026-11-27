@@ -6,6 +6,7 @@ import { en } from '../src/renderer/i18n/en';
 import { es } from '../src/renderer/i18n/es';
 import { fr } from '../src/renderer/i18n/fr';
 import { pt } from '../src/renderer/i18n/pt';
+import { detalleRegex } from '../src/renderer/utilidades/herramientasTrabajo';
 import { errorWifi, textoQrWifi } from '../src/renderer/utilidades/qrWifi';
 import { pngsAIco, TAMANOS_ICO } from '../src/renderer/utilidades/ico';
 import {
@@ -100,6 +101,33 @@ describe('expresiones regulares', () => {
   it('un patrón inválido da un error en español', () => {
     expect(buscarCoincidencias('(', '', 'x').error).toMatch(/^Expresión no válida/);
     expect(buscarCoincidencias('a', 'q', 'x').error).toMatch(/Banderas no válidas/);
+  });
+
+  it('el error del motor se traduce y el mensaje original queda aparte (D54a, I7)', () => {
+    const r = buscarCoincidencias('(abc[', 'g', 'x');
+    expect(r.error).toBe('Expresión no válida: falta cerrar un corchete «[».');
+    expect(r.errorMotor).toMatch(/Unterminated character class/);
+    expect(buscarCoincidencias('(', '', 'x').error).toBe(
+      'Expresión no válida: falta cerrar un paréntesis «(».',
+    );
+    expect(buscarCoincidencias('*a', '', 'x').error).toMatch(/nada que repetir/);
+    expect(buscarCoincidencias('a)', '', 'x').error).toMatch(/«\)»/);
+    // El mensaje nunca lleva inglés del motor.
+    for (const p of ['(', '[', '*', 'a)', '\\', '[z-a]', '(?<>a)', 'a{2,1}']) {
+      expect(buscarCoincidencias(p, '', 'x').error).not.toMatch(/Invalid|Unterminated|Unmatched/);
+    }
+  });
+
+  it('un mensaje del motor que no se reconoce da «Expresión no válida.» sin inglés (D54a)', () => {
+    for (const [id, d] of Object.entries({ es, en, pt, fr })) {
+      const e = d.herramientas.errores;
+      expect(e.regex(null), id).not.toMatch(id === 'en' ? /Unterminated/ : /Invalid|Unterminated/);
+      expect(detalleRegex('Invalid regular expression: /a/: algo raro', e.regexDetalle)).toBeNull();
+      for (const clave of Object.keys(e.regexDetalle)) {
+        expect(e.regexDetalle[clave as keyof typeof e.regexDetalle], `${id}/${clave}`).toBeTruthy();
+      }
+    }
+    expect(es.herramientas.errores.regex(null)).toBe('Expresión no válida.');
   });
 
   it('las coincidencias vacías no cuelgan y el total se acota', () => {

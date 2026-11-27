@@ -11,7 +11,7 @@ const plural = (n: number, uno: string, varios: string): string =>
 export const fr: Textos = {
   app: {
     nombre: 'WolfCore Dev',
-    lema: 'PHP et Nginx sans complication',
+    lema: 'Votre environnement local, prêt à travailler',
     version: 'Version',
   },
   nav: {
@@ -1511,7 +1511,7 @@ export const fr: Textos = {
       interruptor: 'Serveur FTP',
       redLocal: 'Autoriser les connexions du réseau local',
       redLocalAyuda:
-        'Désactivé, seul cet ordinateur peut se connecter (127.0.0.1). Chaque site active son propre accès dans Sites.',
+        'Désactivé, seul cet ordinateur peut se connecter (127.0.0.1). Chaque projet active son propre accès dans Projets.',
       avisoTitulo: 'Ouvrir le FTP au réseau local',
       avisoTexto:
         'Le FTP envoie utilisateurs, mots de passe et fichiers sans chiffrement. N’importe quel ordinateur de votre réseau pourra tenter de se connecter. Ne l’utilisez que sur un réseau de confiance.',
@@ -2138,7 +2138,7 @@ export const fr: Textos = {
     columnas: { sitio: 'Site', estado: 'État', url: 'Lien', acciones: 'Actions' },
     vacioTitulo: 'Aucun tunnel ouvert',
     vacio: 'Activez l’interrupteur de tunnel d’un site pour obtenir un lien public.',
-    irASitios: 'Aller à Sites',
+    irAProyectos: 'Aller aux Projets',
     sinNombre: 'Site supprimé',
     compartir: {
       enlace: 'Partager un dossier ou un fichier…',
@@ -3883,7 +3883,20 @@ export const fr: Textos = {
         `JSON non valide : vérifiez la ligne ${linea}, colonne ${columna}.`,
       banderas:
         'Drapeaux non valides : utilisez uniquement d, g, i, m, s, u, v ou y, sans répétition.',
-      regex: (detalle: string) => `Expression non valide (${detalle}).`,
+      regex: (detalle: string | null) =>
+        detalle ? `Expression non valide : ${detalle}` : 'Expression non valide.',
+      regexDetalle: {
+        corchete: 'il manque un crochet fermant « ] ».',
+        parentesis: 'il manque une parenthèse fermante « ) ».',
+        parentesisSobra: 'une parenthèse fermante « ) » n’a pas de parenthèse ouvrante.',
+        nadaQueRepetir: 'un quantificateur (« * », « + », « ? » ou « {} ») n’a rien à répéter.',
+        barraAlFinal: 'le motif ne peut pas se terminer par une barre oblique inverse.',
+        rangoInvertido:
+          'un intervalle d’une classe de caractères est inversé (par exemple « z-a »).',
+        cuantificador: 'le quantificateur « {} » est incomplet ou ses nombres sont inversés.',
+        grupo: 'le nom ou la forme d’un groupe n’est pas valide.',
+        escape: 'une séquence d’échappement avec barre oblique inverse n’est pas valide.',
+      },
       trabajador: 'Impossible d’exécuter l’opération en arrière-plan.',
       diffLento: 'Les textes sont trop différents pour être comparés à temps.',
       base64: 'Base64 non valide.',
@@ -5475,7 +5488,7 @@ export const fr: Textos = {
     modos: { liviano: 'Léger', moderado: 'Modéré', profundo: 'Approfondi' },
     descripciones: {
       liviano:
-        'Vide seulement le cache de la session de l’application : il libère du disque, pas de la RAM. N’arrête ni ne ferme rien.',
+        'Vide le cache de l’application. Libère de l’espace disque ; ne ferme ni n’arrête rien.',
       moderado:
         'Propose aussi de ne garder qu’un seul processus PHP et d’arrêter les services de WolfCore Dev sans activité ni connexions. Les services sont décochés.',
       profundo:

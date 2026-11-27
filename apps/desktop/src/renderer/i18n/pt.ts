@@ -10,7 +10,7 @@ const plural = (n: number, uno: string, varios: string): string => `${n} ${n ===
 export const pt: Textos = {
   app: {
     nombre: 'WolfCore Dev',
-    lema: 'PHP e Nginx sem complicação',
+    lema: 'Seu ambiente local, pronto para trabalhar',
     version: 'Versão',
   },
   nav: {
@@ -1453,7 +1453,7 @@ export const pt: Textos = {
       interruptor: 'Servidor FTP',
       redLocal: 'Permitir conexões da rede local',
       redLocalAyuda:
-        'Desligado, só este computador pode se conectar (127.0.0.1). Cada site ativa o próprio acesso em Sites.',
+        'Desligado, só este computador pode se conectar (127.0.0.1). Cada projeto ativa o próprio acesso em Projetos.',
       avisoTitulo: 'Abrir o FTP para a rede local',
       avisoTexto:
         'O FTP envia usuários, senhas e arquivos sem criptografia. Qualquer computador da sua rede poderá tentar se conectar. Use-o somente em uma rede de confiança.',
@@ -2072,7 +2072,7 @@ export const pt: Textos = {
     columnas: { sitio: 'Site', estado: 'Estado', url: 'Link', acciones: 'Ações' },
     vacioTitulo: 'Não há túneis abertos',
     vacio: 'Ligue o interruptor de túnel de um site para obter um link público.',
-    irASitios: 'Ir para Sites',
+    irAProyectos: 'Ir para Projetos',
     sinNombre: 'Site apagado',
     compartir: {
       enlace: 'Compartilhar pasta ou arquivo…',
@@ -3782,7 +3782,20 @@ export const pt: Textos = {
       jsonInvalido: (linea: number, columna: number) =>
         `JSON inválido: confira a linha ${linea}, coluna ${columna}.`,
       banderas: 'Flags inválidas: use somente d, g, i, m, s, u, v ou y, sem repetir.',
-      regex: (detalle: string) => `Expressão inválida (${detalle}).`,
+      regex: (detalle: string | null) =>
+        detalle ? `Expressão inválida: ${detalle}` : 'Expressão inválida.',
+      regexDetalle: {
+        corchete: 'falta fechar um colchete “[”.',
+        parentesis: 'falta fechar um parêntese “(”.',
+        parentesisSobra: 'há um parêntese de fechamento “)” sem o de abertura.',
+        nadaQueRepetir: 'um quantificador (“*”, “+”, “?” ou “{}”) não tem nada a repetir.',
+        barraAlFinal: 'o padrão não pode terminar em uma barra invertida.',
+        rangoInvertido:
+          'um intervalo de uma classe de caracteres está invertido (por exemplo “z-a”).',
+        cuantificador: 'o quantificador “{}” está incompleto ou com os números invertidos.',
+        grupo: 'o nome ou a forma de um grupo não é válido.',
+        escape: 'uma sequência de escape com barra invertida não é válida.',
+      },
       trabajador: 'Não foi possível executar a operação em segundo plano.',
       diffLento: 'Os textos são diferentes demais para serem comparados a tempo.',
       base64: 'Base64 inválido.',
@@ -5348,8 +5361,7 @@ export const pt: Textos = {
     modo: 'Modo',
     modos: { liviano: 'Leve', moderado: 'Moderado', profundo: 'Profundo' },
     descripciones: {
-      liviano:
-        'Só limpa o cache da sessão do aplicativo: libera disco, não RAM. Não para nem fecha nada.',
+      liviano: 'Esvazia o cache do aplicativo. Libera espaço em disco; não fecha nem para nada.',
       moderado:
         'Também oferece deixar um único trabalhador do PHP e parar serviços do WolfCore Dev sem atividade nem conexões. Os serviços começam desmarcados.',
       profundo:
