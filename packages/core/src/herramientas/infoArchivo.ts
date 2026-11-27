@@ -74,6 +74,11 @@ const MIME_EXTENSION: Record<string, string> = {
   toml: 'application/toml',
   ini: 'text/plain',
   env: 'text/plain',
+  gitignore: 'text/plain',
+  gitattributes: 'text/plain',
+  editorconfig: 'text/plain',
+  npmrc: 'text/plain',
+  dockerignore: 'text/plain',
   sql: 'application/sql',
   sh: 'application/x-sh',
   ps1: 'text/plain',
@@ -115,11 +120,13 @@ export function mimePorFirma(b: Uint8Array): string | null {
 
 /** Tipo por la extensión del nombre, o null si no se conoce. */
 export function mimePorExtension(nombre: string): string | null {
-  const ext = path.extname(nombre).slice(1).toLowerCase();
+  let ext = path.extname(nombre).slice(1).toLowerCase();
+  // «.env», «.gitignore»: un nombre que empieza por punto y no tiene extensión toma el tipo de su nombre.
+  if (ext === '' && /^\.[^.]+$/.test(nombre)) ext = nombre.slice(1).toLowerCase();
   if (ext === '') return null;
   const propio = Object.hasOwn(MIME_EXTENSION, ext) ? MIME_EXTENSION[ext] : undefined;
   if (propio) return propio;
-  const t = tipoDe(nombre);
+  const t = tipoDe(`x.${ext}`);
   return t.tipo === 'application/octet-stream' ? null : (t.tipo.split(';')[0] ?? null);
 }
 
@@ -251,6 +258,7 @@ export async function calcularHashesRuta(
     // Mismo archivo que vio `lstat` (no un enlace puesto en medio) y sin pasar del tope.
     const actual = await f.stat();
     if (!actual.isFile() || actual.size > tope) throw invalida();
+    if (actual.dev !== e.dev || actual.ino !== e.ino) throw invalida();
     const buf = Buffer.alloc(1024 * 1024);
     let leidos = 0;
     for (;;) {

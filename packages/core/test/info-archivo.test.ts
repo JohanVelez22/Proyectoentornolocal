@@ -83,6 +83,12 @@ describe('tipo por firma y por extensión', () => {
     expect(mimePorExtension('a.zzz')).toBeNull();
     expect(mimePorExtension('LEEME')).toBeNull();
   });
+  it('un nombre que empieza por punto y no tiene extensión toma el tipo de su nombre', () => {
+    expect(mimePorExtension('.env')).toBe('text/plain');
+    expect(mimePorExtension('.gitignore')).toBe('text/plain');
+    expect(mimePorExtension('.desconocido')).toBeNull();
+    expect(mimePorExtension('.')).toBeNull();
+  });
 });
 
 describe('atributos de attrib', () => {
@@ -121,6 +127,12 @@ describe('leerInfoRuta con PlataformaFalsa', () => {
     b.writeUInt32BE(alto, 20);
     return b;
   };
+
+  it('un archivo de punto sin extensión (.gitignore) toma el tipo de su nombre', async () => {
+    const f = path.join(dir, '.gitignore');
+    writeFileSync(f, 'node_modules');
+    expect((await leerInfoRuta(f, { plataforma: plat })).mime).toBe('text/plain');
+  });
 
   it('de un archivo de texto: tamaño, tipo, fechas y atributos de la plataforma', async () => {
     const f = path.join(dir, 'datos.json');
