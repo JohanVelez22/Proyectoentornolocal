@@ -411,6 +411,34 @@ const TEXTOS = {
     carpetaDatosInvalida:
       'WOLFCORE_DATOS bukan folder data yang valid: harus berupa jalur absolut, bukan folder sistem, dan berbeda dari folder data asli (maupun sebelumnya). Aplikasi ditutup tanpa mengubah apa pun.',
   },
+  pl: {
+    abrir: 'Otwórz',
+    iniciarTodo: 'Uruchom wszystko',
+    detenerTodo: 'Zatrzymaj wszystko',
+    salir: 'Zakończ',
+    workspaces: 'Przestrzenie robocze',
+    workspaceParcial: 'częściowo',
+    preguntaApagar: 'Czy zatrzymać usługi?',
+    siApagar: 'Tak, zatrzymaj',
+    noApagar: 'Nie, pozostaw uruchomione',
+    cancelar: 'Anuluj',
+    cliTitulo: 'Polecenie terminala (wolf)',
+    cliTunelInternet:
+      'Polecenie terminala chce opublikować {dominio} w internecie za pomocą {proveedor}. Każda osoba z linkiem będzie mogła uzyskać dostęp.',
+    cliTunelTailnet:
+      'Polecenie terminala chce udostępnić {dominio} urządzeniom w sieci tailnet ({proveedor}).',
+    cliPublicoEn: 'Adres publiczny: https://{publico}',
+    cliDatosReales:
+      'UWAGA: {dominio} zawiera RZECZYWISTE DANE. Aby kontynuować, wybierz poniżej dokładną domenę. Jeśli to nie było zamierzone, anuluj.',
+    cliPublicar: 'Opublikuj',
+    cliPhpGlobal:
+      'Polecenie terminala chce zmienić wersję PHP we wszystkich terminalach na {version}.',
+    cliCambiar: 'Zmień',
+    carpetaDatosAislada:
+      'testowy folder danych — bez modyfikowania pliku hosts, PATH ani certyfikatów systemowych',
+    carpetaDatosInvalida:
+      'WOLFCORE_DATOS nie jest prawidłowym folderem danych: ścieżka musi być bezwzględna, nie może być folderem systemowym i musi różnić się od rzeczywistego (oraz poprzedniego) folderu. Aplikacja zamknie się bez wprowadzania zmian.',
+  },
 } satisfies Record<IdiomaUi, Record<string, string>>;
 
 export type TextosMain = (typeof TEXTOS)['es'];

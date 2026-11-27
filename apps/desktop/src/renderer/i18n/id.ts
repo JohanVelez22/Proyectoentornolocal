@@ -4431,7 +4431,7 @@ export const id: Textos = {
     tema: 'Tema',
     temas: { sistema: 'Sistem', claro: 'Terang', oscuro: 'Gelap' },
     idioma: 'Bahasa',
-    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語', ko: '한국어', hi: 'हिन्दी', tr: 'Türkçe', id: 'Bahasa Indonesia' },
+    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語', ko: '한국어', hi: 'हिन्दी', tr: 'Türkçe', id: 'Bahasa Indonesia', pl: 'Polski' },
     acento: 'Warna aksen',
     acentos: {
       indigo: 'Indigo',
