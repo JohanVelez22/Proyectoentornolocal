@@ -331,7 +331,7 @@ describe('IPC de Uso del disco (D51): el Explorador siempre es un doble, nunca e
     expect((await t.llamar('discoUso.abrirCarpeta', 'd1', 4)).ok).toBe(true);
     expect(t.usoDisco.carpetaDe).toHaveBeenCalledWith('d1', 4);
     expect(t.abrirCarpeta).toHaveBeenCalledWith(join(dir, 'real'));
-    expect((await t.llamar('discoUso.abrirCarpeta', 'd1', 'C:\Windows')).ok).toBe(false);
+    expect((await t.llamar('discoUso.abrirCarpeta', 'd1', 'C:/Windows')).ok).toBe(false);
     expect(t.abrirCarpeta).toHaveBeenCalledTimes(1);
   });
 
