@@ -9,6 +9,7 @@ import { textos } from '../i18n';
 import type { EstadoReparacion } from '../stores/doctor';
 import { destinoHallazgo, textoEvidencia, textoReparacion } from '../utilidades/doctor';
 import { traducirError } from '../utilidades/errores';
+import { nombreVisibleDeId } from '../utilidades/nombreServicio';
 
 /**
  * Un hallazgo del Doctor: qué pasa, lo que se vio (evidencia: solo en esta pantalla) y su
@@ -28,8 +29,15 @@ const detalles = ref(false);
 const router = useRouter();
 const TONO = { error: 'error', aviso: 'warning', info: 'info' } as const;
 
+/** El servicio se nombra como producto («Nginx», «MySQL»), no con su identificador. */
+const datosVisibles = computed(() => {
+  const d = props.hallazgo.datos;
+  return d && typeof d['servicio'] === 'string'
+    ? { ...d, servicio: nombreVisibleDeId(d['servicio']) }
+    : d;
+});
 const titulo = computed(() =>
-  traducirError({ codigo: props.hallazgo.codigo, datos: props.hallazgo.datos }),
+  traducirError({ codigo: props.hallazgo.codigo, datos: datosVisibles.value }),
 );
 const evidencia = computed(() => textoEvidencia(props.hallazgo.evidencia));
 const rep = computed(() => props.hallazgo.reparacion);
@@ -67,25 +75,32 @@ const resultado = computed(() => {
       </NTag>
       <strong>{{ titulo }}</strong>
     </header>
-    <div v-if="tieneTarjeta || esDePuertos" class="ver">
-      <NButton v-if="tieneTarjeta" quaternary size="small" @click="emit('ver')">{{
-        t.ver
-      }}</NButton>
-      <NButton v-if="esDePuertos" quaternary size="small" @click="verPuertos">{{
-        t.verPuertos
-      }}</NButton>
+    <div v-if="tieneTarjeta" class="ver">
+      <NButton quaternary size="small" @click="emit('ver')">{{ t.ver }}</NButton>
     </div>
     <div class="detalles">
-      <NButton
-        text
-        size="small"
-        type="primary"
-        data-testid="ver-detalles"
-        :aria-expanded="detalles"
-        @click="detalles = !detalles"
-      >
-        {{ detalles ? tp.ocultarDetalles : tp.verDetalles }}
-      </NButton>
+      <div class="fila-enlaces">
+        <NButton
+          text
+          size="small"
+          type="primary"
+          data-testid="ver-detalles"
+          :aria-expanded="detalles"
+          @click="detalles = !detalles"
+        >
+          {{ detalles ? tp.ocultarDetalles : tp.verDetalles }}
+        </NButton>
+        <NButton
+          v-if="esDePuertos"
+          text
+          size="small"
+          type="primary"
+          data-testid="ver-puertos"
+          @click="verPuertos"
+        >
+          {{ t.verPuertos }}
+        </NButton>
+      </div>
       <p v-if="detalles" class="evidencia">
         <span class="etiqueta">{{ t.evidencia }}:</span> <code>{{ evidencia }}</code>
       </p>
@@ -100,7 +115,6 @@ const resultado = computed(() => {
         <NButton
           v-if="!rep.soloInforma"
           type="primary"
-          size="small"
           :loading="aplicando"
           @click="emit('pedir', false)"
         >
@@ -166,6 +180,12 @@ const resultado = computed(() => {
 }
 .detalles {
   margin-top: 4px;
+}
+.fila-enlaces {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
 }
 .evidencia {
   margin: 4px 0 0;
