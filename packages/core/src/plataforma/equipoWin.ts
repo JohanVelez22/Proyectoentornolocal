@@ -1,3 +1,4 @@
+import { raizSistema } from './raizSistema';
 import { literalPowerShell } from './literalPowerShell';
 import path from 'node:path';
 import {
@@ -66,7 +67,7 @@ export const SCRIPT_EQUIPO = [
  * Archivos de programa. Nunca se busca en el PATH (podría apuntar a un programa del proyecto).
  */
 export function rutasNvidiaSmi(env: NodeJS.ProcessEnv): string[] {
-  const raiz = env.SystemRoot ?? env.SYSTEMROOT ?? 'C:\\Windows';
+  const raiz = raizSistema(env);
   const pf = env.ProgramFiles ?? 'C:\\Program Files';
   return [
     path.win32.join(raiz, 'System32', 'nvidia-smi.exe'),

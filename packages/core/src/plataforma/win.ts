@@ -1,3 +1,4 @@
+import { raizSistema } from './raizSistema';
 import { execFile } from 'node:child_process';
 import { entornoDelHijo } from '../procesos/entorno';
 import { randomUUID } from 'node:crypto';
@@ -144,7 +145,6 @@ import {
   existeEntrada,
   lanzarEnConsolaNueva,
   lanzarSeparado,
-  raizSistema,
   terminalesWindows,
   type LanzadorSeparado,
 } from './terminalWin';
@@ -408,12 +408,10 @@ export const rutaVcvars64 = (vs: string): string =>
   path.win32.join(vs, 'VC', 'Auxiliary', 'Build', 'vcvars64.bat');
 
 /** Intérprete de comandos del sistema (para ejecutar un .cmd). */
-export const interpreteComandos = (): string =>
-  process.env.ComSpec ?? rutaSistema32(process.env, 'cmd.exe');
+export const interpreteComandos = (): string => rutaSistema32(process.env, 'cmd.exe');
 
 /** tar.exe de Windows (bsdtar en System32, no el de Git). */
-export const rutaTarSistema = (): string =>
-  path.win32.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe');
+export const rutaTarSistema = (): string => rutaSistema32(process.env, 'tar.exe');
 
 export interface OpcionesPlataformaWindows {
   /** Variables de entorno (por defecto, las del proceso). */
@@ -522,7 +520,7 @@ export class PlataformaWindows implements PlataformaCompleta {
   carpetasDelSistema(): string[] {
     const e = this.entorno;
     const lista = [
-      e.SystemRoot || e.windir || 'C:\\Windows',
+      raizSistema(e),
       e.ProgramFiles || 'C:\\Program Files',
       e['ProgramFiles(x86)'] || 'C:\\Program Files (x86)',
       e.ProgramW6432 || '',
@@ -1642,8 +1640,7 @@ export class PlataformaWindows implements PlataformaCompleta {
   }
 
   rutaHosts(): string {
-    const raiz = process.env.SystemRoot ?? 'C:\\Windows';
-    return path.win32.join(raiz, 'System32', 'drivers', 'etc', 'hosts');
+    return rutaSistema32(this.entorno, 'drivers', 'etc', 'hosts');
   }
 
   escribirComoAdmin(

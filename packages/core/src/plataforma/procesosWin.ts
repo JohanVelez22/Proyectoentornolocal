@@ -1,4 +1,4 @@
-import path from 'node:path';
+import { rutaSistema32 } from './raizSistema';
 import type { Ejecutor } from './tipos';
 import { interpretarTasklist, interpretarTasklistTodos } from './netstat';
 
@@ -8,10 +8,7 @@ export interface ProcesoTabla {
   nombre: string;
 }
 
-/** Ejecutable de System32 por ruta absoluta (nunca del PATH ni de la carpeta actual). */
-export function rutaSistema32(env: NodeJS.ProcessEnv, ...partes: string[]): string {
-  return path.win32.join(env.SystemRoot ?? env.SYSTEMROOT ?? 'C:\\Windows', 'System32', ...partes);
-}
+export { rutaSistema32 };
 
 /** PowerShell de Windows por ruta absoluta. */
 export const rutaPowerShell = (env: NodeJS.ProcessEnv): string =>

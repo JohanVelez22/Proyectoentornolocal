@@ -1,3 +1,4 @@
+import { raizSistema } from './raizSistema';
 import path from 'node:path';
 import { ErrorWolf } from '../errores';
 import { codificarPowerShell } from './pathUsuarioWin';
@@ -213,7 +214,7 @@ export class ProcesosUsuarioWindows {
   /** Carpetas del sistema y del antivirus integrado que nunca se tocan. */
   rutasProtegidas(): string[] {
     const e = this.env;
-    const windir = e.SystemRoot ?? e.SYSTEMROOT ?? e.windir ?? 'C:\\Windows';
+    const windir = raizSistema(e);
     const pf = e.ProgramFiles ?? 'C:\\Program Files';
     const pf86 = e['ProgramFiles(x86)'] ?? 'C:\\Program Files (x86)';
     const pd = e.ProgramData ?? 'C:\\ProgramData';

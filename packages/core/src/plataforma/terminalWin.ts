@@ -4,6 +4,7 @@ import path from 'node:path';
 import { ErrorWolf } from '../errores';
 import { CODIGO_RESTRINGIDO, literalPowerShell } from './lanzarOculto';
 import { codificarPowerShell } from './pathUsuarioWin';
+import { raizSistema } from './raizSistema';
 import type { Ejecutor, IdTerminal, OpcionesAbrirTerminal, TerminalDisponible } from './tipos';
 
 /** Lanza un proceso separado de nosotros y con ventana propia (sin shell). */
@@ -58,17 +59,7 @@ export function citarArgWindows(a: string): string {
 /** Script de PowerShell en UTF-16LE y base64 para `-EncodedCommand`. */
 const codificar = (script: string): string => Buffer.from(script, 'utf16le').toString('base64');
 
-/**
- * Carpeta de Windows: SystemRoot, SYSTEMROOT o windir si es una ruta absoluta con unidad; si no,
- * `C:\Windows`. Nunca se deja que el PATH decida qué PowerShell o cmd se ejecuta.
- */
-export function raizSistema(entorno: NodeJS.ProcessEnv): string {
-  const r = entorno.SystemRoot ?? entorno.SYSTEMROOT ?? entorno.windir;
-  // Con unidad y sin tramos `..` (no se sale de la carpeta que dice ser).
-  return r && /^[A-Za-z]:\\[^"<>|?*\0]*$/.test(r) && !/(^|[\\/])\.\.([\\/]|$)/.test(r)
-    ? r
-    : 'C:\\Windows';
-}
+export { raizSistema };
 
 /** PowerShell 5 del sistema (siempre con ruta completa; ver `raizSistema`). */
 export function powershellDelSistema(entorno: NodeJS.ProcessEnv): string {

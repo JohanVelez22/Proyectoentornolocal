@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { lstat, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -197,8 +198,31 @@ function ejecutar(cmd: string, args: string[], tiempoMs = 20_000): Promise<strin
   });
 }
 
-const sistema32 = (): string =>
-  path.join(process.env.SystemRoot ?? process.env.windir ?? 'C:\\Windows', 'System32');
+/**
+ * Carpeta de Windows con el mismo criterio que `raizSistema` del núcleo (este cliente no importa
+ * `@pel/core`; una prueba comprueba que coinciden con valores hostiles): con unidad, sin `..` ni
+ * UNC y con `System32\kernel32.dll`; si no, `C:\Windows`.
+ */
+export function raizSistemaCli(
+  env: NodeJS.ProcessEnv,
+  existe: (ruta: string) => boolean = (r) =>
+    existsSync(path.win32.join(r, 'System32', 'kernel32.dll')),
+): string {
+  for (const v of ['SystemRoot', 'SYSTEMROOT', 'windir']) {
+    const r = env[v];
+    if (
+      r &&
+      /^[A-Za-z]:\\[^"<>|?*\0]*$/.test(r) &&
+      !/(^|[\\/])\.\.([\\/]|$)/.test(r) &&
+      existe(r)
+    ) {
+      return r;
+    }
+  }
+  return 'C:\\Windows';
+}
+
+const sistema32 = (): string => path.win32.join(raizSistemaCli(process.env), 'System32');
 
 export function depsLecturaReales(): DepsLectura {
   const plataforma = process.platform;

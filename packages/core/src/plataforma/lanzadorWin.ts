@@ -1,3 +1,4 @@
+import { raizSistema } from './raizSistema';
 import { existsSync } from 'node:fs';
 import { readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -17,7 +18,7 @@ export const NOMBRE_VERSION_EXE = 'wolf.exe.version';
 
 /** El compilador de C# de .NET Framework (viene con Windows); null si no está. */
 export function rutaCsc(env: NodeJS.ProcessEnv = process.env): string | null {
-  const raiz = env.SystemRoot ?? env.windir ?? 'C:\\Windows';
+  const raiz = raizSistema(env);
   for (const f of ['Framework64', 'Framework']) {
     const r = path.win32.join(raiz, 'Microsoft.NET', f, 'v4.0.30319', 'csc.exe');
     if (existsSync(r)) return r;

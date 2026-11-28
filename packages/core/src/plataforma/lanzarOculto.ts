@@ -1,3 +1,4 @@
+import { rutaPowerShell } from './procesosWin';
 import { literalPowerShell } from './literalPowerShell';
 import * as childProcess from 'node:child_process';
 import { randomUUID } from 'node:crypto';
@@ -95,14 +96,7 @@ export function scriptLanzamiento(
   ].join('\n');
 }
 
-const powershell = (): string =>
-  path.win32.join(
-    process.env.SystemRoot ?? 'C:\\Windows',
-    'System32',
-    'WindowsPowerShell',
-    'v1.0',
-    'powershell.exe',
-  );
+const powershell = (): string => rutaPowerShell(process.env);
 
 const LIMITE_MS = 30_000;
 

@@ -1,5 +1,5 @@
+import { rutaSistema32 } from './raizSistema';
 import { spawn } from 'node:child_process';
-import path from 'node:path';
 import type { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { StringDecoder } from 'node:string_decoder';
@@ -55,11 +55,7 @@ const esCierreDelHijo = (e: unknown): boolean => {
  */
 /** taskkill.exe por ruta absoluta (no se busca en el PATH ni en la carpeta del proyecto). */
 export function rutaTaskkill(env: NodeJS.ProcessEnv = process.env): string {
-  return path.win32.join(
-    env.SystemRoot ?? env.SYSTEMROOT ?? 'C:\\Windows',
-    'System32',
-    'taskkill.exe',
-  );
+  return rutaSistema32(env, 'taskkill.exe');
 }
 
 export interface OpcionesMatar {

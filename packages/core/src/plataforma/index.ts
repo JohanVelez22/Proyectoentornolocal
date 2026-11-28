@@ -66,6 +66,7 @@ export {
   interpretarServiciosSistema,
 } from './diagnosticoWin';
 export { interpretarDescendientes } from './procesosWin';
+export { raizSistema } from './raizSistema';
 export { nombreEjecutable, sistemaActual } from './sistema';
 export type {
   AdaptadorRed,
