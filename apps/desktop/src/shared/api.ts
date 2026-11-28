@@ -120,6 +120,9 @@ import type {
   InfoDescargaOllama,
   InfoEquipo,
   SugerenciaEquipo,
+  ResultadoSalud,
+  DiscoSalud,
+  EventoDisco,
   ModeloOllama,
   MotorBd,
   OpcionesCrearBase,
@@ -395,6 +398,9 @@ export type {
   InfoDescargaOllama,
   InfoEquipo,
   SugerenciaEquipo,
+  ResultadoSalud,
+  DiscoSalud,
+  EventoDisco,
   ModeloOllama,
   MotorBd,
   OpcionesCrearBase,
@@ -1532,6 +1538,19 @@ export interface ApiEntorno {
      */
     equipo(forzar?: boolean): Promise<InfoEquipo>;
     /**
+     * Salud de los discos (D57): estado, tipo, contadores y veredicto de cada disco, sin números de
+     * serie. Solo lectura y sin administrador: lo que Windows reserva a un administrador llega como
+     * «no disponible» con su motivo.
+     */
+    saludDiscos(): Promise<ResultadoSalud>;
+    /**
+     * La misma lectura con permisos de administrador. Pide el UAC de Windows al llamarla, así que
+     * SOLO la dispara el botón «Leer con permisos de administrador»; nunca ocurre sola.
+     */
+    saludDiscosAdmin(): Promise<ResultadoSalud>;
+    /** Eventos del disco de los últimos 30 días (registro System, solo lectura, máximo 200). */
+    eventosDisco(): Promise<EventoDisco[]>;
+    /**
      * Imagen elegida con `sistema.elegirArchivo`: bytes más dimensiones y tipo leídos de la
      * cabecera. Rechaza lo que pesa más de 30 MB o supera 12000 px por lado (bombas de
      * descompresión) sin decodificarlo.
@@ -2247,6 +2266,9 @@ export const RUTAS_IPC = [
   'herramientas.emitirCertificado',
   'herramientas.entorno',
   'herramientas.equipo',
+  'herramientas.saludDiscos',
+  'herramientas.saludDiscosAdmin',
+  'herramientas.eventosDisco',
   'herramientas.leerImagen',
   'herramientas.guardarImagen',
   'herramientas.comprimirZip',

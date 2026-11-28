@@ -1938,6 +1938,11 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'herramientas.entorno': (n) => n.entornoSistema(),
   'herramientas.equipo': (n, _s, forzar) =>
     n.infoEquipo(forzar === undefined ? false : booleano(forzar, 'forzar')),
+  // Salud de los discos (D57): solo lectura, sin argumentos. La lectura con administrador es un
+  // canal aparte que sale únicamente del botón «Leer con permisos de administrador» (UAC).
+  'herramientas.saludDiscos': (n) => n.saludDiscos.leer(),
+  'herramientas.saludDiscosAdmin': (n) => n.saludDiscos.leer({ admin: true }),
+  'herramientas.eventosDisco': (n) => n.saludDiscos.eventos(),
   // Imágenes, ZIP y PDF (D33): toda ruta sale de un diálogo (lectura = abrir; escritura = guardar)
   // y el núcleo nunca pisa un archivo existente. Los bytes de la imagen tienen tope.
   'herramientas.leerImagen': (n, s, ruta) => n.leerImagen(s.elegidas.exigir(ruta, 'archivo')),

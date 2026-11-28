@@ -244,7 +244,7 @@ function motivoSinContadores(estado: string, bus: BusDisco | null): MotivoSinCon
 export function interpretarSaludDiscos(stdout: string): LecturaDiscos | null {
   let crudo: unknown;
   try {
-    crudo = JSON.parse(stdout.replace(/^﻿/, '').trim());
+    crudo = JSON.parse(stdout.replace(/^\uFEFF/, '').trim());
   } catch {
     return null;
   }
