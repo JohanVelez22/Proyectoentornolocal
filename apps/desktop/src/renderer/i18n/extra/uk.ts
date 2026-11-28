@@ -1568,6 +1568,9 @@ export const ukExtra: TextosParciales = {
     avanzadas: 'Показувати розширені розділи',
     avanzadasAyuda:
       'Додає на бічну панель рідко використовувані екрани, наприклад «Контейнери». Вони також доступні за Ctrl+K.',
+    animacionInicio: 'Анімація запуску',
+    animacionInicioAyuda:
+      'Під час відкриття застосунку логотип малюється світною лінією. Її можна пропустити клацанням або клавішею Esc. Якщо Windows просить зменшити рух, показується лише коротке згасання.',
   },
   paleta: {
     irAServicio: (nombre: string) => `Перейти до служби ${nombre}`,
@@ -1691,6 +1694,8 @@ export const ukExtra: TextosParciales = {
     },
   },
   asistenteInicio: {
+    animacionNota:
+      'Якщо ви не хочете бачити анімацію логотипа під час запуску, вимкніть її в «Налаштування › Вигляд».',
     titulo: 'Вітальний тур',
     saltar: 'Пропуск',
     terminar: 'Почати роботу',

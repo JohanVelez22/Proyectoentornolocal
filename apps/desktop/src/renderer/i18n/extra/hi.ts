@@ -1423,6 +1423,9 @@ export const hiExtra: TextosParciales = {
     asistenteAbrir: 'टूर देखें',
     avanzadas: 'उन्नत अनुभाग दिखाएँ',
     avanzadasAyuda: 'साइडबार में कम उपयोग होने वाली स्क्रीनें जोड़ता है, जैसे कंटेनर। वे Ctrl+K से भी पहुँच में हैं।',
+    animacionInicio: 'स्टार्टअप एनिमेशन',
+    animacionInicioAyuda:
+      'ऐप खुलते समय लोगो को चमकती रेखा से बनाया जाता है। क्लिक या Esc से इसे छोड़ा जा सकता है। यदि Windows में गति कम करने का विकल्प चालू है, तो केवल एक छोटा फ़ेड दिखाई देता है।',
   },
   paleta: {
     irAServicio: (nombre) => `${nombre} सेवा पर जाएँ`,
@@ -1540,6 +1543,7 @@ export const hiExtra: TextosParciales = {
     },
   },
   asistenteInicio: {
+    animacionNota: 'यदि आप ऐप खुलते समय लोगो एनिमेशन नहीं चाहते, तो इसे सेटिंग्स › दिखावट में बंद करें।',
     titulo: 'स्वागत टूर',
     saltar: 'छोड़ें',
     terminar: 'शुरू करें',

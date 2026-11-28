@@ -6062,6 +6062,9 @@ export const fr: Textos = {
     avanzadas: 'Afficher les sections avancées',
     avanzadasAyuda:
       'Ajoute à la barre latérale les écrans rarement utilisés, comme Conteneurs. Vous y accédez aussi avec Ctrl+K.',
+    animacionInicio: 'Animation de démarrage',
+    animacionInicioAyuda:
+      'Dessine le logo d’un trait lumineux à l’ouverture de l’application. Cliquez ou appuyez sur Échap pour l’ignorer. Si Windows demande de réduire les animations, seul un court fondu s’affiche.',
   },
   paleta: {
     titulo: 'Palette de commandes',
@@ -6606,6 +6609,8 @@ export const fr: Textos = {
     },
   },
   asistenteInicio: {
+    animacionNota:
+      'Si vous ne souhaitez pas l’animation du logo à l’ouverture, désactivez-la dans Réglages › Apparence.',
     titulo: 'Visite de bienvenue',
     paso: (n: number, total: number) => `Étape ${n} sur ${total}`,
     anterior: 'Précédent',

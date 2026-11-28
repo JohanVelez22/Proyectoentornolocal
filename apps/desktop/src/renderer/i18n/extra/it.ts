@@ -1584,6 +1584,9 @@ export const itExtra: TextosParciales = {
     avanzadas: 'Mostra le sezioni avanzate',
     avanzadasAyuda:
       'Aggiunge alla barra laterale le schermate usate di rado, come Container. Sono raggiungibili anche con Ctrl+K.',
+    animacionInicio: 'Animazione di avvio',
+    animacionInicioAyuda:
+      'Disegna il logo con un tratto luminoso all’apertura dell’applicazione. La si salta con un clic o con Esc. Se Windows chiede di ridurre il movimento, compare solo una breve dissolvenza.',
   },
   paleta: {
     irAServicio: (nombre) => `Vai al servizio ${nombre}`,
@@ -1708,6 +1711,8 @@ export const itExtra: TextosParciales = {
     },
   },
   asistenteInicio: {
+    animacionNota:
+      'Se non desidera l’animazione del logo all’apertura, la disattivi in Impostazioni › Aspetto.',
     titulo: 'Tour di benvenuto',
     saltar: 'Salta',
     terminar: 'Inizia',

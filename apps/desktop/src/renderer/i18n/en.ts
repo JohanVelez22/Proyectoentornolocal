@@ -5866,6 +5866,9 @@ export const en: Textos = {
     avanzadas: 'Show advanced sections',
     avanzadasAyuda:
       'Adds the rarely used screens to the sidebar, such as Containers. They are also reachable with Ctrl+K.',
+    animacionInicio: 'Startup animation',
+    animacionInicioAyuda:
+      'Draws the logo with a glowing stroke when the app opens. Click or press Esc to skip it. If Windows asks for reduced motion, only a short fade is shown.',
   },
   paleta: {
     titulo: 'Command palette',
@@ -6398,6 +6401,8 @@ export const en: Textos = {
     },
   },
   asistenteInicio: {
+    animacionNota:
+      'If you prefer no logo animation when the app opens, turn it off in Settings › Appearance.',
     titulo: 'Welcome tour',
     paso: (n: number, total: number) => `Step ${n} of ${total}`,
     anterior: 'Back',

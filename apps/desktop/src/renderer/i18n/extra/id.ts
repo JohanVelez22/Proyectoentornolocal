@@ -1487,6 +1487,9 @@ export const idExtra: TextosParciales = {
     avanzadas: 'Tampilkan bagian lanjutan',
     avanzadasAyuda:
       'Menambahkan layar yang jarang dipakai ke bilah samping, seperti Kontainer. Juga dapat dijangkau dengan Ctrl+K.',
+    animacionInicio: 'Animasi awal',
+    animacionInicioAyuda:
+      'Menggambar logo dengan goresan bercahaya saat aplikasi dibuka. Klik atau tekan Esc untuk melewatinya. Jika Windows meminta pengurangan gerakan, hanya pudar singkat yang ditampilkan.',
   },
   paleta: {
     irAServicio: (nombre) => `Buka layanan ${nombre}`,
@@ -1606,6 +1609,8 @@ export const idExtra: TextosParciales = {
     },
   },
   asistenteInicio: {
+    animacionNota:
+      'Jika Anda tidak ingin animasi logo saat aplikasi dibuka, matikan di Pengaturan › Tampilan.',
     titulo: 'Tur selamat datang',
     saltar: 'Lewati',
     terminar: 'Mulai',

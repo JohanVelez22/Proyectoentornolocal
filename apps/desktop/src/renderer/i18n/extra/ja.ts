@@ -1506,6 +1506,9 @@ export const jaExtra: TextosParciales = {
     avanzadas: '詳細セクションを表示',
     avanzadasAyuda:
       'コンテナーなど、あまり使わない画面をサイドバーに追加します。Ctrl+K でも開けます。',
+    animacionInicio: '起動アニメーション',
+    animacionInicioAyuda:
+      'アプリを開くときに、ロゴを光る線で描きます。クリックまたは Esc でスキップできます。Windows でアニメーションの軽減が設定されている場合は、短いフェードのみ表示されます。',
   },
   paleta: {
     irAServicio: (nombre) => `${nombre} サービスへ移動`,
@@ -1624,6 +1627,8 @@ export const jaExtra: TextosParciales = {
     },
   },
   asistenteInicio: {
+    animacionNota:
+      '起動時のロゴアニメーションが不要な場合は、「設定 › 外観」でオフにしてください。',
     titulo: 'ウェルカムツアー',
     saltar: 'スキップ',
     terminar: '始める',

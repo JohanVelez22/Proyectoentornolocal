@@ -163,6 +163,8 @@ const estiloTarjeta = computed(() => {
         <div aria-live="polite" aria-atomic="true">
           <h2 id="recorrido-titulo">{{ texto.titulo }}</h2>
           <p id="recorrido-texto" class="texto">{{ texto.texto }}</p>
+          <!-- La animación de inicio se menciona en el último paso, sin añadir pasos (D56). -->
+          <p v-if="esUltimo" class="texto" data-nota-animacion>{{ t.animacionNota }}</p>
         </div>
         <ol class="puntos" aria-hidden="true">
           <li v-for="(p, i) in PASOS_RECORRIDO" :key="p.id" :class="{ activo: i === actual }" />

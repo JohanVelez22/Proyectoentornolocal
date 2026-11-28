@@ -1456,6 +1456,9 @@ export const koExtra: TextosParciales = {
     avanzadas: '고급 섹션 표시',
     avanzadasAyuda:
       '컨테이너처럼 자주 쓰지 않는 화면을 사이드바에 추가합니다. Ctrl+K로도 열 수 있습니다.',
+    animacionInicio: '시작 애니메이션',
+    animacionInicioAyuda:
+      '앱을 열 때 로고를 빛나는 선으로 그립니다. 클릭하거나 Esc를 누르면 건너뜁니다. Windows에서 동작 줄이기를 요청한 경우에는 짧은 페이드만 표시됩니다.',
   },
   paleta: {
     irAServicio: (nombre) => `${nombre} 서비스로 이동`,
@@ -1574,6 +1577,7 @@ export const koExtra: TextosParciales = {
     },
   },
   asistenteInicio: {
+    animacionNota: '앱을 열 때 로고 애니메이션이 필요하지 않으시면 설정 › 모양에서 끄십시오.',
     titulo: '시작 투어',
     saltar: '건너뛰기',
     terminar: '시작하기',

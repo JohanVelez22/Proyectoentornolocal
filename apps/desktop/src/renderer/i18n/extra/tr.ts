@@ -1492,6 +1492,9 @@ export const trExtra: TextosParciales = {
     avanzadas: 'Gelişmiş bölümleri göster',
     avanzadasAyuda:
       'Kenar çubuğuna Kapsayıcılar gibi nadiren kullanılan ekranları ekler. Ctrl+K ile de erişilebilirler.',
+    animacionInicio: 'Açılış animasyonu',
+    animacionInicioAyuda:
+      'Uygulama açılırken logoyu parlayan bir çizgiyle çizer. Tıklayarak veya Esc tuşuyla atlanabilir. Windows hareketin azaltılmasını istiyorsa yalnızca kısa bir solma gösterilir.',
   },
   paleta: {
     irAServicio: (nombre) => `${nombre} hizmetine git`,
@@ -1610,6 +1613,8 @@ export const trExtra: TextosParciales = {
     },
   },
   asistenteInicio: {
+    animacionNota:
+      'Uygulama açılırken logo animasyonunu istemiyorsanız Ayarlar › Görünüm bölümünden kapatın.',
     titulo: 'Karşılama turu',
     saltar: 'Atla',
     terminar: 'Başla',

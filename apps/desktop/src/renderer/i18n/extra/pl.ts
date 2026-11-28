@@ -1588,6 +1588,9 @@ export const plExtra: TextosParciales = {
     avanzadas: 'Pokaż sekcje zaawansowane',
     avanzadasAyuda:
       'Dodaje do paska bocznego rzadko używane ekrany, takie jak Kontenery. Są też dostępne przez Ctrl+K.',
+    animacionInicio: 'Animacja startowa',
+    animacionInicioAyuda:
+      'Rysuje logo świecącą kreską po otwarciu aplikacji. Można ją pominąć kliknięciem lub klawiszem Esc. Jeśli system Windows wymaga ograniczenia ruchu, pojawi się tylko krótkie wygaszenie.',
   },
   paleta: {
     irAServicio: (nombre: string) => `Przejdź do usługi ${nombre}`,
@@ -1711,6 +1714,8 @@ export const plExtra: TextosParciales = {
     },
   },
   asistenteInicio: {
+    animacionNota:
+      'Jeśli nie chcą Państwo animacji logo przy otwarciu, można ją wyłączyć w Ustawienia › Wygląd.',
     titulo: 'Wycieczka powitalna',
     saltar: 'Pomiń',
     terminar: 'Zaczynamy',

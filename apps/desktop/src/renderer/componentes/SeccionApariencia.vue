@@ -23,6 +23,14 @@ async function cambiarAvanzadas(v: boolean): Promise<void> {
   }
 }
 
+async function cambiarAnimacion(v: boolean): Promise<void> {
+  try {
+    await preferencias.cambiarAnimacionInicio(v);
+  } catch (e) {
+    notification.error({ title: t.errorGuardar, content: mensajeDeError(e), duration: 6000 });
+  }
+}
+
 /** Acento elegido: el de la tabla, o null si es un color propio puesto a mano. */
 const actual = computed(() => acentoDe(preferencias.acento));
 
@@ -80,6 +88,18 @@ async function elegirAcento(claro: string): Promise<void> {
         :value="preferencias.seccionesAvanzadas"
         aria-labelledby="etiqueta-avanzadas"
         @update:value="cambiarAvanzadas"
+      />
+    </div>
+    <div class="asistente">
+      <div>
+        <strong id="etiqueta-animacion">{{ t.animacionInicio }}</strong>
+        <small class="ayuda">{{ t.animacionInicioAyuda }}</small>
+      </div>
+      <NSwitch
+        :value="preferencias.animacionInicio"
+        aria-labelledby="etiqueta-animacion"
+        data-animacion-inicio-interruptor
+        @update:value="cambiarAnimacion"
       />
     </div>
     <div class="asistente">

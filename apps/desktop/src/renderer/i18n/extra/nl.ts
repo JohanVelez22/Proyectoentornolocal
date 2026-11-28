@@ -1595,6 +1595,9 @@ export const nlExtra: TextosParciales = {
     avanzadas: 'Geavanceerde secties tonen',
     avanzadasAyuda:
       'Voegt de zelden gebruikte schermen toe aan de zijbalk, zoals Containers. Ze zijn ook bereikbaar met Ctrl+K.',
+    animacionInicio: 'Opstartanimatie',
+    animacionInicioAyuda:
+      'Tekent het logo met een oplichtende lijn bij het openen van de app. Met een klik of Esc slaat u ze over. Als Windows om minder beweging vraagt, verschijnt alleen een korte overgang.',
   },
   paleta: {
     irAServicio: (nombre) => `Naar de dienst ${nombre}`,
@@ -1720,6 +1723,8 @@ export const nlExtra: TextosParciales = {
     },
   },
   asistenteInicio: {
+    animacionNota:
+      'Als u de logo-animatie bij het openen niet wilt, schakelt u die uit via Instellingen › Weergave.',
     titulo: 'Welkomstrondleiding',
     saltar: 'Later',
     terminar: 'Aan de slag',

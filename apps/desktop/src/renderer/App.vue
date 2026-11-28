@@ -40,11 +40,13 @@ import {
   useOsTheme,
   zhCN,
 } from 'naive-ui';
-import { computed, watchEffect } from 'vue';
+import { computed, ref, watchEffect } from 'vue';
+import AnimacionInicio from './componentes/AnimacionInicio.vue';
 import Marco from './componentes/Marco.vue';
 import { idioma } from './i18n';
 import { esOscuro, usePreferencias } from './stores/preferencias';
 import { mezclar, primarioDe, temaDe, textoSobre } from './tema';
+import { entornoDelNavegador, modoAnimacion } from './utilidades/animacionInicio';
 
 const preferencias = usePreferencias();
 const osTheme = useOsTheme();
@@ -70,6 +72,11 @@ const LOCALES_NAIVE = {
 } as const;
 const locale = computed(() => LOCALES_NAIVE[idioma.value][0]);
 const dateLocale = computed(() => LOCALES_NAIVE[idioma.value][1]);
+
+// Animación de inicio (D56): una capa encima mientras la app carga. Se decide una sola vez, con las
+// preferencias ya leídas (`main.ts` monta después de leerlas), y nada la espera.
+const modoInicio = modoAnimacion(entornoDelNavegador(preferencias.animacionInicio));
+const animando = ref(modoInicio !== 'ninguna');
 
 // El acento también llega a los estilos propios (bordes, fondos suaves, el logo).
 watchEffect(() => {
@@ -103,4 +110,9 @@ watchEffect(() => {
       </NNotificationProvider>
     </NMessageProvider>
   </NConfigProvider>
+  <AnimacionInicio
+    v-if="animando && modoInicio !== 'ninguna'"
+    :modo="modoInicio"
+    @terminar="animando = false"
+  />
 </template>

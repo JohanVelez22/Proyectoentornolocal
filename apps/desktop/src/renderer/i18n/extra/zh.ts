@@ -1341,6 +1341,9 @@ export const zhExtra: TextosParciales = {
     asistenteAbrir: '观看导览',
     avanzadas: '显示高级分区',
     avanzadasAyuda: '在侧边栏中添加很少使用的界面，例如“容器”。也可以使用 Ctrl+K 打开它们。',
+    animacionInicio: '启动动画',
+    animacionInicioAyuda:
+      '打开应用时，用发光的线条绘制标志。单击或按 Esc 即可跳过。如果 Windows 要求减少动态效果，则只显示简短的淡出。',
   },
   paleta: {
     irAServicio: (nombre) => `前往 ${nombre} 服务`,
@@ -1453,6 +1456,7 @@ export const zhExtra: TextosParciales = {
     },
   },
   asistenteInicio: {
+    animacionNota: '如果您不想在启动时看到标志动画，可以在“设置 › 外观”中将其关闭。',
     titulo: '欢迎导览',
     saltar: '跳过',
     terminar: '开始使用',

@@ -1610,6 +1610,9 @@ export const deExtra: TextosParciales = {
     avanzadas: 'Erweiterte Bereiche anzeigen',
     avanzadasAyuda:
       'Fügt der Seitenleiste die selten genutzten Bildschirme hinzu, etwa Container. Sie sind auch mit Strg+K erreichbar.',
+    animacionInicio: 'Startanimation',
+    animacionInicioAyuda:
+      'Zeichnet beim Öffnen der Anwendung das Logo mit einem leuchtenden Strich. Mit einem Klick oder Esc wird sie übersprungen. Wenn Windows weniger Bewegung verlangt, erscheint nur eine kurze Überblendung.',
   },
   paleta: {
     irAServicio: (nombre) => `Zum Dienst ${nombre}`,
@@ -1735,6 +1738,8 @@ export const deExtra: TextosParciales = {
     },
   },
   asistenteInicio: {
+    animacionNota:
+      'Falls Sie die Logo-Animation beim Öffnen nicht möchten, schalten Sie sie unter Einstellungen › Darstellung aus.',
     titulo: 'Willkommensrundgang',
     saltar: 'Später',
     terminar: 'Los geht’s',

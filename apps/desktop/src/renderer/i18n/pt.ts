@@ -5914,6 +5914,9 @@ export const pt: Textos = {
     avanzadas: 'Mostrar seções avançadas',
     avanzadasAyuda:
       'Adiciona à barra lateral as telas pouco usadas, como Contêineres. Também dá para chegar a elas com Ctrl+K.',
+    animacionInicio: 'Animação de abertura',
+    animacionInicioAyuda:
+      'Desenha o logotipo com um traço luminoso ao abrir o aplicativo. Clique ou pressione Esc para pular. Se o Windows pedir redução de movimento, só aparece um fade curto.',
   },
   paleta: {
     titulo: 'Paleta de comandos',
@@ -6440,6 +6443,8 @@ export const pt: Textos = {
     },
   },
   asistenteInicio: {
+    animacionNota:
+      'Se preferir não ver a animação do logotipo ao abrir o aplicativo, desative-a em Configurações › Aparência.',
     titulo: 'Tour de boas-vindas',
     paso: (n: number, total: number) => `Passo ${n} de ${total}`,
     anterior: 'Anterior',
