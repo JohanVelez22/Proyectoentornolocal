@@ -22,7 +22,10 @@ describe('rejilla de Servicios: tarjetas independientes y del mismo tamaño (D54
     expect(r).toMatch(
       /grid-template-columns:\s*repeat\(auto-fill,\s*minmax\(min\(100%,\s*\d+px\),\s*1fr\)\)/,
     );
-    expect(r).toContain('grid-auto-rows: 1fr');
+    // Altura igual dentro de cada fila (stretch); una tarjeta expandida no estira toda la rejilla.
+    expect(r).toContain('grid-auto-rows: auto');
+    expect(r).toContain('align-items: stretch');
+    expect(r).not.toContain('grid-auto-rows: 1fr');
     expect(r).toMatch(/gap:\s*16px/);
   });
 

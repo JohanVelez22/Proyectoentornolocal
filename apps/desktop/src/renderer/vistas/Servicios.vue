@@ -304,12 +304,13 @@ onMounted(() => {
   font-size: 12px;
   opacity: 0.72;
 }
-/* Rejilla uniforme (D54b): columnas iguales, filas de la misma altura, separación fija. El mínimo
+/* Rejilla uniforme (D54b): columnas iguales, tarjetas de la misma altura dentro de cada fila, separación fija. El mínimo
    nunca supera el contenedor y cada celda puede encogerse, así una tarjeta no se monta en otra. */
 .rejilla {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
-  grid-auto-rows: 1fr;
+  grid-auto-rows: auto;
+  align-items: stretch;
   gap: 16px;
 }
 .rejilla > * {
