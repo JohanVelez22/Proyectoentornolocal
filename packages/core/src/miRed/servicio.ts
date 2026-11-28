@@ -5,7 +5,7 @@ import type { AdaptadorRed, CarpetaCompartida, RecursoRed, VecinoRed } from '../
 import type { PlataformaCompleta } from '../plataforma/tipos';
 import { escanearRango, PLAZO_PING_ESCANEO_MS } from './escaneo';
 import { fabricantePorMac } from './fabricante';
-import { esPrivadaRfc1918, rangoDeEscaneo } from './rfc1918';
+import { enRango, esPrivadaRfc1918, rangoDeEscaneo } from './rfc1918';
 import { nombreDeRecursoValido, rutaUncRecurso, validarIpPrivada } from './validacion';
 import {
   medirVelocidad,
@@ -260,8 +260,15 @@ export class MiRed {
     return [...porIp.values()].sort((a, b) => ordenIp(a.ip) - ordenIp(b.ip));
   }
 
+  /** Olvida los equipos sobre los que se podía actuar: una lectura o un escaneo nuevos los rehacen. */
+  private olvidar(): void {
+    this.conocidos.clear();
+    this.recursosPorEquipo.clear();
+  }
+
   private recordar(equipos: EquipoRed[]): void {
     this.ultimosEquipos = new Map(equipos.map((e) => [e.ip, e]));
+    this.olvidar();
     for (const e of equipos) this.conocidos.add(e.ip);
   }
 
@@ -304,6 +311,8 @@ export class MiRed {
     if (adaptadores === null && vecinos === null) {
       throw new ErrorWolf('red.lectura_fallo', 'No se pudo leer la red de este equipo.');
     }
+    // Lo que se podía hacer con la lectura anterior ya no vale, aunque esta falle a medias.
+    this.olvidar();
     const lista = adaptadores ?? [];
     const activo = this.activo(lista);
     const escaneo = this.estadoEscaneo(lista);
@@ -325,6 +334,8 @@ export class MiRed {
   async escanear(confirmado: unknown): Promise<ResultadoEscaneoRed> {
     if (confirmado !== true) throw sinConfirmar();
     if (this.escaneo) throw ocupado();
+    // Mientras se explora, tampoco se actúa sobre equipos de una lectura anterior.
+    this.olvidar();
     const adaptadores = await this.deps.plataforma.adaptadoresRed();
     if (adaptadores === null) {
       throw new ErrorWolf('red.lectura_fallo', 'No se pudo leer la red de este equipo.');
@@ -403,8 +414,37 @@ export class MiRed {
 
   // ---- Acciones por equipo (a petición, sobre equipos de la lista) ----
 
-  private conocido(ip: unknown): string {
+  /**
+   * Un equipo sobre el que se puede actuar: IPv4 privada, de la lista actual Y dentro de la red del
+   * adaptador activo, que además se vuelve a leer ahora: si la red es (o pasó a ser) pública o de
+   * perfil desconocido no se toca a nadie (ni ping ni `net view`, que podría filtrar credenciales
+   * NTLM por SMB a un equipo hostil).
+   */
+  private async conocido(ip: unknown): Promise<string> {
     const v = validarIpPrivada(ip);
+    const adaptadores = await this.deps.plataforma.adaptadoresRed();
+    if (adaptadores === null) {
+      throw new ErrorWolf('red.lectura_fallo', 'No se pudo leer la red de este equipo.');
+    }
+    const a = this.activo(adaptadores);
+    if (!a) throw new ErrorWolf('red.sin_adaptador', 'No hay una red activa que explorar.');
+    const motivo = evaluarAdaptador(a);
+    if (motivo === 'publica') {
+      throw new ErrorWolf('red.red_publica', 'En redes públicas no se exploran otros equipos.');
+    }
+    if (motivo === 'perfil_desconocido') {
+      throw new ErrorWolf(
+        'red.perfil_desconocido',
+        'No se pudo saber si la red es privada o pública.',
+      );
+    }
+    // Lanza `red.rango_no_permitido` si el adaptador no es de una red privada explorable.
+    if (!enRango(rangoDeEscaneo(a.ip, a.prefijo), v)) {
+      throw new ErrorWolf(
+        'red.rango_no_permitido',
+        'Ese equipo no está en la red activa de este equipo.',
+      );
+    }
     if (!this.conocidos.has(v)) {
       throw new ErrorWolf(
         'red.equipo_desconocido',
@@ -416,7 +456,7 @@ export class MiRed {
 
   /** Ping a un equipo de la lista: 4 paquetes por defecto, nunca más de 10. */
   async ping(ip: unknown, intentos: unknown = INTENTOS_PING): Promise<ResultadoPingEquipo> {
-    const v = this.conocido(ip);
+    const v = await this.conocido(ip);
     const n = intentos === undefined ? INTENTOS_PING : intentos;
     if (typeof n !== 'number' || !Number.isInteger(n) || n < 1 || n > MAX_INTENTOS_PING_RED) {
       throw new ErrorWolf('red.equipo_no_valido', 'Número de paquetes no válido.');
@@ -447,7 +487,7 @@ export class MiRed {
 
   /** Carpetas compartidas de un equipo de la lista (`net view`: consulta SMB, no un escaneo). */
   async carpetasDeEquipo(ip: unknown): Promise<ResultadoCarpetasDeEquipo> {
-    const v = this.conocido(ip);
+    const v = await this.conocido(ip);
     const ctl = new AbortController();
     this.pings.add(ctl);
     try {
@@ -466,8 +506,8 @@ export class MiRed {
    * Ruta `\\IP\recurso` para que el proceso principal la abra por un clic: el equipo debe estar
    * en la lista, el recurso salir del último `net view` de ese equipo y ambos pasar la validación.
    */
-  rutaRecurso(ip: unknown, recurso: unknown): string {
-    const v = this.conocido(ip);
+  async rutaRecurso(ip: unknown, recurso: unknown): Promise<string> {
+    const v = await this.conocido(ip);
     if (typeof recurso !== 'string' || !this.recursosPorEquipo.get(v)?.has(recurso)) {
       throw new ErrorWolf('red.recurso_no_valido', 'Ese recurso no está en la lista del equipo.');
     }

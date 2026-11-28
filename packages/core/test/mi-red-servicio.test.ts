@@ -239,11 +239,11 @@ describe('Mi red: acciones por equipo (D53)', () => {
       recursos: [{ nombre: 'Música 2024', tipo: 'Disk', comentario: '' }],
     });
     // Antes de listar no hay nada que abrir.
-    expect(() => servicio.rutaRecurso('192.168.1.1', 'Música 2024')).toThrowError(
-      expect.objectContaining({ codigo: 'red.recurso_no_valido' }),
-    );
+    await rechaza(servicio.rutaRecurso('192.168.1.1', 'Música 2024'), 'red.recurso_no_valido');
     await servicio.carpetasDeEquipo('192.168.1.1');
-    expect(servicio.rutaRecurso('192.168.1.1', 'Música 2024')).toBe('\\\\192.168.1.1\\Música 2024');
+    expect(await servicio.rutaRecurso('192.168.1.1', 'Música 2024')).toBe(
+      '\\\\192.168.1.1\\Música 2024',
+    );
     for (const [ip, recurso, codigo] of [
       ['192.168.1.1', 'Otro', 'red.recurso_no_valido'],
       ['192.168.1.1', 'C$', 'red.recurso_no_valido'],
@@ -253,10 +253,93 @@ describe('Mi red: acciones por equipo (D53)', () => {
       ['192.168.1.99', 'Música 2024', 'red.equipo_desconocido'],
       ['8.8.8.8', 'Música 2024', 'red.equipo_no_valido'],
     ] as const) {
-      expect(() => servicio.rutaRecurso(ip, recurso), `${ip} ${String(recurso)}`).toThrowError(
-        expect.objectContaining({ codigo }),
-      );
+      await rechaza(servicio.rutaRecurso(ip, recurso), codigo);
     }
+  });
+});
+
+describe('Mi red: acciones por equipo y la red activa (D53)', () => {
+  const OTRA_SUBRED = '10.0.0.5';
+
+  async function conLista() {
+    const t = crear();
+    t.falsa.vecinosFalsos = [
+      ...(t.falsa.vecinosFalsos ?? []),
+      { ip: OTRA_SUBRED, mac: 'b8:27:eb:00:00:09', estado: 'Reachable', indice: 5 },
+    ];
+    t.falsa.recursosFalsos.set('192.168.1.1', {
+      ok: true,
+      recursos: [{ nombre: 'Docs', tipo: 'Disk', comentario: '' }],
+    });
+    await t.servicio.lectura();
+    await t.servicio.carpetasDeEquipo('192.168.1.1');
+    t.falsa.recursosPedidos.length = 0;
+    t.falsa.pingsPedidos.length = 0;
+    return t;
+  }
+
+  it('en una red pública (o que pasó a serlo tras la lectura) no se hace ping, ni net view ni se abre nada', async () => {
+    const { falsa, servicio } = await conLista();
+    falsa.adaptadoresFalsos = [{ ...WIFI, perfil: 'publico' }];
+    await rechaza(servicio.ping('192.168.1.1'), 'red.red_publica');
+    await rechaza(servicio.carpetasDeEquipo('192.168.1.1'), 'red.red_publica');
+    await rechaza(servicio.rutaRecurso('192.168.1.1', 'Docs'), 'red.red_publica');
+    expect(falsa.pingsPedidos).toEqual([]);
+    expect(falsa.recursosPedidos).toEqual([]);
+  });
+
+  it('con perfil desconocido, sin adaptador activo o sin poder leerlos, tampoco', async () => {
+    const { falsa, servicio } = await conLista();
+    falsa.adaptadoresFalsos = [{ ...WIFI, perfil: null }];
+    await rechaza(servicio.ping('192.168.1.1'), 'red.perfil_desconocido');
+    falsa.adaptadoresFalsos = [{ ...WIFI, predeterminado: false }];
+    await rechaza(servicio.carpetasDeEquipo('192.168.1.1'), 'red.sin_adaptador');
+    falsa.adaptadoresFalsos = null;
+    await rechaza(servicio.rutaRecurso('192.168.1.1', 'Docs'), 'red.lectura_fallo');
+    expect(falsa.pingsPedidos).toEqual([]);
+    expect(falsa.recursosPedidos).toEqual([]);
+  });
+
+  it('un equipo de otra subred (aunque esté en la tabla ARP) o de otro adaptador se rechaza', async () => {
+    const { falsa, servicio } = await conLista();
+    await rechaza(servicio.ping(OTRA_SUBRED), 'red.rango_no_permitido');
+    await rechaza(servicio.carpetasDeEquipo(OTRA_SUBRED), 'red.rango_no_permitido');
+    await rechaza(servicio.rutaRecurso(OTRA_SUBRED, 'Docs'), 'red.rango_no_permitido');
+    // Otro adaptador privado que NO es el activo: su red tampoco.
+    falsa.adaptadoresFalsos = [
+      WIFI,
+      {
+        ...WIFI,
+        indice: 7,
+        nombre: 'Ethernet',
+        ip: '10.0.0.7',
+        prefijo: 24,
+        predeterminado: false,
+      },
+    ];
+    await rechaza(servicio.ping(OTRA_SUBRED), 'red.rango_no_permitido');
+    expect(falsa.pingsPedidos).toEqual([]);
+    expect(falsa.recursosPedidos).toEqual([]);
+    // Y el de la red activa sigue funcionando.
+    expect((await servicio.ping('192.168.1.1')).enviados).toBe(4);
+  });
+
+  it('tras una nueva lectura o un escaneo, una IP antigua ya no está «conocida»', async () => {
+    const { falsa, servicio } = await conLista();
+    falsa.vecinosFalsos = [
+      { ip: '192.168.1.40', mac: 'da:a1:19:00:00:01', estado: 'Stale', indice: 12 },
+    ];
+    await servicio.lectura();
+    await rechaza(servicio.ping('192.168.1.1'), 'red.equipo_desconocido');
+    // Los recursos listados de la lectura anterior tampoco se pueden abrir.
+    await rechaza(servicio.rutaRecurso('192.168.1.1', 'Docs'), 'red.equipo_desconocido');
+    expect((await servicio.ping('192.168.1.40')).enviados).toBe(4);
+    await servicio.carpetasDeEquipo('192.168.1.40');
+    // Un escaneo rehace la lista: la IP que ya no sale deja de valer.
+    falsa.vecinosFalsos = [];
+    await servicio.escanear(true);
+    await rechaza(servicio.ping('192.168.1.40'), 'red.equipo_desconocido');
+    await rechaza(servicio.rutaRecurso('192.168.1.40', 'Docs'), 'red.equipo_desconocido');
   });
 });
 

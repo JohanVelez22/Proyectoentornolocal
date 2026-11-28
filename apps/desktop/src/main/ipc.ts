@@ -2118,7 +2118,10 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'miRed.abrirRecurso': async (n, s, ip, recurso) => {
     if (!s.abrirRecursoRed) throw new Error('No disponible');
     await s.abrirRecursoRed(
-      n.miRed.rutaRecurso(textoAcotado(ip, 7, 15, 'ip'), textoAcotado(recurso, 1, 80, 'recurso')),
+      await n.miRed.rutaRecurso(
+        textoAcotado(ip, 7, 15, 'ip'),
+        textoAcotado(recurso, 1, 80, 'recurso'),
+      ),
     );
   },
   'miRed.medirVelocidad': (n, _s, confirmacion) => n.miRed.medirVelocidad(confirmado(confirmacion)),
