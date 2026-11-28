@@ -17,6 +17,11 @@ export const trExtra: TextosParciales = {
     cortoCargando: 'Bağlanıyor…',
     cortoSinConexion: 'Çevrimdışı',
     irAServicios: 'Hizmetleri aç',
+    /** Texto largo de la pastilla (D54c): con un solo error nombra el servicio. */
+    errorServicio: (nombre: string) => `${nombre}: hata`,
+    variosErrores: (n: number) => `${n} hizmette hata`,
+    irAlServicio: 'Hizmete git',
+    problemasInicio: (n: number) => `Başlangıç’ta ${n} sorun`,
   },
   acciones: { copiarCompleto: 'Metnin tamamını kopyala' },
   errores: {

@@ -19,6 +19,11 @@ export const nlExtra: TextosParciales = {
     cortoCargando: 'Verbinden…',
     cortoSinConexion: 'Offline',
     irAServicios: 'Diensten openen',
+    /** Texto largo de la pastilla (D54c): con un solo error nombra el servicio. */
+    errorServicio: (nombre: string) => `${nombre}: fout`,
+    variosErrores: (n: number) => `${n} diensten met fouten`,
+    irAlServicio: 'Naar de dienst',
+    problemasInicio: (n: number) => plural(n, 'probleem in Start', 'problemen in Start'),
   },
   acciones: {
     copiarCompleto: 'De volledige tekst kopiëren',

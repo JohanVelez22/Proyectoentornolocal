@@ -16,6 +16,11 @@ export const idExtra: TextosParciales = {
     cortoCargando: 'Menyambung…',
     cortoSinConexion: 'Luring',
     irAServicios: 'Buka Layanan',
+    /** Texto largo de la pastilla (D54c): con un solo error nombra el servicio. */
+    errorServicio: (nombre: string) => `${nombre}: galat`,
+    variosErrores: (n: number) => `${n} layanan bermasalah`,
+    irAlServicio: 'Buka layanan',
+    problemasInicio: (n: number) => `${n} masalah di Beranda`,
   },
   acciones: { copiarCompleto: 'Salin seluruh teks' },
   errores: {

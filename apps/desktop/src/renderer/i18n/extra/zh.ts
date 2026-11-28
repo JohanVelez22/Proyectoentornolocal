@@ -14,6 +14,11 @@ export const zhExtra: TextosParciales = {
     cortoCargando: '正在连接…',
     cortoSinConexion: '离线',
     irAServicios: '打开服务',
+    /** Texto largo de la pastilla (D54c): con un solo error nombra el servicio. */
+    errorServicio: (nombre: string) => `${nombre}: 出错`,
+    variosErrores: (n: number) => `${n} 个服务出错`,
+    irAlServicio: '前往该服务',
+    problemasInicio: (n: number) => `首页有 ${n} 个问题`,
   },
   acciones: { copiarCompleto: '复制全文' },
   errores: {

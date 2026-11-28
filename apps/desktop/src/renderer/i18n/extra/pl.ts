@@ -23,6 +23,12 @@ export const plExtra: TextosParciales = {
     cortoCargando: 'Łączenie…',
     cortoSinConexion: 'Brak łączności',
     irAServicios: 'Otwórz Usługi',
+    /** Texto largo de la pastilla (D54c): con un solo error nombra el servicio. */
+    errorServicio: (nombre: string) => `${nombre}: błąd`,
+    variosErrores: (n: number) => `${n} usług z błędami`,
+    irAlServicio: 'Przejdź do usługi',
+    problemasInicio: (n: number) =>
+      plural(n, 'problem w Start', 'problemy w Start', 'problemów w Start'),
   },
   acciones: {
     copiarCompleto: 'Kopiuj cały tekst',

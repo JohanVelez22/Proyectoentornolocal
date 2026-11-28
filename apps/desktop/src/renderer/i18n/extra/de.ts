@@ -19,6 +19,11 @@ export const deExtra: TextosParciales = {
     cortoCargando: 'Verbinde…',
     cortoSinConexion: 'Offline',
     irAServicios: 'Dienste öffnen',
+    /** Texto largo de la pastilla (D54c): con un solo error nombra el servicio. */
+    errorServicio: (nombre: string) => `${nombre}: Fehler`,
+    variosErrores: (n: number) => `${n} Dienste mit Fehlern`,
+    irAlServicio: 'Zum Dienst wechseln',
+    problemasInicio: (n: number) => plural(n, 'Problem im Start', 'Probleme im Start'),
   },
   acciones: {
     copiarCompleto: 'Gesamten Text kopieren',

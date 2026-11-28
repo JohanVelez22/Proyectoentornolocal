@@ -14,6 +14,11 @@ export const koExtra: TextosParciales = {
     cortoCargando: '연결 중…',
     cortoSinConexion: '오프라인',
     irAServicios: '서비스 열기',
+    /** Texto largo de la pastilla (D54c): con un solo error nombra el servicio. */
+    errorServicio: (nombre: string) => `${nombre}: 오류`,
+    variosErrores: (n: number) => `${n}개 서비스에서 오류`,
+    irAlServicio: '서비스로 이동',
+    problemasInicio: (n: number) => `홈에 문제 ${n}건`,
   },
   acciones: { copiarCompleto: '전체 텍스트 복사' },
   errores: {

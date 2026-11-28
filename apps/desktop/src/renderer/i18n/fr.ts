@@ -46,6 +46,11 @@ export const fr: Textos = {
     cortoCargando: 'Connexion…',
     cortoSinConexion: 'Hors connexion',
     irAServicios: 'Ouvrir Services',
+    /** Texto largo de la pastilla (D54c): con un solo error nombra el servicio. */
+    errorServicio: (nombre: string) => `${nombre} : erreur`,
+    variosErrores: (n: number) => `${n} services en erreur`,
+    irAlServicio: 'Aller au service',
+    problemasInicio: (n: number) => `${n} ${n === 1 ? 'problème' : 'problèmes'} dans Accueil`,
   },
   estado: {
     encendido: 'Allumé',

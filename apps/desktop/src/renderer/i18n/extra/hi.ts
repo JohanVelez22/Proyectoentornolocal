@@ -16,6 +16,11 @@ export const hiExtra: TextosParciales = {
     cortoCargando: 'जुड़ रहा…',
     cortoSinConexion: 'ऑफ़लाइन',
     irAServicios: 'सेवाएँ खोलें',
+    /** Texto largo de la pastilla (D54c): con un solo error nombra el servicio. */
+    errorServicio: (nombre: string) => `${nombre}: त्रुटि`,
+    variosErrores: (n: number) => `${n} सेवाओं में त्रुटि`,
+    irAlServicio: 'सेवा पर जाएँ',
+    problemasInicio: (n: number) => `होम में ${n} समस्या`,
   },
   acciones: { copiarCompleto: 'पूरा पाठ कॉपी करें' },
   errores: {

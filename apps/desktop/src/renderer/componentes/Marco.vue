@@ -9,14 +9,14 @@ import {
   Cube as IconoContenedores,
   DocumentText as IconoRegistros,
   Home as IconoInicio,
-  Layers as IconoBases,
   Mail as IconoCorreo,
   Medkit as IconoDoctor,
-  Server as IconoServicios,
+  Server as IconoBases,
   Settings as IconoAjustes,
   Sparkles as IconoIa,
   Search as IconoBuscar,
   SwapHorizontal as IconoTuneles,
+  Toggle as IconoServicios,
 } from '@vicons/ionicons5';
 import {
   NIcon,
@@ -35,7 +35,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { argsDeAviso, useVersiones } from '../stores/versiones';
-import { destinoVersion, rutaConFoco } from '../utilidades/foco';
+import { destinoServicio, destinoVersion, rutaConFoco } from '../utilidades/foco';
 import { solicitudes } from '../composables/solicitudes';
 import AsistenteInicio from './AsistenteInicio.vue';
 import BotonMemoria from './BotonMemoria.vue';
@@ -54,6 +54,8 @@ import type { SeccionNav } from '../router';
 import { detenerEntorno, iniciarEntorno } from '../stores/entorno';
 import { resumenPastilla } from '../utilidades/pastilla';
 import { useAvisos } from '../stores/avisos';
+import { useMetricas, INTERVALO_PUERTOS_MS } from '../stores/metricas';
+import { useProblemas } from '../stores/problemas';
 import { useServicios } from '../stores/servicios';
 import { useTuneles } from '../stores/tuneles';
 
@@ -66,6 +68,8 @@ const { ejecutar } = useAccion();
 const notification = useNotification();
 
 const avisos = useAvisos();
+const problemas = useProblemas();
+const metricas = useMetricas();
 const panelAvisos = ref(false);
 /** Ventana estrecha (p. ej. escala de Windows alta): el menú lateral empieza plegado. */
 const ANCHO_PLEGAR = 900;
@@ -140,8 +144,20 @@ const pastilla = computed(() =>
     // Con los procesos de proyecto: uno en error también pone la pastilla en alerta.
     hayError: servicios.resumen.conErrorVigilados > 0,
     conError: servicios.resumen.conErrorVigilados,
+    errores: servicios.vigilados
+      .filter((s) => s.estado === 'error')
+      .map((s) => ({ id: s.id, nombre: s.nombre, mensaje: s.mensaje })),
+    // La misma cuenta que la campana y el bloque «Problemas detectados» de Inicio.
+    problemas: problemas.total,
   }),
 );
+
+/** Con un servicio en error, la pastilla lleva a su tarjeta (con foco); si no, a Servicios. */
+function abrirPastilla(): void {
+  const id = pastilla.value.destinoId;
+  if (id) void router.push(destinoServicio(id));
+  else navegar('servicios');
+}
 
 /** Plegado, el menú solo muestra iconos: cada entrada lleva su nombre para lectores de pantalla. */
 function propsEntrada(o: MenuOption): Record<string, string> {
@@ -192,6 +208,7 @@ watch(
 
 let bajaAviso: (() => void) | null = null;
 let bajaCaptura: (() => void) | null = null;
+let vigilaPuertos: ReturnType<typeof setInterval> | null = null;
 
 /** Al cruzar el umbral se pliega o despliega solo; el usuario puede cambiarlo después. */
 let consultaAncho: MediaQueryList | null = null;
@@ -201,6 +218,12 @@ function alCambiarAncho(e: MediaQueryListEvent): void {
 onMounted(() => {
   consultaAncho = window.matchMedia(`(max-width: ${ANCHO_PLEGAR - 1}px)`);
   consultaAncho.addEventListener('change', alCambiarAncho);
+  // Los puertos ocupados cuentan como problema en la pastilla y la campana desde cualquier
+  // pantalla, no solo desde Inicio (la misma lectura que usa el bloque de Inicio).
+  void metricas.cargarPuertos();
+  vigilaPuertos = setInterval(() => {
+    if (!document.hidden) void metricas.cargarPuertos();
+  }, INTERVALO_PUERTOS_MS);
   // El historial no es imprescindible: si no carga, la campana queda en cero.
   void avisos.cargar().catch(() => undefined);
   avisos.iniciar(abrirAviso);
@@ -239,6 +262,7 @@ onBeforeUnmount(() => {
   consultaAncho?.removeEventListener('change', alCambiarAncho);
   bajaAviso?.();
   bajaCaptura?.();
+  if (vigilaPuertos) clearInterval(vigilaPuertos);
   avisos.detener();
   detenerEntorno();
 });
@@ -305,12 +329,15 @@ onBeforeUnmount(() => {
               type="button"
               class="pastilla"
               :class="{ viva: pastilla.tono === 'viva', alerta: pastilla.tono === 'alerta' }"
-              :title="`${pastilla.texto} · ${textos.resumenGlobal.irAServicios}`"
-              :aria-label="`${pastilla.texto}. ${textos.resumenGlobal.irAServicios}`"
-              @click="navegar('servicios')"
+              :title="pastilla.title"
+              :aria-label="pastilla.title"
+              @click="abrirPastilla"
             >
               <span class="pastilla-punto" aria-hidden="true" />
-              <span class="pastilla-texto" role="status">{{ pastilla.corto }}</span>
+              <span class="pastilla-texto pastilla-largo" role="status">{{ pastilla.largo }}</span>
+              <span class="pastilla-texto pastilla-corto" aria-hidden="true">{{
+                pastilla.corto
+              }}</span>
             </button>
           </div>
         </div>
@@ -393,6 +420,17 @@ onBeforeUnmount(() => {
 /* El logotipo es oscuro: sobre el fondo del tema oscuro se aclara para que se distinga. */
 :global(:root[data-tema='oscuro'] .logo) {
   filter: brightness(1.7) saturate(1.15);
+}
+/* La raya para plegar el menú solo se ve al pasar el ratón por la barra lateral o al enfocarla. */
+:deep(.n-layout-toggle-bar) {
+  opacity: 0;
+  transition: opacity var(--transicion) ease;
+}
+:deep(.n-layout-sider:hover .n-layout-toggle-bar),
+:deep(.n-layout-toggle-bar:hover),
+:deep(.n-layout-toggle-bar:focus-visible),
+:deep(.n-layout-sider:focus-within .n-layout-toggle-bar) {
+  opacity: 1;
 }
 /* El globo del menú plegado cubre la entrada entera. */
 :deep(.icono-plegado) {
@@ -493,6 +531,14 @@ onBeforeUnmount(() => {
 .pastilla-texto {
   white-space: nowrap;
 }
+.pastilla-largo {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pastilla-corto {
+  display: none;
+}
 /* Sitio justo: el buscador conserva el texto y cede el atajo, que no es imprescindible. */
 @container (max-width: 1240px) {
   .buscador kbd {
@@ -515,7 +561,10 @@ onBeforeUnmount(() => {
   .buscador kbd {
     display: none;
   }
-  /* Solo por debajo de 900 px la pastilla se queda en el punto (el texto sigue en su título). */
+  /*
+   * Por debajo de 900 px la pastilla en reposo se queda en el punto (el texto sigue en su título);
+   * en alerta enseña «N con error» y no solo el punto: el color solo no basta (D54c).
+   */
   .pastilla-texto {
     position: absolute;
     width: 1px;
@@ -525,6 +574,20 @@ onBeforeUnmount(() => {
   }
   .pastilla {
     padding: 8px;
+  }
+  .pastilla.alerta {
+    padding: 0 10px;
+  }
+  .pastilla.alerta .pastilla-largo {
+    display: none;
+  }
+  .pastilla.alerta .pastilla-corto {
+    display: inline;
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
   }
 }
 .pastilla {
@@ -560,6 +623,15 @@ onBeforeUnmount(() => {
 }
 .pastilla.alerta .pastilla-punto {
   background: #dc2626;
+}
+/* Estado de alerta: borde, fondo y texto en rojo (más claro sobre el tema oscuro). */
+.pastilla.alerta {
+  border-color: rgba(220, 38, 38, 0.45);
+  background: rgba(220, 38, 38, 0.08);
+  color: #b91c1c;
+}
+:global(:root[data-tema='oscuro'] .pastilla.alerta) {
+  color: #fca5a5;
 }
 .contenido {
   height: calc(100vh - 60px);

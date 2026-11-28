@@ -14,6 +14,11 @@ export const jaExtra: TextosParciales = {
     cortoCargando: '接続中…',
     cortoSinConexion: 'オフライン',
     irAServicios: 'サービスを開く',
+    /** Texto largo de la pastilla (D54c): con un solo error nombra el servicio. */
+    errorServicio: (nombre: string) => `${nombre}: エラー`,
+    variosErrores: (n: number) => `${n} 件のサービスでエラー`,
+    irAlServicio: 'サービスへ移動',
+    problemasInicio: (n: number) => `ホームに ${n} 件の問題`,
   },
   acciones: { copiarCompleto: '全文をコピー' },
   errores: {

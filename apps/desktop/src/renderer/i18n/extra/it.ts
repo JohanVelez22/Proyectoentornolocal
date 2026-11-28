@@ -18,6 +18,11 @@ export const itExtra: TextosParciales = {
     cortoCargando: 'Connessione…',
     cortoSinConexion: 'Offline',
     irAServicios: 'Apri Servizi',
+    /** Texto largo de la pastilla (D54c): con un solo error nombra el servicio. */
+    errorServicio: (nombre: string) => `${nombre}: errore`,
+    variosErrores: (n: number) => `${n} servizi con errori`,
+    irAlServicio: 'Vai al servizio',
+    problemasInicio: (n: number) => plural(n, 'problema in Home', 'problemi in Home'),
   },
   acciones: {
     copiarCompleto: 'Copia il testo completo',

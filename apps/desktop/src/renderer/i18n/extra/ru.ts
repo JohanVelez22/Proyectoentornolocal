@@ -23,6 +23,12 @@ export const ruExtra: TextosParciales = {
     cortoCargando: 'Подключение…',
     cortoSinConexion: 'Нет связи',
     irAServicios: 'Открыть «Службы»',
+    /** Texto largo de la pastilla (D54c): con un solo error nombra el servicio. */
+    errorServicio: (nombre: string) => `${nombre}: ошибка`,
+    variosErrores: (n: number) => `${n} служб с ошибками`,
+    irAlServicio: 'Перейти к службе',
+    problemasInicio: (n: number) =>
+      plural(n, 'проблема на «Главной»', 'проблемы на «Главной»', 'проблем на «Главной»'),
   },
   acciones: {
     copiarCompleto: 'Копировать весь текст',

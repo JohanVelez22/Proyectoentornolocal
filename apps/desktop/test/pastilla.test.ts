@@ -62,3 +62,63 @@ describe('resumenPastilla', () => {
     expect(resumenPastilla({ ...base, cargado: false }).corto).toBe('Conectando…');
   });
 });
+
+describe('pastilla con servicios en error (D54c)', () => {
+  const php = { id: 'php-8.0', nombre: 'PHP 8.0', mensaje: 'El puerto 9080 está ocupado.' };
+  const mysql = { id: 'mysql', nombre: 'MySQL' };
+
+  it('con un solo error nombra el servicio y el title lleva el motivo y «Ir al servicio»', () => {
+    const r = resumenPastilla({
+      ...base,
+      encendidos: 2,
+      hayError: true,
+      conError: 1,
+      errores: [php],
+    });
+    expect(r.largo).toBe('PHP 8.0: error');
+    expect(r.title).toContain('PHP 8.0: El puerto 9080 está ocupado.');
+    expect(r.title).toContain('Ir al servicio');
+    expect(r.title).not.toContain('Ver Servicios');
+    expect(r.destinoId).toBe('php-8.0');
+    expect(r.tono).toBe('alerta');
+  });
+
+  it('con varios errores dice cuántos y el title pide ver Servicios, sin plurales mal puestos', () => {
+    const r = resumenPastilla({ ...base, hayError: true, conError: 2, errores: [php, mysql] });
+    expect(r.largo).toBe('2 servicios con error');
+    expect(r.title).toContain('Ver Servicios');
+    expect(r.title).not.toContain('Ir al servicio');
+    expect(r.destinoId).toBe('php-8.0');
+  });
+
+  it('en ancho estrecho se queda con «N con error» y no solo el punto', () => {
+    const r = resumenPastilla({ ...base, hayError: true, conError: 2, errores: [php, mysql] });
+    expect(r.corto).toBe('2 con errores');
+  });
+
+  it('el title suma los problemas de Inicio, con singular y plural', () => {
+    const uno = resumenPastilla({ ...base, encendidos: 1, problemas: 1 });
+    expect(uno.title).toContain('1 problema en Inicio');
+    const tres = resumenPastilla({ ...base, encendidos: 1, problemas: 3 });
+    expect(tres.title).toContain('3 problemas en Inicio');
+    expect(resumenPastilla({ ...base, encendidos: 1 }).title).not.toContain('Inicio');
+  });
+
+  it('sin errores el texto largo es el corto y el title lleva a Servicios', () => {
+    const r = resumenPastilla({ ...base, encendidos: 3 });
+    expect(r.largo).toBe(r.corto);
+    expect(r.title).toContain('Ver Servicios');
+    expect(r.destinoId).toBeNull();
+  });
+
+  it('los textos nuevos existen en los 16 idiomas', () => {
+    for (const [id, d] of Object.entries(diccionarios)) {
+      const g = d.resumenGlobal;
+      expect(g.errorServicio('PHP 8.0'), id).toContain('PHP 8.0');
+      expect(g.variosErrores(3), id).toContain('3');
+      expect(g.irAlServicio.length, id).toBeGreaterThan(2);
+      expect(g.problemasInicio(1), id).toContain('1');
+      expect(g.problemasInicio(5), id).toContain('5');
+    }
+  });
+});

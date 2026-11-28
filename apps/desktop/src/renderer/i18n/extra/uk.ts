@@ -23,6 +23,12 @@ export const ukExtra: TextosParciales = {
     cortoCargando: 'Підключення…',
     cortoSinConexion: "Немає зв'язку",
     irAServicios: 'Відкрити «Служби»',
+    /** Texto largo de la pastilla (D54c): con un solo error nombra el servicio. */
+    errorServicio: (nombre: string) => `${nombre}: помилка`,
+    variosErrores: (n: number) => `${n} служб із помилками`,
+    irAlServicio: 'Перейти до служби',
+    problemasInicio: (n: number) =>
+      plural(n, 'проблема на «Головній»', 'проблеми на «Головній»', 'проблем на «Головній»'),
   },
   acciones: {
     copiarCompleto: 'Копіювати весь текст',

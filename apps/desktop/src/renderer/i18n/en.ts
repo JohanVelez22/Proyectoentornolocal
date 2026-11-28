@@ -41,6 +41,11 @@ export const en: Textos = {
     cortoCargando: 'Connecting…',
     cortoSinConexion: 'Offline',
     irAServicios: 'Open Services',
+    /** Texto largo de la pastilla (D54c): con un solo error nombra el servicio. */
+    errorServicio: (nombre: string) => `${nombre}: error`,
+    variosErrores: (n: number) => `${n} services with errors`,
+    irAlServicio: 'Go to the service',
+    problemasInicio: (n: number) => plural(n, 'problem in Home', 'problems in Home'),
   },
   estado: {
     encendido: 'Running',
