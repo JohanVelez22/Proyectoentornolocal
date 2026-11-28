@@ -272,12 +272,16 @@ function cambiarRedLocal(valor: boolean): void {
         ><NIcon :size="18"><component :is="icono" /></NIcon
       ></span>
       <div class="titulo">
-        <h3>{{ nombreServicio(servicio.nombre) }}</h3>
+        <h3 :title="nombreServicio(servicio.nombre)">{{ nombreServicio(servicio.nombre) }}</h3>
         <span class="version" :class="{ numero: esNumeroVersion(servicio.version) }">{{
           servicio.version ?? t.sinVersion
         }}</span>
       </div>
-      <EstadoPunto :estado="servicio.estado" />
+      <EstadoPunto class="estado" :estado="servicio.estado" />
+    </header>
+
+    <!-- Fila fija de acciones: siempre justo debajo de la cabecera y en el mismo sitio. -->
+    <div v-if="servicioVersiones || deDatos" class="acciones" data-testid="acciones-tarjeta">
       <NButton
         v-if="servicioVersiones"
         text
@@ -308,7 +312,7 @@ function cambiarRedLocal(valor: boolean): void {
           ></template>
         </NButton>
       </MenuDesplegable>
-    </header>
+    </div>
 
     <p v-if="resumenInstancias" class="instancias">{{ resumenInstancias }}</p>
     <dl class="datos">
@@ -556,9 +560,20 @@ function cambiarRedLocal(valor: boolean): void {
 }
 .cabeza {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 8px 12px;
+  gap: 12px;
+}
+.estado {
+  flex: none;
+}
+/* Fila 2: Versiones, «⋯» y lo que corresponda, siempre en el mismo sitio y sin saltos de línea. */
+.acciones {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: -6px;
 }
 .icono {
   display: grid;
@@ -571,9 +586,15 @@ function cambiarRedLocal(valor: boolean): void {
   flex: none;
 }
 .titulo {
-  flex: 1 1 96px;
+  flex: 1 1 0;
   min-width: 0;
-  overflow-wrap: anywhere;
+}
+.titulo h3,
+.version {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .titulo h3 {
   margin: 0;
@@ -589,9 +610,12 @@ function cambiarRedLocal(valor: boolean): void {
 }
 .datos {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 8px;
   margin: 0;
+}
+.datos > div {
+  min-width: 0;
 }
 .datos dt {
   font-size: 11px;
@@ -600,15 +624,16 @@ function cambiarRedLocal(valor: boolean): void {
   opacity: 0.72;
 }
 .datos dd {
-  margin: 2px 0 0;
+  display: flex;
+  align-items: center;
+  /* Misma altura en puerto y PID: el valor se alinea aunque el otro lleve un enlace. */
+  min-height: 32px;
+  margin: 0;
   font-family: var(--fuente-mono);
   font-size: 13px;
 }
 .puerto {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 4px 8px;
+  gap: 8px;
 }
 .enlace {
   font-family: var(--fuente);
