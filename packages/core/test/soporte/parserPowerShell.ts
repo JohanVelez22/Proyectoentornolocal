@@ -1,13 +1,12 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import path from 'node:path';
+import { rutaPowerShell } from '../../src/plataforma/procesosWin';
 
 /**
  * Ruta absoluta de Windows PowerShell 5.1 (la que usa la aplicación). Solo tiene sentido en Windows.
  */
 export function rutaPowerShellWindows(): string {
-  const raiz = process.env.SystemRoot ?? process.env.SYSTEMROOT ?? String.raw`C:\Windows`;
-  return path.win32.join(raiz, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+  return rutaPowerShell(process.env);
 }
 
 /**

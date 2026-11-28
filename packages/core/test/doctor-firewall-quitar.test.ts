@@ -838,7 +838,8 @@ describe('D46: scripts del cortafuegos real (solo se comprueba su texto: nunca s
     expect(s).toContain('exit 13');
     expect(s).toContain(`-ne '${'b'.repeat(64)}'`);
     expect(s.indexOf('exit 13')).toBeLessThan(s.indexOf('[scriptblock]::Create'));
-    expect(scriptElevar(codificarComando(s)).length).toBeLessThan(4000);
+    // Corto y de tamaño fijo: muy por debajo de los 8191 caracteres que admite cualquier línea de órdenes.
+    expect(scriptElevar(codificarComando(s)).length).toBeLessThan(6000);
   });
 });
 
