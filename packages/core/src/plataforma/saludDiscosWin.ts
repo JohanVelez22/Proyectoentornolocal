@@ -1,3 +1,5 @@
+import { z } from 'zod';
+import { CODIFICACION_UTF8, lineasAlmacen, RUTA_CLAVE_SALUD } from './firewallCambiosWin';
 import { literalPowerShell } from './literalPowerShell';
 import {
   DIAS_EVENTOS_DISCO,
@@ -86,33 +88,181 @@ export const SCRIPT_SALUD_DISCOS = [
   '[Console]::Out.Write($json)',
 ].join('\n');
 
-const lit = literalPowerShell;
-
 /** Salidas propias del cuerpo elevado (aparte de las del cargador). */
-export const SALIDA_SALUD_ADMIN = { sinSalida: 52, salidaInsegura: 53 } as const;
+export const SALIDA_SALUD_ADMIN = { almacenInseguro: 54, fallo: 55 } as const;
+
+/** `detalle` con el que la plataforma informa que la clave del registro no es de fiar. */
+export const DETALLE_SALUD_INSEGURA = 'almacen-inseguro';
+
+/** Tope de la lectura (caracteres): el cuerpo elevado la recorta en origen y la app la rechaza si lo pasa. */
+export const MAX_LECTURA_ADMIN = 512 * 1024;
+/** Antigüedad máxima de la lectura: pasado este tiempo desde que se pidió, no se acepta. */
+export const MAX_ANTIGUEDAD_LECTURA_MS = 10 * 60 * 1000;
+/** Holgura entre el reloj del proceso elevado y el de la app (el mismo equipo, pero por si acaso). */
+const HOLGURA_RELOJ_MS = 60_000;
+
+/** Id de la petición: solo letras, cifras, `_` y `-`. Es lo ÚNICO que el cuerpo elevado incrusta. */
+export const ID_PETICION_ADMIN = /^[\w-]{1,100}$/;
+
+const TIPO_CADENA = '[Microsoft.Win32.RegistryValueKind]::String';
 
 /**
- * Cuerpo que corre ELEVADO (UAC, solo al pulsar el botón): hace la misma lectura de solo
- * consulta y deja el JSON en `salida`, un archivo temporal propio que la aplicación creó vacío
- * antes. No escribe nada más; si el archivo no existe o es un enlace, sale sin escribir.
+ * Cuerpo que corre ELEVADO (UAC, solo al pulsar el botón): hace la misma lectura de solo consulta
+ * y deja el JSON en el registro, NO en el sistema de archivos: un `WriteAllText` a un `.json` de
+ * %TEMP% seguiría enlaces, uniones y redirecciones y permitiría escribir en una ruta privilegiada.
+ *
+ * Escribe en la clave `HKLM\SOFTWARE\WolfCoreDev\SaludDiscos` (la crea con la ACL protegida y no
+ * la usa si el dueño o los permisos no son de fiar, igual que la copia del cortafuegos) tres
+ * valores REG_SZ que SIEMPRE se sobrescriben: `Lectura` (el JSON, recortado en origen a
+ * `MAX_LECTURA_ADMIN`), `Creado` (UTC) e `Id` (el de esta petición, escrito el último). Lo único
+ * que se incrusta en el script es el id ya validado.
+ *
+ * Decisión: el valor se DEJA tras leerlo (la app, sin elevar, no puede borrarlo y no se abre un
+ * segundo UAC solo para eso): es solo el estado de los discos, sin números de serie, y la
+ * siguiente lectura con administrador lo sobrescribe.
  */
-export function cuerpoSaludDiscosAdmin(salida: string): string {
+export function cuerpoSaludDiscosAdmin(id: string): string {
+  if (!ID_PETICION_ADMIN.test(id)) throw new Error(`Id de petición no válido: ${id}`);
   return [
     ...CABECERA,
     ...CUERPO_SALUD,
-    `$o = ${lit(salida)}`,
-    `if (-not [IO.File]::Exists($o)) { exit ${SALIDA_SALUD_ADMIN.sinSalida} }`,
-    `if (([IO.File]::GetAttributes($o) -band [IO.FileAttributes]::ReparsePoint) -ne 0) { exit ${SALIDA_SALUD_ADMIN.salidaInsegura} }`,
-    '[IO.File]::WriteAllText($o, $json, [Text.UTF8Encoding]::new($false))',
+    // Recorte en origen: se quitan discos del final hasta que quepa.
+    `while ($json.Length -gt ${MAX_LECTURA_ADMIN} -and $discos.Count -gt 0) { $discos = @($discos | Select-Object -First ($discos.Count - 1)); $json = ConvertTo-Json -InputObject ([pscustomobject]@{ p = $estadoPred; discos = $discos }) -Depth 5 -Compress }`,
+    "$ErrorActionPreference = 'Stop'",
+    ...lineasAlmacen(RUTA_CLAVE_SALUD),
+    `$id = ${literalPowerShell(id)}`,
+    '$k = Open-ClaveWolf $true',
+    `if ($null -eq $k) { exit ${SALIDA_SALUD_ADMIN.almacenInseguro} }`,
+    'try {',
+    "  $k.DeleteValue('Id', $false)",
+    `  $k.SetValue('Lectura', $json, ${TIPO_CADENA})`,
+    `  $k.SetValue('Creado', [DateTime]::UtcNow.ToString('o', [Globalization.CultureInfo]::InvariantCulture), ${TIPO_CADENA})`,
+    `  $k.SetValue('Id', $id, ${TIPO_CADENA})`,
+    `} catch { exit ${SALIDA_SALUD_ADMIN.fallo} } finally { $k.Dispose() }`,
     'exit 0',
   ].join('\n');
+}
+
+/**
+ * Lectura SIN elevar del valor que dejó el cuerpo elevado (HKLM es legible por los usuarios).
+ * Antes de leer comprueba el dueño y la ACL de la clave y de su superior (solo Administradores y
+ * SYSTEM pueden escribir): si no, imprime `INSEGURO` y no lee nada. Salida: `OK`, id, creado y el
+ * JSON, una por línea; `SIN` si no hay clave o valores; `GRANDE` si pasa del tope.
+ */
+export const SCRIPT_LEER_SALUD_ADMIN = [
+  "$ErrorActionPreference = 'Stop'",
+  CODIFICACION_UTF8,
+  ...lineasAlmacen(RUTA_CLAVE_SALUD),
+  '$k = $hklm.OpenSubKey($rutaClave)',
+  "if ($null -eq $k) { [Console]::Out.WriteLine('SIN'); exit 0 }",
+  'try {',
+  '  $base = $hklm.OpenSubKey($rutaBase)',
+  '  $bien = (Test-ClaveWolf $base) -and (Test-ClaveWolf $k)',
+  '  if ($null -ne $base) { $base.Dispose() }',
+  "  if (-not $bien) { [Console]::Out.WriteLine('INSEGURO'); exit 0 }",
+  '  $v = @{}',
+  "  foreach ($n in @('Id', 'Creado', 'Lectura')) {",
+  '    $x = $k.GetValue($n, $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)',
+  "    if (($x -isnot [string]) -or ($k.GetValueKind($n) -ne 'String')) { [Console]::Out.WriteLine('SIN'); exit 0 }",
+  '    $v[$n] = $x',
+  '  }',
+  `  if ($v['Lectura'].Length -gt ${MAX_LECTURA_ADMIN}) { [Console]::Out.WriteLine('GRANDE'); exit 0 }`,
+  "  [Console]::Out.WriteLine('OK')",
+  "  [Console]::Out.WriteLine($v['Id'])",
+  "  [Console]::Out.WriteLine($v['Creado'])",
+  "  [Console]::Out.WriteLine($v['Lectura'])",
+  '} finally { $k.Dispose() }',
+].join('\n');
+
+const valor = z.union([z.string().max(64), z.number(), z.null()]).optional();
+const textoCorto = (max: number) => z.string().max(max).nullish();
+
+/** Esquema estricto de lo que deja el cuerpo elevado: cualquier campo de más lo rechaza. */
+export const ESQUEMA_LECTURA_ADMIN = z.strictObject({
+  p: z.enum(['ok', 'sin_acceso', 'no_disponible']),
+  discos: z
+    .array(
+      z.strictObject({
+        n: valor,
+        modelo: textoCorto(300),
+        medio: textoCorto(32),
+        bus: textoCorto(32),
+        tam: valor,
+        salud: textoCorto(32),
+        oper: z
+          .union([z.string().max(64), z.array(z.string().max(64)).max(16), z.null()])
+          .optional(),
+        cs: textoCorto(32),
+        c: z
+          .strictObject({
+            t: valor,
+            tm: valor,
+            w: valor,
+            rc: valor,
+            ru: valor,
+            wc: valor,
+            wu: valor,
+            h: valor,
+          })
+          .nullish(),
+        pf: z.boolean().nullish(),
+        letras: z
+          .union([z.string().max(2), z.array(z.string().max(2)).max(26), z.null()])
+          .optional(),
+      }),
+    )
+    .max(64),
+});
+
+export type ResultadoLecturaRegistro =
+  { ok: true; lectura: LecturaDiscos } | { ok: false; detalle: string };
+
+/**
+ * Interpreta la salida de `SCRIPT_LEER_SALUD_ADMIN` para UNA petición: el id tiene que ser el de
+ * esta petición, `Creado` no puede ser anterior a su inicio ni más viejo que
+ * `MAX_ANTIGUEDAD_LECTURA_MS` ni del futuro, el JSON no pasa del tope y se valida con un esquema
+ * estricto antes de interpretarlo. Lo demás se rechaza con su motivo (sin valores inventados).
+ */
+export function interpretarLecturaRegistro(
+  salida: string,
+  esperado: { id: string; desde: number; ahora: number },
+): ResultadoLecturaRegistro {
+  const no = (detalle: string): ResultadoLecturaRegistro => ({ ok: false, detalle });
+  if (salida.length > MAX_LECTURA_ADMIN * 2 + 1000) return no('salida demasiado grande');
+  const lineas = salida.replace(/^\uFEFF/, '').split(/\r?\n/);
+  const estado = lineas[0]?.trim();
+  if (estado === 'INSEGURO') return no(DETALLE_SALUD_INSEGURA);
+  if (estado === 'GRANDE') return no('salida demasiado grande');
+  if (estado !== 'OK' || lineas.length < 4) return no('sin lectura');
+  if (lineas[1]!.trim() !== esperado.id) return no('la lectura es de otra petición');
+  const creadoTxt = lineas[2]!.trim();
+  const creado = /^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(creadoTxt) ? Date.parse(creadoTxt) : NaN;
+  if (!Number.isFinite(creado)) return no('fecha de la lectura no válida');
+  if (creado < esperado.desde - HOLGURA_RELOJ_MS) return no('la lectura es anterior a la petición');
+  if (creado > esperado.ahora + HOLGURA_RELOJ_MS) return no('la lectura es del futuro');
+  if (esperado.ahora - creado > MAX_ANTIGUEDAD_LECTURA_MS) {
+    return no('la lectura es demasiado vieja');
+  }
+  const texto = lineas[3]!.trim();
+  if (texto.length > MAX_LECTURA_ADMIN) return no('salida demasiado grande');
+  let crudo: unknown;
+  try {
+    crudo = JSON.parse(texto);
+  } catch {
+    return no('la lectura no se pudo interpretar');
+  }
+  if (!ESQUEMA_LECTURA_ADMIN.safeParse(crudo).success) {
+    return no('la lectura no tiene la forma esperada');
+  }
+  const lectura = interpretarSaludDiscos(texto);
+  return lectura ? { ok: true, lectura } : no('la lectura no se pudo interpretar');
 }
 
 /** Eventos del disco de los últimos días (solo lectura del registro System). */
 export const SCRIPT_EVENTOS_DISCO = [
   ...CABECERA,
   `$desde = [DateTime]::Now.AddDays(-${DIAS_EVENTOS_DISCO})`,
-  `$filtro = @{ LogName = 'System'; ProviderName = @(${PROVEEDORES_EVENTO_DISCO.map(lit).join(', ')}); Id = @(${IDS_EVENTO_DISCO.join(', ')}); StartTime = $desde }`,
+  `$filtro = @{ LogName = 'System'; ProviderName = @(${PROVEEDORES_EVENTO_DISCO.map(literalPowerShell).join(', ')}); Id = @(${IDS_EVENTO_DISCO.join(', ')}); StartTime = $desde }`,
   `$ev = @(Get-WinEvent -FilterHashtable $filtro -MaxEvents ${MAX_EVENTOS_DISCO} -ErrorAction SilentlyContinue | ForEach-Object {`,
   '  $m = [string]$_.Message',
   '  if ($m.Length -gt 400) { $m = $m.Substring(0, 400) }',

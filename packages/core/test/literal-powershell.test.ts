@@ -13,7 +13,6 @@ import { scriptLeerVariableUsuario, scriptVariableUsuario } from '../src/platafo
 import { scriptEscribir, scriptLeer } from '../src/plataforma/pathUsuarioWin';
 import { scriptNvidiaSmi } from '../src/plataforma/equipoWin';
 import { scriptDuenoDeRuta } from '../src/plataforma/win';
-import { cuerpoSaludDiscosAdmin } from '../src/plataforma/saludDiscosWin';
 import {
   analizarPowerShell,
   esperarLiteralExacto,
@@ -83,7 +82,6 @@ const CASOS: Caso[] = [
   { nombre: 'PATH de usuario: leer', generar: (v) => scriptLeer(v) },
   { nombre: 'PATH de usuario: escribir', generar: (v) => scriptEscribir(v, 'String') },
   { nombre: 'nvidia-smi', generar: (v) => scriptNvidiaSmi([v, v]) },
-  { nombre: 'salud de los discos (cuerpo elevado)', generar: (v) => cuerpoSaludDiscosAdmin(v) },
   { nombre: 'dueño de una ruta', generar: (v) => scriptDuenoDeRuta(v) },
 ];
 

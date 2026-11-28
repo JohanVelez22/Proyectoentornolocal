@@ -316,17 +316,19 @@ const FUNCION_HUELLA =
  */
 export const RUTA_BASE_ALMACEN = 'SOFTWARE\\WolfCoreDev';
 export const RUTA_CLAVE_ALMACEN = 'SOFTWARE\\WolfCoreDev\\Cortafuegos';
+/** Clave de la lectura de salud de los discos (D57): misma protección que la del cortafuegos. */
+export const RUTA_CLAVE_SALUD = 'SOFTWARE\\WolfCoreDev\\SaludDiscos';
 
 /**
  * Comprobación de la clave (y de la superior): el dueño es Administradores o SYSTEM y en su DACL
  * solo ellos (y TrustedInstaller) pueden escribir, borrar o cambiar permisos. Una clave que no
  * cumple no se usa: el script sale con 21 sin tocar nada.
  */
-const ALMACEN = [
+export const lineasAlmacen = (rutaClave: string): string[] => [
   "$sidSistema = 'S-1-5-18'; $sidAdmins = 'S-1-5-32-544'; $sidUsuarios = 'S-1-5-32-545'",
   "$sidInstalador = 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464'; $sidCreador = 'S-1-3-0'",
   `$rutaBase = '${RUTA_BASE_ALMACEN}'`,
-  `$rutaClave = '${RUTA_CLAVE_ALMACEN}'`,
+  `$rutaClave = '${rutaClave}'`,
   // Más GENERIC_ALL (0x10000000) y GENERIC_WRITE (0x40000000), que una ACE puede traer sin mapear.
   // Como entero: un enum de PowerShell no admite esos bits genéricos, que no tienen nombre.
   "$derechosPeligrosos = [int][Security.AccessControl.RegistryRights]'SetValue, CreateSubKey, CreateLink, Delete, ChangePermissions, TakeOwnership' -bor 0x50000000",
@@ -380,6 +382,7 @@ const ALMACEN = [
   '  return $k',
   '}',
 ];
+const ALMACEN = lineasAlmacen(RUTA_CLAVE_ALMACEN);
 
 /**
  * Lectura SIN elevar, solo para mostrar: una línea por copia, `<id> <json>`. No cambia nada. El

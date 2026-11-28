@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -7,9 +7,8 @@ import { aislarPlataforma } from '../src/plataforma/aislada';
 import { SaludDiscos, unidadDeRuta, claveDisco } from '../src/discos/servicio';
 import type { DiscoLeido, EventoDisco, LecturaDiscos } from '../src/discos/tipos';
 import { PlataformaFalsa } from '../src/plataforma/falsa';
-import { codificarComando } from '../src/plataforma/hostsAdmin';
 import { PlataformaWindows } from '../src/plataforma/win';
-import { cuerpoSaludDiscosAdmin, SCRIPT_SALUD_DISCOS } from '../src/plataforma/saludDiscosWin';
+import { SCRIPT_SALUD_DISCOS } from '../src/plataforma/saludDiscosWin';
 import { completarPlataforma } from '../src/plataforma/index';
 
 const contadoresNulos = {
@@ -324,57 +323,5 @@ describe('PlataformaWindows (ejecutor falso)', () => {
     );
     expect(await rara.saludDiscos()).toBeNull();
     expect(await rara.eventosDisco()).toEqual([]);
-  });
-
-  it('elevada: cola + UAC por PowerShell de System32, lee el JSON del temporal y limpia todo', async () => {
-    const llamadas: string[][] = [];
-    const ej = vi.fn(async (cmd: string, args: string[]) => {
-      llamadas.push([cmd, ...args]);
-      // Hace de «script elevado»: deja el JSON en el temporal de salida que la app creó vacío.
-      const nombres = await readdir(carpeta);
-      const salida = nombres.find((n) => n.endsWith('.json'))!;
-      expect(await readFile(path.join(carpeta, salida), 'utf8')).toBe('');
-      await writeFile(path.join(carpeta, salida), '\uFEFF' + JSON_OK, 'utf8');
-      return { codigo: 0, stdout: '', stderr: '' };
-    });
-    const p = new PlataformaWindows(ej, undefined, { entorno, carpetaTemporal: carpeta });
-    const r = await p.saludDiscosAdmin();
-    expect(r.ok).toBe(true);
-    expect(llamadas).toHaveLength(1);
-    expect(llamadas[0]![0]).toBe('C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe');
-    expect(llamadas[0]!.join(' ')).toContain('runas');
-    expect(await readdir(carpeta)).toEqual([]);
-  });
-
-  it('elevada: el cuerpo que se verifica es de solo lectura y escribe únicamente su salida', async () => {
-    let cuerpo = '';
-    const ej = vi.fn(async () => {
-      const t = (await readdir(carpeta)).find((n) => n.endsWith('.txt'))!;
-      cuerpo = await readFile(path.join(carpeta, t), 'utf8');
-      return { codigo: 10, stdout: '', stderr: '' };
-    });
-    const p = new PlataformaWindows(ej, undefined, { entorno, carpetaTemporal: carpeta });
-    const r = await p.saludDiscosAdmin();
-    expect(r).toMatchObject({ ok: false, motivo: 'cancelado' });
-    expect(cuerpo).toContain('Get-PhysicalDisk');
-    expect(cuerpo).not.toMatch(
-      /Set-|Remove-|New-Item|Clear-|Format-Volume|Repair-|Start-Process|Invoke-Expression|\biex\b/i,
-    );
-    expect(cuerpo.match(/WriteAllText|WriteAllBytes|SetAttributes|Delete\(/g)).toEqual([
-      'WriteAllText',
-    ]);
-    expect(codificarComando('x')).toBeTypeOf('string');
-    expect(cuerpoSaludDiscosAdmin("C:\\a'b.json")).toContain("'C:\\a''b.json'");
-    expect(await readdir(carpeta)).toEqual([]);
-  });
-
-  it('elevada: una salida que no se interpreta es un error, no un valor inventado', async () => {
-    const ej = vi.fn(async () => {
-      const salida = (await readdir(carpeta)).find((n) => n.endsWith('.json'))!;
-      await writeFile(path.join(carpeta, salida), 'no es json', 'utf8');
-      return { codigo: 0, stdout: '', stderr: '' };
-    });
-    const p = new PlataformaWindows(ej, undefined, { entorno, carpetaTemporal: carpeta });
-    expect(await p.saludDiscosAdmin()).toMatchObject({ ok: false, motivo: 'error' });
   });
 });

@@ -195,7 +195,7 @@ describe('privacidad: sin números de serie ni identificadores únicos', () => {
   it('los scripts no piden serie, identificador único ni objeto', () => {
     for (const s of [
       SCRIPT_SALUD_DISCOS,
-      cuerpoSaludDiscosAdmin('C:\\t\\x.json'),
+      cuerpoSaludDiscosAdmin('1-1-abc'),
       SCRIPT_EVENTOS_DISCO,
     ]) {
       expect(s).not.toMatch(/SerialNumber|UniqueId|ObjectId|Win32_PhysicalMedia|\bSerial/i);
@@ -245,7 +245,7 @@ describe.skipIf(process.platform !== 'win32')(
     it('sin errores de sintaxis', () => {
       for (const s of [
         SCRIPT_SALUD_DISCOS,
-        cuerpoSaludDiscosAdmin('C:\\Temp\\pel-discos-1.json'),
+        cuerpoSaludDiscosAdmin('1-1-abc'),
         SCRIPT_EVENTOS_DISCO,
       ]) {
         const b64 = Buffer.from(s, 'utf8').toString('base64');

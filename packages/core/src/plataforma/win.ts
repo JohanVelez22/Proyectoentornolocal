@@ -28,6 +28,7 @@ import {
   MOTIVO_SALIDA_COPIA,
   literal,
   MOTIVO_SALIDA_SERVICIO,
+  PREFIJO_TEMPORAL_DISCOS,
   PREFIJO_TEMPORAL_HOSTS,
   SALIDA_COPIA,
   SALIDA_SERVICIO,
@@ -107,9 +108,12 @@ import { interpretarEventosDisco } from '../discos/eventos';
 import type { EventoDisco, LecturaDiscos, ResultadoLecturaAdmin } from '../discos/tipos';
 import {
   cuerpoSaludDiscosAdmin,
+  DETALLE_SALUD_INSEGURA,
+  interpretarLecturaRegistro,
   interpretarSaludDiscos,
   SALIDA_SALUD_ADMIN,
   SCRIPT_EVENTOS_DISCO,
+  SCRIPT_LEER_SALUD_ADMIN,
   SCRIPT_SALUD_DISCOS,
 } from './saludDiscosWin';
 import {
@@ -439,6 +443,8 @@ export function scriptDuenoDeRuta(ruta: string): string {
 
 export class PlataformaWindows implements PlataformaCompleta {
   private contador = 0;
+  /** Ids de lecturas con administrador ya aceptadas (cada id se usa una sola vez). */
+  private readonly idsLeidosAdmin = new Set<string>();
   /** PowerShell exteriores que esperan un UAC (se cortan al cerrar la app). */
   private readonly elevaciones = new Set<AbortController>();
   /** Un solo UAC a la vez (hosts, servicios…): cada elevación espera a la anterior. */
@@ -1192,44 +1198,51 @@ export class PlataformaWindows implements PlataformaCompleta {
    * La lectura de la salud de los discos con permisos de administrador (UAC). SOLO la llama quien
    * ya tiene el clic de la persona (nunca el sondeo en segundo plano). Mismo patrón que los
    * cambios del cortafuegos: cola de elevaciones, el cuerpo va en un temporal con su SHA-256
-   * comprobado dentro del comando elevado, ruta absoluta de PowerShell y plazo. El cuerpo SOLO
-   * LEE y deja el JSON en un segundo temporal propio, creado antes (y vacío) por la aplicación.
+   * comprobado dentro del comando elevado, ruta absoluta de PowerShell y plazo.
+   *
+   * El proceso elevado NO escribe en el sistema de archivos: deja el JSON en un valor del registro
+   * (`HKLM\SOFTWARE\WolfCoreDev\SaludDiscos`, protegido como el del cortafuegos) con el id de esta
+   * petición y su hora. La app, sin elevar, comprueba el dueño y la ACL de la clave, lee el valor
+   * y lo acepta solo si el id es el suyo, es reciente, cabe en el tope y cumple el esquema.
    */
   async saludDiscosAdmin(): Promise<ResultadoLecturaAdmin> {
     const plazo = 90_000;
     const id = `${process.pid}-${++this.contador}-${randomUUID().slice(0, 8)}`;
-    const cuerpoRuta = path.join(this.carpetaTemporal, `${PREFIJO_TEMPORAL_HOSTS}discos-${id}.txt`);
-    const salidaRuta = path.join(
-      this.carpetaTemporal,
-      `${PREFIJO_TEMPORAL_HOSTS}discos-${id}.json`,
-    );
+    const cuerpoRuta = path.join(this.carpetaTemporal, `${PREFIJO_TEMPORAL_DISCOS}${id}.txt`);
+    const desde = Date.now();
     try {
-      // Vacío y exclusivo (`wx`): si ya existiera, no se escribe nada.
-      await writeFile(salidaRuta, '', { flag: 'wx' });
-      const datos = Buffer.from(cuerpoSaludDiscosAdmin(salidaRuta), 'utf8');
+      const datos = Buffer.from(cuerpoSaludDiscosAdmin(id), 'utf8');
       await this.escribirTemporal(cuerpoRuta, datos);
       const r = await this.enCola(() =>
         this.elevarAhora(scriptCargador(cuerpoRuta, sha256Hex(datos)), plazo),
       );
       if (!r.ok) {
         const codigo = /^código (\d+)$/.exec(r.detalle ?? '')?.[1];
-        if (codigo === String(SALIDA_SALUD_ADMIN.salidaInsegura)) {
-          return { ok: false, motivo: 'error', detalle: 'el archivo de salida no es de fiar' };
+        if (codigo === String(SALIDA_SALUD_ADMIN.almacenInseguro)) {
+          return { ok: false, motivo: 'error', detalle: DETALLE_SALUD_INSEGURA };
         }
         return { ok: false, motivo: r.motivo, ...(r.detalle ? { detalle: r.detalle } : {}) };
       }
-      const info = await stat(salidaRuta);
-      if (info.size > 2_000_000)
-        return { ok: false, motivo: 'error', detalle: 'salida demasiado grande' };
-      const lectura = interpretarSaludDiscos(await readFile(salidaRuta, 'utf8'));
-      return lectura
-        ? { ok: true, lectura }
-        : { ok: false, motivo: 'error', detalle: 'la lectura no se pudo interpretar' };
+      if (this.idsLeidosAdmin.has(id)) {
+        return { ok: false, motivo: 'error', detalle: 'la petición ya se usó' };
+      }
+      const salida = await this.ejecutar(
+        rutaPowerShell(this.entorno),
+        codificarPowerShell(SCRIPT_LEER_SALUD_ADMIN),
+        { timeoutMs: 30_000 },
+      );
+      if (salida.codigo !== 0) {
+        return { ok: false, motivo: 'error', detalle: 'no se pudo leer el registro' };
+      }
+      const v = interpretarLecturaRegistro(salida.stdout, { id, desde, ahora: Date.now() });
+      if (!v.ok) return { ok: false, motivo: 'error', detalle: v.detalle };
+      // Un id de un solo uso: aunque el valor siga en el registro, esta petición no se repite.
+      this.idsLeidosAdmin.add(id);
+      return { ok: true, lectura: v.lectura };
     } catch (e) {
       return { ok: false, motivo: 'error', detalle: e instanceof Error ? e.message : String(e) };
     } finally {
       await rm(cuerpoRuta, { force: true }).catch(() => undefined);
-      await rm(salidaRuta, { force: true }).catch(() => undefined);
     }
   }
 
@@ -1607,7 +1620,11 @@ export class PlataformaWindows implements PlataformaCompleta {
       return;
     }
     for (const n of nombres) {
-      const m = new RegExp(`^${PREFIJO_TEMPORAL_HOSTS}(\\d+)-[\\w-]+\\.txt$`).exec(n);
+      // Los de hosts/cortafuegos y los de la lectura de discos (también los `pel-hosts-discos-` y
+      // los `.json` de salida de versiones anteriores).
+      const m = new RegExp(
+        `^(?:${PREFIJO_TEMPORAL_HOSTS}(?:discos-)?|${PREFIJO_TEMPORAL_DISCOS})(\\d+)-[\\w-]+\\.(?:txt|json)$`,
+      ).exec(n);
       // Solo los de procesos que ya no existen: otra instancia viva puede estar esperando su UAC.
       if (!m || Number(m[1]) === process.pid || this.existe(Number(m[1]))) continue;
       await rm(path.join(this.carpetaTemporal, n), { force: true }).catch(() => undefined);

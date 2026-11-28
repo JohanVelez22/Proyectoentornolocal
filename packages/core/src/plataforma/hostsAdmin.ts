@@ -4,6 +4,8 @@ import type { ResultadoEscritura } from './tipos';
 
 /** Prefijo de los temporales de hosts en %TEMP% (`pel-hosts-<pid>-…`). */
 export const PREFIJO_TEMPORAL_HOSTS = 'pel-hosts-';
+/** Prefijo propio de los temporales de la lectura de discos (`pel-discos-<pid>-…`). */
+export const PREFIJO_TEMPORAL_DISCOS = 'pel-discos-';
 
 export const sha256 = (b: Buffer | string): string =>
   createHash('sha256').update(b).digest('hex').toUpperCase();
