@@ -73,6 +73,16 @@ describe('Inicio: avisos agrupados, disco y memoria (D54a)', () => {
     expect(panel).not.toContain('NAlert');
   });
 
+  it('la insignia de memoria va DENTRO de la cabecera de la tarjeta, junto al título (D54d)', () => {
+    const panel = fuente('componentes', 'PanelRendimiento.vue');
+    // La cabecera de RAM abarca la insignia: el NTag aparece antes del cierre de su div.
+    const ram = panel.slice(panel.indexOf('t.ram'), panel.indexOf('graficaRam'));
+    const finCabeza = ram.indexOf('</div>');
+    expect(finCabeza).toBeGreaterThan(-1);
+    expect(ram.indexOf('<NTag')).toBeGreaterThan(-1);
+    expect(ram.indexOf('<NTag')).toBeLessThan(finCabeza);
+  });
+
   it('«Liberar espacio» solo ofrece lo que ya existe y no borra nada por su cuenta', () => {
     const disco = fuente('componentes', 'TarjetaDisco.vue');
     expect(disco).toContain('DialogoLimpiarVersiones');

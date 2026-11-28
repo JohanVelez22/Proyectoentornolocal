@@ -60,18 +60,20 @@ const memoriaAlta = computed(() => problemas.alertas.find((a) => a.tipo === 'ram
 
       <NCard size="small" class="metrica">
         <div class="metrica-cabeza">
-          <span class="etiqueta">{{ t.ram }}</span>
+          <span class="titulo-metrica">
+            <span class="etiqueta">{{ t.ram }}</span>
+            <NTag
+              v-if="memoriaAlta"
+              size="small"
+              type="warning"
+              class="insignia"
+              :title="memoriaAlta.texto"
+            >
+              {{ t.insignias.memoriaAlta }}
+            </NTag>
+          </span>
           <strong class="valor">{{ m ? formatoPorcentaje(ramPct) : '—' }}</strong>
         </div>
-        <NTag
-          v-if="memoriaAlta"
-          size="small"
-          type="warning"
-          class="insignia"
-          :title="memoriaAlta.texto"
-        >
-          {{ t.insignias.memoriaAlta }}
-        </NTag>
         <GraficaLinea
           :series="[{ valores: serieRam, color: COLORES.ram }]"
           :max="100"
@@ -138,8 +140,12 @@ const memoriaAlta = computed(() => problemas.alertas.find((a) => a.tipo === 'ram
 .esperando {
   margin: 8px 0 0;
 }
-.insignia {
-  margin-bottom: var(--wc-esp-2);
+.titulo-metrica {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--wc-esp-2);
+  min-width: 0;
 }
 .metricas {
   display: grid;
