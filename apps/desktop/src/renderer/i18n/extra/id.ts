@@ -22,6 +22,9 @@ export const idExtra: TextosParciales = {
     uacHuerfano:
       'Jika muncul jendela izin Windows, Anda dapat membatalkannya: jendela itu tidak lagi melakukan apa pun.',
     codigos: {
+      'bd.vector_confirmacion': 'Konfirmasikan operasi untuk melanjutkan.',
+      'bd.vector_no_instalado':
+        'pgvector belum terpasang: gunakan "Pasang pgvector" di Basis data.',
       'asistentes.no_existe': 'Asisten itu tidak didukung.',
       'asistentes.no_instalado': '{asistente} belum terpasang.',
       'asistentes.no_compatible': '{asistente} belum dapat dihubungkan.',
@@ -272,6 +275,62 @@ export const idExtra: TextosParciales = {
     datosConexion: 'Detail koneksi',
   },
   bd: {
+    pgvector: {
+      ayuda:
+        'pgvector memungkinkan Anda menyimpan dan mencari "vektor" (daftar angka yang mewakili makna teks atau gambar), berguna untuk pencarian berbasis AI. Di PostgreSQL, ekstensi ini diaktifkan per basis data karena setiap basis data memiliki ekstensinya sendiri.',
+      variasBoton: 'Aktifkan di beberapa basis data',
+      variasTitulo: 'Aktifkan pgvector di beberapa basis data',
+      variasTexto:
+        'Pilih basis data pada instans ini yang akan diberi ekstensi. Basis data yang sudah memilikinya tidak berubah.',
+      variasVacio: 'Instans ini belum memiliki basis data.',
+      seleccionarTodas: 'Pilih semua',
+      quitarSeleccion: 'Hapus pilihan',
+      yaLaTiene: 'Sudah aktif',
+      datosReales: 'Data nyata',
+      variasConfirmarTitulo: 'Konfirmasi pengaktifan',
+      variasConfirmarTexto: (n: number) =>
+        `Ekstensi pgvector akan dibuat di basis data yang dipilih (${n}). Tidak ada data yang dihapus atau diubah.`,
+      variasActivar: (n: number) => `Aktifkan di basis data terpilih (${n})`,
+      informeTitulo: 'Hasil per basis data',
+      estados: {
+        activada: 'Diaktifkan',
+        yaEstaba: 'Sudah aktif sebelumnya',
+        error: 'Galat',
+        quitada: 'Dihapus',
+        requiereAviso: 'Tidak diubah: data nyata',
+      },
+      motivos: {
+        sinPgvector: 'pgvector belum terpasang',
+        noExiste: 'Basis data sudah tidak ada',
+        permiso: 'Izin ditolak',
+        conexion: 'Koneksi ke PostgreSQL terputus',
+        enUso: 'Basis data sedang digunakan',
+        otro: 'PostgreSQL menolak operasi',
+      },
+      realesTexto: (n: number) =>
+        `Dari basis data yang dipilih, ${n} berisi data nyata dan tidak diubah. Jika Anda ingin mengaktifkan pgvector di sana juga, konfirmasikan secara tegas. Ekstensi tidak menghapus data, tetapi sebaiknya siapkan cadangan terbaru.`,
+      realesBoton: 'Aktifkan juga di basis data berdata nyata',
+      cerrar: 'Tutup',
+      plantilla: {
+        titulo: 'Basis data baru',
+        explicacion:
+          'Membuat ekstensi di template1, templat PostgreSQL: basis data yang dibuat setelahnya akan memilikinya; yang sudah ada tidak berubah.',
+        estadoSi: 'Aktif: basis data baru akan memiliki pgvector',
+        estadoNo: 'Tidak aktif: basis data baru tidak memiliki pgvector',
+        activar: 'Aktifkan juga di basis data baru',
+        quitar: 'Hapus dari basis data baru',
+        confirmarActivarTitulo: 'Aktifkan pgvector di basis data baru',
+        confirmarActivarTexto:
+          'Ekstensi akan dibuat di template1. Basis data yang Anda buat mulai sekarang akan memilikinya; yang sudah ada tidak berubah. Anda dapat menghapusnya kapan saja.',
+        confirmarQuitarTitulo: 'Hapus pgvector dari basis data baru',
+        confirmarQuitarTexto:
+          'Ekstensi akan dihapus dari template1. Basis data baru tidak akan memilikinya lagi; yang sudah menggunakannya tidak berubah.',
+        activadaOk: 'pgvector diaktifkan di basis data baru',
+        quitadaOk: 'pgvector dihapus dari basis data baru',
+        yaEstaba: 'Tidak ada perubahan: sudah demikian',
+      },
+      errorBases: 'Status basis data tidak dapat dibaca',
+    },
     dialogoConexion: {
       tituloServicio: 'Koneksi ke Meilisearch',
       notaMeilisearch:

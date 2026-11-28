@@ -187,6 +187,9 @@ export const es = {
       'bd.encender_servicio': 'Encienda {nombre} para administrar sus bases.',
       'bd.sin_credenciales': 'No hay credenciales guardadas de {nombre}.',
       'bd.confirmacion_borrado': 'Para borrar la base {nombre} escriba su nombre exacto.',
+      'bd.vector_confirmacion': 'Confirme la operación para continuar.',
+      'bd.vector_no_instalado':
+        'pgvector no está instalado: use «Instalar pgvector» en Bases de datos.',
       'bd.usuario_privilegiado':
         'El usuario {usuario} es un administrador o un rol del sistema: elija un usuario propio para el proyecto.',
       'bd.usuario_en_uso':
@@ -1777,6 +1780,60 @@ export const es = {
       cargando: 'Leyendo los datos de conexión…',
     },
     pgvector: {
+      ayuda:
+        'pgvector permite guardar y buscar "vectores" (listas de números que representan el significado de un texto o una imagen), útil para búsquedas con IA. En PostgreSQL se activa base por base porque cada base tiene sus propias extensiones.',
+      variasBoton: 'Activar en varias bases',
+      variasTitulo: 'Activar pgvector en varias bases',
+      variasTexto:
+        'Elija las bases de esta instancia en las que crear la extensión. Las que ya la tienen no cambian.',
+      variasVacio: 'Esta instancia aún no tiene bases.',
+      seleccionarTodas: 'Seleccionar todas',
+      quitarSeleccion: 'Quitar la selección',
+      yaLaTiene: 'Ya la tiene',
+      datosReales: 'Datos reales',
+      variasConfirmarTitulo: 'Confirmar la activación',
+      variasConfirmarTexto: (n: number) =>
+        `Se creará la extensión pgvector en las bases elegidas (${n}). No se borra ni se modifica ningún dato.`,
+      variasActivar: (n: number) => `Activar en las bases elegidas (${n})`,
+      informeTitulo: 'Resultado por base',
+      estados: {
+        activada: 'Activada',
+        yaEstaba: 'Ya estaba activada',
+        error: 'Error',
+        quitada: 'Quitada',
+        requiereAviso: 'Sin tocar: datos reales',
+      },
+      motivos: {
+        sinPgvector: 'pgvector no está instalado',
+        noExiste: 'La base ya no existe',
+        permiso: 'Permiso denegado',
+        conexion: 'Se perdió la conexión con PostgreSQL',
+        enUso: 'La base está en uso',
+        otro: 'PostgreSQL rechazó la operación',
+      },
+      realesTexto: (n: number) =>
+        `Entre las bases elegidas hay ${n} con datos reales y no se tocaron. Si desea activar pgvector también en ellas, confírmelo expresamente. La extensión no borra datos, pero conviene tener un respaldo reciente.`,
+      realesBoton: 'Activar también en las bases con datos reales',
+      cerrar: 'Cerrar',
+      plantilla: {
+        titulo: 'Bases nuevas',
+        explicacion:
+          'Crea la extensión en template1, la plantilla de PostgreSQL: las bases que se creen después la tendrán; las existentes no cambian.',
+        estadoSi: 'Activada: las bases nuevas llevarán pgvector',
+        estadoNo: 'No activada: las bases nuevas no llevan pgvector',
+        activar: 'Activar también en las bases nuevas',
+        quitar: 'Quitar de las bases nuevas',
+        confirmarActivarTitulo: 'Activar pgvector en las bases nuevas',
+        confirmarActivarTexto:
+          'Se creará la extensión en template1. Las bases que cree a partir de ahora la tendrán; las existentes no cambian. Podrá quitarla cuando quiera.',
+        confirmarQuitarTitulo: 'Quitar pgvector de las bases nuevas',
+        confirmarQuitarTexto:
+          'Se quitará la extensión de template1. Las bases nuevas ya no la tendrán; las que ya la usan no cambian.',
+        activadaOk: 'pgvector activado en las bases nuevas',
+        quitadaOk: 'pgvector quitado de las bases nuevas',
+        yaEstaba: 'No hubo cambios: ya estaba así',
+      },
+      errorBases: 'No se pudo leer el estado de las bases',
       titulo: 'pgvector',
       enCurso: 'Ya hay una instalación de pgvector en curso.',
       descripcion:

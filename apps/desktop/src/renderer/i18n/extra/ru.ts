@@ -31,6 +31,9 @@ export const ruExtra: TextosParciales = {
     uacHuerfano:
       'Если появится окно разрешения Windows, вы можете его отменить: оно больше ничего не делает.',
     codigos: {
+      'bd.vector_confirmacion': 'Подтвердите операцию, чтобы продолжить.',
+      'bd.vector_no_instalado':
+        'pgvector не установлен: воспользуйтесь пунктом «Установить pgvector» в разделе «Базы данных».',
       'asistentes.no_existe': 'Этот ассистент не поддерживается.',
       'asistentes.no_instalado': '{asistente} не установлен.',
       'asistentes.no_compatible': '{asistente} пока нельзя подключить.',
@@ -298,6 +301,62 @@ export const ruExtra: TextosParciales = {
     datosConexion: 'Данные подключения',
   },
   bd: {
+    pgvector: {
+      ayuda:
+        'pgvector позволяет хранить и искать «векторы» (списки чисел, отражающие смысл текста или изображения), что удобно для поиска с помощью ИИ. В PostgreSQL расширение включается отдельно для каждой базы, потому что у каждой базы свои расширения.',
+      variasBoton: 'Включить в нескольких базах',
+      variasTitulo: 'Включить pgvector в нескольких базах',
+      variasTexto:
+        'Выберите базы этой службы, в которых нужно создать расширение. В базах, где оно уже есть, ничего не изменится.',
+      variasVacio: 'В этой службе пока нет баз.',
+      seleccionarTodas: 'Выбрать все',
+      quitarSeleccion: 'Снять выбор',
+      yaLaTiene: 'Уже включено',
+      datosReales: 'Реальные данные',
+      variasConfirmarTitulo: 'Подтвердите включение',
+      variasConfirmarTexto: (n: number) =>
+        `Расширение pgvector будет создано в выбранных базах (${n}). Никакие данные не удаляются и не изменяются.`,
+      variasActivar: (n: number) => `Включить в выбранных базах (${n})`,
+      informeTitulo: 'Результат по базам',
+      estados: {
+        activada: 'Включено',
+        yaEstaba: 'Уже было включено',
+        error: 'Ошибка',
+        quitada: 'Удалено',
+        requiereAviso: 'Не затронуто: реальные данные',
+      },
+      motivos: {
+        sinPgvector: 'pgvector не установлен',
+        noExiste: 'Базы больше не существует',
+        permiso: 'Доступ запрещён',
+        conexion: 'Соединение с PostgreSQL потеряно',
+        enUso: 'База используется',
+        otro: 'PostgreSQL отклонил операцию',
+      },
+      realesTexto: (n: number) =>
+        `Среди выбранных баз ${n} содержат реальные данные, поэтому их не трогали. Если хотите включить pgvector и в них, подтвердите это отдельно. Расширение не удаляет данные, но лучше иметь свежую резервную копию.`,
+      realesBoton: 'Включить и в базах с реальными данными',
+      cerrar: 'Закрыть',
+      plantilla: {
+        titulo: 'Новые базы',
+        explicacion:
+          'Создаёт расширение в template1 — шаблоне PostgreSQL: базы, созданные позже, получат его; существующие не изменятся.',
+        estadoSi: 'Включено: новые базы будут с pgvector',
+        estadoNo: 'Не включено: новые базы будут без pgvector',
+        activar: 'Включить и в новых базах',
+        quitar: 'Убрать из новых баз',
+        confirmarActivarTitulo: 'Включить pgvector в новых базах',
+        confirmarActivarTexto:
+          'Расширение будет создано в template1. Базы, которые вы создадите с этого момента, получат его; существующие не изменятся. Убрать его можно в любой момент.',
+        confirmarQuitarTitulo: 'Убрать pgvector из новых баз',
+        confirmarQuitarTexto:
+          'Расширение будет удалено из template1. Новые базы больше не получат его; базы, которые его уже используют, не изменятся.',
+        activadaOk: 'pgvector включён в новых базах',
+        quitadaOk: 'pgvector убран из новых баз',
+        yaEstaba: 'Изменений нет: так уже было',
+      },
+      errorBases: 'Не удалось прочитать состояние баз',
+    },
     dialogoConexion: {
       tituloServicio: 'Подключение к Meilisearch',
       notaMeilisearch:

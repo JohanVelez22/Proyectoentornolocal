@@ -26,6 +26,8 @@ export const itExtra: TextosParciales = {
     uacHuerfano:
       'Se compare una finestra di autorizzazione di Windows, può annullarla: non fa più nulla.',
     codigos: {
+      'bd.vector_confirmacion': "Confermi l'operazione per continuare.",
+      'bd.vector_no_instalado': 'pgvector non è installato: usi «Installa pgvector» in Database.',
       'asistentes.no_existe': 'Questo assistente non è supportato.',
       'asistentes.no_instalado': '{asistente} non è installato.',
       'asistentes.no_compatible': '{asistente} non può ancora essere collegato.',
@@ -300,6 +302,62 @@ export const itExtra: TextosParciales = {
     datosConexion: 'Dati di connessione',
   },
   bd: {
+    pgvector: {
+      ayuda:
+        'pgvector consente di salvare e cercare "vettori" (elenchi di numeri che rappresentano il significato di un testo o di un\'immagine), utile per le ricerche con l\'IA. In PostgreSQL si attiva database per database, perché ogni database ha le proprie estensioni.',
+      variasBoton: 'Attiva su più database',
+      variasTitulo: 'Attivare pgvector su più database',
+      variasTexto:
+        "Scelga i database di questa istanza in cui creare l'estensione. Quelli che ce l'hanno già non cambiano.",
+      variasVacio: 'Questa istanza non ha ancora database.',
+      seleccionarTodas: 'Seleziona tutti',
+      quitarSeleccion: 'Cancella la selezione',
+      yaLaTiene: 'Già attiva',
+      datosReales: 'Dati reali',
+      variasConfirmarTitulo: "Conferma l'attivazione",
+      variasConfirmarTexto: (n: number) =>
+        `L'estensione pgvector verrà creata nei database scelti (${n}). Nessun dato viene eliminato o modificato.`,
+      variasActivar: (n: number) => `Attiva nei database scelti (${n})`,
+      informeTitulo: 'Risultato per database',
+      estados: {
+        activada: 'Attivata',
+        yaEstaba: 'Era già attiva',
+        error: 'Errore',
+        quitada: 'Rimossa',
+        requiereAviso: 'Non modificato: dati reali',
+      },
+      motivos: {
+        sinPgvector: 'pgvector non è installato',
+        noExiste: 'Il database non esiste più',
+        permiso: 'Permesso negato',
+        conexion: 'La connessione a PostgreSQL è andata persa',
+        enUso: 'Il database è in uso',
+        otro: "PostgreSQL ha rifiutato l'operazione",
+      },
+      realesTexto: (n: number) =>
+        `Tra i database scelti, ${n} contengono dati reali e non sono stati modificati. Se desidera attivare pgvector anche in questi, lo confermi espressamente. L'estensione non elimina dati, ma è consigliabile avere un backup recente.`,
+      realesBoton: 'Attiva anche nei database con dati reali',
+      cerrar: 'Chiudi',
+      plantilla: {
+        titulo: 'Nuovi database',
+        explicacion:
+          "Crea l'estensione in template1, il modello di PostgreSQL: i database creati in seguito la avranno; quelli esistenti non cambiano.",
+        estadoSi: 'Attiva: i nuovi database avranno pgvector',
+        estadoNo: 'Non attiva: i nuovi database non hanno pgvector',
+        activar: 'Attiva anche nei nuovi database',
+        quitar: 'Rimuovi dai nuovi database',
+        confirmarActivarTitulo: 'Attivare pgvector nei nuovi database',
+        confirmarActivarTexto:
+          "L'estensione verrà creata in template1. I database che creerà da ora in poi la avranno; quelli esistenti non cambiano. Potrà rimuoverla quando vuole.",
+        confirmarQuitarTitulo: 'Rimuovere pgvector dai nuovi database',
+        confirmarQuitarTexto:
+          "L'estensione verrà rimossa da template1. I nuovi database non la avranno più; quelli che già la usano non cambiano.",
+        activadaOk: 'pgvector attivato nei nuovi database',
+        quitadaOk: 'pgvector rimosso dai nuovi database',
+        yaEstaba: 'Nessuna modifica: era già così',
+      },
+      errorBases: 'Impossibile leggere lo stato dei database',
+    },
     dialogoConexion: {
       tituloServicio: 'Connessione a Meilisearch',
       notaMeilisearch:

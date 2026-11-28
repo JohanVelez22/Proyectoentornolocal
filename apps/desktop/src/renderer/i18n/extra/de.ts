@@ -27,6 +27,9 @@ export const deExtra: TextosParciales = {
     uacHuerfano:
       'Falls ein Windows-Berechtigungsfenster erscheint, können Sie es abbrechen: Es bewirkt nichts mehr.',
     codigos: {
+      'bd.vector_confirmacion': 'Bestätigen Sie den Vorgang, um fortzufahren.',
+      'bd.vector_no_instalado':
+        'pgvector ist nicht installiert: Verwenden Sie „pgvector installieren“ unter Datenbanken.',
       'asistentes.no_existe': 'Dieser Assistent wird nicht unterstützt.',
       'asistentes.no_instalado': '{asistente} ist nicht installiert.',
       'asistentes.no_compatible': '{asistente} kann noch nicht verbunden werden.',
@@ -316,6 +319,62 @@ export const deExtra: TextosParciales = {
     datosConexion: 'Verbindungsdaten',
   },
   bd: {
+    pgvector: {
+      ayuda:
+        'pgvector erlaubt es, „Vektoren“ (Zahlenlisten, die die Bedeutung eines Textes oder Bildes darstellen) zu speichern und zu durchsuchen – nützlich für KI-gestützte Suchen. In PostgreSQL wird es datenbankweise aktiviert, weil jede Datenbank ihre eigenen Erweiterungen hat.',
+      variasBoton: 'In mehreren Datenbanken aktivieren',
+      variasTitulo: 'pgvector in mehreren Datenbanken aktivieren',
+      variasTexto:
+        'Wählen Sie die Datenbanken dieser Instanz, in denen die Erweiterung angelegt werden soll. Datenbanken, die sie schon haben, bleiben unverändert.',
+      variasVacio: 'Diese Instanz hat noch keine Datenbanken.',
+      seleccionarTodas: 'Alle auswählen',
+      quitarSeleccion: 'Auswahl aufheben',
+      yaLaTiene: 'Bereits aktiv',
+      datosReales: 'Echte Daten',
+      variasConfirmarTitulo: 'Aktivierung bestätigen',
+      variasConfirmarTexto: (n: number) =>
+        `Die Erweiterung pgvector wird in den gewählten Datenbanken (${n}) angelegt. Es werden keine Daten gelöscht oder geändert.`,
+      variasActivar: (n: number) => `In den gewählten Datenbanken aktivieren (${n})`,
+      informeTitulo: 'Ergebnis je Datenbank',
+      estados: {
+        activada: 'Aktiviert',
+        yaEstaba: 'War bereits aktiv',
+        error: 'Fehler',
+        quitada: 'Entfernt',
+        requiereAviso: 'Nicht angerührt: echte Daten',
+      },
+      motivos: {
+        sinPgvector: 'pgvector ist nicht installiert',
+        noExiste: 'Die Datenbank existiert nicht mehr',
+        permiso: 'Zugriff verweigert',
+        conexion: 'Die Verbindung zu PostgreSQL wurde unterbrochen',
+        enUso: 'Die Datenbank wird gerade verwendet',
+        otro: 'PostgreSQL hat den Vorgang abgelehnt',
+      },
+      realesTexto: (n: number) =>
+        `Unter den gewählten Datenbanken enthalten ${n} echte Daten und wurden nicht angerührt. Wenn Sie pgvector auch dort aktivieren möchten, bestätigen Sie dies ausdrücklich. Die Erweiterung löscht keine Daten, eine aktuelle Sicherung ist aber ratsam.`,
+      realesBoton: 'Auch in Datenbanken mit echten Daten aktivieren',
+      cerrar: 'Schließen',
+      plantilla: {
+        titulo: 'Neue Datenbanken',
+        explicacion:
+          'Legt die Erweiterung in template1 an, der PostgreSQL-Vorlage: Später erstellte Datenbanken haben sie; bestehende ändern sich nicht.',
+        estadoSi: 'Aktiviert: neue Datenbanken enthalten pgvector',
+        estadoNo: 'Nicht aktiviert: neue Datenbanken enthalten pgvector nicht',
+        activar: 'Auch in neuen Datenbanken aktivieren',
+        quitar: 'Aus neuen Datenbanken entfernen',
+        confirmarActivarTitulo: 'pgvector in neuen Datenbanken aktivieren',
+        confirmarActivarTexto:
+          'Die Erweiterung wird in template1 angelegt. Datenbanken, die Sie ab jetzt erstellen, haben sie; bestehende ändern sich nicht. Sie können sie jederzeit wieder entfernen.',
+        confirmarQuitarTitulo: 'pgvector aus neuen Datenbanken entfernen',
+        confirmarQuitarTexto:
+          'Die Erweiterung wird aus template1 entfernt. Neue Datenbanken haben sie dann nicht mehr; Datenbanken, die sie bereits nutzen, ändern sich nicht.',
+        activadaOk: 'pgvector in neuen Datenbanken aktiviert',
+        quitadaOk: 'pgvector aus neuen Datenbanken entfernt',
+        yaEstaba: 'Keine Änderung: Es war bereits so',
+      },
+      errorBases: 'Der Zustand der Datenbanken konnte nicht gelesen werden',
+    },
     dialogoConexion: {
       tituloServicio: 'Verbindung zu Meilisearch',
       notaMeilisearch:

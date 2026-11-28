@@ -19,6 +19,9 @@ export const koExtra: TextosParciales = {
   errores: {
     uacHuerfano: 'Windows 권한 창이 나타나면 취소하셔도 됩니다. 더 이상 아무 작업도 하지 않습니다.',
     codigos: {
+      'bd.vector_confirmacion': '계속하려면 작업을 확인하십시오.',
+      'bd.vector_no_instalado':
+        'pgvector가 설치되어 있지 않습니다. 데이터베이스에서 "pgvector 설치"를 사용하십시오.',
       'asistentes.no_existe': '이 어시스턴트는 지원되지 않습니다.',
       'asistentes.no_instalado': '{asistente}이(가) 설치되어 있지 않습니다.',
       'asistentes.no_compatible': '{asistente}은(는) 아직 연결할 수 없습니다.',
@@ -270,6 +273,62 @@ export const koExtra: TextosParciales = {
     datosConexion: '연결 정보',
   },
   bd: {
+    pgvector: {
+      ayuda:
+        'pgvector를 사용하면 "벡터"(텍스트나 이미지의 의미를 나타내는 숫자 목록)를 저장하고 검색할 수 있어 AI 검색에 유용합니다. PostgreSQL에서는 데이터베이스마다 고유한 확장이 있으므로 데이터베이스별로 활성화합니다.',
+      variasBoton: '여러 데이터베이스에서 활성화',
+      variasTitulo: '여러 데이터베이스에서 pgvector 활성화',
+      variasTexto:
+        '이 인스턴스에서 확장을 만들 데이터베이스를 선택하십시오. 이미 활성화된 데이터베이스는 변경되지 않습니다.',
+      variasVacio: '이 인스턴스에는 아직 데이터베이스가 없습니다.',
+      seleccionarTodas: '모두 선택',
+      quitarSeleccion: '선택 해제',
+      yaLaTiene: '이미 활성화됨',
+      datosReales: '실제 데이터',
+      variasConfirmarTitulo: '활성화 확인',
+      variasConfirmarTexto: (n: number) =>
+        `선택한 데이터베이스(${n})에 pgvector 확장을 만듭니다. 데이터는 삭제되거나 변경되지 않습니다.`,
+      variasActivar: (n: number) => `선택한 데이터베이스에서 활성화(${n})`,
+      informeTitulo: '데이터베이스별 결과',
+      estados: {
+        activada: '활성화됨',
+        yaEstaba: '이미 활성화되어 있었음',
+        error: '오류',
+        quitada: '제거됨',
+        requiereAviso: '변경 안 됨: 실제 데이터',
+      },
+      motivos: {
+        sinPgvector: 'pgvector가 설치되어 있지 않습니다',
+        noExiste: '데이터베이스가 더 이상 없습니다',
+        permiso: '권한이 거부되었습니다',
+        conexion: 'PostgreSQL과의 연결이 끊겼습니다',
+        enUso: '데이터베이스를 사용 중입니다',
+        otro: 'PostgreSQL이 작업을 거부했습니다',
+      },
+      realesTexto: (n: number) =>
+        `선택한 데이터베이스 중 ${n}개는 실제 데이터가 있어 변경하지 않았습니다. 이 데이터베이스에서도 pgvector를 활성화하려면 명시적으로 확인하십시오. 확장은 데이터를 삭제하지 않지만 최신 백업을 권장합니다.`,
+      realesBoton: '실제 데이터가 있는 데이터베이스에서도 활성화',
+      cerrar: '닫기',
+      plantilla: {
+        titulo: '새 데이터베이스',
+        explicacion:
+          'PostgreSQL 템플릿인 template1에 확장을 만듭니다. 이후에 만드는 데이터베이스에는 포함되며 기존 데이터베이스는 변경되지 않습니다.',
+        estadoSi: '활성화됨: 새 데이터베이스에 pgvector가 포함됩니다',
+        estadoNo: '활성화 안 됨: 새 데이터베이스에 pgvector가 포함되지 않습니다',
+        activar: '새 데이터베이스에서도 활성화',
+        quitar: '새 데이터베이스에서 제거',
+        confirmarActivarTitulo: '새 데이터베이스에서 pgvector 활성화',
+        confirmarActivarTexto:
+          'template1에 확장을 만듭니다. 지금부터 만드는 데이터베이스에는 포함되며 기존 데이터베이스는 변경되지 않습니다. 언제든 제거할 수 있습니다.',
+        confirmarQuitarTitulo: '새 데이터베이스에서 pgvector 제거',
+        confirmarQuitarTexto:
+          'template1에서 확장을 제거합니다. 새 데이터베이스에는 더 이상 포함되지 않으며 이미 사용 중인 데이터베이스는 변경되지 않습니다.',
+        activadaOk: '새 데이터베이스에서 pgvector를 활성화했습니다',
+        quitadaOk: '새 데이터베이스에서 pgvector를 제거했습니다',
+        yaEstaba: '변경 없음: 이미 그 상태였습니다',
+      },
+      errorBases: '데이터베이스 상태를 읽지 못했습니다',
+    },
     dialogoConexion: {
       tituloServicio: 'Meilisearch 연결',
       notaMeilisearch:

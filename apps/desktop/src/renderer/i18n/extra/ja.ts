@@ -20,6 +20,9 @@ export const jaExtra: TextosParciales = {
     uacHuerfano:
       'Windows の許可ウィンドウが表示された場合は、キャンセルしてください。もう何も実行されません。',
     codigos: {
+      'bd.vector_confirmacion': '操作を確認して続行してください。',
+      'bd.vector_no_instalado':
+        'pgvector がインストールされていません。「データベース」の「pgvector をインストール」を使用してください。',
       'asistentes.no_existe': 'このアシスタントには対応していません。',
       'asistentes.no_instalado': '{asistente} はインストールされていません。',
       'asistentes.no_compatible': '{asistente} はまだ接続できません。',
@@ -283,6 +286,62 @@ export const jaExtra: TextosParciales = {
     datosConexion: '接続情報',
   },
   bd: {
+    pgvector: {
+      ayuda:
+        'pgvector を使うと「ベクトル」（文章や画像の意味を表す数値のリスト）を保存・検索でき、AI を使った検索に役立ちます。PostgreSQL ではデータベースごとに拡張機能を持つため、データベース単位で有効にします。',
+      variasBoton: '複数のデータベースで有効化',
+      variasTitulo: '複数のデータベースで pgvector を有効化',
+      variasTexto:
+        'このインスタンスのデータベースから、拡張機能を作成するものを選んでください。すでに有効なものは変更されません。',
+      variasVacio: 'このインスタンスにはまだデータベースがありません。',
+      seleccionarTodas: 'すべて選択',
+      quitarSeleccion: '選択を解除',
+      yaLaTiene: '有効済み',
+      datosReales: '実データ',
+      variasConfirmarTitulo: '有効化の確認',
+      variasConfirmarTexto: (n: number) =>
+        `選択したデータベース（${n}）に pgvector 拡張機能を作成します。データの削除や変更は行いません。`,
+      variasActivar: (n: number) => `選択したデータベースで有効化（${n}）`,
+      informeTitulo: 'データベースごとの結果',
+      estados: {
+        activada: '有効化しました',
+        yaEstaba: 'すでに有効でした',
+        error: 'エラー',
+        quitada: '削除しました',
+        requiereAviso: '未変更：実データ',
+      },
+      motivos: {
+        sinPgvector: 'pgvector がインストールされていません',
+        noExiste: 'データベースが存在しません',
+        permiso: '権限がありません',
+        conexion: 'PostgreSQL との接続が切れました',
+        enUso: 'データベースが使用中です',
+        otro: 'PostgreSQL が操作を拒否しました',
+      },
+      realesTexto: (n: number) =>
+        `選択したデータベースのうち ${n} 件は実データを含むため、変更していません。これらでも pgvector を有効にする場合は、明示的に確認してください。拡張機能はデータを削除しませんが、最新のバックアップをおすすめします。`,
+      realesBoton: '実データのデータベースでも有効化',
+      cerrar: '閉じる',
+      plantilla: {
+        titulo: '新しいデータベース',
+        explicacion:
+          'PostgreSQL のテンプレートである template1 に拡張機能を作成します。以後に作成するデータベースには含まれ、既存のデータベースは変わりません。',
+        estadoSi: '有効：新しいデータベースに pgvector が含まれます',
+        estadoNo: '無効：新しいデータベースに pgvector は含まれません',
+        activar: '新しいデータベースでも有効化',
+        quitar: '新しいデータベースから削除',
+        confirmarActivarTitulo: '新しいデータベースで pgvector を有効化',
+        confirmarActivarTexto:
+          'template1 に拡張機能を作成します。今後作成するデータベースには含まれ、既存のデータベースは変わりません。いつでも削除できます。',
+        confirmarQuitarTitulo: '新しいデータベースから pgvector を削除',
+        confirmarQuitarTexto:
+          'template1 から拡張機能を削除します。新しいデータベースには含まれなくなり、すでに使用中のデータベースは変わりません。',
+        activadaOk: '新しいデータベースで pgvector を有効にしました',
+        quitadaOk: '新しいデータベースから pgvector を削除しました',
+        yaEstaba: '変更なし：すでにその状態でした',
+      },
+      errorBases: 'データベースの状態を読み取れませんでした',
+    },
     dialogoConexion: {
       tituloServicio: 'Meilisearch への接続',
       notaMeilisearch:

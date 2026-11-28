@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  objetivoPostgres,
-  pedidoVectorBases,
-  pedidoVectorPlantilla,
-} from '../src/main/validacion';
+import { objetivoPostgres, pedidoVectorBases, pedidoVectorPlantilla } from '../src/main/validacion';
 
 describe('validación de pgvector en varias bases (D54b)', () => {
   it('acepta nombres válidos, quita repetidos y no da por confirmado nada que no sea true', () => {
@@ -26,7 +22,10 @@ describe('validación de pgvector en varias bases (D54b)', () => {
     expect(() => pedidoVectorBases({ bases: [1], confirmado: true })).toThrow();
     expect(() => pedidoVectorBases({ bases: 'a', confirmado: true })).toThrow();
     expect(() =>
-      pedidoVectorBases({ bases: Array.from({ length: 201 }, (_, i) => `b${i}`), confirmado: true }),
+      pedidoVectorBases({
+        bases: Array.from({ length: 201 }, (_, i) => `b${i}`),
+        confirmado: true,
+      }),
     ).toThrow();
     expect(() => pedidoVectorBases({ bases: ['a'], confirmado: true, x: 1 })).toThrow();
     expect(() => pedidoVectorBases(null)).toThrow();

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { Build, Construct, Sparkles } from '@vicons/ionicons5';
 import { NButton, NIcon, NSkeleton, NSpin, NTag, useDialog, useNotification } from 'naive-ui';
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
 import { LIMITE_LINEAS, useBd } from '../stores/bd';
+import DialogoVectorBases from './DialogoVectorBases.vue';
 import PanelProgreso from './PanelProgreso.vue';
 
 /** Estado de pgvector y su instalación (Build Tools + compilación), con su registro en vivo. */
@@ -19,9 +21,81 @@ const tarea = computed(() => bd.tareaPgvector);
 /** Compilar detiene PostgreSQL un momento: no se ofrece durante una restauración. */
 const bloqueado = computed(() => tarea.value !== null || bd.enCurso);
 
+/** Instancia de PostgreSQL elegida en Bases de datos (o la predeterminada). */
+const objetivo = computed(() => bd.objetivo('postgresql'));
+const variasAbierto = ref(false);
+/** ¿template1 lleva pgvector? null mientras no se sabe (p. ej. PostgreSQL apagado). */
+const plantilla = ref<boolean | null>(null);
+
+async function leerPlantilla(): Promise<void> {
+  try {
+    plantilla.value = (await api().pgvector.estadoBases(objetivo.value)).plantilla;
+  } catch {
+    plantilla.value = null; // sin PostgreSQL encendido no se sabe; la acción avisará si se pide
+  }
+}
+
 onMounted(() => {
   void ejecutar('estado', () => bd.cargarPgvector(), { tituloError: t.errorEstado });
 });
+watch(
+  () => [estado.value?.instalado, objetivo.value],
+  () => {
+    if (estado.value?.instalado) void leerPlantilla();
+  },
+  { immediate: true },
+);
+
+/** «Activar también en las bases nuevas» (o quitarlo): explicación y confirmación; nunca por defecto. */
+function pedirPlantilla(activar: boolean): void {
+  if (bloqueado.value) return;
+  const p = t.plantilla;
+  dialog.warning({
+    title: activar ? p.confirmarActivarTitulo : p.confirmarQuitarTitulo,
+    content: activar ? p.confirmarActivarTexto : p.confirmarQuitarTexto,
+    positiveText: activar ? p.activar : p.quitar,
+    negativeText: textos.acciones.cancelar,
+    onPositiveClick: () => {
+      void cambiarPlantilla(activar);
+    },
+  });
+}
+
+async function cambiarPlantilla(activar: boolean): Promise<void> {
+  const r = await ejecutar(
+    'plantilla',
+    () => api().pgvector.plantilla(objetivo.value, { activar, confirmado: true }),
+    { tituloError: t.plantilla.titulo },
+  );
+  if (!r) return;
+  if (r.estado === 'error') {
+    notification.error({
+      title: t.plantilla.titulo,
+      content: t.motivos[motivoClave(r.motivo)],
+      duration: 8000,
+    });
+  } else if (r.estado === 'ya-estaba') {
+    notification.info({ title: t.plantilla.yaEstaba, duration: 4000 });
+  } else {
+    notification.success({
+      title: activar ? t.plantilla.activadaOk : t.plantilla.quitadaOk,
+      duration: 4000,
+    });
+  }
+  await leerPlantilla();
+}
+
+const MOTIVOS = {
+  'sin-pgvector': 'sinPgvector',
+  'no-existe': 'noExiste',
+  permiso: 'permiso',
+  conexion: 'conexion',
+  'en-uso': 'enUso',
+  otro: 'otro',
+} as const;
+function motivoClave(m: keyof typeof MOTIVOS | undefined): (typeof MOTIVOS)[keyof typeof MOTIVOS] {
+  return MOTIVOS[m ?? 'otro'];
+}
 
 function pedirHerramientas(luego?: () => void): void {
   dialog.warning({
@@ -154,6 +228,48 @@ function instalar(): void {
         </NButton>
       </div>
       <p v-if="estado.instalado" class="tenue">{{ t.activarAyuda }}</p>
+      <div v-if="estado.instalado" class="multibase">
+        <p class="tenue ayuda-vector" data-testid="ayuda-vector">{{ t.ayuda }}</p>
+        <div class="botones">
+          <NButton size="small" secondary :disabled="bloqueado" @click="variasAbierto = true">
+            {{ t.variasBoton }}
+          </NButton>
+        </div>
+        <div class="plantilla">
+          <strong>{{ t.plantilla.titulo }}</strong>
+          <small class="tenue">{{ t.plantilla.explicacion }}</small>
+          <small v-if="plantilla !== null" class="estado-plantilla">
+            {{ plantilla ? t.plantilla.estadoSi : t.plantilla.estadoNo }}
+          </small>
+          <div class="botones">
+            <NButton
+              v-if="!plantilla"
+              size="small"
+              secondary
+              :disabled="bloqueado"
+              :loading="ocupado('plantilla')"
+              @click="pedirPlantilla(true)"
+            >
+              {{ t.plantilla.activar }}
+            </NButton>
+            <NButton
+              v-else
+              size="small"
+              secondary
+              :disabled="bloqueado"
+              :loading="ocupado('plantilla')"
+              @click="pedirPlantilla(false)"
+            >
+              {{ t.plantilla.quitar }}
+            </NButton>
+          </div>
+        </div>
+        <DialogoVectorBases
+          v-model:show="variasAbierto"
+          :objetivo="objetivo"
+          @cambio="leerPlantilla"
+        />
+      </div>
     </template>
 
     <div v-if="tarea || bd.lineasPgvector.length" class="progreso">
@@ -230,6 +346,31 @@ function instalar(): void {
   margin: 0;
   font-size: 12px;
   opacity: 0.72;
+}
+.multibase {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(128, 128, 128, 0.18);
+}
+.ayuda-vector {
+  max-width: 70ch;
+  line-height: 1.5;
+}
+.plantilla {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.plantilla small {
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.estado-plantilla {
+  font-weight: 600;
 }
 .progreso {
   display: flex;

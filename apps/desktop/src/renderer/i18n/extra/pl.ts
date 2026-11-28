@@ -31,6 +31,9 @@ export const plExtra: TextosParciales = {
     uacHuerfano:
       'Jeśli pojawi się okno zgody systemu Windows, można je anulować: nic już nie robi.',
     codigos: {
+      'bd.vector_confirmacion': 'Potwierdź operację, aby kontynuować.',
+      'bd.vector_no_instalado':
+        'pgvector nie jest zainstalowany: proszę użyć opcji „Zainstaluj pgvector” w sekcji Bazy danych.',
       'asistentes.no_existe': 'Ten asystent nie jest obsługiwany.',
       'asistentes.no_instalado': '{asistente} nie jest zainstalowany.',
       'asistentes.no_compatible': '{asistente} nie może jeszcze zostać połączony.',
@@ -303,6 +306,62 @@ export const plExtra: TextosParciales = {
     datosConexion: 'Dane połączenia',
   },
   bd: {
+    pgvector: {
+      ayuda:
+        'pgvector umożliwia zapisywanie i wyszukiwanie „wektorów” (list liczb reprezentujących znaczenie tekstu lub obrazu), co przydaje się w wyszukiwaniu opartym na AI. W PostgreSQL włącza się go w każdej bazie osobno, ponieważ każda baza ma własne rozszerzenia.',
+      variasBoton: 'Włącz w kilku bazach',
+      variasTitulo: 'Włącz pgvector w kilku bazach',
+      variasTexto:
+        'Wybierz bazy tej instancji, w których ma powstać rozszerzenie. Bazy, które już je mają, nie zmieniają się.',
+      variasVacio: 'Ta instancja nie ma jeszcze baz.',
+      seleccionarTodas: 'Zaznacz wszystkie',
+      quitarSeleccion: 'Wyczyść zaznaczenie',
+      yaLaTiene: 'Już włączone',
+      datosReales: 'Prawdziwe dane',
+      variasConfirmarTitulo: 'Potwierdź włączenie',
+      variasConfirmarTexto: (n: number) =>
+        `Rozszerzenie pgvector zostanie utworzone w wybranych bazach (${n}). Żadne dane nie zostaną usunięte ani zmienione.`,
+      variasActivar: (n: number) => `Włącz w wybranych bazach (${n})`,
+      informeTitulo: 'Wynik dla każdej bazy',
+      estados: {
+        activada: 'Włączono',
+        yaEstaba: 'Było już włączone',
+        error: 'Błąd',
+        quitada: 'Usunięto',
+        requiereAviso: 'Nie zmieniono: prawdziwe dane',
+      },
+      motivos: {
+        sinPgvector: 'pgvector nie jest zainstalowany',
+        noExiste: 'Baza już nie istnieje',
+        permiso: 'Odmowa dostępu',
+        conexion: 'Utracono połączenie z PostgreSQL',
+        enUso: 'Baza jest w użyciu',
+        otro: 'PostgreSQL odrzucił operację',
+      },
+      realesTexto: (n: number) =>
+        `Wśród wybranych baz ${n} zawiera prawdziwe dane i nie zostało zmienionych. Jeśli chce Pan/Pani włączyć pgvector także w nich, proszę wyraźnie to potwierdzić. Rozszerzenie nie usuwa danych, ale warto mieć świeżą kopię zapasową.`,
+      realesBoton: 'Włącz także w bazach z prawdziwymi danymi',
+      cerrar: 'Zamknij',
+      plantilla: {
+        titulo: 'Nowe bazy',
+        explicacion:
+          'Tworzy rozszerzenie w template1, czyli w szablonie PostgreSQL: bazy tworzone później będą je miały; istniejące się nie zmienią.',
+        estadoSi: 'Włączone: nowe bazy będą miały pgvector',
+        estadoNo: 'Niewłączone: nowe bazy nie będą miały pgvector',
+        activar: 'Włącz także w nowych bazach',
+        quitar: 'Usuń z nowych baz',
+        confirmarActivarTitulo: 'Włącz pgvector w nowych bazach',
+        confirmarActivarTexto:
+          'Rozszerzenie zostanie utworzone w template1. Bazy tworzone od teraz będą je miały; istniejące się nie zmienią. Można je w każdej chwili usunąć.',
+        confirmarQuitarTitulo: 'Usuń pgvector z nowych baz',
+        confirmarQuitarTexto:
+          'Rozszerzenie zostanie usunięte z template1. Nowe bazy nie będą go już miały; bazy, które już go używają, się nie zmienią.',
+        activadaOk: 'Włączono pgvector w nowych bazach',
+        quitadaOk: 'Usunięto pgvector z nowych baz',
+        yaEstaba: 'Bez zmian: tak już było',
+      },
+      errorBases: 'Nie udało się odczytać stanu baz',
+    },
     dialogoConexion: {
       tituloServicio: 'Połączenie z Meilisearch',
       notaMeilisearch:

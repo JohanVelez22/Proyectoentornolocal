@@ -23,6 +23,9 @@ export const trExtra: TextosParciales = {
     uacHuerfano:
       'Bir Windows izin penceresi görünürse iptal edebilirsiniz: artık hiçbir şey yapmaz.',
     codigos: {
+      'bd.vector_confirmacion': 'Devam etmek için işlemi onaylayın.',
+      'bd.vector_no_instalado':
+        'pgvector yüklü değil: Veritabanları bölümündeki "pgvector\'ü yükle" seçeneğini kullanın.',
       'asistentes.no_existe': 'Bu asistan desteklenmiyor.',
       'asistentes.no_instalado': '{asistente} yüklü değil.',
       'asistentes.no_compatible': '{asistente} henüz bağlanamıyor.',
@@ -274,6 +277,62 @@ export const trExtra: TextosParciales = {
     datosConexion: 'Bağlantı bilgileri',
   },
   bd: {
+    pgvector: {
+      ayuda:
+        'pgvector, "vektörleri" (bir metnin veya görselin anlamını temsil eden sayı listeleri) saklamanıza ve aramanıza olanak tanır; yapay zekâ destekli aramalar için kullanışlıdır. PostgreSQL\'de her veritabanının kendi eklentileri olduğu için eklenti veritabanı veritabanı etkinleştirilir.',
+      variasBoton: 'Birkaç veritabanında etkinleştir',
+      variasTitulo: "pgvector'ü birkaç veritabanında etkinleştir",
+      variasTexto:
+        'Bu örnekteki veritabanlarından eklentinin oluşturulacağı olanları seçin. Eklentiye zaten sahip olanlar değişmez.',
+      variasVacio: 'Bu örnekte henüz veritabanı yok.',
+      seleccionarTodas: 'Tümünü seç',
+      quitarSeleccion: 'Seçimi kaldır',
+      yaLaTiene: 'Zaten etkin',
+      datosReales: 'Gerçek veri',
+      variasConfirmarTitulo: 'Etkinleştirmeyi onaylayın',
+      variasConfirmarTexto: (n: number) =>
+        `pgvector eklentisi seçilen veritabanlarında (${n}) oluşturulacak. Hiçbir veri silinmez veya değiştirilmez.`,
+      variasActivar: (n: number) => `Seçilen veritabanlarında etkinleştir (${n})`,
+      informeTitulo: 'Veritabanı başına sonuç',
+      estados: {
+        activada: 'Etkinleştirildi',
+        yaEstaba: 'Zaten etkindi',
+        error: 'Hata',
+        quitada: 'Kaldırıldı',
+        requiereAviso: 'Dokunulmadı: gerçek veri',
+      },
+      motivos: {
+        sinPgvector: 'pgvector yüklü değil',
+        noExiste: 'Veritabanı artık yok',
+        permiso: 'İzin reddedildi',
+        conexion: 'PostgreSQL bağlantısı kesildi',
+        enUso: 'Veritabanı kullanımda',
+        otro: 'PostgreSQL işlemi reddetti',
+      },
+      realesTexto: (n: number) =>
+        `Seçilen veritabanlarından ${n} tanesi gerçek veri içeriyor ve onlara dokunulmadı. pgvector'ü bunlarda da etkinleştirmek istiyorsanız açıkça onaylayın. Eklenti veri silmez, ancak yakın tarihli bir yedek bulundurmanız önerilir.`,
+      realesBoton: 'Gerçek verili veritabanlarında da etkinleştir',
+      cerrar: 'Kapat',
+      plantilla: {
+        titulo: 'Yeni veritabanları',
+        explicacion:
+          "Eklentiyi PostgreSQL şablonu olan template1'de oluşturur: sonradan oluşturulan veritabanlarında bulunur; mevcutlar değişmez.",
+        estadoSi: 'Etkin: yeni veritabanlarında pgvector olacak',
+        estadoNo: 'Etkin değil: yeni veritabanlarında pgvector olmayacak',
+        activar: 'Yeni veritabanlarında da etkinleştir',
+        quitar: 'Yeni veritabanlarından kaldır',
+        confirmarActivarTitulo: "pgvector'ü yeni veritabanlarında etkinleştir",
+        confirmarActivarTexto:
+          "Eklenti template1'de oluşturulacak. Bundan sonra oluşturacağınız veritabanlarında bulunur; mevcutlar değişmez. İstediğiniz zaman kaldırabilirsiniz.",
+        confirmarQuitarTitulo: "pgvector'ü yeni veritabanlarından kaldır",
+        confirmarQuitarTexto:
+          "Eklenti template1'den kaldırılacak. Yeni veritabanlarında artık bulunmaz; onu zaten kullananlar değişmez.",
+        activadaOk: 'pgvector yeni veritabanlarında etkinleştirildi',
+        quitadaOk: 'pgvector yeni veritabanlarından kaldırıldı',
+        yaEstaba: 'Değişiklik yok: zaten böyleydi',
+      },
+      errorBases: 'Veritabanlarının durumu okunamadı',
+    },
     dialogoConexion: {
       tituloServicio: 'Meilisearch bağlantısı',
       notaMeilisearch:

@@ -19,6 +19,8 @@ export const zhExtra: TextosParciales = {
   errores: {
     uacHuerfano: '如果出现 Windows 权限窗口，您可以将其取消：它已不会再执行任何操作。',
     codigos: {
+      'bd.vector_confirmacion': '请确认操作以继续。',
+      'bd.vector_no_instalado': 'pgvector 未安装：请在“数据库”中使用“安装 pgvector”。',
       'asistentes.no_existe': '不支持该助手。',
       'asistentes.no_instalado': '未安装{asistente}。',
       'asistentes.no_compatible': '暂时无法连接{asistente}。',
@@ -232,6 +234,61 @@ export const zhExtra: TextosParciales = {
     datosConexion: '连接信息',
   },
   bd: {
+    pgvector: {
+      ayuda:
+        'pgvector 可用于保存和搜索“向量”（用一串数字表示文本或图像含义的列表），适合 AI 搜索。在 PostgreSQL 中需要逐个数据库启用，因为每个数据库都有各自的扩展。',
+      variasBoton: '在多个数据库中启用',
+      variasTitulo: '在多个数据库中启用 pgvector',
+      variasTexto: '请选择此实例中要创建扩展的数据库。已启用的数据库不会改变。',
+      variasVacio: '此实例还没有数据库。',
+      seleccionarTodas: '全选',
+      quitarSeleccion: '清除选择',
+      yaLaTiene: '已启用',
+      datosReales: '真实数据',
+      variasConfirmarTitulo: '确认启用',
+      variasConfirmarTexto: (n: number) =>
+        `将在所选数据库（${n}）中创建 pgvector 扩展。不会删除或修改任何数据。`,
+      variasActivar: (n: number) => `在所选数据库中启用（${n}）`,
+      informeTitulo: '各数据库的结果',
+      estados: {
+        activada: '已启用',
+        yaEstaba: '原本已启用',
+        error: '错误',
+        quitada: '已移除',
+        requiereAviso: '未改动：真实数据',
+      },
+      motivos: {
+        sinPgvector: '未安装 pgvector',
+        noExiste: '该数据库已不存在',
+        permiso: '权限被拒绝',
+        conexion: '与 PostgreSQL 的连接已断开',
+        enUso: '该数据库正在使用',
+        otro: 'PostgreSQL 拒绝了该操作',
+      },
+      realesTexto: (n: number) =>
+        `所选数据库中有 ${n} 个含真实数据，未作改动。如需在这些数据库中也启用 pgvector，请明确确认。该扩展不会删除数据，但建议先备份。`,
+      realesBoton: '也在含真实数据的数据库中启用',
+      cerrar: '关闭',
+      plantilla: {
+        titulo: '新数据库',
+        explicacion:
+          '在 PostgreSQL 的模板 template1 中创建扩展：之后新建的数据库会带有该扩展；现有数据库不变。',
+        estadoSi: '已启用：新数据库将带有 pgvector',
+        estadoNo: '未启用：新数据库不带 pgvector',
+        activar: '同时在新数据库中启用',
+        quitar: '从新数据库中移除',
+        confirmarActivarTitulo: '在新数据库中启用 pgvector',
+        confirmarActivarTexto:
+          '将在 template1 中创建该扩展。从现在起新建的数据库会带有它；现有数据库不变。您可以随时移除。',
+        confirmarQuitarTitulo: '从新数据库中移除 pgvector',
+        confirmarQuitarTexto:
+          '将从 template1 中移除该扩展。新数据库将不再带有它；已在使用它的数据库不变。',
+        activadaOk: '已在新数据库中启用 pgvector',
+        quitadaOk: '已从新数据库中移除 pgvector',
+        yaEstaba: '无变化：本来就是这样',
+      },
+      errorBases: '无法读取数据库的状态',
+    },
     dialogoConexion: {
       tituloServicio: '连接到 Meilisearch',
       notaMeilisearch:

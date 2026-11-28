@@ -27,6 +27,9 @@ export const nlExtra: TextosParciales = {
     uacHuerfano:
       'Als er een Windows-toestemmingsvenster verschijnt, kunt u het annuleren: het doet niets meer.',
     codigos: {
+      'bd.vector_confirmacion': 'Bevestig de bewerking om door te gaan.',
+      'bd.vector_no_instalado':
+        'pgvector is niet geïnstalleerd: gebruik "pgvector installeren" bij Databases.',
       'asistentes.no_existe': 'Die assistent wordt niet ondersteund.',
       'asistentes.no_instalado': '{asistente} is niet geïnstalleerd.',
       'asistentes.no_compatible': '{asistente} kan nog niet worden gekoppeld.',
@@ -304,6 +307,62 @@ export const nlExtra: TextosParciales = {
     datosConexion: 'Verbindingsgegevens',
   },
   bd: {
+    pgvector: {
+      ayuda:
+        'Met pgvector kunt u "vectoren" (lijsten met getallen die de betekenis van een tekst of afbeelding weergeven) opslaan en doorzoeken, handig voor zoekopdrachten met AI. In PostgreSQL wordt het per database ingeschakeld, omdat elke database zijn eigen extensies heeft.',
+      variasBoton: 'In meerdere databases inschakelen',
+      variasTitulo: 'pgvector in meerdere databases inschakelen',
+      variasTexto:
+        'Kies de databases van deze instantie waarin de extensie moet worden aangemaakt. Databases die de extensie al hebben, blijven ongewijzigd.',
+      variasVacio: 'Deze instantie heeft nog geen databases.',
+      seleccionarTodas: 'Alles selecteren',
+      quitarSeleccion: 'Selectie wissen',
+      yaLaTiene: 'Al ingeschakeld',
+      datosReales: 'Echte gegevens',
+      variasConfirmarTitulo: 'Inschakeling bevestigen',
+      variasConfirmarTexto: (n: number) =>
+        `De extensie pgvector wordt aangemaakt in de gekozen databases (${n}). Er worden geen gegevens verwijderd of gewijzigd.`,
+      variasActivar: (n: number) => `Inschakelen in de gekozen databases (${n})`,
+      informeTitulo: 'Resultaat per database',
+      estados: {
+        activada: 'Ingeschakeld',
+        yaEstaba: 'Was al ingeschakeld',
+        error: 'Fout',
+        quitada: 'Verwijderd',
+        requiereAviso: 'Niet aangeraakt: echte gegevens',
+      },
+      motivos: {
+        sinPgvector: 'pgvector is niet geïnstalleerd',
+        noExiste: 'De database bestaat niet meer',
+        permiso: 'Toegang geweigerd',
+        conexion: 'De verbinding met PostgreSQL is verbroken',
+        enUso: 'De database is in gebruik',
+        otro: 'PostgreSQL heeft de bewerking geweigerd',
+      },
+      realesTexto: (n: number) =>
+        `Van de gekozen databases bevatten er ${n} echte gegevens; die zijn niet aangeraakt. Wilt u pgvector ook daarin inschakelen, bevestig dat dan uitdrukkelijk. De extensie verwijdert geen gegevens, maar een recente back-up is raadzaam.`,
+      realesBoton: 'Ook inschakelen in databases met echte gegevens',
+      cerrar: 'Sluiten',
+      plantilla: {
+        titulo: 'Nieuwe databases',
+        explicacion:
+          'Maakt de extensie aan in template1, de PostgreSQL-sjabloon: databases die u daarna aanmaakt, hebben de extensie; bestaande databases veranderen niet.',
+        estadoSi: 'Ingeschakeld: nieuwe databases bevatten pgvector',
+        estadoNo: 'Niet ingeschakeld: nieuwe databases bevatten pgvector niet',
+        activar: 'Ook inschakelen in nieuwe databases',
+        quitar: 'Verwijderen uit nieuwe databases',
+        confirmarActivarTitulo: 'pgvector inschakelen in nieuwe databases',
+        confirmarActivarTexto:
+          'De extensie wordt aangemaakt in template1. Databases die u vanaf nu aanmaakt, hebben haar; bestaande databases veranderen niet. U kunt haar op elk moment verwijderen.',
+        confirmarQuitarTitulo: 'pgvector verwijderen uit nieuwe databases',
+        confirmarQuitarTexto:
+          'De extensie wordt verwijderd uit template1. Nieuwe databases hebben haar dan niet meer; databases die haar al gebruiken, veranderen niet.',
+        activadaOk: 'pgvector ingeschakeld in nieuwe databases',
+        quitadaOk: 'pgvector verwijderd uit nieuwe databases',
+        yaEstaba: 'Geen wijzigingen: het was al zo',
+      },
+      errorBases: 'De status van de databases kon niet worden gelezen',
+    },
     dialogoConexion: {
       tituloServicio: 'Verbinding met Meilisearch',
       notaMeilisearch:

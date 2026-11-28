@@ -31,6 +31,9 @@ export const ukExtra: TextosParciales = {
     uacHuerfano:
       'Якщо з’явиться вікно дозволу Windows, ви можете його скасувати: воно вже нічого не робить.',
     codigos: {
+      'bd.vector_confirmacion': 'Підтвердьте операцію, щоб продовжити.',
+      'bd.vector_no_instalado':
+        'pgvector не встановлено: скористайтеся пунктом «Установити pgvector» у розділі «Бази даних».',
       'asistentes.no_existe': 'Цей асистент не підтримується.',
       'asistentes.no_instalado': '{asistente} не встановлено.',
       'asistentes.no_compatible': '{asistente} поки що не можна підключити.',
@@ -295,6 +298,62 @@ export const ukExtra: TextosParciales = {
     datosConexion: 'Дані підключення',
   },
   bd: {
+    pgvector: {
+      ayuda:
+        'pgvector дає змогу зберігати й шукати «вектори» (списки чисел, що передають зміст тексту чи зображення), що корисно для пошуку за допомогою ШІ. У PostgreSQL розширення вмикається окремо для кожної бази, бо кожна база має власні розширення.',
+      variasBoton: 'Увімкнути в кількох базах',
+      variasTitulo: 'Увімкнути pgvector у кількох базах',
+      variasTexto:
+        'Виберіть бази цього екземпляра, в яких потрібно створити розширення. Бази, що вже мають його, не зміняться.',
+      variasVacio: 'У цьому екземплярі ще немає баз.',
+      seleccionarTodas: 'Вибрати всі',
+      quitarSeleccion: 'Зняти вибір',
+      yaLaTiene: 'Уже ввімкнено',
+      datosReales: 'Реальні дані',
+      variasConfirmarTitulo: 'Підтвердьте вмикання',
+      variasConfirmarTexto: (n: number) =>
+        `Розширення pgvector буде створено у вибраних базах (${n}). Жодні дані не видаляються і не змінюються.`,
+      variasActivar: (n: number) => `Увімкнути у вибраних базах (${n})`,
+      informeTitulo: 'Результат за базами',
+      estados: {
+        activada: 'Увімкнено',
+        yaEstaba: 'Уже було ввімкнено',
+        error: 'Помилка',
+        quitada: 'Вилучено',
+        requiereAviso: 'Не чіпали: реальні дані',
+      },
+      motivos: {
+        sinPgvector: 'pgvector не встановлено',
+        noExiste: 'Бази більше не існує',
+        permiso: 'У доступі відмовлено',
+        conexion: 'З’єднання з PostgreSQL втрачено',
+        enUso: 'Базу використовують',
+        otro: 'PostgreSQL відхилив операцію',
+      },
+      realesTexto: (n: number) =>
+        `Серед вибраних баз ${n} містять реальні дані, тому їх не чіпали. Якщо хочете ввімкнути pgvector і в них, підтвердьте це окремо. Розширення не видаляє дані, але краще мати свіжу резервну копію.`,
+      realesBoton: 'Увімкнути й у базах із реальними даними',
+      cerrar: 'Закрити',
+      plantilla: {
+        titulo: 'Нові бази',
+        explicacion:
+          'Створює розширення в template1 — шаблоні PostgreSQL: бази, створені пізніше, матимуть його; наявні не зміняться.',
+        estadoSi: 'Увімкнено: нові бази матимуть pgvector',
+        estadoNo: 'Не ввімкнено: нові бази не матимуть pgvector',
+        activar: 'Увімкнути й у нових базах',
+        quitar: 'Прибрати з нових баз',
+        confirmarActivarTitulo: 'Увімкнути pgvector у нових базах',
+        confirmarActivarTexto:
+          'Розширення буде створено в template1. Бази, які ви створите відтепер, матимуть його; наявні не зміняться. Прибрати його можна будь-коли.',
+        confirmarQuitarTitulo: 'Прибрати pgvector з нових баз',
+        confirmarQuitarTexto:
+          'Розширення буде вилучено з template1. Нові бази більше не матимуть його; бази, що вже його використовують, не зміняться.',
+        activadaOk: 'pgvector увімкнено в нових базах',
+        quitadaOk: 'pgvector прибрано з нових баз',
+        yaEstaba: 'Без змін: так уже було',
+      },
+      errorBases: 'Не вдалося прочитати стан баз',
+    },
     dialogoConexion: {
       tituloServicio: 'Підключення до Meilisearch',
       notaMeilisearch:

@@ -193,6 +193,9 @@ export const pt: Textos = {
       'bd.encender_servicio': 'Ligue {nombre} para administrar os bancos dele.',
       'bd.sin_credenciales': 'Não há credenciais salvas de {nombre}.',
       'bd.confirmacion_borrado': 'Para apagar o banco {nombre}, digite o nome exato dele.',
+      'bd.vector_confirmacion': 'Confirme a operação para continuar.',
+      'bd.vector_no_instalado':
+        'O pgvector não está instalado: use "Instalar pgvector" em Bancos de dados.',
       'bd.usuario_privilegiado':
         'O usuário {usuario} é um administrador ou uma função do sistema: escolha um usuário próprio para o projeto.',
       'bd.usuario_en_uso':
@@ -1783,6 +1786,60 @@ export const pt: Textos = {
       cargando: 'Lendo os dados de conexão…',
     },
     pgvector: {
+      ayuda:
+        'O pgvector permite guardar e buscar "vetores" (listas de números que representam o significado de um texto ou de uma imagem), útil para buscas com IA. No PostgreSQL ele é ativado banco por banco, porque cada banco tem as suas próprias extensões.',
+      variasBoton: 'Ativar em vários bancos',
+      variasTitulo: 'Ativar o pgvector em vários bancos',
+      variasTexto:
+        'Escolha os bancos desta instância nos quais criar a extensão. Os que já a têm não mudam.',
+      variasVacio: 'Esta instância ainda não tem bancos.',
+      seleccionarTodas: 'Selecionar todos',
+      quitarSeleccion: 'Limpar a seleção',
+      yaLaTiene: 'Já tem',
+      datosReales: 'Dados reais',
+      variasConfirmarTitulo: 'Confirmar a ativação',
+      variasConfirmarTexto: (n: number) =>
+        `A extensão pgvector será criada nos bancos escolhidos (${n}). Nenhum dado é apagado nem alterado.`,
+      variasActivar: (n: number) => `Ativar nos bancos escolhidos (${n})`,
+      informeTitulo: 'Resultado por banco',
+      estados: {
+        activada: 'Ativada',
+        yaEstaba: 'Já estava ativada',
+        error: 'Erro',
+        quitada: 'Removida',
+        requiereAviso: 'Não alterado: dados reais',
+      },
+      motivos: {
+        sinPgvector: 'O pgvector não está instalado',
+        noExiste: 'O banco não existe mais',
+        permiso: 'Permissão negada',
+        conexion: 'A conexão com o PostgreSQL foi perdida',
+        enUso: 'O banco está em uso',
+        otro: 'O PostgreSQL recusou a operação',
+      },
+      realesTexto: (n: number) =>
+        `Entre os bancos escolhidos, ${n} têm dados reais e não foram alterados. Se quiser ativar o pgvector neles também, confirme expressamente. A extensão não apaga dados, mas convém ter um backup recente.`,
+      realesBoton: 'Ativar também nos bancos com dados reais',
+      cerrar: 'Fechar',
+      plantilla: {
+        titulo: 'Bancos novos',
+        explicacion:
+          'Cria a extensão no template1, o modelo do PostgreSQL: os bancos criados depois terão a extensão; os existentes não mudam.',
+        estadoSi: 'Ativada: os bancos novos terão o pgvector',
+        estadoNo: 'Não ativada: os bancos novos não terão o pgvector',
+        activar: 'Ativar também nos bancos novos',
+        quitar: 'Remover dos bancos novos',
+        confirmarActivarTitulo: 'Ativar o pgvector nos bancos novos',
+        confirmarActivarTexto:
+          'A extensão será criada no template1. Os bancos que você criar a partir de agora a terão; os existentes não mudam. Você pode removê-la quando quiser.',
+        confirmarQuitarTitulo: 'Remover o pgvector dos bancos novos',
+        confirmarQuitarTexto:
+          'A extensão será removida do template1. Os bancos novos deixarão de tê-la; os que já a usam não mudam.',
+        activadaOk: 'pgvector ativado nos bancos novos',
+        quitadaOk: 'pgvector removido dos bancos novos',
+        yaEstaba: 'Nada mudou: já estava assim',
+      },
+      errorBases: 'Não foi possível ler o estado dos bancos',
       titulo: 'pgvector',
       enCurso: 'Já há uma instalação do pgvector em andamento.',
       descripcion:

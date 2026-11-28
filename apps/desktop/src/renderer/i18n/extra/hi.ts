@@ -21,6 +21,8 @@ export const hiExtra: TextosParciales = {
   errores: {
     uacHuerfano: 'यदि Windows की अनुमति विंडो दिखे, तो आप उसे रद्द कर सकते हैं: अब वह कुछ नहीं करेगी।',
     codigos: {
+      'bd.vector_confirmacion': 'जारी रखने के लिए ऑपरेशन की पुष्टि करें।',
+      'bd.vector_no_instalado': 'pgvector इंस्टॉल नहीं है: डेटाबेस में "pgvector इंस्टॉल करें" का उपयोग करें।',
       'asistentes.no_existe': 'यह असिस्टेंट समर्थित नहीं है।',
       'asistentes.no_instalado': '{asistente} इंस्टॉल नहीं है।',
       'asistentes.no_compatible': '{asistente} को अभी कनेक्ट नहीं किया जा सकता।',
@@ -256,6 +258,61 @@ export const hiExtra: TextosParciales = {
     datosConexion: 'कनेक्शन विवरण',
   },
   bd: {
+    pgvector: {
+      ayuda:
+        'pgvector की मदद से "वेक्टर" (संख्याओं की सूचियाँ, जो किसी टेक्स्ट या छवि का अर्थ दर्शाती हैं) सहेजे और खोजे जा सकते हैं, जो AI खोज के लिए उपयोगी है। PostgreSQL में इसे हर डेटाबेस में अलग-अलग सक्रिय किया जाता है, क्योंकि हर डेटाबेस के अपने एक्सटेंशन होते हैं।',
+      variasBoton: 'कई डेटाबेस में सक्रिय करें',
+      variasTitulo: 'कई डेटाबेस में pgvector सक्रिय करें',
+      variasTexto: 'इस इंस्टेंस के वे डेटाबेस चुनें जिनमें एक्सटेंशन बनाना है। जिनमें यह पहले से है, वे नहीं बदलेंगे।',
+      variasVacio: 'इस इंस्टेंस में अभी कोई डेटाबेस नहीं है।',
+      seleccionarTodas: 'सभी चुनें',
+      quitarSeleccion: 'चयन हटाएँ',
+      yaLaTiene: 'पहले से सक्रिय',
+      datosReales: 'वास्तविक डेटा',
+      variasConfirmarTitulo: 'सक्रियण की पुष्टि करें',
+      variasConfirmarTexto: (n: number) =>
+        `चुने गए डेटाबेस (${n}) में pgvector एक्सटेंशन बनाया जाएगा। कोई डेटा न हटाया जाएगा, न बदला जाएगा।`,
+      variasActivar: (n: number) => `चुने गए डेटाबेस में सक्रिय करें (${n})`,
+      informeTitulo: 'डेटाबेस के अनुसार परिणाम',
+      estados: {
+        activada: 'सक्रिय किया गया',
+        yaEstaba: 'पहले से सक्रिय था',
+        error: 'त्रुटि',
+        quitada: 'हटाया गया',
+        requiereAviso: 'छुआ नहीं गया: वास्तविक डेटा',
+      },
+      motivos: {
+        sinPgvector: 'pgvector इंस्टॉल नहीं है',
+        noExiste: 'डेटाबेस अब मौजूद नहीं है',
+        permiso: 'अनुमति नहीं मिली',
+        conexion: 'PostgreSQL से कनेक्शन टूट गया',
+        enUso: 'डेटाबेस उपयोग में है',
+        otro: 'PostgreSQL ने ऑपरेशन अस्वीकार कर दिया',
+      },
+      realesTexto: (n: number) =>
+        `चुने गए डेटाबेस में से ${n} में वास्तविक डेटा है, इसलिए उन्हें नहीं छुआ गया। यदि आप उनमें भी pgvector सक्रिय करना चाहते हैं, तो स्पष्ट रूप से पुष्टि करें। एक्सटेंशन डेटा नहीं हटाता, फिर भी हाल का बैकअप रखना बेहतर है।`,
+      realesBoton: 'वास्तविक डेटा वाले डेटाबेस में भी सक्रिय करें',
+      cerrar: 'बंद करें',
+      plantilla: {
+        titulo: 'नए डेटाबेस',
+        explicacion:
+          'PostgreSQL के टेम्पलेट template1 में एक्सटेंशन बनाता है: बाद में बनने वाले डेटाबेस में यह होगा; मौजूदा डेटाबेस नहीं बदलेंगे।',
+        estadoSi: 'सक्रिय: नए डेटाबेस में pgvector होगा',
+        estadoNo: 'सक्रिय नहीं: नए डेटाबेस में pgvector नहीं होगा',
+        activar: 'नए डेटाबेस में भी सक्रिय करें',
+        quitar: 'नए डेटाबेस से हटाएँ',
+        confirmarActivarTitulo: 'नए डेटाबेस में pgvector सक्रिय करें',
+        confirmarActivarTexto:
+          'template1 में एक्सटेंशन बनाया जाएगा। अब से आप जो डेटाबेस बनाएँगे उनमें यह होगा; मौजूदा डेटाबेस नहीं बदलेंगे। आप इसे कभी भी हटा सकते हैं।',
+        confirmarQuitarTitulo: 'नए डेटाबेस से pgvector हटाएँ',
+        confirmarQuitarTexto:
+          'template1 से एक्सटेंशन हटाया जाएगा। नए डेटाबेस में यह नहीं होगा; जो डेटाबेस इसका उपयोग कर रहे हैं वे नहीं बदलेंगे।',
+        activadaOk: 'नए डेटाबेस में pgvector सक्रिय किया गया',
+        quitadaOk: 'नए डेटाबेस से pgvector हटाया गया',
+        yaEstaba: 'कोई बदलाव नहीं: यह पहले से ऐसा ही था',
+      },
+      errorBases: 'डेटाबेस की स्थिति नहीं पढ़ी जा सकी',
+    },
     dialogoConexion: {
       tituloServicio: 'Meilisearch से कनेक्शन',
       notaMeilisearch:

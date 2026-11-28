@@ -196,6 +196,9 @@ export const fr: Textos = {
       'bd.encender_servicio': 'Allumez {nombre} pour gérer ses bases.',
       'bd.sin_credenciales': 'Aucun identifiant enregistré pour {nombre}.',
       'bd.confirmacion_borrado': 'Pour supprimer la base {nombre}, tapez son nom exact.',
+      'bd.vector_confirmacion': 'Confirmez l’opération pour continuer.',
+      'bd.vector_no_instalado':
+        'pgvector n’est pas installé : utilisez « Installer pgvector » dans Bases de données.',
       'bd.usuario_privilegiado':
         'L’utilisateur {usuario} est un administrateur ou un rôle système : choisissez un utilisateur propre au projet.',
       'bd.usuario_en_uso':
@@ -1843,6 +1846,60 @@ export const fr: Textos = {
       cargando: 'Lecture des données de connexion…',
     },
     pgvector: {
+      ayuda:
+        'pgvector permet de stocker et de rechercher des « vecteurs » (listes de nombres qui représentent le sens d’un texte ou d’une image), ce qui sert aux recherches par IA. Dans PostgreSQL, il s’active base par base, car chaque base a ses propres extensions.',
+      variasBoton: 'Activer sur plusieurs bases',
+      variasTitulo: 'Activer pgvector sur plusieurs bases',
+      variasTexto:
+        'Choisissez les bases de cette instance où créer l’extension. Celles qui l’ont déjà ne changent pas.',
+      variasVacio: 'Cette instance n’a pas encore de bases.',
+      seleccionarTodas: 'Tout sélectionner',
+      quitarSeleccion: 'Effacer la sélection',
+      yaLaTiene: 'Déjà activée',
+      datosReales: 'Données réelles',
+      variasConfirmarTitulo: 'Confirmer l’activation',
+      variasConfirmarTexto: (n: number) =>
+        `L’extension pgvector sera créée dans les bases choisies (${n}). Aucune donnée n’est supprimée ni modifiée.`,
+      variasActivar: (n: number) => `Activer sur les bases choisies (${n})`,
+      informeTitulo: 'Résultat par base',
+      estados: {
+        activada: 'Activée',
+        yaEstaba: 'Était déjà activée',
+        error: 'Erreur',
+        quitada: 'Retirée',
+        requiereAviso: 'Non modifiée : données réelles',
+      },
+      motivos: {
+        sinPgvector: 'pgvector n’est pas installé',
+        noExiste: 'La base n’existe plus',
+        permiso: 'Autorisation refusée',
+        conexion: 'La connexion à PostgreSQL a été perdue',
+        enUso: 'La base est en cours d’utilisation',
+        otro: 'PostgreSQL a refusé l’opération',
+      },
+      realesTexto: (n: number) =>
+        `Parmi les bases choisies, ${n} contiennent des données réelles et n’ont pas été modifiées. Si vous souhaitez y activer aussi pgvector, confirmez-le expressément. L’extension ne supprime aucune donnée, mais une sauvegarde récente est conseillée.`,
+      realesBoton: 'Activer aussi sur les bases à données réelles',
+      cerrar: 'Fermer',
+      plantilla: {
+        titulo: 'Nouvelles bases',
+        explicacion:
+          'Crée l’extension dans template1, le modèle de PostgreSQL : les bases créées ensuite l’auront ; les bases existantes ne changent pas.',
+        estadoSi: 'Activée : les nouvelles bases auront pgvector',
+        estadoNo: 'Non activée : les nouvelles bases n’ont pas pgvector',
+        activar: 'Activer aussi sur les nouvelles bases',
+        quitar: 'Retirer des nouvelles bases',
+        confirmarActivarTitulo: 'Activer pgvector sur les nouvelles bases',
+        confirmarActivarTexto:
+          'L’extension sera créée dans template1. Les bases que vous créerez à partir de maintenant l’auront ; les bases existantes ne changent pas. Vous pourrez la retirer à tout moment.',
+        confirmarQuitarTitulo: 'Retirer pgvector des nouvelles bases',
+        confirmarQuitarTexto:
+          'L’extension sera retirée de template1. Les nouvelles bases ne l’auront plus ; celles qui l’utilisent déjà ne changent pas.',
+        activadaOk: 'pgvector activé sur les nouvelles bases',
+        quitadaOk: 'pgvector retiré des nouvelles bases',
+        yaEstaba: 'Aucun changement : c’était déjà le cas',
+      },
+      errorBases: 'Impossible de lire l’état des bases',
       titulo: 'pgvector',
       enCurso: 'Une installation de pgvector est déjà en cours.',
       descripcion:

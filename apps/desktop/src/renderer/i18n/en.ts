@@ -189,6 +189,8 @@ export const en: Textos = {
       'bd.encender_servicio': 'Start {nombre} to manage its databases.',
       'bd.sin_credenciales': 'There are no saved credentials for {nombre}.',
       'bd.confirmacion_borrado': 'To delete the database {nombre}, type its exact name.',
+      'bd.vector_confirmacion': 'Confirm the operation to continue.',
+      'bd.vector_no_instalado': 'pgvector is not installed: use "Install pgvector" in Databases.',
       'bd.usuario_privilegiado':
         'User {usuario} is an administrator or a system role: choose a dedicated user for the project.',
       'bd.usuario_en_uso':
@@ -1766,6 +1768,60 @@ export const en: Textos = {
       cargando: 'Reading connection details…',
     },
     pgvector: {
+      ayuda:
+        'pgvector lets you store and search "vectors" (lists of numbers that represent the meaning of a text or an image), which is useful for AI-powered search. In PostgreSQL it is enabled database by database because each database has its own extensions.',
+      variasBoton: 'Enable on several databases',
+      variasTitulo: 'Enable pgvector on several databases',
+      variasTexto:
+        'Choose the databases of this instance where the extension should be created. Databases that already have it stay as they are.',
+      variasVacio: 'This instance has no databases yet.',
+      seleccionarTodas: 'Select all',
+      quitarSeleccion: 'Clear selection',
+      yaLaTiene: 'Already enabled',
+      datosReales: 'Real data',
+      variasConfirmarTitulo: 'Confirm activation',
+      variasConfirmarTexto: (n: number) =>
+        `The pgvector extension will be created in the selected databases (${n}). No data is deleted or changed.`,
+      variasActivar: (n: number) => `Enable on the selected databases (${n})`,
+      informeTitulo: 'Result per database',
+      estados: {
+        activada: 'Enabled',
+        yaEstaba: 'Was already enabled',
+        error: 'Error',
+        quitada: 'Removed',
+        requiereAviso: 'Not touched: real data',
+      },
+      motivos: {
+        sinPgvector: 'pgvector is not installed',
+        noExiste: 'The database no longer exists',
+        permiso: 'Permission denied',
+        conexion: 'The connection to PostgreSQL was lost',
+        enUso: 'The database is in use',
+        otro: 'PostgreSQL rejected the operation',
+      },
+      realesTexto: (n: number) =>
+        `${n} of the selected databases hold real data and were not touched. If you also want to enable pgvector on them, confirm it explicitly. The extension does not delete data, but a recent backup is advisable.`,
+      realesBoton: 'Also enable on the databases with real data',
+      cerrar: 'Close',
+      plantilla: {
+        titulo: 'New databases',
+        explicacion:
+          'Creates the extension in template1, the PostgreSQL template: databases created afterwards will have it; existing ones do not change.',
+        estadoSi: 'Enabled: new databases will include pgvector',
+        estadoNo: 'Not enabled: new databases do not include pgvector',
+        activar: 'Also enable on new databases',
+        quitar: 'Remove from new databases',
+        confirmarActivarTitulo: 'Enable pgvector on new databases',
+        confirmarActivarTexto:
+          'The extension will be created in template1. Databases you create from now on will have it; existing ones do not change. You can remove it at any time.',
+        confirmarQuitarTitulo: 'Remove pgvector from new databases',
+        confirmarQuitarTexto:
+          'The extension will be removed from template1. New databases will no longer have it; databases already using it do not change.',
+        activadaOk: 'pgvector enabled on new databases',
+        quitadaOk: 'pgvector removed from new databases',
+        yaEstaba: 'No changes: it was already like that',
+      },
+      errorBases: 'Could not read the state of the databases',
       titulo: 'pgvector',
       enCurso: 'A pgvector installation is already in progress.',
       descripcion:
