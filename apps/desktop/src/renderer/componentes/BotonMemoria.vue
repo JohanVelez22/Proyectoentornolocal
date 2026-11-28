@@ -17,6 +17,11 @@ import { formatoBytes } from '../utilidades/metricas';
  * «Liviano», «Moderado» y «Profundo». Al pasar el ratón o enfocar un nivel se ve qué hace y
  * cuánto liberaría aproximadamente (calculado al abrir, con lo de ese momento). Profundo pide
  * confirmación y avisa del permiso de administrador. Nunca corre solo ni cierra programas.
+ *
+ * Cifras honestas: Liviano y Moderado dan «≈» (conjunto de trabajo privado) o «hasta ≈» (si solo se
+ * pudo leer el total); Profundo da dos, lo de los procesos y la lista de espera que pasa a memoria
+ * libre. El resultado es el aumento medido AHORA, no «lo liberado de verdad». Si Windows dice que
+ * hay un juego o algo a pantalla completa, se avisa antes de Moderado y Profundo.
  */
 const t = textos.memoria;
 const { ejecutar, ocupado } = useAccion();
@@ -28,6 +33,8 @@ const estimacion = ref<EstimacionMemoria | null>(null);
 const calculando = ref(false);
 const previo = ref<NivelMemoria | null>(null);
 const confirmando = ref(false);
+/** Nivel pendiente de que se acepte el aviso de juego o pantalla completa. */
+const avisandoPantalla = ref<NivelMemoria | null>(null);
 const resultado = ref<ResultadoLiberacion | null>(null);
 const items = ref<HTMLElement[]>([]);
 
@@ -49,11 +56,33 @@ async function alAbrir(visible: boolean): Promise<void> {
   items.value[0]?.focus();
 }
 
-/** «Liberaría ≈ 1,2 GB» o «No disponible»: una cifra que no se pudo medir nunca se inventa. */
+/**
+ * «Liberaría ≈ 1,2 GB» (conjunto de trabajo privado), «Liberaría hasta ≈ 1,2 GB» (solo el total) o
+ * «No disponible»: una cifra que no se pudo medir nunca se inventa. En Profundo es «≈ X de
+ * procesos»; la lista de espera va en otra línea (`listaEspera`).
+ */
 function aproximado(n: NivelMemoria): string {
-  const bytes = estimacion.value?.niveles[n].bytes;
-  return bytes === null || bytes === undefined ? t.noDisponible : t.liberaria(formatoBytes(bytes));
+  const nivel = estimacion.value?.niveles[n];
+  if (!nivel || nivel.bytes === null) return t.noDisponible;
+  const cantidad = formatoBytes(nivel.bytes);
+  if (n === 'profundo')
+    return nivel.tipo === 'hasta' ? t.procesosCifraHasta(cantidad) : t.procesosCifra(cantidad);
+  return nivel.tipo === 'hasta' ? t.liberariaHasta(cantidad) : t.liberaria(cantidad);
 }
+
+/** «La lista de espera (X) pasa a memoria libre», con «No disponible» si no se pudo leer. */
+const listaEspera = (): string => {
+  const bytes = estimacion.value?.listaEspera;
+  return t.listaEsperaCifra(
+    bytes === null || bytes === undefined ? t.noDisponible : formatoBytes(bytes),
+  );
+};
+
+/** ¿Windows dice que hay un juego, una presentación o algo a pantalla completa? */
+const pantallaOcupada = computed(() => {
+  const p = estimacion.value?.pantalla;
+  return p !== undefined && p !== null && p !== 'libre';
+});
 
 function moverFoco(desde: number, paso: number): void {
   const i = (desde + paso + NIVELES.length) % NIVELES.length;
@@ -62,6 +91,13 @@ function moverFoco(desde: number, paso: number): void {
 
 function elegir(n: NivelMemoria): void {
   abierto.value = false;
+  // Liviano solo toca lo propio; Moderado y Profundo avisan si hay un juego o pantalla completa.
+  if (n !== 'liviano' && pantallaOcupada.value) avisandoPantalla.value = n;
+  else seguir(n);
+}
+
+function seguir(n: NivelMemoria): void {
+  avisandoPantalla.value = null;
   if (n === 'profundo') confirmando.value = true;
   else void liberar(n);
 }
@@ -74,11 +110,15 @@ async function liberar(n: NivelMemoria): Promise<void> {
 
 /** El permiso vencido a tiempo deja la ventana de Windows abierta: se avisa de que ya no hace nada. */
 const textoPurga = (p: Exclude<ResultadoLiberacion['purga'], 'no-aplica'>): string =>
-  p === 'tiempo' ? `${t.purga.tiempo} ${textos.errores.uacHuerfano}` : t.purga[p];
+  p === 'tiempo' ? `${t.purga.tiempo} ${textos.errores.uacHuerfano}` : t.purga[p === 'sin-cache' ? 'sinCache' : p];
 
 /** Memoria disponible o «No disponible» si no se pudo medir. */
 const cifra = (m: { disponible: number } | null): string =>
   m ? formatoBytes(m.disponible) : t.noDisponible;
+
+/** Un aumento medido, con «+», o «No disponible» si no se pudo medir. */
+const aumento = (bytes: number | null): string =>
+  bytes === null ? t.noDisponible : `+${formatoBytes(bytes)}`;
 </script>
 
 <template>
@@ -141,6 +181,9 @@ const cifra = (m: { disponible: number } | null): string =>
             <template v-if="calculando">{{ t.calculando }}</template>
             <strong v-else>{{ aproximado(previo) }}</strong>
           </p>
+          <p v-if="previo === 'profundo' && !calculando" class="previa-cifra">
+            <strong>{{ listaEspera() }}</strong>
+          </p>
           <p v-if="previo === 'profundo'" class="previa-nota">{{ t.notaProfundo }}</p>
         </template>
         <p v-else class="previa-nota">{{ t.sugerencia }}</p>
@@ -148,6 +191,26 @@ const cifra = (m: { disponible: number } | null): string =>
       </div>
     </div>
   </NPopover>
+
+  <!-- Moderado y Profundo: aviso si hay un juego o una aplicación a pantalla completa. -->
+  <NModal
+    :show="avisandoPantalla !== null"
+    preset="card"
+    :title="t.avisoPantallaTitulo"
+    :style="{ width: '460px', maxWidth: 'calc(100vw - 32px)' }"
+    :auto-focus="false"
+    @update:show="(v: boolean) => !v && (avisandoPantalla = null)"
+  >
+    <NAlert type="warning" :bordered="false" class="aviso" data-aviso="pantalla">{{
+      t.avisoPantalla
+    }}</NAlert>
+    <div class="botones">
+      <NButton size="small" secondary @click="avisandoPantalla = null">{{ t.cancelar }}</NButton>
+      <NButton size="small" type="primary" @click="avisandoPantalla && seguir(avisandoPantalla)">{{
+        t.continuar
+      }}</NButton>
+    </div>
+  </NModal>
 
   <!-- Profundo: confirmación explícita y aviso del permiso de administrador. -->
   <NModal
@@ -166,11 +229,11 @@ const cifra = (m: { disponible: number } | null): string =>
     </div>
   </NModal>
 
-  <!-- Lo liberado de verdad: memoria disponible antes y después. -->
+  <!-- Lo medido ahora: memoria disponible antes y después, y su aumento (y el de la libre). -->
   <NModal
     :show="resultado !== null"
     preset="card"
-    :title="t.liberadaTitulo"
+    :title="t.aumentoTitulo"
     :style="{ width: '460px', maxWidth: 'calc(100vw - 32px)' }"
     :auto-focus="false"
     @update:show="(v: boolean) => !v && (resultado = null)"
@@ -187,10 +250,12 @@ const cifra = (m: { disponible: number } | null): string =>
           <dd>{{ cifra(resultado.despues) }}</dd>
         </div>
         <div class="total">
-          <dt>{{ t.liberadoReal }}</dt>
-          <dd>
-            {{ resultado.liberado === null ? t.noDisponible : formatoBytes(resultado.liberado) }}
-          </dd>
+          <dt>{{ t.aumentoDisponible }}</dt>
+          <dd data-medida="disponible">{{ aumento(resultado.aumentoDisponible) }}</dd>
+        </div>
+        <div>
+          <dt>{{ t.aumentoLibre }}</dt>
+          <dd data-medida="libre">{{ aumento(resultado.aumentoLibre) }}</dd>
         </div>
       </dl>
       <p class="texto">{{ t.procesos(resultado.procesosVaciados, resultado.procesosSaltados) }}</p>

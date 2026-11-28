@@ -229,9 +229,9 @@ export const plExtra: TextosParciales = {
         'Nie udało się zapisać pliku ({codigo}). Oryginał nie został tknięty.',
       'memoria.sin_confirmar':
         'Przed kontynuowaniem należy potwierdzić działanie w oknie dialogowym.',
-      'memoria.modo_invalido': 'Taki tryb optymalizacji nie istnieje.',
+      'memoria.modo_invalido': 'Taki poziom zwalniania nie istnieje.',
       'memoria.no_disponible':
-        'Optymalizator pamięci nie jest tu dostępny lub nie mógł odczytać systemu.',
+        'Zwalnianie pamięci nie jest tu dostępne lub nie mogło odczytać systemu.',
       'conversor.ocupado':
         'Jedna konwersja już trwa, a kolejna czeka: należy poczekać, aż się zakończy.',
       'doctor.firewall_reglas_acotadas':
@@ -1471,17 +1471,26 @@ export const plExtra: TextosParciales = {
       profundo: 'Głęboki',
     },
     queHace: {
-      liviano: 'Zwalnia pamięć, której WolfCore Dev i jego usługi w tej chwili nie używają.',
+      liviano:
+        'Zmniejsza zestaw roboczy pamięci WolfCore Dev i jego usług; system Windows wczytuje go ponownie, gdy jest potrzebny.',
       moderado:
-        'To, co powyżej, oraz pamięć, której w tej chwili nie używają otwarte programy niekrytyczne. Żaden z nich nie zostanie zamknięty.',
+        'To, co powyżej, oraz otwartych programów niekrytycznych; system Windows wczytuje go ponownie, gdy jest potrzebny. Żaden z nich nie zostanie zamknięty.',
       profundo:
-        'To, co powyżej, oraz opróżnienie listy gotowości i pamięci podręcznej plików systemu Windows. Wymaga zgody administratora.',
+        'To, co powyżej, oraz opróżnienie pamięci podręcznej plików i listy gotowości systemu Windows.',
     },
     requiereAdmin: 'Wymaga zgody administratora',
     calculando: 'Obliczanie…',
     noDisponible: 'Niedostępne',
     sugerencia: 'Należy wskazać poziom myszą lub zaznaczyć go, aby zobaczyć, co robi i ile zwolni.',
     liberaria: (cantidad: string) => `Zwolni ≈ ${cantidad}`,
+    liberariaHasta: (cantidad: string) => `Zwolni do ≈ ${cantidad}`,
+    procesosCifra: (cantidad: string) => `≈ ${cantidad} z procesów`,
+    procesosCifraHasta: (cantidad: string) => `Do ≈ ${cantidad} z procesów`,
+    listaEsperaCifra: (cantidad: string) =>
+      `Lista gotowości (${cantidad}) staje się wolną pamięcią`,
+    avisoPantallaTitulo: 'Wykryto pełny ekran',
+    avisoPantalla:
+      'Gra lub aplikacja działa na pełnym ekranie: zwalnianie pamięci może powodować przycięcia.',
     notaEstimacion:
       'To szacunek na podstawie pamięci z tej chwili: rzeczywisty wynik może się różnić. Żaden program nie zostanie zamknięty i nic nie zostanie utracone.',
     notaProfundo:
@@ -1493,11 +1502,12 @@ export const plExtra: TextosParciales = {
       'System Windows wyświetli okno zgody administratora (UAC), które trzeba zaakceptować, aby kontynuować. Jeśli zostanie anulowane, opróżnione zostaną tylko procesy.',
     continuar: 'Kontynuuj',
     cancelar: 'Anuluj',
-    liberadaTitulo: 'Pamięć zwolniona',
+    aumentoTitulo: 'Wzrost zmierzony teraz',
     nivelAplicado: (nivel: string) => `Zastosowany poziom: ${nivel}.`,
     antes: 'Dostępna pamięć przed',
     despues: 'Dostępna pamięć po',
-    liberadoReal: 'Faktycznie zwolniono',
+    aumentoDisponible: 'Wzrost dostępnej pamięci',
+    aumentoLibre: 'Wzrost wolnej pamięci',
     procesos: (vaciados: number, omitidos: number) =>
       `Opróżnione procesy: ${vaciados}. Pominięte: ${omitidos}.`,
     purga: {
@@ -1505,10 +1515,12 @@ export const plExtra: TextosParciales = {
       cancelada: 'Zgoda administratora została anulowana: opróżniono tylko procesy.',
       tiempo:
         'Nie odpowiedziano na czas na prośbę o zgodę administratora: opróżniono tylko procesy.',
+      sinCache:
+        'Lista gotowości została opróżniona, ale system Windows nie mógł opróżnić pamięci podręcznej plików.',
       error: 'Nie udało się opróżnić listy gotowości: opróżniono tylko procesy.',
     },
     notaResultado:
-      'Zwolniona ilość to zmierzona różnica dostępnej pamięci. System Windows rozdziela ją ponownie i może się ona zaraz zmienić.',
+      '„Dostępna” to pamięć wolna plus lista gotowości systemu Windows. To wartość zmierzona teraz: system Windows od razu ponownie wykorzystuje tę pamięć, więc może ona znów spaść, gdy tylko poprosi o nią inny program.',
     cerrar: 'Zamknij',
   },
   guias: {

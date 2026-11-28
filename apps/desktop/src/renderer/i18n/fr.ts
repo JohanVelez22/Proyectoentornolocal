@@ -658,9 +658,9 @@ export const fr: Textos = {
       'editor.escritura_fallo':
         'Le fichier n’a pas pu être enregistré ({codigo}). L’original n’a pas été touché.',
       'memoria.sin_confirmar': 'Confirmez l’action dans la boîte de dialogue avant de continuer.',
-      'memoria.modo_invalido': 'Ce mode d’optimisation n’existe pas.',
+      'memoria.modo_invalido': 'Ce niveau de libération n’existe pas.',
       'memoria.no_disponible':
-        'L’optimiseur de mémoire n’est pas disponible ici ou n’a pas pu lire le système.',
+        'La libération de mémoire n’est pas disponible ici ou n’a pas pu lire le système.',
       'conversor.archivo_invalido':
         'Le fichier est endommagé ou n’est pas du type indiqué par son extension.',
       'conversor.archivo_grande': 'Le fichier est trop volumineux (jusqu’à {maximo}).',
@@ -5932,11 +5932,12 @@ export const fr: Textos = {
       profundo: 'Profond',
     },
     queHace: {
-      liviano: 'Libère la mémoire que WolfCore Dev et ses services n’utilisent pas en ce moment.',
+      liviano:
+        'Réduit la mémoire de travail de WolfCore Dev et de ses services ; Windows la recharge quand c’est nécessaire.',
       moderado:
-        'Ce qui précède, plus la mémoire que les programmes ouverts non critiques n’utilisent pas en ce moment. Aucun n’est fermé.',
+        'Ce qui précède, plus celle des programmes ouverts non critiques ; Windows la recharge quand c’est nécessaire. Aucun n’est fermé.',
       profundo:
-        'Ce qui précède, plus le vidage de la liste d’attente et du cache de fichiers de Windows. Demande l’autorisation de l’administrateur.',
+        'Ce qui précède, plus le vidage du cache de fichiers et de la liste d’attente de Windows.',
     },
     requiereAdmin: 'Demande l’autorisation de l’administrateur',
     calculando: 'Calcul en cours…',
@@ -5944,6 +5945,14 @@ export const fr: Textos = {
     sugerencia:
       'Survolez un niveau ou placez-y le focus pour voir ce qu’il fait et combien il libérerait.',
     liberaria: (cantidad: string) => `Libérerait ≈ ${cantidad}`,
+    liberariaHasta: (cantidad: string) => `Libérerait jusqu’à ≈ ${cantidad}`,
+    procesosCifra: (cantidad: string) => `≈ ${cantidad} issus des processus`,
+    procesosCifraHasta: (cantidad: string) => `Jusqu’à ≈ ${cantidad} issus des processus`,
+    listaEsperaCifra: (cantidad: string) =>
+      `La liste d’attente (${cantidad}) devient de la mémoire libre`,
+    avisoPantallaTitulo: 'Plein écran détecté',
+    avisoPantalla:
+      'Un jeu ou une application est en plein écran : libérer la mémoire peut provoquer des saccades.',
     notaEstimacion:
       'Il s’agit d’une estimation avec la mémoire du moment : le résultat réel peut différer. Aucun programme n’est fermé et rien n’est perdu.',
     notaProfundo:
@@ -5955,11 +5964,12 @@ export const fr: Textos = {
       'Windows affichera une fenêtre d’autorisation de l’administrateur (UAC) que vous devrez accepter pour continuer. Si vous l’annulez, seuls les processus seront vidés.',
     continuar: 'Continuer',
     cancelar: 'Annuler',
-    liberadaTitulo: 'Mémoire libérée',
+    aumentoTitulo: 'Augmentation mesurée maintenant',
     nivelAplicado: (nivel: string) => `Niveau appliqué : ${nivel}.`,
     antes: 'Mémoire disponible avant',
     despues: 'Mémoire disponible après',
-    liberadoReal: 'Réellement libéré',
+    aumentoDisponible: 'Augmentation de la mémoire disponible',
+    aumentoLibre: 'Augmentation de la mémoire libre',
     procesos: (vaciados: number, omitidos: number) =>
       `Processus vidés : ${vaciados}. Ignorés : ${omitidos}.`,
     purga: {
@@ -5968,10 +5978,12 @@ export const fr: Textos = {
         'L’autorisation de l’administrateur a été annulée : seuls les processus ont été vidés.',
       tiempo:
         'Aucune réponse à l’autorisation de l’administrateur à temps : seuls les processus ont été vidés.',
+      sinCache:
+        'La liste d’attente a été vidée, mais Windows n’a pas pu vider le cache de fichiers.',
       error: 'La liste d’attente n’a pas pu être vidée : seuls les processus ont été vidés.',
     },
     notaResultado:
-      'Le résultat est la différence mesurée de la mémoire disponible. Windows la redistribue et elle peut changer aussitôt.',
+      '« Disponible » correspond à la mémoire libre plus la liste d’attente de Windows. C’est ce qui a été mesuré à l’instant : Windows réutilise aussitôt cette mémoire, elle peut donc rebaisser dès qu’un autre programme la demande.',
     cerrar: 'Fermer',
   },
   guias: {

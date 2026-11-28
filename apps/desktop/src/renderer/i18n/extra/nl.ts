@@ -229,9 +229,9 @@ export const nlExtra: TextosParciales = {
       'editor.escritura_fallo':
         'Het bestand kon niet worden opgeslagen ({codigo}). Het origineel is niet aangeraakt.',
       'memoria.sin_confirmar': 'Bevestig de actie in het dialoogvenster voordat u doorgaat.',
-      'memoria.modo_invalido': 'Die optimalisatiemodus bestaat niet.',
+      'memoria.modo_invalido': 'Dat vrijmaakniveau bestaat niet.',
       'memoria.no_disponible':
-        'De geheugenoptimalisatie is hier niet beschikbaar of kon het systeem niet lezen.',
+        'Geheugen vrijmaken is hier niet beschikbaar of kon het systeem niet lezen.',
       'conversor.ocupado':
         'Er loopt al een conversie en er wacht er nog een: wacht tot die klaar is.',
       'doctor.firewall_reglas_acotadas':
@@ -1483,11 +1483,11 @@ export const nlExtra: TextosParciales = {
     },
     queHace: {
       liviano:
-        'Maakt het geheugen vrij dat WolfCore Dev en de bijbehorende services op dit moment niet gebruiken.',
+        'Verkleint het werkgeheugen van WolfCore Dev en de bijbehorende services; Windows laadt het opnieuw wanneer dat nodig is.',
       moderado:
-        'Het bovenstaande, plus het geheugen dat geopende, niet-kritieke programma’s nu niet gebruiken. Er wordt er geen gesloten.',
+        'Het bovenstaande, plus dat van geopende, niet-kritieke programma’s; Windows laadt het opnieuw wanneer dat nodig is. Er wordt er geen gesloten.',
       profundo:
-        'Het bovenstaande, plus het legen van de standbylijst en de bestandscache van Windows. Vraagt om beheerderstoestemming.',
+        'Het bovenstaande, plus het legen van de bestandscache en de standbylijst van Windows.',
     },
     requiereAdmin: 'Vraagt om beheerderstoestemming',
     calculando: 'Berekenen…',
@@ -1495,6 +1495,13 @@ export const nlExtra: TextosParciales = {
     sugerencia:
       'Beweeg de muis over een niveau of selecteer het om te zien wat het doet en hoeveel het zou vrijmaken.',
     liberaria: (cantidad: string) => `Zou ≈ ${cantidad} vrijmaken`,
+    liberariaHasta: (cantidad: string) => `Zou tot ≈ ${cantidad} vrijmaken`,
+    procesosCifra: (cantidad: string) => `≈ ${cantidad} uit processen`,
+    procesosCifraHasta: (cantidad: string) => `Tot ≈ ${cantidad} uit processen`,
+    listaEsperaCifra: (cantidad: string) => `De standbylijst (${cantidad}) wordt vrij geheugen`,
+    avisoPantallaTitulo: 'Volledig scherm gedetecteerd',
+    avisoPantalla:
+      'Een game of toepassing draait op volledig scherm: geheugen vrijmaken kan haperingen veroorzaken.',
     notaEstimacion:
       'Dit is een schatting op basis van het geheugen van dit moment: de werkelijke waarde kan afwijken. Er wordt geen programma gesloten en er gaat niets verloren.',
     notaProfundo:
@@ -1506,11 +1513,12 @@ export const nlExtra: TextosParciales = {
       'Windows toont een venster voor beheerderstoestemming (UAC) dat u moet accepteren om door te gaan. Als u het annuleert, worden alleen de processen geleegd.',
     continuar: 'Doorgaan',
     cancelar: 'Annuleren',
-    liberadaTitulo: 'Geheugen vrijgemaakt',
+    aumentoTitulo: 'Nu gemeten toename',
     nivelAplicado: (nivel: string) => `Toegepast niveau: ${nivel}.`,
     antes: 'Beschikbaar geheugen vóór',
     despues: 'Beschikbaar geheugen erna',
-    liberadoReal: 'Daadwerkelijk vrijgemaakt',
+    aumentoDisponible: 'Toename van het beschikbare geheugen',
+    aumentoLibre: 'Toename van het vrije geheugen',
     procesos: (vaciados: number, omitidos: number) =>
       `Geleegde processen: ${vaciados}. Overgeslagen: ${omitidos}.`,
     purga: {
@@ -1518,10 +1526,11 @@ export const nlExtra: TextosParciales = {
       cancelada: 'De beheerderstoestemming is geannuleerd: alleen de processen zijn geleegd.',
       tiempo:
         'De beheerderstoestemming is niet op tijd beantwoord: alleen de processen zijn geleegd.',
+      sinCache: 'De standbylijst is geleegd, maar Windows kon de bestandscache niet legen.',
       error: 'De standbylijst kon niet worden geleegd: alleen de processen zijn geleegd.',
     },
     notaResultado:
-      'Het vrijgemaakte geheugen is het gemeten verschil in beschikbaar geheugen. Windows verdeelt het opnieuw en het kan meteen veranderen.',
+      '“Beschikbaar” is het vrije geheugen plus de standbylijst van Windows. Dit is wat nu is gemeten: Windows gebruikt dat geheugen meteen opnieuw, dus het kan weer dalen zodra een ander programma erom vraagt.',
     cerrar: 'Sluiten',
   },
   guias: {

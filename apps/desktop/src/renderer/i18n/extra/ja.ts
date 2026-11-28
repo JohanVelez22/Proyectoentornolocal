@@ -216,9 +216,9 @@ export const jaExtra: TextosParciales = {
       'editor.escritura_fallo':
         'ファイルを保存できませんでした（{codigo}）。元のファイルには手を加えていません。',
       'memoria.sin_confirmar': '続行する前に、ダイアログで操作を確認してください。',
-      'memoria.modo_invalido': 'その最適化モードは存在しません。',
+      'memoria.modo_invalido': 'その解放レベルは存在しません。',
       'memoria.no_disponible':
-        'ここではメモリ最適化を利用できないか、システムを読み取れませんでした。',
+        'ここではメモリの解放を利用できないか、システムを読み取れませんでした。',
       'conversor.ocupado':
         '変換がすでに実行中で、もう 1 件が待機中です。終わるまでお待ちください。',
       'doctor.firewall_reglas_acotadas':
@@ -1409,11 +1409,11 @@ export const jaExtra: TextosParciales = {
       profundo: '徹底',
     },
     queHace: {
-      liviano: 'WolfCore Dev とそのサービスが現在使っていないメモリを解放します。',
+      liviano:
+        'WolfCore Dev とそのサービスのワーキングセットを縮小します。Windows は必要に応じて再読み込みします。',
       moderado:
-        '上記に加えて、開いている重要でないプログラムが現在使っていないメモリも解放します。プログラムは閉じません。',
-      profundo:
-        '上記に加えて、Windows のスタンバイリストとファイルキャッシュを空にします。管理者の許可が必要です。',
+        '上記に加えて、開いている重要でないプログラムのワーキングセットも縮小します。Windows は必要に応じて再読み込みします。プログラムは閉じません。',
+      profundo: '上記に加えて、Windows のファイルキャッシュとスタンバイリストを空にします。',
     },
     requiereAdmin: '管理者の許可が必要です',
     calculando: '計算しています…',
@@ -1421,6 +1421,13 @@ export const jaExtra: TextosParciales = {
     sugerencia:
       'レベルにマウスを合わせるかフォーカスすると、内容と解放できる量の目安が表示されます。',
     liberaria: (cantidad: string) => `解放の目安: ≈ ${cantidad}`,
+    liberariaHasta: (cantidad: string) => `最大 ≈ ${cantidad} を解放します`,
+    procesosCifra: (cantidad: string) => `プロセスから ≈ ${cantidad}`,
+    procesosCifraHasta: (cantidad: string) => `プロセスから最大 ≈ ${cantidad}`,
+    listaEsperaCifra: (cantidad: string) => `スタンバイリスト（${cantidad}）が空きメモリになります`,
+    avisoPantallaTitulo: '全画面表示を検出しました',
+    avisoPantalla:
+      'ゲームまたはアプリが全画面で動作中です。メモリを解放すると動作がカクつくことがあります。',
     notaEstimacion:
       '現在のメモリに基づく推定値です。実際の値は異なる場合があります。プログラムは閉じられず、何も失われません。',
     notaProfundo:
@@ -1432,21 +1439,24 @@ export const jaExtra: TextosParciales = {
       'Windows が管理者の許可ウィンドウ (UAC) を表示します。続行するには許可してください。キャンセルした場合は、プロセスのみ解放されます。',
     continuar: '続行',
     cancelar: 'キャンセル',
-    liberadaTitulo: 'メモリを解放しました',
+    aumentoTitulo: '今回測定した増加量',
     nivelAplicado: (nivel: string) => `適用したレベル: ${nivel}。`,
     antes: '解放前の利用可能メモリ',
     despues: '解放後の利用可能メモリ',
-    liberadoReal: '実際に解放された量',
+    aumentoDisponible: '利用可能メモリの増加量',
+    aumentoLibre: '空きメモリの増加量',
     procesos: (vaciados: number, omitidos: number) =>
       `解放したプロセス: ${vaciados}。スキップ: ${omitidos}。`,
     purga: {
       hecha: 'スタンバイリストとファイルキャッシュを空にしました。',
       cancelada: '管理者の許可がキャンセルされました。プロセスのみ解放しました。',
       tiempo: '管理者の許可が時間内に応答されませんでした。プロセスのみ解放しました。',
+      sinCache:
+        'スタンバイリストは空にしましたが、Windows はファイルキャッシュを空にできませんでした。',
       error: 'スタンバイリストを空にできませんでした。プロセスのみ解放しました。',
     },
     notaResultado:
-      '解放量は、利用可能メモリの測定された差です。Windows が再配分するため、すぐに変わることがあります。',
+      '「利用可能」は、空きメモリに Windows のスタンバイリストを加えたものです。これは今回測定した値で、Windows はこのメモリをすぐに再利用するため、他のプログラムが要求するとまた減ることがあります。',
     cerrar: '閉じる',
   },
   guias: {

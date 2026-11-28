@@ -241,9 +241,9 @@ export const deExtra: TextosParciales = {
       'editor.escritura_fallo':
         'Die Datei konnte nicht gespeichert werden ({codigo}). Das Original wurde nicht angetastet.',
       'memoria.sin_confirmar': 'Bestätigen Sie die Aktion im Dialog, bevor Sie fortfahren.',
-      'memoria.modo_invalido': 'Dieser Optimierungsmodus existiert nicht.',
+      'memoria.modo_invalido': 'Diese Freigabestufe existiert nicht.',
       'memoria.no_disponible':
-        'Der Speicheroptimierer ist hier nicht verfügbar oder konnte das System nicht lesen.',
+        'Das Freigeben von Speicher ist hier nicht verfügbar oder konnte das System nicht lesen.',
       'conversor.ocupado':
         'Eine Konvertierung läuft bereits und eine weitere wartet: Warten Sie, bis sie abgeschlossen ist.',
       'doctor.firewall_reglas_acotadas':
@@ -1501,11 +1501,11 @@ export const deExtra: TextosParciales = {
       profundo: 'Tief',
     },
     queHace: {
-      liviano: 'Gibt den Speicher frei, den WolfCore Dev und seine Dienste gerade nicht nutzen.',
+      liviano:
+        'Verkleinert den Arbeitsspeicher von WolfCore Dev und seinen Diensten; Windows lädt ihn bei Bedarf neu.',
       moderado:
-        'Zusätzlich der Speicher, den geöffnete, nicht kritische Programme gerade nicht nutzen. Es wird keines davon geschlossen.',
-      profundo:
-        'Zusätzlich werden die Standbyliste und der Dateicache von Windows geleert. Erfordert Administratorrechte.',
+        'Zusätzlich der von geöffneten, nicht kritischen Programmen; Windows lädt ihn bei Bedarf neu. Es wird keines davon geschlossen.',
+      profundo: 'Zusätzlich werden der Dateicache und die Standbyliste von Windows geleert.',
     },
     requiereAdmin: 'Erfordert Administratorrechte',
     calculando: 'Wird berechnet…',
@@ -1513,6 +1513,14 @@ export const deExtra: TextosParciales = {
     sugerencia:
       'Fahren Sie mit der Maus über eine Stufe oder fokussieren Sie sie, um zu sehen, was sie bewirkt und wie viel sie freigeben würde.',
     liberaria: (cantidad: string) => `Würde ≈ ${cantidad} freigeben`,
+    liberariaHasta: (cantidad: string) => `Würde bis zu ≈ ${cantidad} freigeben`,
+    procesosCifra: (cantidad: string) => `≈ ${cantidad} aus Prozessen`,
+    procesosCifraHasta: (cantidad: string) => `Bis zu ≈ ${cantidad} aus Prozessen`,
+    listaEsperaCifra: (cantidad: string) =>
+      `Die Standbyliste (${cantidad}) wird zu freiem Speicher`,
+    avisoPantallaTitulo: 'Vollbild erkannt',
+    avisoPantalla:
+      'Ein Spiel oder eine Anwendung läuft im Vollbild: Das Freigeben von Speicher kann zu Rucklern führen.',
     notaEstimacion:
       'Dies ist eine Schätzung auf Grundlage des aktuellen Speichers: Der tatsächliche Wert kann abweichen. Es wird kein Programm geschlossen und nichts geht verloren.',
     notaProfundo:
@@ -1524,11 +1532,12 @@ export const deExtra: TextosParciales = {
       'Windows zeigt ein Fenster zur Administratorberechtigung (UAC) an, das Sie bestätigen müssen, um fortzufahren. Wenn Sie es abbrechen, werden nur die Prozesse geleert.',
     continuar: 'Fortfahren',
     cancelar: 'Abbrechen',
-    liberadaTitulo: 'Speicher freigegeben',
+    aumentoTitulo: 'Jetzt gemessene Zunahme',
     nivelAplicado: (nivel: string) => `Angewendete Stufe: ${nivel}.`,
     antes: 'Verfügbarer Speicher vorher',
     despues: 'Verfügbarer Speicher nachher',
-    liberadoReal: 'Tatsächlich freigegeben',
+    aumentoDisponible: 'Zunahme des verfügbaren Speichers',
+    aumentoLibre: 'Zunahme des freien Speichers',
     procesos: (vaciados: number, omitidos: number) =>
       `Geleerte Prozesse: ${vaciados}. Übersprungen: ${omitidos}.`,
     purga: {
@@ -1537,10 +1546,11 @@ export const deExtra: TextosParciales = {
         'Die Administratorberechtigung wurde abgebrochen: Es wurden nur die Prozesse geleert.',
       tiempo:
         'Die Administratorberechtigung wurde nicht rechtzeitig beantwortet: Es wurden nur die Prozesse geleert.',
+      sinCache: 'Die Standbyliste wurde geleert, aber Windows konnte den Dateicache nicht leeren.',
       error: 'Die Standbyliste konnte nicht geleert werden: Es wurden nur die Prozesse geleert.',
     },
     notaResultado:
-      'Der freigegebene Wert ist die gemessene Differenz des verfügbaren Speichers. Windows verteilt ihn neu, und er kann sich sofort wieder ändern.',
+      '„Verfügbar“ ist der freie Speicher plus die Standbyliste von Windows. Gemessen wurde jetzt: Windows verwendet diesen Speicher sofort wieder, daher kann der Wert wieder sinken, sobald ein anderes Programm ihn anfordert.',
     cerrar: 'Schließen',
   },
   guias: {

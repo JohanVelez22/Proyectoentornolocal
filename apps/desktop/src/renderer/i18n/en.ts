@@ -621,9 +621,9 @@ export const en: Textos = {
       'editor.escritura_fallo':
         'The file could not be saved ({codigo}). The original was not touched.',
       'memoria.sin_confirmar': 'Confirm the action in the dialog before continuing.',
-      'memoria.modo_invalido': 'That optimization mode does not exist.',
+      'memoria.modo_invalido': 'That level of memory release does not exist.',
       'memoria.no_disponible':
-        'The memory optimizer is not available here or could not read the system.',
+        'Freeing up memory is not available here or could not read the system.',
       'conversor.archivo_invalido': 'The file is damaged or is not the type its extension says.',
       'conversor.archivo_grande': 'The file is too large (up to {maximo}).',
       'conversor.archivo_peligroso':
@@ -5755,17 +5755,24 @@ export const en: Textos = {
       profundo: 'Deep',
     },
     queHace: {
-      liviano: 'Frees the memory that WolfCore Dev and its services are not using right now.',
+      liviano:
+        'Trims the working memory of WolfCore Dev and its services; Windows reloads it when needed.',
       moderado:
-        'The above, plus the memory that open, non-critical programs are not using right now. It does not close any of them.',
-      profundo:
-        'The above, plus it empties the standby list and the Windows file cache. It asks for administrator permission.',
+        'The above, plus that of open, non-critical programs; Windows reloads it when needed. It does not close any of them.',
+      profundo: 'The above, plus it empties the Windows file cache and standby list.',
     },
     requiereAdmin: 'Asks for administrator permission',
     calculando: 'Calculating…',
     noDisponible: 'Not available',
     sugerencia: 'Hover over or focus a level to see what it does and how much it would free up.',
     liberaria: (cantidad: string) => `Would free up ≈ ${cantidad}`,
+    liberariaHasta: (cantidad: string) => `Would free up to ≈ ${cantidad}`,
+    procesosCifra: (cantidad: string) => `≈ ${cantidad} from processes`,
+    procesosCifraHasta: (cantidad: string) => `Up to ≈ ${cantidad} from processes`,
+    listaEsperaCifra: (cantidad: string) => `The standby list (${cantidad}) becomes free memory`,
+    avisoPantallaTitulo: 'Full screen detected',
+    avisoPantalla:
+      'A game or an application is running full screen: freeing up memory may cause stutters.',
     notaEstimacion:
       'This is an estimate based on the memory right now: the real figure may differ. No program is closed and nothing is lost.',
     notaProfundo:
@@ -5777,11 +5784,12 @@ export const en: Textos = {
       'Windows will show an administrator permission window (UAC) that you must accept to continue. If you cancel it, only the processes will be emptied.',
     continuar: 'Continue',
     cancelar: 'Cancel',
-    liberadaTitulo: 'Memory freed up',
+    aumentoTitulo: 'Increase measured right now',
     nivelAplicado: (nivel: string) => `Level applied: ${nivel}.`,
     antes: 'Available memory before',
     despues: 'Available memory after',
-    liberadoReal: 'Actually freed up',
+    aumentoDisponible: 'Increase in available memory',
+    aumentoLibre: 'Increase in free memory',
     procesos: (vaciados: number, omitidos: number) =>
       `Processes emptied: ${vaciados}. Skipped: ${omitidos}.`,
     purga: {
@@ -5789,10 +5797,11 @@ export const en: Textos = {
       cancelada: 'The administrator permission was cancelled: only the processes were emptied.',
       tiempo:
         'There was no response to the administrator permission in time: only the processes were emptied.',
+      sinCache: 'The standby list was emptied, but Windows could not empty the file cache.',
       error: 'The standby list could not be emptied: only the processes were emptied.',
     },
     notaResultado:
-      'The amount freed is the measured difference in available memory. Windows redistributes it and it may change right away.',
+      '“Available” is free memory plus the Windows standby list. This is what was measured right now: Windows reuses that memory straight away, so it may drop again as soon as another program asks for it.',
     cerrar: 'Close',
   },
   guias: {

@@ -209,8 +209,8 @@ export const trExtra: TextosParciales = {
       'editor.lectura_fallo': 'Dosya okunamadı ({codigo}).',
       'editor.escritura_fallo': 'Dosya kaydedilemedi ({codigo}). Asıl dosyaya dokunulmadı.',
       'memoria.sin_confirmar': 'Devam etmeden önce işlemi iletişim kutusunda onaylayın.',
-      'memoria.modo_invalido': 'Bu en iyileştirme modu mevcut değil.',
-      'memoria.no_disponible': 'Bellek iyileştirici burada kullanılamıyor veya sistemi okuyamadı.',
+      'memoria.modo_invalido': 'Böyle bir boşaltma düzeyi yok.',
+      'memoria.no_disponible': 'Belleği boşaltma burada kullanılamıyor veya sistemi okuyamadı.',
       'conversor.ocupado':
         'Bir dönüştürme zaten çalışıyor ve bir diğeri bekliyor: bitmesini bekleyin.',
       'doctor.firewall_reglas_acotadas':
@@ -1394,11 +1394,11 @@ export const trExtra: TextosParciales = {
       profundo: 'Derin',
     },
     queHace: {
-      liviano: 'WolfCore Dev ve hizmetlerinin şu anda kullanmadığı belleği boşaltır.',
+      liviano:
+        'WolfCore Dev ve hizmetlerinin çalışma belleğini küçültür; Windows gerektiğinde yeniden yükler.',
       moderado:
-        'Yukarıdakine ek olarak, açık ve kritik olmayan programların şu anda kullanmadığı belleği de boşaltır. Hiçbirini kapatmaz.',
-      profundo:
-        'Yukarıdakine ek olarak, Windows bekleme listesini ve dosya önbelleğini boşaltır. Yönetici izni ister.',
+        'Yukarıdakine ek olarak, açık ve kritik olmayan programların çalışma belleğini de küçültür; Windows gerektiğinde yeniden yükler. Hiçbirini kapatmaz.',
+      profundo: 'Yukarıdakine ek olarak, Windows dosya önbelleğini ve bekleme listesini boşaltır.',
     },
     requiereAdmin: 'Yönetici izni ister',
     calculando: 'Hesaplanıyor…',
@@ -1406,6 +1406,13 @@ export const trExtra: TextosParciales = {
     sugerencia:
       'Ne yaptığını ve ne kadar boşaltacağını görmek için bir düzeyin üzerine gelin veya odaklanın.',
     liberaria: (cantidad: string) => `≈ ${cantidad} boşaltır`,
+    liberariaHasta: (cantidad: string) => `En fazla ≈ ${cantidad} boşaltır`,
+    procesosCifra: (cantidad: string) => `İşlemlerden ≈ ${cantidad}`,
+    procesosCifraHasta: (cantidad: string) => `İşlemlerden en fazla ≈ ${cantidad}`,
+    listaEsperaCifra: (cantidad: string) => `Bekleme listesi (${cantidad}) boş belleğe dönüşür`,
+    avisoPantallaTitulo: 'Tam ekran algılandı',
+    avisoPantalla:
+      'Tam ekranda bir oyun veya uygulama çalışıyor: belleği boşaltmak takılmalara yol açabilir.',
     notaEstimacion:
       'Bu, şu anki belleğe göre bir tahmindir: gerçek değer farklı olabilir. Hiçbir program kapatılmaz ve hiçbir şey kaybolmaz.',
     notaProfundo:
@@ -1417,21 +1424,23 @@ export const trExtra: TextosParciales = {
       'Windows, devam etmek için kabul etmeniz gereken bir yönetici izni penceresi (UAC) gösterecek. İptal ederseniz yalnızca işlemler boşaltılır.',
     continuar: 'Devam',
     cancelar: 'İptal',
-    liberadaTitulo: 'Bellek boşaltıldı',
+    aumentoTitulo: 'Şimdi ölçülen artış',
     nivelAplicado: (nivel: string) => `Uygulanan düzey: ${nivel}.`,
     antes: 'Önceki kullanılabilir bellek',
     despues: 'Sonraki kullanılabilir bellek',
-    liberadoReal: 'Gerçekte boşaltılan',
+    aumentoDisponible: 'Kullanılabilir bellekteki artış',
+    aumentoLibre: 'Boş bellekteki artış',
     procesos: (vaciados: number, omitidos: number) =>
       `Boşaltılan işlemler: ${vaciados}. Atlanan: ${omitidos}.`,
     purga: {
       hecha: 'Bekleme listesi ve dosya önbelleği boşaltıldı.',
       cancelada: 'Yönetici izni iptal edildi: yalnızca işlemler boşaltıldı.',
       tiempo: 'Yönetici izni zamanında yanıtlanmadı: yalnızca işlemler boşaltıldı.',
+      sinCache: 'Bekleme listesi boşaltıldı ancak Windows dosya önbelleğini boşaltamadı.',
       error: 'Bekleme listesi boşaltılamadı: yalnızca işlemler boşaltıldı.',
     },
     notaResultado:
-      'Boşaltılan miktar, kullanılabilir bellekteki ölçülen farktır. Windows belleği yeniden dağıtır ve hemen değişebilir.',
+      '“Kullanılabilir”, boş bellek ile Windows bekleme listesinin toplamıdır. Bu, şu anda ölçülen değerdir: Windows bu belleği hemen yeniden kullanır, bu yüzden başka bir program istediği anda yeniden düşebilir.',
     cerrar: 'Kapat',
   },
   guias: {

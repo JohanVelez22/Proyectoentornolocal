@@ -225,9 +225,9 @@ export const itExtra: TextosParciales = {
       'editor.escritura_fallo':
         "Non è stato possibile salvare il file ({codigo}). L'originale non è stato toccato.",
       'memoria.sin_confirmar': "Confermi l'azione nella finestra di dialogo prima di continuare.",
-      'memoria.modo_invalido': 'Quella modalità di ottimizzazione non esiste.',
+      'memoria.modo_invalido': 'Quel livello di liberazione non esiste.',
       'memoria.no_disponible':
-        "L'ottimizzatore della memoria non è disponibile qui o non ha potuto leggere il sistema.",
+        'La liberazione della memoria non è disponibile qui o non ha potuto leggere il sistema.',
       'conversor.ocupado':
         "Una conversione è già in corso e un'altra è in attesa: attenda che termini.",
       'doctor.firewall_reglas_acotadas':
@@ -1476,11 +1476,11 @@ export const itExtra: TextosParciales = {
     },
     queHace: {
       liviano:
-        'Libera la memoria che WolfCore Dev e i suoi servizi non stanno usando in questo momento.',
+        'Riduce la memoria di lavoro di WolfCore Dev e dei suoi servizi; Windows la ricarica quando serve.',
       moderado:
-        'Quanto sopra, più la memoria che i programmi aperti non critici non stanno usando ora. Non ne chiude nessuno.',
+        'Quanto sopra, più quella dei programmi aperti non critici; Windows la ricarica quando serve. Non ne chiude nessuno.',
       profundo:
-        'Quanto sopra, più lo svuotamento della lista di standby e della cache dei file di Windows. Richiede l’autorizzazione di amministratore.',
+        'Quanto sopra, più lo svuotamento della cache dei file e della lista di standby di Windows.',
     },
     requiereAdmin: 'Richiede l’autorizzazione di amministratore',
     calculando: 'Calcolo in corso…',
@@ -1488,6 +1488,14 @@ export const itExtra: TextosParciales = {
     sugerencia:
       'Passi il mouse su un livello o lo selezioni con la tastiera per vedere cosa fa e quanto libererebbe.',
     liberaria: (cantidad: string) => `Libererebbe ≈ ${cantidad}`,
+    liberariaHasta: (cantidad: string) => `Libererebbe fino a ≈ ${cantidad}`,
+    procesosCifra: (cantidad: string) => `≈ ${cantidad} dai processi`,
+    procesosCifraHasta: (cantidad: string) => `Fino a ≈ ${cantidad} dai processi`,
+    listaEsperaCifra: (cantidad: string) =>
+      `La lista di standby (${cantidad}) diventa memoria libera`,
+    avisoPantallaTitulo: 'Schermo intero rilevato',
+    avisoPantalla:
+      'Un gioco o un’applicazione è a schermo intero: liberare memoria può causare scatti.',
     notaEstimacion:
       'È una stima con la memoria di questo momento: il valore reale può variare. Nessun programma viene chiuso e nulla va perso.',
     notaProfundo:
@@ -1499,11 +1507,12 @@ export const itExtra: TextosParciales = {
       'Windows mostrerà una finestra di autorizzazione di amministratore (UAC) che dovrà accettare per continuare. Se la annulla, verranno svuotati solo i processi.',
     continuar: 'Continua',
     cancelar: 'Annulla',
-    liberadaTitulo: 'Memoria liberata',
+    aumentoTitulo: 'Aumento misurato adesso',
     nivelAplicado: (nivel: string) => `Livello applicato: ${nivel}.`,
     antes: 'Memoria disponibile prima',
     despues: 'Memoria disponibile dopo',
-    liberadoReal: 'Liberata davvero',
+    aumentoDisponible: 'Aumento della memoria disponibile',
+    aumentoLibre: 'Aumento della memoria libera',
     procesos: (vaciados: number, omitidos: number) =>
       `Processi svuotati: ${vaciados}. Ignorati: ${omitidos}.`,
     purga: {
@@ -1512,11 +1521,13 @@ export const itExtra: TextosParciales = {
         'L’autorizzazione di amministratore è stata annullata: sono stati svuotati solo i processi.',
       tiempo:
         'Nessuna risposta all’autorizzazione di amministratore in tempo: sono stati svuotati solo i processi.',
+      sinCache:
+        'La lista di standby è stata svuotata, ma Windows non è riuscito a svuotare la cache dei file.',
       error:
         'Non è stato possibile svuotare la lista di standby: sono stati svuotati solo i processi.',
     },
     notaResultado:
-      'Il valore liberato è la differenza misurata della memoria disponibile. Windows la ridistribuisce e può cambiare subito.',
+      '«Disponibile» è la memoria libera più la lista di standby di Windows. È quanto misurato adesso: Windows riutilizza subito quella memoria, quindi può tornare a scendere non appena un altro programma la richiede.',
     cerrar: 'Chiudi',
   },
   guias: {

@@ -626,9 +626,8 @@ export const es = {
       'editor.lectura_fallo': 'No se pudo leer el archivo ({codigo}).',
       'editor.escritura_fallo': 'No se pudo guardar el archivo ({codigo}). El original no se tocó.',
       'memoria.sin_confirmar': 'Confirme la acción en el diálogo antes de continuar.',
-      'memoria.modo_invalido': 'Ese modo de optimización no existe.',
-      'memoria.no_disponible':
-        'El optimizador de memoria no está disponible aquí o no pudo leer el sistema.',
+      'memoria.modo_invalido': 'Ese nivel de liberación no existe.',
+      'memoria.no_disponible': 'Liberar memoria no está disponible aquí o no pudo leer el sistema.',
       'conversor.archivo_invalido':
         'El archivo está dañado o no es del tipo que indica su extensión.',
       'conversor.archivo_grande': 'El archivo pesa demasiado (hasta {maximo}).',
@@ -5784,17 +5783,23 @@ export const es = {
     },
     queHace: {
       liviano:
-        'Libera la memoria que WolfCore Dev y sus servicios no están usando en este momento.',
+        'Recorta la memoria de trabajo de WolfCore Dev y sus servicios; Windows la recarga cuando haga falta.',
       moderado:
-        'Lo anterior, y además la memoria que no están usando ahora los programas abiertos que no son críticos. No cierra ninguno.',
-      profundo:
-        'Lo anterior, y además vacía la lista de espera y la caché de archivos de Windows. Pide permiso de administrador.',
+        'Lo anterior, y además la de los programas abiertos que no son críticos; Windows la recarga cuando haga falta. No cierra ninguno.',
+      profundo: 'Lo anterior, y además vacía la caché de archivos y la lista de espera de Windows.',
     },
     requiereAdmin: 'Pide permiso de administrador',
     calculando: 'Calculando…',
     noDisponible: 'No disponible',
     sugerencia: 'Pase el ratón por un nivel o enfóquelo para ver qué hace y cuánto liberaría.',
     liberaria: (cantidad: string) => `Liberaría ≈ ${cantidad}`,
+    liberariaHasta: (cantidad: string) => `Liberaría hasta ≈ ${cantidad}`,
+    procesosCifra: (cantidad: string) => `≈ ${cantidad} de procesos`,
+    procesosCifraHasta: (cantidad: string) => `Hasta ≈ ${cantidad} de procesos`,
+    listaEsperaCifra: (cantidad: string) => `La lista de espera (${cantidad}) pasa a memoria libre`,
+    avisoPantallaTitulo: 'Pantalla completa detectada',
+    avisoPantalla:
+      'Hay un juego o una aplicación a pantalla completa: liberar memoria puede causar tirones.',
     notaEstimacion:
       'Es una estimación con la memoria de este momento: lo real puede variar. No se cierra ningún programa ni se pierde nada.',
     notaProfundo:
@@ -5806,11 +5811,12 @@ export const es = {
       'Windows mostrará una ventana de permiso de administrador (UAC) que deberá aceptar para continuar. Si la cancela, solo se vaciarán los procesos.',
     continuar: 'Continuar',
     cancelar: 'Cancelar',
-    liberadaTitulo: 'Memoria liberada',
+    aumentoTitulo: 'Aumento medido ahora',
     nivelAplicado: (nivel: string) => `Nivel aplicado: ${nivel}.`,
     antes: 'Memoria disponible antes',
     despues: 'Memoria disponible después',
-    liberadoReal: 'Liberado de verdad',
+    aumentoDisponible: 'Aumento de la memoria disponible',
+    aumentoLibre: 'Aumento de la memoria libre',
     procesos: (vaciados: number, omitidos: number) =>
       `Procesos vaciados: ${vaciados}. Omitidos: ${omitidos}.`,
     purga: {
@@ -5818,10 +5824,11 @@ export const es = {
       cancelada: 'Se canceló el permiso de administrador: solo se vaciaron los procesos.',
       tiempo:
         'No hubo respuesta al permiso de administrador a tiempo: solo se vaciaron los procesos.',
+      sinCache: 'La lista de espera se vació, pero Windows no pudo vaciar la caché de archivos.',
       error: 'No se pudo vaciar la lista de espera: solo se vaciaron los procesos.',
     },
     notaResultado:
-      'Lo liberado es la diferencia medida de la memoria disponible. Windows la reparte y puede cambiar enseguida.',
+      '«Disponible» es la memoria libre más la lista de espera de Windows. Es lo medido ahora: Windows reutiliza esa memoria enseguida, así que puede volver a bajar en cuanto otro programa la pida.',
     cerrar: 'Cerrar',
   },
   guias: {

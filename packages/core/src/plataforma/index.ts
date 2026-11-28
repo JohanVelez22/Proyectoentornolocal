@@ -20,6 +20,8 @@ export type {
   EstadoCierre,
   ConexionActiva,
   MemoriaSistema,
+  EstadoPantalla,
+  ResultadoPurga,
   ObjetivoVaciado,
   ResultadoVaciadoProceso,
   EstadoServicioSistema,

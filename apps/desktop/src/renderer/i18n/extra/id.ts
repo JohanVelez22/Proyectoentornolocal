@@ -209,9 +209,9 @@ export const idExtra: TextosParciales = {
       'editor.escritura_fallo':
         'Berkas tidak dapat disimpan ({codigo}). Berkas asli tidak disentuh.',
       'memoria.sin_confirmar': 'Konfirmasikan tindakan di dialog sebelum melanjutkan.',
-      'memoria.modo_invalido': 'Mode optimasi itu tidak ada.',
+      'memoria.modo_invalido': 'Tingkat pembebasan itu tidak ada.',
       'memoria.no_disponible':
-        'Pengoptimal memori tidak tersedia di sini atau tidak dapat membaca sistem.',
+        'Pembebasan memori tidak tersedia di sini atau tidak dapat membaca sistem.',
       'conversor.ocupado':
         'Sebuah konversi sedang berjalan dan satu lagi menunggu: tunggu hingga selesai.',
       'doctor.firewall_reglas_acotadas':
@@ -1391,11 +1391,11 @@ export const idExtra: TextosParciales = {
       profundo: 'Dalam',
     },
     queHace: {
-      liviano: 'Membebaskan memori yang saat ini tidak digunakan oleh WolfCore Dev dan layanannya.',
+      liviano:
+        'Memperkecil memori kerja WolfCore Dev dan layanannya; Windows memuatnya kembali saat diperlukan.',
       moderado:
-        'Yang di atas, ditambah memori yang saat ini tidak digunakan oleh program terbuka yang tidak kritis. Tidak ada yang ditutup.',
-      profundo:
-        'Yang di atas, ditambah mengosongkan daftar siaga dan cache berkas Windows. Meminta izin administrator.',
+        'Yang di atas, ditambah memori kerja program terbuka yang tidak kritis; Windows memuatnya kembali saat diperlukan. Tidak ada yang ditutup.',
+      profundo: 'Yang di atas, ditambah mengosongkan cache berkas dan daftar siaga Windows.',
     },
     requiereAdmin: 'Meminta izin administrator',
     calculando: 'Menghitung…',
@@ -1403,6 +1403,13 @@ export const idExtra: TextosParciales = {
     sugerencia:
       'Arahkan kursor ke sebuah tingkat atau fokuskan untuk melihat apa yang dilakukannya dan berapa banyak yang akan dibebaskan.',
     liberaria: (cantidad: string) => `Akan membebaskan ≈ ${cantidad}`,
+    liberariaHasta: (cantidad: string) => `Akan membebaskan hingga ≈ ${cantidad}`,
+    procesosCifra: (cantidad: string) => `≈ ${cantidad} dari proses`,
+    procesosCifraHasta: (cantidad: string) => `Hingga ≈ ${cantidad} dari proses`,
+    listaEsperaCifra: (cantidad: string) => `Daftar siaga (${cantidad}) menjadi memori bebas`,
+    avisoPantallaTitulo: 'Layar penuh terdeteksi',
+    avisoPantalla:
+      'Ada game atau aplikasi yang berjalan dalam layar penuh: membebaskan memori dapat menyebabkan tersendat.',
     notaEstimacion:
       'Ini adalah perkiraan berdasarkan memori saat ini: angka sebenarnya bisa berbeda. Tidak ada program yang ditutup dan tidak ada yang hilang.',
     notaProfundo:
@@ -1414,21 +1421,24 @@ export const idExtra: TextosParciales = {
       'Windows akan menampilkan jendela izin administrator (UAC) yang harus Anda setujui untuk melanjutkan. Jika Anda membatalkannya, hanya proses yang dikosongkan.',
     continuar: 'Lanjutkan',
     cancelar: 'Batal',
-    liberadaTitulo: 'Memori dibebaskan',
+    aumentoTitulo: 'Kenaikan yang terukur sekarang',
     nivelAplicado: (nivel: string) => `Tingkat yang diterapkan: ${nivel}.`,
     antes: 'Memori tersedia sebelum',
     despues: 'Memori tersedia sesudah',
-    liberadoReal: 'Benar-benar dibebaskan',
+    aumentoDisponible: 'Kenaikan memori tersedia',
+    aumentoLibre: 'Kenaikan memori bebas',
     procesos: (vaciados: number, omitidos: number) =>
       `Proses dikosongkan: ${vaciados}. Dilewati: ${omitidos}.`,
     purga: {
       hecha: 'Daftar siaga dan cache berkas telah dikosongkan.',
       cancelada: 'Izin administrator dibatalkan: hanya proses yang dikosongkan.',
       tiempo: 'Izin administrator tidak dijawab tepat waktu: hanya proses yang dikosongkan.',
+      sinCache:
+        'Daftar siaga telah dikosongkan, tetapi Windows tidak dapat mengosongkan cache berkas.',
       error: 'Daftar siaga tidak dapat dikosongkan: hanya proses yang dikosongkan.',
     },
     notaResultado:
-      'Jumlah yang dibebaskan adalah selisih memori tersedia yang terukur. Windows mendistribusikannya kembali dan bisa segera berubah.',
+      '“Tersedia” adalah memori bebas ditambah daftar siaga Windows. Ini yang terukur sekarang: Windows segera memakai ulang memori itu, sehingga bisa turun lagi begitu program lain memintanya.',
     cerrar: 'Tutup',
   },
   guias: {

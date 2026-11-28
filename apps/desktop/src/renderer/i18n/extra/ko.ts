@@ -205,9 +205,9 @@ export const koExtra: TextosParciales = {
       'editor.lectura_fallo': '파일을 읽을 수 없습니다({codigo}).',
       'editor.escritura_fallo': '파일을 저장할 수 없습니다({codigo}). 원본은 건드리지 않았습니다.',
       'memoria.sin_confirmar': '계속하기 전에 대화 상자에서 작업을 확인하십시오.',
-      'memoria.modo_invalido': '해당 최적화 모드가 없습니다.',
+      'memoria.modo_invalido': '해당 확보 단계가 없습니다.',
       'memoria.no_disponible':
-        '여기서는 메모리 최적화 도구를 사용할 수 없거나 시스템을 읽을 수 없습니다.',
+        '여기서는 메모리 확보 기능을 사용할 수 없거나 시스템을 읽을 수 없습니다.',
       'conversor.ocupado':
         '이미 변환이 실행 중이고 다른 하나가 대기 중입니다. 끝날 때까지 기다리십시오.',
       'doctor.firewall_reglas_acotadas':
@@ -1366,11 +1366,11 @@ export const koExtra: TextosParciales = {
       profundo: '깊음',
     },
     queHace: {
-      liviano: 'WolfCore Dev와 그 서비스가 지금 사용하지 않는 메모리를 확보합니다.',
+      liviano:
+        'WolfCore Dev와 그 서비스의 작업 집합을 줄입니다. Windows가 필요할 때 다시 불러옵니다.',
       moderado:
-        '위 내용에 더해, 열려 있는 비핵심 프로그램이 지금 사용하지 않는 메모리도 확보합니다. 어떤 프로그램도 닫지 않습니다.',
-      profundo:
-        '위 내용에 더해, Windows의 대기 목록과 파일 캐시를 비웁니다. 관리자 권한 승인이 필요합니다.',
+        '위 내용에 더해, 열려 있는 비핵심 프로그램의 작업 집합도 줄입니다. Windows가 필요할 때 다시 불러옵니다. 어떤 프로그램도 닫지 않습니다.',
+      profundo: '위 내용에 더해, Windows의 파일 캐시와 대기 목록을 비웁니다.',
     },
     requiereAdmin: '관리자 권한 승인 필요',
     calculando: '계산하는 중…',
@@ -1378,6 +1378,13 @@ export const koExtra: TextosParciales = {
     sugerencia:
       '단계 위에 마우스를 올리거나 포커스를 두면 수행 내용과 확보할 수 있는 양을 볼 수 있습니다.',
     liberaria: (cantidad: string) => `확보 예상량 ≈ ${cantidad}`,
+    liberariaHasta: (cantidad: string) => `최대 ≈ ${cantidad} 확보 가능`,
+    procesosCifra: (cantidad: string) => `프로세스에서 ≈ ${cantidad}`,
+    procesosCifraHasta: (cantidad: string) => `프로세스에서 최대 ≈ ${cantidad}`,
+    listaEsperaCifra: (cantidad: string) => `대기 목록(${cantidad})이 여유 메모리가 됩니다`,
+    avisoPantallaTitulo: '전체 화면이 감지되었습니다',
+    avisoPantalla:
+      '게임 또는 앱이 전체 화면으로 실행 중입니다. 메모리를 확보하면 끊김이 생길 수 있습니다.',
     notaEstimacion:
       '현재 메모리를 기준으로 한 추정치이며 실제 값은 다를 수 있습니다. 프로그램은 닫히지 않으며 아무것도 손실되지 않습니다.',
     notaProfundo:
@@ -1389,21 +1396,23 @@ export const koExtra: TextosParciales = {
       'Windows에서 관리자 권한 창(UAC)이 표시되며, 계속하려면 승인하셔야 합니다. 취소하시면 프로세스만 비워집니다.',
     continuar: '계속',
     cancelar: '취소',
-    liberadaTitulo: '메모리를 확보했습니다',
+    aumentoTitulo: '지금 측정한 증가량',
     nivelAplicado: (nivel: string) => `적용된 단계: ${nivel}.`,
     antes: '이전 사용 가능 메모리',
     despues: '이후 사용 가능 메모리',
-    liberadoReal: '실제로 확보된 양',
+    aumentoDisponible: '사용 가능 메모리 증가량',
+    aumentoLibre: '여유 메모리 증가량',
     procesos: (vaciados: number, omitidos: number) =>
       `비운 프로세스: ${vaciados}. 건너뜀: ${omitidos}.`,
     purga: {
       hecha: '대기 목록과 파일 캐시를 비웠습니다.',
       cancelada: '관리자 권한 승인이 취소되었습니다. 프로세스만 비웠습니다.',
       tiempo: '관리자 권한 승인에 제때 응답하지 않았습니다. 프로세스만 비웠습니다.',
+      sinCache: '대기 목록은 비웠지만 Windows가 파일 캐시를 비우지 못했습니다.',
       error: '대기 목록을 비우지 못했습니다. 프로세스만 비웠습니다.',
     },
     notaResultado:
-      '확보된 양은 사용 가능 메모리의 측정된 차이입니다. Windows가 이를 다시 배분하므로 곧 바뀔 수 있습니다.',
+      '“사용 가능”은 여유 메모리에 Windows 대기 목록을 더한 값입니다. 지금 측정한 값이며, Windows가 이 메모리를 곧바로 다시 사용하므로 다른 프로그램이 요청하면 다시 줄어들 수 있습니다.',
     cerrar: '닫기',
   },
   guias: {
