@@ -1,18 +1,11 @@
 <script setup lang="ts">
-import { Close, Copy, InformationCircle, Open, Refresh, SwapHorizontal } from '@vicons/ionicons5';
-import {
-  NAlert,
-  NButton,
-  NDataTable,
-  NEmpty,
-  NIcon,
-  NTooltip,
-  type DataTableColumns,
-} from 'naive-ui';
+import { Close, Copy, Open, Refresh, SwapHorizontal } from '@vicons/ionicons5';
+import { NButton, NDataTable, NEmpty, NIcon, NTooltip, type DataTableColumns } from 'naive-ui';
 import { computed, h, onMounted, type Component, type HTMLAttributes } from 'vue';
 import { useRouter } from 'vue-router';
 import { solicitudes } from '../composables/solicitudes';
 import type { EstadoTunel, Sitio } from '../../shared/api';
+import AvisoPlegable from '../componentes/AvisoPlegable.vue';
 import EstadoPunto from '../componentes/EstadoPunto.vue';
 import { useFoco } from '../composables/useFoco';
 import { useTunel } from '../composables/useTunel';
@@ -212,12 +205,9 @@ const columnas: DataTableColumns<Fila> = [
       <span class="compartir-ayuda">{{ t.compartir.ayuda }}</span>
     </p>
 
-    <NAlert type="info" :show-icon="true" class="explicacion">
-      <template #icon
-        ><NIcon><InformationCircle /></NIcon
-      ></template>
+    <AvisoPlegable :titulo="textos.avisoPlegable.tunelesRapidos" tipo="info" class="explicacion">
       {{ t.explicacion }}
-    </NAlert>
+    </AvisoPlegable>
 
     <div v-if="!filas.length" class="vacio">
       <NEmpty size="large">

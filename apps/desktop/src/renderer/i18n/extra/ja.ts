@@ -2215,4 +2215,11 @@ export const jaExtra: TextosParciales = {
       `トークンはファイルの別の場所（「${donde}」）に平文のまま残っており、変更していません。お手数ですが手動で削除してください。直前のコピーでは伏せ字（***）になっています。`,
     hCopiada: '設定をコピーしました（トークンは含みません）。',
   },
+  avisoPlegable: {
+    verDetalles: '詳細を表示',
+    ocultarDetalles: '詳細を非表示',
+    tunelesRapidos: 'クイックトンネルの仕組み',
+    seguridadBuzones: 'キャッチャーとセキュリティに関する注記',
+    sinProveedores: 'リモート SMTP プロバイダーはまだありません',
+  },
 };

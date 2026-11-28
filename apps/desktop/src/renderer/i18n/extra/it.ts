@@ -2293,4 +2293,11 @@ export const itExtra: TextosParciales = {
       `Il token è ancora scritto in chiaro in un’altra parte del file («${donde}») e non è stato toccato: lo elimini a mano. La copia precedente lo conserva mascherato (***).`,
     hCopiada: 'Configurazione copiata (senza il token).',
   },
+  avisoPlegable: {
+    verDetalles: 'Mostra dettagli',
+    ocultarDetalles: 'Nascondi dettagli',
+    tunelesRapidos: 'Come funzionano i tunnel rapidi',
+    seguridadBuzones: 'Note su catturatori e sicurezza',
+    sinProveedores: 'Nessun provider SMTP remoto per ora',
+  },
 };

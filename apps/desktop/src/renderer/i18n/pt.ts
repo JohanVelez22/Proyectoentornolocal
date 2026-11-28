@@ -7301,4 +7301,11 @@ export const pt: Textos = {
     vacioTexto:
       'Quando você criar tabelas (por exemplo, com as migrações do seu projeto), elas aparecerão aqui.',
   },
+  avisoPlegable: {
+    verDetalles: 'Ver detalhes',
+    ocultarDetalles: 'Ocultar detalhes',
+    tunelesRapidos: 'Como funcionam os túneis rápidos',
+    seguridadBuzones: 'Notas sobre captadores e segurança',
+    sinProveedores: 'Ainda não há provedores SMTP remotos',
+  },
 };

@@ -2329,4 +2329,11 @@ export const deExtra: TextosParciales = {
       `Das Token steht an anderer Stelle der Datei („${donde}“) weiterhin im Klartext und wurde nicht angetastet: Bitte löschen Sie es von Hand. Die vorherige Kopie speichert es maskiert (***).`,
     hCopiada: 'Konfiguration kopiert (ohne das Token).',
   },
+  avisoPlegable: {
+    verDetalles: 'Details anzeigen',
+    ocultarDetalles: 'Details ausblenden',
+    tunelesRapidos: 'So funktionieren Schnelltunnel',
+    seguridadBuzones: 'Hinweise zu Mail-Fängern und Sicherheit',
+    sinProveedores: 'Noch keine entfernten SMTP-Anbieter',
+  },
 };

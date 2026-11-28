@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Copy, ShieldCheckmark } from '@vicons/ionicons5';
 import { NAlert, NButton, NIcon, NSpace, NTag } from 'naive-ui';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { solicitudes } from '../composables/solicitudes';
 import type { Hallazgo } from '../../shared/api';
@@ -22,6 +22,9 @@ const emit = defineEmits<{
 }>();
 
 const t = textos.doctor;
+const tp = textos.avisoPlegable;
+/** La evidencia técnica va plegada: «Ver detalles» la muestra. */
+const detalles = ref(false);
 const router = useRouter();
 const TONO = { error: 'error', aviso: 'warning', info: 'info' } as const;
 
@@ -72,9 +75,21 @@ const resultado = computed(() => {
         t.verPuertos
       }}</NButton>
     </div>
-    <p class="evidencia">
-      <span class="etiqueta">{{ t.evidencia }}:</span> <code>{{ evidencia }}</code>
-    </p>
+    <div class="detalles">
+      <NButton
+        text
+        size="small"
+        type="primary"
+        data-testid="ver-detalles"
+        :aria-expanded="detalles"
+        @click="detalles = !detalles"
+      >
+        {{ detalles ? tp.ocultarDetalles : tp.verDetalles }}
+      </NButton>
+      <p v-if="detalles" class="evidencia">
+        <span class="etiqueta">{{ t.evidencia }}:</span> <code>{{ evidencia }}</code>
+      </p>
+    </div>
     <div v-if="rep" class="reparacion">
       <p>{{ queHara }}</p>
       <template v-if="rep.comandoManual">
@@ -149,8 +164,11 @@ const resultado = computed(() => {
 .ver {
   margin-top: 6px;
 }
+.detalles {
+  margin-top: 4px;
+}
 .evidencia {
-  margin: 8px 0 0;
+  margin: 4px 0 0;
   font-size: 12px;
   opacity: 0.8;
   overflow-wrap: anywhere;

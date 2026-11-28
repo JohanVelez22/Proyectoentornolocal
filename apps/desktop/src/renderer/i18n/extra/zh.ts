@@ -2004,4 +2004,11 @@ export const zhExtra: TextosParciales = {
       `令牌仍以明文保存在文件的其他位置（“${donde}”），未作改动：请您手动删除。上一份副本中已将其遮盖（***）。`,
     hCopiada: '已复制配置（不含令牌）。',
   },
+  avisoPlegable: {
+    verDetalles: '查看详情',
+    ocultarDetalles: '隐藏详情',
+    tunelesRapidos: '快速隧道的工作方式',
+    seguridadBuzones: '关于捕获器与安全的说明',
+    sinProveedores: '尚未添加远程 SMTP 服务商',
+  },
 };

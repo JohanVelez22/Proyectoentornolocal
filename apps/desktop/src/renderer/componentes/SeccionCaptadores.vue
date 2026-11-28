@@ -2,6 +2,7 @@
 import { NSkeleton } from 'naive-ui';
 import type { EstadoCaptador, IdCaptador } from '../../shared/api';
 import { textos } from '../i18n';
+import AvisoPlegable from './AvisoPlegable.vue';
 import TarjetaCaptador from './TarjetaCaptador.vue';
 
 defineProps<{
@@ -38,8 +39,11 @@ const t = textos.correo;
         @instalar="emit('instalar', c.id)"
       />
     </div>
-    <small class="nota">{{ t.notaDescartados }}</small>
-    <small class="nota">{{ t.notaHost }}</small>
+    <!-- Notas largas de seguridad: plegadas, con el título como resumen. -->
+    <AvisoPlegable :titulo="textos.avisoPlegable.seguridadBuzones" tipo="info">
+      <p class="nota">{{ t.notaDescartados }}</p>
+      <p class="nota">{{ t.notaHost }}</p>
+    </AvisoPlegable>
   </section>
 </template>
 
@@ -68,7 +72,10 @@ const t = textos.correo;
   font-size: 13px;
 }
 .nota {
-  font-size: 12px;
-  opacity: 0.72;
+  margin: 0 0 6px;
+  font-size: var(--wc-texto-sm);
+}
+.nota:last-child {
+  margin-bottom: 0;
 }
 </style>

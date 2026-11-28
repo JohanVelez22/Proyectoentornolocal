@@ -2196,4 +2196,11 @@ export const idExtra: TextosParciales = {
       `Token masih tertulis sebagai teks biasa di bagian lain berkas (“${donde}”) dan tidak disentuh: silakan hapus secara manual. Salinan sebelumnya menyimpannya dalam keadaan tersamarkan (***).`,
     hCopiada: 'Konfigurasi disalin (tanpa token).',
   },
+  avisoPlegable: {
+    verDetalles: 'Lihat detail',
+    ocultarDetalles: 'Sembunyikan detail',
+    tunelesRapidos: 'Cara kerja tunnel cepat',
+    seguridadBuzones: 'Catatan tentang penangkap email dan keamanan',
+    sinProveedores: 'Belum ada penyedia SMTP jarak jauh',
+  },
 };

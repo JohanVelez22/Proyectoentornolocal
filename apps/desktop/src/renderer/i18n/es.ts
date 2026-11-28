@@ -7289,6 +7289,13 @@ export const es = {
     vacioTexto:
       'Cuando cree tablas (por ejemplo, con las migraciones de su proyecto) aparecerán aquí.',
   },
+  avisoPlegable: {
+    verDetalles: 'Ver detalles',
+    ocultarDetalles: 'Ocultar detalles',
+    tunelesRapidos: 'Cómo funcionan los túneles rápidos',
+    seguridadBuzones: 'Notas sobre captadores y seguridad',
+    sinProveedores: 'Aún no hay proveedores SMTP remotos',
+  },
 };
 
 export type Textos = typeof es;

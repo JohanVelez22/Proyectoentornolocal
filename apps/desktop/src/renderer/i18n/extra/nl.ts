@@ -2306,4 +2306,11 @@ export const nlExtra: TextosParciales = {
       `Het token staat nog als platte tekst elders in het bestand (‘${donde}’) en is niet aangeraakt: verwijder het handmatig. De vorige kopie bewaart het gemaskeerd (***).`,
     hCopiada: 'Configuratie gekopieerd (zonder het token).',
   },
+  avisoPlegable: {
+    verDetalles: 'Details tonen',
+    ocultarDetalles: 'Details verbergen',
+    tunelesRapidos: 'Hoe snelle tunnels werken',
+    seguridadBuzones: 'Opmerkingen over mailvangers en beveiliging',
+    sinProveedores: 'Nog geen externe SMTP-providers',
+  },
 };

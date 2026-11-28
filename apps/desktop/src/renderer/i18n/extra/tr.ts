@@ -2194,4 +2194,11 @@ export const trExtra: TextosParciales = {
       `Belirteç dosyanın başka bir yerinde (“${donde}”) hâlâ düz metin olarak yazılı ve dokunulmadı: lütfen elle siliniz. Önceki kopya onu gizlenmiş (***) olarak saklar.`,
     hCopiada: 'Yapılandırma kopyalandı (belirteç olmadan).',
   },
+  avisoPlegable: {
+    verDetalles: 'Ayrıntıları göster',
+    ocultarDetalles: 'Ayrıntıları gizle',
+    tunelesRapidos: 'Hızlı tüneller nasıl çalışır',
+    seguridadBuzones: 'Yakalayıcılar ve güvenlikle ilgili notlar',
+    sinProveedores: 'Henüz uzak SMTP sağlayıcısı yok',
+  },
 };

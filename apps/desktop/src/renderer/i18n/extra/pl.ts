@@ -2301,4 +2301,11 @@ export const plExtra: TextosParciales = {
       `Token nadal jest zapisany jawnym tekstem w innym miejscu pliku („${donde}”) i nie został ruszony: proszę usunąć go ręcznie. Poprzednia kopia przechowuje go zamaskowany (***).`,
     hCopiada: 'Skopiowano konfigurację (bez tokenu).',
   },
+  avisoPlegable: {
+    verDetalles: 'Pokaż szczegóły',
+    ocultarDetalles: 'Ukryj szczegóły',
+    tunelesRapidos: 'Jak działają szybkie tunele',
+    seguridadBuzones: 'Uwagi o przechwytywaczach poczty i bezpieczeństwie',
+    sinProveedores: 'Nie ma jeszcze zdalnych dostawców SMTP',
+  },
 };

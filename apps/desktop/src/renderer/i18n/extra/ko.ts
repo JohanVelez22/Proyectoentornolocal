@@ -2152,4 +2152,11 @@ export const koExtra: TextosParciales = {
       `토큰이 파일의 다른 위치("${donde}")에 평문으로 남아 있으며 건드리지 않았습니다. 직접 삭제해 주십시오. 이전 복사본에는 가려진 상태(***)로 저장됩니다.`,
     hCopiada: '설정을 복사했습니다(토큰 제외).',
   },
+  avisoPlegable: {
+    verDetalles: '자세히 보기',
+    ocultarDetalles: '자세히 숨기기',
+    tunelesRapidos: '빠른 터널의 작동 방식',
+    seguridadBuzones: '수신기 및 보안 관련 참고 사항',
+    sinProveedores: '아직 원격 SMTP 공급자가 없습니다',
+  },
 };

@@ -7482,4 +7482,11 @@ export const fr: Textos = {
     vacioTexto:
       'Lorsque vous créerez des tables (par exemple avec les migrations de votre projet), elles apparaîtront ici.',
   },
+  avisoPlegable: {
+    verDetalles: 'Afficher les détails',
+    ocultarDetalles: 'Masquer les détails',
+    tunelesRapidos: 'Fonctionnement des tunnels rapides',
+    seguridadBuzones: 'Remarques sur les capteurs et la sécurité',
+    sinProveedores: 'Aucun fournisseur SMTP distant pour le moment',
+  },
 };

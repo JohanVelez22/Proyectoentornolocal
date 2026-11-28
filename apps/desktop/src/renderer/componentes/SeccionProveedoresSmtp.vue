@@ -7,6 +7,7 @@ import { api } from '../api';
 import { useAccion, mensajeDeError } from '../composables/useAccion';
 import { textos } from '../i18n';
 import DialogoEnvSmtp from './DialogoEnvSmtp.vue';
+import EstadoVacio from './EstadoVacio.vue';
 import DialogoProveedorSmtp from './DialogoProveedorSmtp.vue';
 
 const t = textos.correo.proveedores;
@@ -173,7 +174,14 @@ const estadoClave = (p: ProveedorSmtpPublico): string =>
   <section class="proveedores" :aria-label="textos.correo.seccionProveedores">
     <div class="cabeza">
       <h3 class="titulo">{{ textos.correo.seccionProveedores }}</h3>
-      <NButton size="small" type="primary" secondary @click="nuevo">
+      <!-- Con la lista vacía la acción vive en el estado vacío, no dos veces. -->
+      <NButton
+        v-if="!proveedores || proveedores.length"
+        size="small"
+        type="primary"
+        secondary
+        @click="nuevo"
+      >
         <template #icon
           ><NIcon><Add /></NIcon
         ></template>
@@ -184,7 +192,20 @@ const estadoClave = (p: ProveedorSmtpPublico): string =>
 
     <NAlert v-if="errorLista" type="error" :title="t.errorLista">{{ errorLista }}</NAlert>
     <NSkeleton v-else-if="proveedores === null" height="90px" class="esqueleto" />
-    <p v-else-if="!proveedores.length" class="tenue">{{ t.vacio }}</p>
+    <EstadoVacio
+      v-else-if="!proveedores.length"
+      pequena
+      :icono="PaperPlaneOutline"
+      :titulo="textos.avisoPlegable.sinProveedores"
+      :texto="t.vacio"
+    >
+      <NButton size="small" type="primary" secondary @click="nuevo">
+        <template #icon
+          ><NIcon><Add /></NIcon
+        ></template>
+        {{ t.agregar }}
+      </NButton>
+    </EstadoVacio>
     <div v-else class="lista">
       <article v-for="p in proveedores" :key="p.id" class="tarjeta">
         <div class="tarjeta-cabeza">

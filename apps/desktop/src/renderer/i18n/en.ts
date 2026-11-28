@@ -7257,4 +7257,11 @@ export const en: Textos = {
     vacioTexto:
       'When you create tables (for example, with your project migrations) they will appear here.',
   },
+  avisoPlegable: {
+    verDetalles: 'Show details',
+    ocultarDetalles: 'Hide details',
+    tunelesRapidos: 'How quick tunnels work',
+    seguridadBuzones: 'Notes on catchers and security',
+    sinProveedores: 'No remote SMTP providers yet',
+  },
 };
