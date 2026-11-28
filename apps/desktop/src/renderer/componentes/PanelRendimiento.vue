@@ -1,23 +1,10 @@
 <script setup lang="ts">
-import { EllipsisHorizontal, Warning } from '@vicons/ionicons5';
-import { NButton, NCard, NIcon, NTag, useDialog } from 'naive-ui';
-import MenuDesplegable from './MenuDesplegable.vue';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { api } from '../api';
-import { useRouter } from 'vue-router';
-import { useAccion } from '../composables/useAccion';
-import { solicitudes } from '../composables/solicitudes';
+import { NCard, NTag } from 'naive-ui';
+import { computed, onBeforeUnmount, onMounted } from 'vue';
 import { textos } from '../i18n';
 import { useMetricas } from '../stores/metricas';
-import { useServicios } from '../stores/servicios';
-import { agruparAvisos } from '../utilidades/avisosInicio';
-import {
-  calcularAlertas,
-  formatoBps,
-  formatoBytes,
-  formatoPorcentaje,
-  type AlertaPanel,
-} from '../utilidades/metricas';
+import { useProblemas } from '../stores/problemas';
+import { formatoBps, formatoBytes, formatoPorcentaje } from '../utilidades/metricas';
 import GraficaLinea from './GraficaLinea.vue';
 import TarjetaDisco from './TarjetaDisco.vue';
 import TarjetaServiciosProcesos from './TarjetaServiciosProcesos.vue';
@@ -25,16 +12,7 @@ import TarjetaServiciosProcesos from './TarjetaServiciosProcesos.vue';
 /** Panel de rendimiento de Inicio: CPU, RAM, disco y red, alertas y procesos. */
 const t = textos.panel;
 const metricas = useMetricas();
-const servicios = useServicios();
-const dialog = useDialog();
-const { ejecutar } = useAccion();
-const router = useRouter();
-
-/** Abre Herramientas → Puertos en uso (para ver quién ocupa un puerto). */
-function verPuertos(): void {
-  solicitudes.herramienta = 'puertos';
-  void router.push({ name: 'herramientas' });
-}
+const problemas = useProblemas();
 
 const COLORES = { cpu: '#6470e0', ram: '#0ea5e9', bajada: '#16a34a', subida: '#d97706' };
 
@@ -53,67 +31,11 @@ const ramPct = computed(() =>
   m.value && m.value.ramTotal > 0 ? (m.value.ramUsada / m.value.ramTotal) * 100 : 0,
 );
 
-const alertas = computed(() =>
-  calcularAlertas({
-    muestra: m.value,
-    puertos: metricas.puertos,
-    // Servicios y procesos de proyecto (su puerto ocupado también es un problema), sin el Nginx
-    // sin instalar: ese no es nada y daría un aviso falso.
-    servicios: servicios.vigilados,
-  }),
-);
-
-/** La memoria del equipo no es un banner: es una insignia en su tarjeta. */
-const memoriaAlta = computed(() => alertas.value.find((a) => a.tipo === 'ramAlta') ?? null);
-
-interface Problema {
-  clave: string;
-  texto: string;
-  tipo: 'error' | 'info';
-  alerta?: AlertaPanel;
-}
-/** Todo lo demás se junta en una sola tarjeta plegable (sin una pila de banners). */
-const problemas = computed<Problema[]>(() => [
-  ...(metricas.errorMuestreo
-    ? [
-        {
-          clave: 'muestreo',
-          texto: t.errorMuestreo(metricas.errorMuestreo),
-          tipo: 'error' as const,
-        },
-      ]
-    : []),
-  ...alertas.value
-    .filter((a) => a.tipo !== 'ramAlta')
-    .map((a) => ({ clave: a.clave, texto: a.texto, tipo: 'error' as const, alerta: a })),
-  ...(metricas.errorPuertos
-    ? [{ clave: 'puertos', texto: t.alertas.errorPuertos, tipo: 'info' as const }]
-    : []),
-]);
-const desplegado = ref(false);
-const grupo = computed(() => agruparAvisos(problemas.value, desplegado.value));
-const hayError = computed(() => problemas.value.some((p) => p.tipo === 'error'));
-/** «Finalizar proceso» ya no es un botón rojo suelto: queda en un menú secundario. */
-const opcionesFila = [{ label: t.alertas.finalizar, key: 'finalizar' }];
-
-function finalizar(a: AlertaPanel): void {
-  const p = a.proceso;
-  if (!p) return;
-  dialog.warning({
-    title: t.alertas.finalizarTitulo,
-    content: t.alertas.finalizarTexto(p.nombre, p.pid),
-    positiveText: t.alertas.finalizar,
-    negativeText: textos.acciones.cancelar,
-    onPositiveClick: async () => {
-      const r = await ejecutar(
-        `finalizar-${p.pid}`,
-        () => api().herramientas.finalizarProceso(p.pid, p.nombre, { creado: p.creado }),
-        { exito: t.alertas.finalizado(p.nombre) },
-      );
-      if (r) await metricas.cargarPuertos();
-    },
-  });
-}
+/**
+ * La memoria del equipo no es un banner: es una insignia en su tarjeta. Los demás problemas
+ * viven en «Problemas detectados» (BloqueProblemas), con la lista compartida (D54c).
+ */
+const memoriaAlta = computed(() => problemas.alertas.find((a) => a.tipo === 'ramAlta') ?? null);
 </script>
 
 <template>
@@ -122,51 +44,6 @@ function finalizar(a: AlertaPanel): void {
       <h2>{{ t.titulo }}</h2>
       <span class="nota">{{ metricas.muestreando ? t.ventana : t.pausado }}</span>
     </header>
-
-    <section
-      v-if="problemas.length"
-      class="problemas"
-      :class="{ 'con-error': hayError }"
-      :aria-label="t.alertas.grupo(grupo.total)"
-    >
-      <header class="problemas-cabeza">
-        <NIcon :size="18" aria-hidden="true"><Warning /></NIcon>
-        <h3>{{ t.alertas.grupo(grupo.total) }}</h3>
-        <NButton
-          v-if="grupo.plegable"
-          size="small"
-          text
-          type="primary"
-          :aria-expanded="desplegado"
-          @click="desplegado = !desplegado"
-        >
-          {{ desplegado ? t.alertas.verMenos : t.alertas.verTodos(grupo.total) }}
-        </NButton>
-      </header>
-      <ul class="problemas-lista">
-        <li v-for="p in grupo.visibles" :key="p.clave" class="problema">
-          <span class="problema-texto">{{ p.texto }}</span>
-          <span class="alerta-botones">
-            <NButton v-if="p.alerta" size="small" quaternary @click="verPuertos">
-              {{ t.alertas.verPuertos }}
-            </NButton>
-            <MenuDesplegable
-              v-if="p.alerta?.proceso"
-              alinear-fin
-              trigger="click"
-              :options="opcionesFila"
-              @select="() => p.alerta && finalizar(p.alerta)"
-            >
-              <NButton size="small" quaternary :aria-label="t.alertas.masAcciones">
-                <template #icon
-                  ><NIcon><EllipsisHorizontal /></NIcon
-                ></template>
-              </NButton>
-            </MenuDesplegable>
-          </span>
-        </li>
-      </ul>
-    </section>
 
     <div class="metricas">
       <NCard size="small" class="metrica">
@@ -261,54 +138,8 @@ function finalizar(a: AlertaPanel): void {
 .esperando {
   margin: 8px 0 0;
 }
-.problemas {
-  margin-bottom: var(--wc-esp-4);
-  padding: var(--wc-esp-2) var(--wc-esp-4);
-  border-radius: var(--wc-radio-md);
-  border-left: 3px solid var(--acento);
-  background: rgba(var(--acento-rgb), 0.08);
-}
-.problemas.con-error {
-  border-left-color: var(--texto-error);
-  background: rgba(220, 38, 38, 0.08);
-}
-.problemas-cabeza {
-  display: flex;
-  align-items: center;
-  gap: var(--wc-esp-2);
-  min-height: 36px;
-}
-.problemas-cabeza h3 {
-  flex: 1;
-  margin: 0;
-  font-size: var(--wc-texto-sm);
-  font-weight: 600;
-}
-.problemas-lista {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.problema {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--wc-esp-3);
-  min-height: 40px;
-  border-top: 1px solid rgba(128, 128, 128, 0.16);
-  font-size: var(--wc-texto-sm);
-}
-.problema-texto {
-  flex: 1;
-  min-width: 0;
-}
 .insignia {
   margin-bottom: var(--wc-esp-2);
-}
-.alerta-botones {
-  display: inline-flex;
-  gap: 6px;
-  flex: none;
 }
 .metricas {
   display: grid;

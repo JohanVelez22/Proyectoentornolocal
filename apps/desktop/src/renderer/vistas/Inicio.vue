@@ -5,10 +5,10 @@ import {
   Globe,
   MailUnread,
   Open,
-  Server,
   ShieldCheckmark,
   Sparkles,
   SwapHorizontal,
+  Toggle,
   Warning,
 } from '@vicons/ionicons5';
 import { NAlert, NButton, NCard, NIcon, NSpace, NTag } from 'naive-ui';
@@ -16,6 +16,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from
 import { useRouter } from 'vue-router';
 import { api } from '../api';
 import AvisoHosts from '../componentes/AvisoHosts.vue';
+import BloqueProblemas from '../componentes/BloqueProblemas.vue';
 import DialogoWorkspace from '../componentes/DialogoWorkspace.vue';
 import PanelRendimiento from '../componentes/PanelRendimiento.vue';
 import TarjetaWorkspace from '../componentes/TarjetaWorkspace.vue';
@@ -123,7 +124,7 @@ const tiles = computed<Tile[]>(() => [
     // La misma cuenta que Servicios y la pastilla de la cabecera.
     valor: servicios.resumen.encendidos,
     detalle: t.tiles.serviciosDe(servicios.resumen.propios),
-    icono: Server,
+    icono: Toggle,
     tono: servicios.resumen.encendidos > 0 ? 'ok' : 'neutro',
     destino: 'servicios',
   },
@@ -233,6 +234,8 @@ function abrir(url: string): void {
         </NTag>
       </NSpace>
     </NAlert>
+
+    <BloqueProblemas />
 
     <PanelRendimiento />
 

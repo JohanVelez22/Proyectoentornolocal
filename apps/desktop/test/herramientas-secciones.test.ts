@@ -105,7 +105,7 @@ describe('Herramientas por secciones (D38a)', () => {
     expect(fuente('src', 'renderer', 'componentes', 'Marco.vue')).toContain(
       "solicitudes.herramienta = 'imagenes'",
     );
-    expect(fuente('src', 'renderer', 'componentes', 'PanelRendimiento.vue')).toContain(
+    expect(fuente('src', 'renderer', 'componentes', 'BloqueProblemas.vue')).toContain(
       "solicitudes.herramienta = 'puertos'",
     );
     for (const id of ['editor', 'imagenes', 'puertos'])

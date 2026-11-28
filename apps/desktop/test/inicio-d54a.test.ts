@@ -60,7 +60,7 @@ describe('Servicios, Inicio y la pastilla comparten una sola fuente (D54a)', () 
 
 describe('Inicio: avisos agrupados, disco y memoria (D54a)', () => {
   it('«Finalizar proceso» ya no es un botón del aviso: va en un menú con su confirmación', () => {
-    const panel = fuente('componentes', 'PanelRendimiento.vue');
+    const panel = fuente('componentes', 'BloqueProblemas.vue');
     expect(panel).toContain('MenuDesplegable');
     expect(panel).toContain('dialog.warning');
     expect(panel).not.toMatch(/<NButton[^>]*type="error"[^>]*>\s*\{\{ t\.alertas\.finalizar/s);

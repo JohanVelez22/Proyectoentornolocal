@@ -5,8 +5,6 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { useMetricas } from '../src/renderer/stores/metricas';
 import { useProblemas } from '../src/renderer/stores/problemas';
 import { useServicios } from '../src/renderer/stores/servicios';
-import { textos } from '../src/renderer/i18n';
-import { calcularAlertas } from '../src/renderer/utilidades/metricas';
 import { cuentaCampana } from '../src/renderer/utilidades/problemas';
 
 const fuente = (...r: string[]): string =>
@@ -55,34 +53,28 @@ describe('problemas detectados: una sola fuente (D54c)', () => {
     for (const f of ['CampanaAvisos.vue', 'PanelAvisos.vue', 'Marco.vue'])
       expect(fuente('componentes', f)).not.toContain('calcularProblemas');
   });
+
+  it('Inicio, la pastilla y la campana leen del MISMO almacén y ninguna recalcula (D54d)', () => {
+    // Inicio: el bloque de problemas y el panel de rendimiento (memoria) leen de useProblemas.
+    expect(fuente('vistas', 'Inicio.vue')).toContain('BloqueProblemas');
+    for (const f of [
+      'BloqueProblemas.vue',
+      'PanelRendimiento.vue',
+      'Marco.vue',
+      'CampanaAvisos.vue',
+    ])
+      expect(fuente('componentes', f)).toContain("from '../stores/problemas'");
+    for (const f of ['BloqueProblemas.vue', 'PanelRendimiento.vue'])
+      expect(fuente('componentes', f)).not.toContain('calcularAlertas');
+    // Una sola instancia: el mismo almacén da la misma cuenta a todos.
+    const metricas = useMetricas();
+    metricas.errorPuertos = true;
+    expect(useProblemas()).toBe(useProblemas());
+    expect(useProblemas().total).toBe(1);
+  });
 });
 
-/**
- * Copia FIJA de la lógica en línea de PanelRendimiento.vue (D54a) tal como estaba en D54b. Mientras
- * Inicio no lea el almacén (Etapa F), esta prueba garantiza que `calcularProblemas` da la misma
- * lista que el panel.
- */
-function problemasDelPanel(m: ReturnType<typeof useMetricas>, sv: ReturnType<typeof useServicios>) {
-  const t = textos.panel;
-  const alertas = calcularAlertas({
-    muestra: m.ultima,
-    puertos: m.puertos,
-    servicios: sv.vigilados,
-  });
-  return [
-    ...(m.errorMuestreo
-      ? [{ clave: 'muestreo', texto: t.errorMuestreo(m.errorMuestreo), tipo: 'error' as const }]
-      : []),
-    ...alertas
-      .filter((a) => a.tipo !== 'ramAlta')
-      .map((a) => ({ clave: a.clave, texto: a.texto, tipo: 'error' as const, alerta: a })),
-    ...(m.errorPuertos
-      ? [{ clave: 'puertos', texto: t.alertas.errorPuertos, tipo: 'info' as const }]
-      : []),
-  ];
-}
-
-describe('calcularProblemas reproduce el cálculo de PanelRendimiento (D54c)', () => {
+describe('el almacén reproduce el cálculo que tenía PanelRendimiento (D54d)', () => {
   beforeEach(() => setActivePinia(createPinia()));
   const nginx = {
     id: 'nginx',
@@ -93,38 +85,49 @@ describe('calcularProblemas reproduce el cálculo de PanelRendimiento (D54c)', (
     puertos: [80],
     pid: null,
   };
-  const casos: Record<string, (m: ReturnType<typeof useMetricas>) => void> = {
-    'sin nada': () => undefined,
-    'error de muestreo': (m) => {
-      m.errorMuestreo = 'sin permiso';
-    },
-    'puerto ajeno y php-cgi huérfano': (m) => {
-      m.puertos = [
-        { puerto: 80, pid: 7, nombre: 'httpd.exe', propio: false },
-        { puerto: 9000, pid: 8, nombre: 'php-cgi.exe', propio: false },
-      ] as never;
-    },
-    'memoria alta (no cuenta) y fallo de puertos': (m) => {
-      m.serie = [
-        { ramTotal: 100, ramUsada: 99, cpu: 1, red: { rxBps: 0, txBps: 0 }, procesos: [] },
-      ] as never;
-      m.errorPuertos = true;
-    },
-    'todo junto': (m) => {
-      m.errorMuestreo = 'x';
-      m.errorPuertos = true;
-      m.puertos = [{ puerto: 80, pid: 7, nombre: 'httpd.exe', propio: false }] as never;
-    },
+  const casos: Record<string, [(m: ReturnType<typeof useMetricas>) => void, string[]]> = {
+    'sin nada': [() => undefined, []],
+    'error de muestreo': [
+      (m) => {
+        m.errorMuestreo = 'sin permiso';
+      },
+      ['muestreo'],
+    ],
+    'memoria alta (no cuenta) y fallo de puertos': [
+      (m) => {
+        m.serie = [
+          { ramTotal: 100, ramUsada: 99, cpu: 1, red: { rxBps: 0, txBps: 0 }, procesos: [] },
+        ] as never;
+        m.errorPuertos = true;
+      },
+      ['puertos'],
+    ],
   };
-  for (const [nombre, preparar] of Object.entries(casos)) {
+  for (const [nombre, [preparar, claves]] of Object.entries(casos)) {
     it(nombre, () => {
       const m = useMetricas();
       const sv = useServicios();
       sv.porId = { nginx } as never;
       preparar(m);
       const p = useProblemas();
-      expect(p.lista).toEqual(problemasDelPanel(m, sv));
-      expect(p.total).toBe(problemasDelPanel(m, sv).length);
+      expect(p.lista.map((x) => x.clave)).toEqual(claves);
+      expect(p.total).toBe(claves.length);
     });
   }
+
+  it('un puerto ajeno y un php-cgi huérfano salen del almacén como alertas con su proceso', () => {
+    const m = useMetricas();
+    const sv = useServicios();
+    sv.porId = { nginx } as never;
+    m.puertos = [
+      { puerto: 80, pid: 7, nombre: 'httpd.exe', propio: false },
+      { puerto: 9000, pid: 8, nombre: 'php-cgi.exe', propio: false },
+    ] as never;
+    const p = useProblemas();
+    expect(p.lista.length).toBeGreaterThan(0);
+    expect(p.lista.every((x) => x.tipo === 'error')).toBe(true);
+    expect(p.lista.map((x) => x.clave)).toEqual(
+      p.alertas.filter((a) => a.tipo !== 'ramAlta').map((a) => a.clave),
+    );
+  });
 });
