@@ -1,9 +1,13 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AlmacenCredenciales } from '../src/almacen';
 import type { Plataforma } from '../src/plataforma/tipos';
-import type { DefProceso, EstadoProceso } from '../src/procesos/supervisor';
+import {
+  ErrorDetenidoAlIniciar,
+  type DefProceso,
+  type EstadoProceso,
+} from '../src/procesos/supervisor';
 import { claveMayor, Rutas } from '../src/rutas';
 import { MARCA_INICIALIZADO, type DefServicio } from '../src/servicios/definicion';
 import { Servicios, type DepsServicios } from '../src/servicios/servicios';
@@ -238,6 +242,61 @@ describe('Iniciar todo con la configuración migrada a instancias', () => {
     configMigrada();
     await iniciarTodo(crear());
     expect(orden.some((x) => x.includes('tunel'))).toBe(false);
+  });
+});
+
+describe('Iniciar todo: orden de arranque y manejo de errores (D54d)', () => {
+  /** PHP y Nginx falsos: registran su arranque sin necesitar binarios. */
+  function conPhpYNginx(
+    s: Servicios,
+    fallos: { php?: Record<string, unknown>; nginx?: unknown } = {},
+  ): void {
+    vi.spyOn(s.php, 'iniciar').mockImplementation(async (rama: string) => {
+      orden.push(`php:${rama}`);
+      if (fallos.php?.[rama] !== undefined) throw fallos.php[rama];
+    });
+    vi.spyOn(s.nginx, 'iniciar').mockImplementation(async () => {
+      orden.push('nginx');
+      if (fallos.nginx !== undefined) throw fallos.nginx;
+    });
+  }
+
+  it('arranca PHP (en el orden de las ramas, solo las instaladas), Nginx, las bases y los procesos', async () => {
+    configMigrada();
+    instalados['php'] = ['8.4', '8.3'];
+    const s = crear({ ramasEnUso: async () => ['8.3', '7.4', '8.4'] });
+    conPhpYNginx(s);
+    await s.iniciarTodo();
+    expect(orden).toEqual([
+      'php:8.3',
+      'php:8.4',
+      'nginx',
+      'iniciar:mysql@8.4',
+      'iniciar:postgresql@17',
+      'proceso:bot:mysql@8.4,postgresql@17',
+      'proceso:web:mysql@8.4,postgresql@17',
+    ]);
+  });
+
+  it('un fallo no corta el resto: se juntan en un solo error con el orden de arranque; una parada normal no cuenta', async () => {
+    configMigrada();
+    instalados['php'] = ['8.4', '8.3'];
+    ocupadosPorOtro.add(5432);
+    const s = crear({ ramasEnUso: async () => ['8.3', '8.4'] });
+    conPhpYNginx(s, {
+      php: { '8.3': new Error('no arranca') },
+      nginx: new ErrorDetenidoAlIniciar('nginx'),
+    });
+    const e = await s.iniciarTodo().then(
+      () => null,
+      (x: unknown) => x as Error & { codigo?: string; datos?: { nombres?: string } },
+    );
+    expect(e?.codigo).toBe('servicios.iniciar_todo_fallos');
+    // PHP 8.3 y PostgreSQL fallan; Nginx detenido a mano no cuenta; lo demás arranca.
+    expect(e?.datos?.nombres).toBe('PHP 8.3, PostgreSQL 17');
+    expect(orden.slice(0, 3)).toEqual(['php:8.3', 'php:8.4', 'nginx']);
+    expect(estados.get('mysql@8.4')).toBe('encendido');
+    expect(orden.some((x) => x.startsWith('proceso:web'))).toBe(true);
   });
 });
 
