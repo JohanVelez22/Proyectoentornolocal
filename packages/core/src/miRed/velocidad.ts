@@ -11,6 +11,8 @@ export const BASE_VELOCIDAD = 'https://speed.cloudflare.com';
 /** Lo que se baja y se sube (bytes) y lo que eso gasta de datos, con la latencia incluida, en MB. */
 export const BYTES_BAJADA = 25_000_000;
 export const BYTES_SUBIDA = 10_000_000;
+/** Margen sobre lo pedido (bytes) a partir del cual se corta la bajada de un servidor que manda de más. */
+export const MARGEN_BAJADA = 64 * 1024;
 export const PLAN_VELOCIDAD = {
   bajadaMb: 25,
   subidaMb: 10,
@@ -133,6 +135,12 @@ export async function medirVelocidad(o: OpcionesVelocidad = {}): Promise<Resulta
         if (inicio === 0) inicio = performance.now();
         r.bytesBajados += value.byteLength;
         fin = performance.now();
+        // Un servidor que manda de más no gasta más datos de la persona: se corta al pasar lo
+        // pedido más un margen.
+        if (r.bytesBajados >= bytes + MARGEN_BAJADA) {
+          await lector.cancel().catch(() => undefined);
+          break;
+        }
       }
     } catch (e) {
       // Plazo o cancelación: se calcula con lo recibido (si llegó algo).

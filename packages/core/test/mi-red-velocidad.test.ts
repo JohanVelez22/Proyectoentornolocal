@@ -5,6 +5,7 @@ import {
   BASE_VELOCIDAD,
   BYTES_BAJADA,
   BYTES_SUBIDA,
+  MARGEN_BAJADA,
   PLAN_VELOCIDAD,
   medirVelocidad,
   type FaseVelocidad,
@@ -27,7 +28,7 @@ afterEach(async () => {
   await new Promise<void>((r) => s.close(() => r()));
 });
 
-async function iniciar(modo: 'normal' | 'lento' | 'error' = 'normal') {
+async function iniciar(modo: 'normal' | 'lento' | 'error' | 'infinito' = 'normal') {
   const peticiones: Peticion[] = [];
   servidor = createServer((req, res) => {
     const p: Peticion = {
@@ -49,6 +50,18 @@ async function iniciar(modo: 'normal' | 'lento' | 'error' = 'normal') {
       if (modo === 'lento' && n > 0) {
         // Manda un poco y se queda esperando: para el plazo y la cancelación.
         res.write(Buffer.alloc(4096));
+        return;
+      }
+      if (modo === 'infinito' && n > 0) {
+        // Un servidor que no respeta el tamaño pedido: sigue mandando hasta que se corte.
+        const trozo = Buffer.alloc(16 * 1024);
+        const mandar = (): void => {
+          while (!res.destroyed && res.write(trozo)) {
+            // sigue mientras haya sitio en el búfer
+          }
+          if (!res.destroyed) res.once('drain', mandar);
+        };
+        mandar();
         return;
       }
       res.end(Buffer.alloc(n));
@@ -139,6 +152,23 @@ describe('prueba de velocidad (D53)', () => {
     expect(r.cancelada).toBe(true);
     expect(fases).not.toContain('subida');
     expect(peticiones.some((p) => p.url === '/__up')).toBe(false);
+  });
+
+  it('un servidor que manda de más no hace bajar más de lo pedido (más un margen) y el resultado es completo', async () => {
+    const { base } = await iniciar('infinito');
+    const pedidos = 1_000_000;
+    const r = await medirVelocidad({
+      base,
+      bytesBajada: pedidos,
+      bytesSubida: 100_000,
+      plazoBajadaMs: 10_000,
+    }).catch((e: unknown) => e);
+    // La subida contra este servidor no importa: la bajada ya quedó medida o cortada.
+    if (r instanceof Error) throw r;
+    expect(r.bytesBajados).toBeGreaterThanOrEqual(pedidos);
+    expect(r.bytesBajados).toBeLessThanOrEqual(pedidos + MARGEN_BAJADA + 64 * 1024);
+    expect(r.bajadaMbps).toBeGreaterThan(0);
+    expect(r.cancelada).toBe(false);
   });
 
   it('un plazo vencido en la bajada calcula con lo recibido y lo marca incompleta', async () => {
