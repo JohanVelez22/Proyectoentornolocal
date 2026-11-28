@@ -380,6 +380,7 @@ import { ejecutarDiffEnProceso, type EjecutorDiff } from './herramientas/diffCar
 import { DiffCarpetas } from './herramientas/diffCarpetasServicio';
 import { ejecutarUsoDiscoEnProceso, type EjecutorUsoDisco } from './herramientas/usoDisco';
 import { UsoDisco } from './herramientas/usoDiscoServicio';
+import { MiRed, type DepsMiRed } from './miRed/servicio';
 import { Compartir } from './compartir/compartir';
 import { emitirCertificadoLibre } from './herramientas/certificadosLibres';
 import { entornoSistema, PLAZO_VERSION_MS, type EntornoSistema } from './herramientas/entorno';
@@ -433,6 +434,8 @@ export interface OpcionesNucleo {
    * el mismo proceso (solo para pruebas).
    */
   ejecutorUsoDisco?: EjecutorUsoDisco;
+  /** Solo pruebas: medidor de velocidad y resolución de nombres falsos de «Mi red» (D53). */
+  miRed?: Pick<DepsMiRed, 'medidor' | 'nombreInverso'>;
   /** Para pruebas: lanzador de los comandos con streaming (pasos de receta, git). */
   lanzar?: Lanzador;
   /** PID del proceso principal y de su padre (por defecto, los de este proceso). */
@@ -537,6 +540,7 @@ interface ModulosNucleo {
   ejecutorConversor?: EjecutorTrabajo;
   ejecutorDiff?: EjecutorDiff;
   ejecutorUsoDisco?: EjecutorUsoDisco;
+  miRed?: Pick<DepsMiRed, 'medidor' | 'nombreInverso'>;
   /** Editor del vhost de cada sitio (reglas propias o vhost completo, con nginx -t y vuelta atrás). */
   editorVhost: EditorVhost;
   /** php.ini de cada rama (editor con prueba, copia y vuelta atrás). */
@@ -772,6 +776,7 @@ export class Nucleo {
   private readonly ejecutorConversor: EjecutorTrabajo | undefined;
   private readonly ejecutorDiff: EjecutorDiff | undefined;
   private readonly ejecutorUsoDisco: EjecutorUsoDisco | undefined;
+  private readonly depsMiRed: Pick<DepsMiRed, 'medidor' | 'nombreInverso'> | undefined;
   /** Puerto de Ollama según la configuración (ClienteOllama lo lee de forma síncrona). */
   private readonly puertoOllama: { valor: number };
   /** Servidor MCP local; se maneja con iniciarMcp/detenerMcp (que guardan `mcp.activo`). */
@@ -877,6 +882,7 @@ export class Nucleo {
     this.ejecutorConversor = m.ejecutorConversor;
     this.ejecutorDiff = m.ejecutorDiff;
     this.ejecutorUsoDisco = m.ejecutorUsoDisco;
+    this.depsMiRed = m.miRed;
     this.bd = m.bd;
     this.respaldos = m.respaldos;
     this.pgvector = m.pgvector;
@@ -1683,6 +1689,7 @@ export class Nucleo {
       ...(o.ejecutorConversor ? { ejecutorConversor: o.ejecutorConversor } : {}),
       ...(o.ejecutorDiff ? { ejecutorDiff: o.ejecutorDiff } : {}),
       ...(o.ejecutorUsoDisco ? { ejecutorUsoDisco: o.ejecutorUsoDisco } : {}),
+      ...(o.miRed ? { miRed: o.miRed } : {}),
       iniPhp,
       poolsSitio: pools,
       ajustesPhpSitio,
@@ -4180,6 +4187,22 @@ export class Nucleo {
     }));
   }
 
+  private miRedServ?: MiRed;
+
+  /**
+   * Mi red (D53): carpetas compartidas de este equipo, equipos de la red local (solo privada y de
+   * la red activa), ping, carpetas de otros equipos y prueba de velocidad. Sin control remoto. La
+   * ventana la usa; el MCP y la CLI no la exponen.
+   */
+  get miRed(): MiRed {
+    return (this.miRedServ ??= new MiRed({
+      plataforma: this.plataforma,
+      alEscaneo: (p) => this.eventos.emit('red:escaneo', p),
+      alVelocidad: (p) => this.eventos.emit('red:velocidad', p),
+      ...this.depsMiRed,
+    }));
+  }
+
   private compartirServ?: Compartir;
 
   /**
@@ -5334,6 +5357,8 @@ export class Nucleo {
     this.busquedasEnCurso?.cancelarTodas();
     this.diffCarpetasServ?.cancelar();
     this.usoDiscoServ?.cancelar();
+    // El escaneo, los pings y la prueba de velocidad no sobreviven a la app.
+    this.miRedServ?.cancelarTodo();
     // Lo compartido por túnel nunca sobrevive a la app: cierra el servidor y el túnel.
     await this.compartirServ?.cerrar().catch(() => undefined);
     // Un UAC abierto no debe sobrevivir a la app: se corta la PowerShell que lo espera.

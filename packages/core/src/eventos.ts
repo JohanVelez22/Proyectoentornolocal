@@ -5,6 +5,7 @@ import type { FinBusqueda, LoteBusqueda } from './herramientas/buscar';
 import type { EstadoCompartir } from './compartir/compartir';
 import type { AccesoCompartido } from './compartir/servidor';
 import type { ProgresoUsoDisco } from './herramientas/usoDisco';
+import type { ProgresoEscaneoRed, ProgresoVelocidad } from './miRed/servicio';
 import type { ResumenDump } from './depuracion/receptor';
 import type { CierreConfirmacion, SolicitudConfirmacion } from './mcp/servidor';
 import type { MuestraSistema } from './monitor/metricas';
@@ -94,6 +95,10 @@ export type EventosNucleo = {
   'busqueda:fin': FinBusqueda;
   /** Avance del análisis de «Uso del disco» en curso (archivos, carpetas y bytes vistos). */
   'disco:progreso': ProgresoUsoDisco;
+  /** Avance del escaneo de «Mi red» (equipos revisados de los que se harán). */
+  'red:escaneo': ProgresoEscaneoRed;
+  /** Fase de la prueba de velocidad de «Mi red» en curso. */
+  'red:velocidad': ProgresoVelocidad;
   /** Cambió lo compartido por túnel (D52): fase, URL, vencimiento o fin. */
   'compartir:estado': EstadoCompartir;
   /** Un acceso a lo compartido (hora, IP, ruta relativa y código; nunca el token). */

@@ -27,3 +27,4 @@ export {
 } from './clientehttp/tipos';
 export { esNombreSecreto, esSoloVariables } from './clientehttp/sensibles';
 export { nombreDeRuta, segmentosDeRuta } from './rutas/nombreDeRuta';
+export { PLAN_VELOCIDAD } from './miRed/velocidad';
