@@ -1,4 +1,31 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
+
+/**
+ * PowerShell para el parser: Windows PowerShell en Windows y `pwsh` (PowerShell 7, mismo parser)
+ * en macOS y Linux, donde lo traen los runners de CI. Null si no hay ninguno: la prueba se omite.
+ */
+function ejecutablePowerShell(): string | null {
+  const candidatos = process.platform === 'win32' ? ['powershell.exe', 'pwsh'] : ['pwsh'];
+  for (const exe of candidatos) {
+    const r = spawnSync(
+      exe,
+      ['-NoProfile', '-NonInteractive', '-Command', '$PSVersionTable.PSVersion.Major'],
+      {
+        encoding: 'utf8',
+        timeout: 30_000,
+      },
+    );
+    if (r.status === 0) return exe;
+  }
+  return null;
+}
+
+let cacheEjecutable: string | null | undefined;
+/** ¿Hay una PowerShell con la que analizar? (se consulta una vez). */
+export function hayPowerShell(): boolean {
+  if (cacheEjecutable === undefined) cacheEjecutable = ejecutablePowerShell();
+  return cacheEjecutable !== null;
+}
 
 /** Lo que el parser de PowerShell (sin ejecutar nada) ve en un script. */
 export interface AnalisisPowerShell {
@@ -28,8 +55,10 @@ foreach ($s in $scripts) {
 export function analizarPowerShell(scripts: string[]): AnalisisPowerShell[] {
   const entrada = Buffer.from(JSON.stringify(scripts), 'utf8').toString('base64');
   const orden = Buffer.from(PROGRAMA, 'utf16le').toString('base64');
+  if (!hayPowerShell())
+    throw new Error('No hay PowerShell (powershell.exe ni pwsh) para el parser.');
   const salida = execFileSync(
-    'powershell.exe',
+    cacheEjecutable as string,
     ['-NoProfile', '-NonInteractive', '-EncodedCommand', orden],
     { input: entrada, encoding: 'utf8', timeout: 60_000, stdio: ['pipe', 'pipe', 'pipe'] },
   );

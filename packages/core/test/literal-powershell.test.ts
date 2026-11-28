@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { literalPowerShell } from '../src/plataforma/literalPowerShell';
 import { literal as literalHosts, scriptCopiaHosts } from '../src/plataforma/hostsAdmin';
 import {
@@ -16,7 +16,9 @@ import { scriptDuenoDeRuta } from '../src/plataforma/win';
 import {
   analizarPowerShell,
   esperarLiteralExacto,
+  hayPowerShell,
   VALORES_HOSTILES,
+  type AnalisisPowerShell,
 } from './soporte/parserPowerShell';
 
 describe('literalPowerShell (único literal compartido)', () => {
@@ -85,11 +87,16 @@ const CASOS: Caso[] = [
   { nombre: 'dueño de una ruta', generar: (v) => scriptDuenoDeRuta(v) },
 ];
 
-describe.skipIf(process.platform !== 'win32')(
+// Con powershell.exe (Windows) o pwsh (macOS y Linux en CI). Se analiza en beforeAll: el cuerpo de
+// un describe se ejecuta al recoger las pruebas aunque esté omitido.
+describe.skipIf(!hayPowerShell())(
   'cada script generado trae el valor hostil como un único literal (se parsea, no se ejecuta)',
   () => {
     const combinaciones = CASOS.flatMap((c) => VALORES_HOSTILES.map((v) => ({ c, v })));
-    const analisis = analizarPowerShell(combinaciones.map(({ c, v }) => c.generar(v)));
+    let analisis: AnalisisPowerShell[] = [];
+    beforeAll(() => {
+      analisis = analizarPowerShell(combinaciones.map(({ c, v }) => c.generar(v)));
+    }, 120_000);
     combinaciones.forEach(({ c, v }, i) => {
       it(`${c.nombre} con ${JSON.stringify(v.slice(0, 3))}`, () => {
         expect(esperarLiteralExacto(analisis[i]!, v)).toEqual([]);
