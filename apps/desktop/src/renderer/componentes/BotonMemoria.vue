@@ -4,11 +4,12 @@ import {
   HardwareChip as IconoMemoria,
   ShieldCheckmark as IconoAdmin,
 } from '@vicons/ionicons5';
-import { NAlert, NButton, NIcon, NModal, NPopover } from 'naive-ui';
+import { NAlert, NButton, NIcon, NModal, NPopover, NSpin, useNotification } from 'naive-ui';
 import { computed, nextTick, ref } from 'vue';
-import type { EstimacionMemoria, NivelMemoria, ResultadoLiberacion } from '../../shared/api';
+import type { NivelMemoria, ResultadoLiberacion } from '../../shared/api';
 import { api } from '../api';
-import { useAccion } from '../composables/useAccion';
+import { mensajeDeError, useAccion } from '../composables/useAccion';
+import { useEstimacionMemoria } from '../composables/useEstimacionMemoria';
 import { textos } from '../i18n';
 import { formatoBytes } from '../utilidades/metricas';
 
@@ -29,8 +30,18 @@ const { ejecutar, ocupado } = useAccion();
 const NIVELES: NivelMemoria[] = ['liviano', 'moderado', 'profundo'];
 
 const abierto = ref(false);
-const estimacion = ref<EstimacionMemoria | null>(null);
-const calculando = ref(false);
+const notification = useNotification();
+/** La estimación no bloquea: al cerrar o cancelar se descarta la que está en curso, sin errores. */
+const { estimacion, calculando, abrir, cerrar } = useEstimacionMemoria(
+  () => api().memoria.estimar(),
+  (e) =>
+    notification.error({
+      title: textos.errores.titulo,
+      content: mensajeDeError(e),
+      duration: 10000,
+      keepAliveOnHover: true,
+    }),
+);
 const previo = ref<NivelMemoria | null>(null);
 const confirmando = ref(false);
 /** Nivel pendiente de que se acepte el aviso de juego o pantalla completa. */
@@ -43,17 +54,20 @@ const trabajando = computed(() => ocupado('memoria-liberar'));
 /** Cada vez que se abre, se vuelve a calcular con los conjuntos de trabajo y la lista de espera de ahora. */
 async function alAbrir(visible: boolean): Promise<void> {
   abierto.value = visible;
-  if (!visible) return;
   previo.value = null;
-  estimacion.value = null;
-  calculando.value = true;
-  try {
-    estimacion.value = (await ejecutar('memoria-estimar', () => api().memoria.estimar())) ?? null;
-  } finally {
-    calculando.value = false;
+  if (!visible) {
+    cerrar();
+    return;
   }
+  if (!(await abrir())) return;
   await nextTick();
   items.value[0]?.focus();
+}
+
+/** Cancelar la estimación: se cierra el desplegable sin esperar la respuesta. */
+function cancelarEstimacion(): void {
+  abierto.value = false;
+  cerrar();
 }
 
 /**
@@ -169,6 +183,13 @@ const aumento = (bytes: number | null): string =>
           @keydown.up.prevent="moverFoco(i, -1)"
         >
           <span class="nivel-nombre">{{ t.niveles[n] }}</span>
+          <NSpin
+            v-if="calculando"
+            :size="14"
+            class="nivel-cargando"
+            data-cargando
+            :aria-label="t.calculando"
+          />
           <span v-if="n === 'profundo'" class="nivel-admin">
             <NIcon :size="14" aria-hidden="true"><IconoAdmin /></NIcon>
             {{ t.requiereAdmin }}
@@ -190,6 +211,14 @@ const aumento = (bytes: number | null): string =>
         </template>
         <p v-else class="previa-nota">{{ t.sugerencia }}</p>
         <p class="previa-nota">{{ t.notaEstimacion }}</p>
+        <NButton
+          v-if="calculando"
+          size="tiny"
+          quaternary
+          data-cancelar
+          @click="cancelarEstimacion"
+          >{{ t.cancelar }}</NButton
+        >
       </div>
     </div>
   </NPopover>
