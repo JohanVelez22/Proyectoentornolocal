@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   cuerpoSaludDiscosAdmin,
   interpretarSaludDiscos,
+  FUNCION_SIN_SERIE,
   numeroLocal,
   SCRIPT_EVENTOS_DISCO,
   SCRIPT_SALUD_DISCOS,
@@ -193,14 +194,21 @@ describe('salida real de un Windows en español (modelo sustituido)', () => {
 });
 
 describe('privacidad: sin números de serie ni identificadores únicos', () => {
-  it('los scripts no piden serie, identificador único ni objeto', () => {
+  it('la serie se lee solo para quitarla del modelo y no sale; no se piden identificadores únicos', () => {
+    for (const s of [SCRIPT_SALUD_DISCOS, cuerpoSaludDiscosAdmin('1-1-abc')]) {
+      expect(s).toContain('SinSerie $d.FriendlyName $d.SerialNumber');
+      // SerialNumber solo aparece como argumento de SinSerie: ningún campo de salida lo lleva.
+      expect(s.match(/SerialNumber/g)).toHaveLength(1);
+      expect(s).not.toMatch(/\bserie?\s*=|\bserial\s*=/i);
+    }
     for (const s of [
       SCRIPT_SALUD_DISCOS,
       cuerpoSaludDiscosAdmin('1-1-abc'),
       SCRIPT_EVENTOS_DISCO,
     ]) {
-      expect(s).not.toMatch(/SerialNumber|UniqueId|ObjectId|Win32_PhysicalMedia|\bSerial/i);
+      expect(s).not.toMatch(/UniqueId|ObjectId|Win32_PhysicalMedia|\bSerial(?!Number)/i);
     }
+    expect(SCRIPT_EVENTOS_DISCO).not.toMatch(/SerialNumber/i);
     // El PNPDeviceID solo se usa dentro del script para emparejar; no se emite.
     expect(SCRIPT_SALUD_DISCOS).not.toMatch(/(?:pnp|ident)\s*=\s*\[string\]/i);
   });
@@ -226,6 +234,37 @@ describe('privacidad: sin números de serie ni identificadores únicos', () => {
     expect(r?.discos[0]?.modelo).toBe('Samsung SSD 970 …');
   });
 });
+
+describe.skipIf(process.platform !== 'win32')(
+  'SinSerie quita la serie del modelo (en PowerShell)',
+  () => {
+    const quitar = (modelo: string, serie: string): string => {
+      const lit = (t: string): string => `'${t.replace(/'/g, "''")}'`;
+      const orden = `${FUNCION_SIN_SERIE}; [Console]::Out.Write((SinSerie ${lit(modelo)} ${lit(serie)}))`;
+      return execFileSync(rutaPowerShellWindows(), codificarPowerShell(orden), {
+        encoding: 'utf8',
+        timeout: 30_000,
+      });
+    };
+
+    it('exacta, sin distinguir mayúsculas y recortando espacios', () => {
+      expect(quitar('Samsung SSD 870 EVO S5Y1NX0R123456', 'S5Y1NX0R123456')).toBe(
+        'Samsung SSD 870 EVO',
+      );
+      expect(quitar('Samsung SSD 870 EVO S5Y1NX0R123456', '  s5y1nx0r123456 ')).toBe(
+        'Samsung SSD 870 EVO',
+      );
+      expect(quitar('  WDC  WD10EZEX WD-WCC4E1234567 ', 'wd-wcc4e1234567')).toBe('WDC WD10EZEX');
+      expect(quitar('USB Disk_S4EWNX0R123456A', 'S4EWNX0R123456A')).toBe('USB Disk_');
+    });
+
+    it('sin serie o con una serie ajena el modelo no cambia; los caracteres de regex no rompen', () => {
+      expect(quitar('Samsung SSD 970', '')).toBe('Samsung SSD 970');
+      expect(quitar('Samsung SSD 970', 'XYZ123456')).toBe('Samsung SSD 970');
+      expect(quitar('Disco 1.5+TB', '.*+(')).toBe('Disco 1.5+TB');
+    });
+  },
+);
 
 describe('numeroLocal', () => {
   it('coma decimal, miles y basura', () => {

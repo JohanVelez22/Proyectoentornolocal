@@ -127,6 +127,23 @@ export function sanearTextoSistema(
   return sinSerie.length > max ? `${sinSerie.slice(0, max).trimEnd()}…` : sinSerie;
 }
 
+/** Token con al menos una cifra: lo que sigue a un separador y parece una serie, no un nombre. */
+const CON_CIFRA = '(?=[A-Za-z0-9]*\\d)[A-Za-z0-9]';
+/** `Disk_S4EWNX0R123456A`: el token con cifras tras un guion bajo (6 o más caracteres). */
+const TRAS_GUION_BAJO = new RegExp(`(?<=_)${CON_CIFRA}{6,}${FIN}`, 'g');
+/**
+ * `WD-WCC4E1234567`: el token con cifras (8 o más) tras el prefijo de un fabricante y un guion. Un
+ * modelo como `WD10EZEX-08WN4A0` o `ST4000DM004-2CV104` no empieza por el prefijo solo.
+ */
+const TRAS_PREFIJO_FABRICANTE = new RegExp(
+  `(${FUERA}(?:WDC|WD|HGST|ST|SEAGATE|TOSHIBA|SAMSUNG|MAXTOR|HITACHI)-)${CON_CIFRA}{8,}${FIN}`,
+  'gi',
+);
+
+/** Tapa lo que va detrás de `_` o de un prefijo de fabricante con guion y parece una serie. */
+const taparTrasSeparador = (t: string): string =>
+  t.replace(TRAS_GUION_BAJO, '…').replace(TRAS_PREFIJO_FABRICANTE, '$1…');
+
 /**
  * Modelo del disco: texto corto, sin control y sin lo que parezca una serie; null si queda vacío.
  * No aplica la regla de las series cortas (`serieCorta: false`): `ST2000DM008` o `HDS721010CLA332`
@@ -134,9 +151,11 @@ export function sanearTextoSistema(
  */
 export function modeloSeguro(v: unknown): string | null {
   if (typeof v !== 'string') return null;
-  const t = enmascararSerie(v.replace(CONTROL, ' ').replace(/\s+/g, ' ').trim(), {
-    serieCorta: false,
-  })
+  const t = taparTrasSeparador(
+    enmascararSerie(v.replace(CONTROL, ' ').replace(/\s+/g, ' ').trim(), {
+      serieCorta: false,
+    }),
+  )
     .slice(0, 80)
     .trim();
   return t === '' || /^[…\s]+$/.test(t) ? null : t;

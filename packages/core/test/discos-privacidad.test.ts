@@ -36,6 +36,19 @@ describe('series de fabricantes (I4)', () => {
     expect(modeloSeguro('Generic_S3Z9NB0K123456789A')).toBe('Generic_…');
   });
 
+  it('modeloSeguro tapa el token tras «_» y tras un prefijo de fabricante con guion (WD-…)', () => {
+    expect(modeloSeguro('USB Disk_S4EWNX0R123456A')).toBe('USB Disk_…');
+    expect(modeloSeguro('WDC WD10EZEX-08WN4A0 WD-WCC4E1234567')).toBe('WDC WD10EZEX-08WN4A0 WD-…');
+    expect(modeloSeguro('wd-wcc4e1234567')).toBe('wd-…');
+    expect(modeloSeguro('Samsung SSD 870 EVO S5Y1NX0R123456')).toBe(
+      'Samsung SSD 870 EVO S5Y1NX0R123456',
+    );
+    // Los modelos con guion o con «_» sin serie se siguen viendo.
+    for (const m of ['ST4000DM004-2CV104', 'Msft_Virtual_Disk', 'WDC WD10EZEX-08WN4A0']) {
+      expect(modeloSeguro(m), m).toBe(m);
+    }
+  });
+
   it('modeloSeguro no aplica la regla de series cortas: los modelos reales se ven', () => {
     for (const m of [
       'ST2000DM008',

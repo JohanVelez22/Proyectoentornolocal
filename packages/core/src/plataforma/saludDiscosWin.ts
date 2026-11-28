@@ -26,8 +26,9 @@ import type {
  * `root\wmi` (`MSStorageDriver_FailurePredictStatus`, si responde sin administrador) y las letras
  * de unidad de cada disco (`Get-Partition`).
  *
- * NO se pide ni `SerialNumber`, ni `UniqueId`, ni `ObjectId`, ni el `PNPDeviceID` sale del
- * script (solo se usa dentro de él para emparejar la predicción con el número de disco). Los
+ * `SerialNumber` se lee SOLO para quitarlo del modelo dentro del script (`SinSerie`) y nunca sale;
+ * no se piden `UniqueId` ni `ObjectId`, y el `PNPDeviceID` tampoco sale del script (solo se usa
+ * dentro de él para emparejar la predicción con el número de disco). Los
  * números salen como texto invariable (sin coma decimal) y las fechas del registro como ISO, así
  * que un Windows en otro idioma da lo mismo; aun así el intérprete tolera comas decimales.
  */
@@ -36,8 +37,16 @@ const CABECERA = [
   "$ProgressPreference = 'SilentlyContinue'",
 ];
 
+/**
+ * Quita la serie del texto del modelo DENTRO del propio script (en memoria): comparación exacta,
+ * sin distinguir mayúsculas y recortando espacios. La serie se lee solo para esto y nunca sale.
+ */
+export const FUNCION_SIN_SERIE =
+  'function SinSerie($m, $s) { $m = ([string]$m).Trim(); $s = ([string]$s).Trim(); if ($s.Length -ge 4) { $m = [regex]::Replace($m, [regex]::Escape($s), "", "IgnoreCase") }; return ([regex]::Replace($m, "\\s+", " ")).Trim() }';
+
 /** Cuerpo común: deja el JSON en `$json`. Se usa tal cual con y sin elevación. */
 const CUERPO_SALUD = [
+  FUNCION_SIN_SERIE,
   'function L($v) { if ($null -eq $v) { return $null }; try { return [long]$v } catch { return $null } }',
   '$letras = @{}',
   'try { Get-Partition | Where-Object { $_.DriveLetter } | ForEach-Object { $k = [string]$_.DiskNumber; if (-not $letras.ContainsKey($k)) { $letras[$k] = @() }; $letras[$k] += [string]$_.DriveLetter } } catch { }',
@@ -66,7 +75,7 @@ const CUERPO_SALUD = [
   "  if ($cs -eq 'ok' -and $null -eq $c) { $cs = 'sin_datos' }",
   '  [pscustomobject]@{',
   '    n = $k',
-  '    modelo = [string]$d.FriendlyName',
+  '    modelo = SinSerie $d.FriendlyName $d.SerialNumber',
   '    medio = [string]$d.MediaType',
   '    bus = [string]$d.BusType',
   '    tam = L $d.Size',
