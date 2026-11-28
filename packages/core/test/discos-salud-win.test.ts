@@ -8,6 +8,7 @@ import {
   SCRIPT_SALUD_DISCOS,
 } from '../src/plataforma/saludDiscosWin';
 import { codificarPowerShell } from '../src/plataforma/pathUsuarioWin';
+import { rutaPowerShellWindows } from './soporte/parserPowerShell';
 
 // Salidas de ejemplo con la forma real del script. Los modelos y números son de ejemplo.
 const NVME_DESGASTADO = {
@@ -250,7 +251,7 @@ describe.skipIf(process.platform !== 'win32')(
       ]) {
         const b64 = Buffer.from(s, 'utf8').toString('base64');
         const orden = `$t = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${b64}')); $e = $null; $null = [System.Management.Automation.Language.Parser]::ParseInput($t, [ref]$null, [ref]$e); if ($e.Count -gt 0) { $e | ForEach-Object { $_.Message }; exit 1 }`;
-        const salida = execFileSync('powershell.exe', codificarPowerShell(orden), {
+        const salida = execFileSync(rutaPowerShellWindows(), codificarPowerShell(orden), {
           encoding: 'utf8',
           timeout: 30_000,
         });

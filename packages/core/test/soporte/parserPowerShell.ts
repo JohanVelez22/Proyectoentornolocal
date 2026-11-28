@@ -1,27 +1,41 @@
 import { execFileSync, spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 
 /**
- * PowerShell para el parser: Windows PowerShell en Windows y `pwsh` (PowerShell 7, mismo parser)
- * en macOS y Linux, donde lo traen los runners de CI. Null si no hay ninguno: la prueba se omite.
+ * Ruta absoluta de Windows PowerShell 5.1 (la que usa la aplicación). Solo tiene sentido en Windows.
+ */
+export function rutaPowerShellWindows(): string {
+  const raiz = process.env.SystemRoot ?? process.env.SYSTEMROOT ?? String.raw`C:\Windows`;
+  return path.win32.join(raiz, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+}
+
+/**
+ * PowerShell para el parser. En Windows: Windows PowerShell por su ruta absoluta, SIN sondear (una
+ * sonda con la máquina cargada agotaba su plazo y las pruebas de seguridad se omitían en silencio).
+ * Si falta, la prueba FALLA (no se omite). En macOS y Linux se sondea `pwsh` (PowerShell 7, mismo
+ * parser; lo traen los runners de CI) con un plazo amplio; si no hay, la prueba se omite.
  */
 function ejecutablePowerShell(): string | null {
-  const candidatos = process.platform === 'win32' ? ['powershell.exe', 'pwsh'] : ['pwsh'];
-  for (const exe of candidatos) {
-    const r = spawnSync(
-      exe,
-      ['-NoProfile', '-NonInteractive', '-Command', '$PSVersionTable.PSVersion.Major'],
-      {
-        encoding: 'utf8',
-        timeout: 30_000,
-      },
-    );
-    if (r.status === 0) return exe;
+  if (process.platform === 'win32') {
+    const ruta = rutaPowerShellWindows();
+    if (!existsSync(ruta)) {
+      throw new Error(
+        `Falta Windows PowerShell en ${ruta}: las pruebas de seguridad no pueden omitirse.`,
+      );
+    }
+    return ruta;
   }
-  return null;
+  const r = spawnSync(
+    'pwsh',
+    ['-NoProfile', '-NonInteractive', '-Command', '$PSVersionTable.PSVersion.Major'],
+    { encoding: 'utf8', timeout: 60_000 },
+  );
+  return r.status === 0 ? 'pwsh' : null;
 }
 
 let cacheEjecutable: string | null | undefined;
-/** ¿Hay una PowerShell con la que analizar? (se consulta una vez). */
+/** ¿Hay una PowerShell con la que analizar? (se consulta una vez; en Windows lanza si falta). */
 export function hayPowerShell(): boolean {
   if (cacheEjecutable === undefined) cacheEjecutable = ejecutablePowerShell();
   return cacheEjecutable !== null;

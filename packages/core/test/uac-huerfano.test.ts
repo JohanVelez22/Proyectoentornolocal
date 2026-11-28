@@ -6,7 +6,11 @@ import {
   SALIDA_COPIA,
   scriptElevar,
 } from '../src/plataforma/hostsAdmin';
-import { analizarPowerShell, hayPowerShell } from './soporte/parserPowerShell';
+import {
+  analizarPowerShell,
+  hayPowerShell,
+  rutaPowerShellWindows,
+} from './soporte/parserPowerShell';
 
 describe('F7: un UAC aceptado tarde no hace nada (el lanzador ya no existe)', () => {
   it('el comando elevado empieza por la guarda del lanzador y el exterior la rellena con su PID', () => {
@@ -42,7 +46,7 @@ describe('F7: un UAC aceptado tarde no hace nada (el lanzador ya no existe)', ()
   describe.skipIf(process.platform !== 'win32')('con PowerShell real, sin elevar', () => {
     const ps = (script: string, timeout = 60_000) =>
       spawnSync(
-        'powershell',
+        rutaPowerShellWindows(),
         ['-NoProfile', '-NonInteractive', '-EncodedCommand', codificarComando(script)],
         { encoding: 'utf8', windowsHide: true, timeout },
       );
@@ -76,7 +80,7 @@ describe('F7: un UAC aceptado tarde no hace nada (el lanzador ya no existe)', ()
       const r = ps(
         `${armado("[Console]::Out.Write('HIZO'); exit 0", false)}\n` +
           `$cmd = $i.Arguments.Substring('-NoProfile -NonInteractive -EncodedCommand '.Length)\n` +
-          `$p = [Diagnostics.Process]::Start([Diagnostics.ProcessStartInfo]@{ FileName = 'powershell.exe'; Arguments = '-NoProfile -NonInteractive -EncodedCommand ' + $cmd; UseShellExecute = $false; RedirectStandardOutput = $true; CreateNoWindow = $true })\n` +
+          `$p = [Diagnostics.Process]::Start([Diagnostics.ProcessStartInfo]@{ FileName = '${rutaPowerShellWindows()}'; Arguments = '-NoProfile -NonInteractive -EncodedCommand ' + $cmd; UseShellExecute = $false; RedirectStandardOutput = $true; CreateNoWindow = $true })\n` +
           `$o = $p.StandardOutput.ReadToEnd(); $p.WaitForExit()\n` +
           `[Console]::Out.Write(([string]$p.ExitCode) + '|' + $o)`,
       );
@@ -86,7 +90,7 @@ describe('F7: un UAC aceptado tarde no hace nada (el lanzador ya no existe)', ()
     it('con el lanzador vivo pero la app ya cerrada (cierre forzado), el comando elevado sale con «huérfano»', async () => {
       // Una «app» de mentira: otra PowerShell que vive hasta que se la cierra.
       const app = spawn(
-        'powershell',
+        rutaPowerShellWindows(),
         ['-NoProfile', '-NonInteractive', '-Command', 'Start-Sleep -Seconds 120'],
         { windowsHide: true, stdio: 'ignore' },
       );
@@ -95,7 +99,7 @@ describe('F7: un UAC aceptado tarde no hace nada (el lanzador ya no existe)', ()
         const pidApp = app.pid!;
         // Con la app viva el comando elevado corre.
         const hijo = (cmd: string): string =>
-          `$p = [Diagnostics.Process]::Start([Diagnostics.ProcessStartInfo]@{ FileName = 'powershell.exe'; Arguments = '-NoProfile -NonInteractive -EncodedCommand ' + ${cmd}; UseShellExecute = $false; RedirectStandardOutput = $true; CreateNoWindow = $true })
+          `$p = [Diagnostics.Process]::Start([Diagnostics.ProcessStartInfo]@{ FileName = '${rutaPowerShellWindows()}'; Arguments = '-NoProfile -NonInteractive -EncodedCommand ' + ${cmd}; UseShellExecute = $false; RedirectStandardOutput = $true; CreateNoWindow = $true })
 ` +
           `$o = $p.StandardOutput.ReadToEnd(); $p.WaitForExit()
 `;

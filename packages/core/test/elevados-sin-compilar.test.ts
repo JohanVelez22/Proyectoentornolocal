@@ -16,7 +16,11 @@ import { scriptQuitarCarpeta } from '../src/plataforma/redWin';
 import { cuerpoSaludDiscosAdmin } from '../src/plataforma/saludDiscosWin';
 import { PlataformaWindows } from '../src/plataforma/win';
 import { carpetaTemporal } from './temporales';
-import { analizarPowerShell, hayPowerShell } from './soporte/parserPowerShell';
+import {
+  analizarPowerShell,
+  hayPowerShell,
+  rutaPowerShellWindows,
+} from './soporte/parserPowerShell';
 
 const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src');
 
@@ -145,7 +149,7 @@ describe.skipIf(process.platform !== 'win32' || !hayPowerShell())(
   () => {
     const ps = (script: string, env: NodeJS.ProcessEnv = process.env) =>
       spawnSync(
-        'powershell',
+        rutaPowerShellWindows(),
         ['-NoProfile', '-NonInteractive', '-EncodedCommand', codificarComando(script)],
         { encoding: 'utf8', windowsHide: true, timeout: 120_000, env },
       );
