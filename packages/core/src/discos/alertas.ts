@@ -76,26 +76,54 @@ export function resultadoDeContadores(
 }
 
 /**
+ * Cuánto vale un dato TRANSITORIO conservado de una lectura con contadores: una temperatura alta o
+ * una subida de errores corregidos describen un momento, no un estado. Pasado este plazo dejan de
+ * aplicarse aunque no haya habido una lectura nueva con administrador.
+ */
+export const CADUCIDAD_TRANSITORIOS_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Motivos que se conservan hasta una nueva lectura con contadores, sin caducar: el desgaste y los
+ * errores sin corregir no se arreglan solos (un disco no se «desgasta menos»).
+ */
+export const MOTIVOS_PERSISTENTES: readonly MotivoVeredicto[] = [
+  'desgaste',
+  'errores_sin_corregir',
+];
+
+/**
  * Una lectura que trae MENOS información (sin contadores) no rebaja un veredicto que dependía de
  * los contadores de la última lectura: se conserva el peor de los dos, con la fecha y el origen
- * de ese dato. Mientras no haya una lectura con contadores, sigue ahí.
+ * de ese dato. Los motivos persistentes (desgaste y errores sin corregir) se conservan mientras no
+ * haya una lectura con contadores; los transitorios (temperatura, subida de errores corregidos)
+ * caducan a las 24 h de haberse leído (`CADUCIDAD_TRANSITORIOS_MS`). Si no queda ninguno, manda lo nuevo.
  */
 export function conservarVeredicto(
   nuevo: ResultadoVeredicto,
   traeContadores: boolean,
   ultimo: UltimoContadores | null,
+  ahora: number,
 ): ResultadoVeredicto & { conservado: DatoConservado | null } {
+  if (traeContadores || ultimo === null) return { ...nuevo, conservado: null };
+  const vigente = ultimo.motivos.filter(
+    (m) => MOTIVOS_PERSISTENTES.includes(m) || ahora - ultimo.en <= CADUCIDAD_TRANSITORIOS_MS,
+  );
+  // Lo que dirían hoy esos motivos solos (igual que en `resultadoDeContadores`).
+  const veredicto: Exclude<Veredicto, 'no_disponible'> = vigente.includes('errores_sin_corregir')
+    ? 'critico'
+    : vigente.length > 0
+      ? 'atencion'
+      : 'bien';
   if (
-    traeContadores ||
-    ultimo === null ||
-    GRAVEDAD_VEREDICTO[ultimo.veredicto] <= GRAVEDAD_VEREDICTO[nuevo.veredicto]
+    vigente.length === 0 ||
+    GRAVEDAD_VEREDICTO[veredicto] <= GRAVEDAD_VEREDICTO[nuevo.veredicto]
   ) {
     return { ...nuevo, conservado: null };
   }
   const motivos = [...nuevo.motivos];
-  for (const m of ultimo.motivos) if (!motivos.includes(m)) motivos.push(m);
+  for (const m of vigente) if (!motivos.includes(m)) motivos.push(m);
   return {
-    veredicto: ultimo.veredicto,
+    veredicto,
     motivos,
     conservado: {
       en: new Date(ultimo.en).toISOString(),

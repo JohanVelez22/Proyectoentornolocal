@@ -111,6 +111,7 @@ export class SaludDiscos {
         evaluarDisco(l, guardado?.corregidos ?? null),
         tieneContadores(l.contadores),
         guardado?.ultimo ?? null,
+        this.ahora,
       );
       return {
         ...l,

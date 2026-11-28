@@ -7,7 +7,7 @@ import {
   VENTANA_REFERENCIA_CORREGIDOS_MS,
   leerEstadoGuardado,
 } from '../src/discos/alertas';
-import type { DiscoSalud, Veredicto } from '../src/discos/tipos';
+import type { DiscoSalud, MotivoVeredicto, Veredicto } from '../src/discos/tipos';
 
 const disco = (veredicto: Veredicto, extra: Partial<DiscoSalud> = {}): DiscoSalud => ({
   clave: 'd0',
@@ -292,21 +292,74 @@ describe('una lectura con menos información no rebaja el veredicto (I1)', () =>
       origen: 'admin' as const,
       contadores: CTR,
     };
-    expect(conservarVeredicto({ veredicto: 'bien', motivos: [] }, false, ultimo)).toEqual({
+    expect(conservarVeredicto({ veredicto: 'bien', motivos: [] }, false, ultimo, T)).toEqual({
       veredicto: 'critico',
       motivos: ['errores_sin_corregir'],
       conservado: { en: new Date(T).toISOString(), origen: 'admin', contadores: CTR },
     });
     // Si lo nuevo es igual o peor, manda lo nuevo; si trae contadores, también.
     expect(
-      conservarVeredicto({ veredicto: 'critico', motivos: ['estado_warning'] }, false, ultimo),
+      conservarVeredicto({ veredicto: 'critico', motivos: ['estado_warning'] }, false, ultimo, T),
     ).toEqual({ veredicto: 'critico', motivos: ['estado_warning'], conservado: null });
-    expect(conservarVeredicto({ veredicto: 'bien', motivos: [] }, true, ultimo).veredicto).toBe(
+    expect(conservarVeredicto({ veredicto: 'bien', motivos: [] }, true, ultimo, T).veredicto).toBe(
       'bien',
     );
     expect(
-      conservarVeredicto({ veredicto: 'no_disponible', motivos: [] }, false, null).conservado,
+      conservarVeredicto({ veredicto: 'no_disponible', motivos: [] }, false, null, T).conservado,
     ).toBeNull();
+  });
+
+  it('conservarVeredicto: lo transitorio (temperatura) caduca a las 24 h; lo persistente no', () => {
+    const DIA = 24 * 60 * 60 * 1000;
+    const de = (motivos: MotivoVeredicto[], veredicto: 'atencion' | 'critico') => ({
+      veredicto,
+      motivos,
+      en: T,
+      origen: 'admin' as const,
+      contadores: CTR,
+    });
+    const bien = { veredicto: 'bien' as const, motivos: [] };
+    // Temperatura: vale justo hasta las 24 h; después, «Bien» y sin dato conservado.
+    const temperatura = de(['temperatura'], 'atencion');
+    expect(conservarVeredicto(bien, false, temperatura, T + DIA).veredicto).toBe('atencion');
+    expect(conservarVeredicto(bien, false, temperatura, T + DIA + 1)).toEqual({
+      veredicto: 'bien',
+      motivos: [],
+      conservado: null,
+    });
+    // Subida de errores corregidos: también es de un momento.
+    const sube = de(['errores_corregidos_suben'], 'atencion');
+    expect(conservarVeredicto(bien, false, sube, T + 30 * DIA).veredicto).toBe('bien');
+    // Errores sin corregir y desgaste siguen hasta una nueva lectura con contadores.
+    for (const [m, v] of [
+      ['errores_sin_corregir', 'critico'],
+      ['desgaste', 'atencion'],
+    ] as const) {
+      const r = conservarVeredicto(bien, false, de([m], v), T + 90 * DIA);
+      expect(r.veredicto).toBe(v);
+      expect(r.motivos).toEqual([m]);
+      expect(r.conservado).not.toBeNull();
+    }
+    // Mezcla: caduca la temperatura, queda el desgaste (y el veredicto se recalcula con él).
+    const mezcla = conservarVeredicto(
+      bien,
+      false,
+      de(['desgaste', 'temperatura'], 'atencion'),
+      T + 2 * DIA,
+    );
+    expect(mezcla.motivos).toEqual(['desgaste']);
+    // Mezcla con crítico: caducan los transitorios, pero «sin corregir» sigue siendo crítico.
+    const critica = conservarVeredicto(
+      bien,
+      false,
+      de(['errores_sin_corregir', 'temperatura'], 'critico'),
+      T + 2 * DIA,
+    );
+    expect(critica).toMatchObject({ veredicto: 'critico', motivos: ['errores_sin_corregir'] });
+    // Con una lectura nueva con contadores, manda siempre lo nuevo.
+    expect(conservarVeredicto(bien, true, de(['desgaste'], 'atencion'), T + DIA).veredicto).toBe(
+      'bien',
+    );
   });
 
   it('el último dato se sobrescribe con una lectura nueva con contadores (sanos incluidos)', () => {

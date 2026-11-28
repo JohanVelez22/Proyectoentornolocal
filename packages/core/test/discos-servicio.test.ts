@@ -287,6 +287,30 @@ describe('lectura sin administrador tras una con administrador (I1) y cola (M5)'
     expect(avisos).toHaveLength(1);
   });
 
+  it('una Atención por temperatura conservada de una lectura con administrador caduca a las 24 h; los errores sin corregir no', async () => {
+    const caliente = (): LecturaDiscos => ({
+      discos: [
+        nvme({
+          motivoSinContadores: null,
+          contadores: { ...contadoresNulos, temperaturaC: 75 },
+        }),
+      ],
+      prediccion: 'ok',
+    });
+    const { s, plataforma, avanzar } = montar(sinContadores());
+    plataforma.discosAdmin = { ok: true, lectura: caliente() };
+    expect((await s.leer({ admin: true })).discos[0]?.veredicto).toBe('atencion');
+    avanzar(23 * 3_600_000);
+    expect((await s.leer()).discos[0]).toMatchObject({ veredicto: 'atencion' });
+    avanzar(2 * 3_600_000);
+    expect((await s.leer()).discos[0]).toMatchObject({ veredicto: 'bien', datoConservado: null });
+    // Los errores sin corregir, en cambio, se conservan hasta una nueva lectura con administrador.
+    plataforma.discosAdmin = { ok: true, lectura: conErrores() };
+    expect((await s.leer({ admin: true })).discos[0]?.veredicto).toBe('critico');
+    avanzar(30 * 24 * 3_600_000);
+    expect((await s.leer()).discos[0]).toMatchObject({ veredicto: 'critico' });
+  });
+
   it('el dato conservado sobrevive a reiniciar la app (se guarda en el estado)', async () => {
     const { s, plataforma } = montar(sinContadores());
     plataforma.discosAdmin = { ok: true, lectura: conErrores() };
