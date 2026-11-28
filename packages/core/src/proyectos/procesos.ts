@@ -46,6 +46,15 @@ const ID_PROCESO = /^[A-Za-z0-9][A-Za-z0-9_]*$/;
 /** Prefijo de las líneas que WolfCore Dev escribe en el log del proceso. */
 const MARCA_LOG = '[WolfCore Dev]';
 
+/** Los procesos con `autoIniciar`, por sitio y en el orden de la configuración. */
+function procesosAutoIniciables(
+  sitios: readonly Sitio[],
+): { sitio: Sitio; proceso: ProcesoProyecto }[] {
+  return sitios.flatMap((sitio) =>
+    sitio.procesos.filter((p) => p.autoIniciar).map((proceso) => ({ sitio, proceso })),
+  );
+}
+
 /** Id de supervisor del proceso. Lanza si algún id trae caracteres no permitidos. */
 export function idSupervisor(sitioId: string, procesoId: string): string {
   if (!ID_SITIO.test(sitioId)) throw new Error(`Id de proyecto no válido: ${sitioId}`);
@@ -461,26 +470,38 @@ export class ProcesosProyecto {
   ): Promise<string[]> {
     const errores = await this.detenerHuerfanos();
     const mensajes = errores.map((e) => mensajeDe(e));
-    for (const sitio of await this.d.leerSitios()) {
-      for (const p of sitio.procesos) {
-        if (!seguir()) return mensajes;
-        if (!p.autoIniciar) continue;
-        try {
-          const estado = this.d.supervisor.estado(idSupervisor(sitio.id, p.id));
-          if (estado === 'encendido' || estado === 'iniciando') continue;
-          // Con su base caída el proceso se caería al instante: se informa y no se arranca.
-          const motivo = (await bloqueo?.(sitio.id)) ?? null;
-          if (motivo !== null) {
-            mensajes.push(`${sitio.dominio}: ${nombreProceso(p)} ${motivo}`);
-            continue;
-          }
-          await this.iniciar(sitio.id, p.id);
-        } catch (e) {
-          mensajes.push(`${sitio.dominio}: ${mensajeDe(e)}`);
+    for (const { sitio, proceso: p } of procesosAutoIniciables(await this.d.leerSitios())) {
+      if (!seguir()) return mensajes;
+      try {
+        const estado = this.d.supervisor.estado(idSupervisor(sitio.id, p.id));
+        if (estado === 'encendido' || estado === 'iniciando') continue;
+        // Con su base caída el proceso se caería al instante: se informa y no se arranca.
+        const motivo = (await bloqueo?.(sitio.id)) ?? null;
+        if (motivo !== null) {
+          mensajes.push(`${sitio.dominio}: ${nombreProceso(p)} ${motivo}`);
+          continue;
         }
+        await this.iniciar(sitio.id, p.id);
+      } catch (e) {
+        mensajes.push(`${sitio.dominio}: ${mensajeDe(e)}`);
       }
     }
     return mensajes;
+  }
+
+  /**
+   * Los procesos con `autoIniciar` que ahora están parados (apagados o en error): lo que
+   * «Iniciar todo» arrancaría. Mismo criterio que `autoIniciar`, sin arrancar nada.
+   */
+  async pendientesAutoIniciar(): Promise<{ id: string; nombre: string }[]> {
+    const res: { id: string; nombre: string }[] = [];
+    for (const { sitio, proceso } of procesosAutoIniciables(await this.d.leerSitios())) {
+      if (!ID_SITIO.test(sitio.id)) continue;
+      const e = this.estadoDe(sitio, proceso);
+      if (e.estado === 'apagado' || e.estado === 'error')
+        res.push({ id: e.id, nombre: `${e.nombre} (${sitio.dominio})` });
+    }
+    return res;
   }
 
   /** Detiene todos los procesos del proyecto (antes de borrarlo). Lanza el primer error. */

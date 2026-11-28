@@ -1244,6 +1244,7 @@ export class Nucleo {
         estadosServicio: () => procesos.estadosServicio(),
         detenerTodos: () => procesos.detenerTodos(),
         autoIniciar: (seguir, bloqueo) => procesos.autoIniciar(seguir, bloqueo),
+        pendientesAutoIniciar: () => procesos.pendientesAutoIniciar(),
       },
       usosDeSitios: () => usosDeSitios(sitios),
     });

@@ -65,6 +65,10 @@ const defs = (): DefServicio[] => [
 const procesos = (): NonNullable<DepsServicios['procesosProyecto']> => ({
   estadosServicio: async () => [],
   detenerTodos: async () => [],
+  pendientesAutoIniciar: async () =>
+    ['bot', 'web']
+      .filter((id) => !orden.some((x) => x.startsWith(`proceso:${id}:`)))
+      .map((id) => ({ id: `proceso-${id}`, nombre: `uvicorn (${id}.test)` })),
   autoIniciar: async (_seguir, bloqueo) => {
     const mensajes: string[] = [];
     for (const s of [
@@ -297,6 +301,56 @@ describe('Iniciar todo: orden de arranque y manejo de errores (D54d)', () => {
     expect(orden.slice(0, 3)).toEqual(['php:8.3', 'php:8.4', 'nginx']);
     expect(estados.get('mysql@8.4')).toBe('encendido');
     expect(orden.some((x) => x.startsWith('proceso:web'))).toBe(true);
+  });
+});
+
+describe('porArrancar: el mismo criterio que «Iniciar todo» (D54d)', () => {
+  it('lista lo que Iniciar todo enciende y queda vacío cuando ya está todo encendido', async () => {
+    configMigrada();
+    instalados['php'] = ['8.4'];
+    instalados['nginx'] = ['1.27.0'];
+    const s = crear({ ramasEnUso: async () => ['8.4', '7.4'] });
+    vi.spyOn(s.php, 'iniciar').mockImplementation(async (rama: string) => {
+      orden.push(`php:${rama}`);
+      for (let i = 0; i < cfg.servicios.php.trabajadores; i++)
+        estados.set(s.php.idTrabajador(rama, i), 'encendido');
+    });
+    vi.spyOn(s.nginx, 'iniciar').mockImplementation(async () => {
+      orden.push('nginx');
+      estados.set('nginx', 'encendido');
+    });
+    const antes = await s.porArrancar();
+    expect(antes.map((p) => `${p.tipo}:${p.id}`)).toEqual([
+      'php:php-8.4',
+      'nginx:nginx',
+      'datos:mysql@8.4',
+      'datos:postgresql@17',
+      'proceso:proceso-bot',
+      'proceso:proceso-web',
+    ]);
+    await s.iniciarTodo();
+    // Lo que «Iniciar todo» encendió es lo que se anunciaba (mismo criterio).
+    const encendido = orden
+      .filter((x) => !x.startsWith('proceso:'))
+      .map((x) => x.replace(/^iniciar:/, ''));
+    expect(encendido).toEqual(['php:8.4', 'nginx', 'mysql@8.4', 'postgresql@17']);
+    expect(orden.filter((x) => x.startsWith('proceso:')).length).toBe(2);
+    expect(await s.porArrancar()).toEqual([]);
+  });
+
+  it('un servicio en error cuenta; uno encendido o la herramienta sin autoIniciar no', async () => {
+    configMigrada();
+    estados.set('mysql@8.4', 'encendido');
+    estados.set('postgresql@17', 'error');
+    const s = crear();
+    const r = await s.porArrancar();
+    expect(r.filter((p) => p.tipo === 'datos').map((p) => p.id)).toEqual(['postgresql@17']);
+    expect(r.some((p) => p.id.includes('mailpit'))).toBe(false);
+  });
+
+  it('sin Nginx instalado no es un pendiente (Iniciar todo solo fallaría)', async () => {
+    const r = await crear().porArrancar();
+    expect(r.some((p) => p.tipo === 'nginx')).toBe(false);
   });
 });
 

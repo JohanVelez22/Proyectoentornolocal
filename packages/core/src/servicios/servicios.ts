@@ -8,7 +8,13 @@ import { puertoResponde } from '../procesos/sonda';
 import { ErrorDetenidoAlIniciar, type EstadoProceso } from '../procesos/supervisor';
 import { AlmacenCredenciales } from '../almacen';
 import type { Rutas } from '../rutas';
-import type { Config, EstadoServicio, IdInstancia, IdServicioDatos } from '../tipos';
+import type {
+  Config,
+  EstadoServicio,
+  IdInstancia,
+  IdServicioDatos,
+  PendienteArranque,
+} from '../tipos';
 import { esIdInstancia } from './instancias';
 import { ejecutorPorDefecto } from '../plataforma/win';
 import { DEFINICIONES } from './datos';
@@ -77,7 +83,7 @@ export interface DepsServicios {
   ftp?: Pick<ServidorFtp, 'estado' | 'iniciar' | 'detener'>;
   /** Procesos de los proyectos: aparecen en los estados y se detienen primero en detenerTodo. */
   procesosProyecto?: Pick<ProcesosProyecto, 'estadosServicio' | 'detenerTodos'> &
-    Partial<Pick<ProcesosProyecto, 'autoIniciar'>>;
+    Partial<Pick<ProcesosProyecto, 'autoIniciar' | 'pendientesAutoIniciar'>>;
   /** Bases que usa cada sitio según su `.env` ("Iniciar todo" las enciende antes que sus procesos). */
   usosDeSitios?: () => Promise<UsoSitio[]>;
   /** Publica un aviso (centro de avisos); aquí, el puerto ocupado al iniciar un servicio. */
@@ -339,9 +345,7 @@ export class Servicios {
     const anotar = (nombre: string, e: unknown): void => {
       if (!(e instanceof ErrorDetenidoAlIniciar)) fallos.push({ nombre, error: e });
     };
-    const instaladas = await this.d.instalador.instalados('php');
-    for (const v of await this.ramasEnUso()) {
-      if (!instaladas.includes(v)) continue;
+    for (const v of await this.ramasPhpEnUso()) {
       try {
         await this.iniciarRama(v);
       } catch (e) {
@@ -368,6 +372,39 @@ export class Servicios {
       for (const m of mensajes) fallos.push({ nombre: m.split(':')[0] ?? m, error: new Error(m) });
     }
     if (fallos.length > 0) throw errorIniciarTodo(fallos);
+  }
+
+  /**
+   * Lo que «Iniciar todo» encendería ahora, con el MISMO criterio que `iniciarTodo` (PHP de las
+   * ramas en uso, Nginx instalado, bases con `autoIniciar`, predeterminadas o usadas por proyectos,
+   * y procesos de proyecto con `autoIniciar`), solo lo que está parado o en error. No arranca nada.
+   */
+  async porArrancar(): Promise<PendienteArranque[]> {
+    const res: PendienteArranque[] = [];
+    const sup = this.d.supervisor;
+    const cfg = await this.d.leerConfig();
+    for (const v of await this.ramasPhpEnUso()) {
+      const ids = puertosPhp(v, cfg.servicios.php.trabajadores).map((_, i) =>
+        this.php.idTrabajador(v, i),
+      );
+      const e = agregar(ids.map((id) => sup.estado(id)));
+      if (e === 'apagado' || e === 'error')
+        res.push({ id: `php-${v}`, nombre: `PHP ${v}`, tipo: 'php' });
+    }
+    // Sin Nginx instalado «Iniciar todo» falla y no hay nada que encender: no es un pendiente.
+    const nginxInstalado = await this.nginx.versionActiva(cfg).then(
+      () => true,
+      () => false,
+    );
+    const en = sup.estado('nginx');
+    if (nginxInstalado && (en === 'apagado' || en === 'error'))
+      res.push({ id: 'nginx', nombre: 'Nginx', tipo: 'nginx' });
+    const sitios = await this.usosDeSitios();
+    for (const o of await this.datos.pendientesIniciarTodo(sitios.flatMap((s) => s.usos)))
+      res.push({ id: o.ref, nombre: o.nombre, tipo: 'datos' });
+    for (const p of (await this.d.procesosProyecto?.pendientesAutoIniciar?.()) ?? [])
+      res.push({ id: p.id, nombre: p.nombre, tipo: 'proceso' });
+    return res;
   }
 
   /** Ramas de PHP que usa algún sitio y ya están instaladas (las que enciende un workspace). */

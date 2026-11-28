@@ -896,6 +896,17 @@ export interface EstadoServicio {
   instancias?: EstadoInstancia[];
 }
 
+/**
+ * Algo que «Iniciar todo» encendería ahora (D54d): PHP de una rama en uso, Nginx, una base de
+ * datos o un proceso de proyecto con `autoIniciar`, parado o en error. Claves cerradas.
+ */
+export interface PendienteArranque {
+  /** Id del servicio, la instancia o el proceso (el mismo que en `EstadoServicio` si lo hay). */
+  id: string;
+  nombre: string;
+  tipo: 'php' | 'nginx' | 'datos' | 'proceso';
+}
+
 export interface EstadoTunel {
   sitioId: string;
   estado: 'apagado' | 'iniciando' | 'activo' | 'error';

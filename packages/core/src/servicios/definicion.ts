@@ -1196,8 +1196,27 @@ export class ServiciosDatos {
    * `.env`). Sin repetir y en el orden de las definiciones.
    */
   async objetivosIniciarTodo(usos: readonly UsoBase[]): Promise<ObjetivoInicio[]> {
+    return (await this.objetivosConProceso(usos)).map((x) => x.objetivo);
+  }
+
+  /**
+   * Los objetivos de "Iniciar todo" que ahora están parados (apagados o en error): lo que el botón
+   * encendería. Es el mismo criterio que `objetivosIniciarTodo`, con el estado del supervisor.
+   */
+  async pendientesIniciarTodo(usos: readonly UsoBase[]): Promise<ObjetivoInicio[]> {
+    return (await this.objetivosConProceso(usos))
+      .filter((x) => {
+        const e = this.d.supervisor.estado(x.proceso);
+        return e === 'apagado' || e === 'error';
+      })
+      .map((x) => x.objetivo);
+  }
+
+  private async objetivosConProceso(
+    usos: readonly UsoBase[],
+  ): Promise<{ objetivo: ObjetivoInicio; proceso: string }[]> {
     const cfg = await this.d.leerConfig();
-    const res: ObjetivoInicio[] = [];
+    const res: { objetivo: ObjetivoInicio; proceso: string }[] = [];
     for (const def of this.d.definiciones()) {
       // En un grupo exclusivo solo arranca el elegido: dos captadores no pueden correr a la vez.
       if (def.grupoExclusivo === GRUPO_CORREO && def.id !== cfg.correo.captador) continue;
@@ -1206,10 +1225,13 @@ export class ServiciosDatos {
         const base = def.categoria === 'bd' && inst.predeterminada;
         if (!inst.autoIniciar && !base && !usada) continue;
         res.push({
-          ref: inst.implicita ? def.id : inst.id,
-          nombre: this.nombreDe(def, inst),
-          servicio: def.id,
-          puerto: inst.puerto,
+          objetivo: {
+            ref: inst.implicita ? def.id : inst.id,
+            nombre: this.nombreDe(def, inst),
+            servicio: def.id,
+            puerto: inst.puerto,
+          },
+          proceso: inst.proceso,
         });
       }
     }
