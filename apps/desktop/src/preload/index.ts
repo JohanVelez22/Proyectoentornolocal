@@ -163,6 +163,9 @@ const api: ApiEntorno = {
     instalarBuildTools: () => invocar('pgvector.instalarBuildTools'),
     compilarEInstalar: () => invocar('pgvector.compilarEInstalar'),
     activar: (base) => invocar('pgvector.activar', base),
+    estadoBases: (motor) => invocar('pgvector.estadoBases', motor),
+    activarEnBases: (motor, pedido) => invocar('pgvector.activarEnBases', motor, pedido),
+    plantilla: (motor, pedido) => invocar('pgvector.plantilla', motor, pedido),
   },
   https: {
     estado: () => invocar('https.estado'),

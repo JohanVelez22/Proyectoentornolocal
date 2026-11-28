@@ -163,6 +163,48 @@ describe.skipIf(!esWindows)('pgvector real en Windows', () => {
   );
 
   it(
+    'activa pgvector en varias bases con informe por base y, opcionalmente, en template1 (D54b)',
+    async () => {
+      const x = n();
+      for (const b of ['multi_a', 'multi_b']) await x.crearBase('postgresql', b);
+      // «vectores» ya la tiene del caso anterior: debe salir como «ya estaba».
+      const informe = await x.activarVectorEnBases('postgresql', {
+        bases: ['vectores', 'multi_a', 'multi_b', 'no_existe'],
+        confirmado: true,
+        // Ninguna base del entorno aislado es de un sitio con datos reales.
+      });
+      expect(informe).toEqual([
+        { base: 'vectores', estado: 'ya-estaba' },
+        { base: 'multi_a', estado: 'activada' },
+        { base: 'multi_b', estado: 'activada' },
+        { base: 'no_existe', estado: 'error', motivo: 'no-existe' },
+      ]);
+      // Sin confirmar no se toca nada.
+      await expect(
+        x.activarVectorEnBases('postgresql', { bases: ['multi_a'], confirmado: false }),
+      ).rejects.toMatchObject({ codigo: 'bd.vector_confirmacion' });
+      // template1: solo las bases nuevas nacen con la extensión.
+      expect((await x.estadoVectorBases()).plantilla).toBe(false);
+      expect(await x.vectorEnPlantilla('postgresql', { activar: true, confirmado: true })).toEqual({
+        base: 'template1',
+        estado: 'activada',
+      });
+      await x.crearBase('postgresql', 'multi_nueva');
+      const estado = await x.estadoVectorBases();
+      expect(estado.plantilla).toBe(true);
+      expect(estado.bases.find((b) => b.base === 'multi_nueva')?.activo).toBe(true);
+      expect(await x.vectorEnPlantilla('postgresql', { activar: false, confirmado: true })).toEqual(
+        {
+          base: 'template1',
+          estado: 'quitada',
+        },
+      );
+      expect((await x.estadoVectorBases()).plantilla).toBe(false);
+    },
+    5 * MIN,
+  );
+
+  it(
     'apaga sin dejar procesos',
     async () => {
       await n().detenerTodo();

@@ -67,6 +67,7 @@ import type {
 } from './perfiles/tipos';
 import { detectarFormato, type FormatoRespaldo } from './bd/formato';
 import { InstaladorPgvector, type ResultadoBuildTools } from './bd/pgvector';
+import type { EstadoVectorBases, ResultadoBaseVector } from './bd/pgvectorBases';
 import {
   Respaldos,
   type OpcionesRestaurar,
@@ -2710,6 +2711,41 @@ export class Nucleo {
 
   activarVector(base: string): Promise<void> {
     return this.bd.activarVector(base);
+  }
+
+  /** ¿La base es la de un sitio con `datosReales`? (ante la duda, sí). */
+  private esBaseDeDatosReales(objetivo: ObjetivoBd): (base: string) => Promise<boolean> {
+    return (base) =>
+      baseDeDatosReales(
+        { sitios: () => this.sitios.listar(), baseDe: baseDeSitio },
+        objetivo,
+        base,
+      );
+  }
+
+  /** pgvector por base de una instancia de PostgreSQL: dónde está, cuáles son de datos reales y template1. */
+  estadoVectorBases(objetivo: ObjetivoBd = 'postgresql'): Promise<EstadoVectorBases> {
+    return this.bd.estadoVector(objetivo, this.esBaseDeDatosReales(objetivo));
+  }
+
+  /** «Activar en varias bases»: `confirmado` debe ser exactamente true; informe por base. */
+  activarVectorEnBases(
+    objetivo: ObjetivoBd,
+    o: {
+      bases: readonly string[];
+      confirmado: boolean;
+      datosRealesConfirmadas?: readonly string[];
+    },
+  ): Promise<ResultadoBaseVector[]> {
+    return this.bd.activarVectorEnBases(objetivo, o, this.esBaseDeDatosReales(objetivo));
+  }
+
+  /** «Activar también en las bases nuevas» (o quitarlo): crea o borra la extensión en template1. */
+  vectorEnPlantilla(
+    objetivo: ObjetivoBd,
+    o: { activar: boolean; confirmado: boolean },
+  ): Promise<ResultadoBaseVector> {
+    return this.bd.vectorEnPlantilla(objetivo, o);
   }
 
   // ---- IA local (Ollama) ----

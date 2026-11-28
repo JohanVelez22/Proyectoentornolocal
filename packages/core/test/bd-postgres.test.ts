@@ -418,6 +418,36 @@ describe('ClientePostgres', () => {
     expect(conexiones.at(-1)!.cerrada).toBe(true);
   });
 
+  it('vectorActivo consulta pg_extension con el nombre como parámetro y se conecta a esa base', async () => {
+    const { cliente, consultas, conexiones } = montar(() => [{ n: 1 }]);
+    await cliente.conectar(cx);
+    expect(await cliente.vectorActivo('template1')).toBe(true);
+    const q = consultas.at(-1)!;
+    expect(q.sql).toContain('pg_catalog.pg_extension');
+    expect(q.params).toEqual(['vector']);
+    expect(conexiones.at(-1)!.base).toBe('template1');
+    expect(conexiones.at(-1)!.cerrada).toBe(true);
+    await expect(cliente.vectorActivo('a"; DROP DATABASE x; --')).rejects.toThrow('no es válido');
+  });
+
+  it('quitarVector no usa CASCADE y un error sale traducido, sin SQL', async () => {
+    const { cliente, consultas } = montar();
+    await cliente.conectar(cx);
+    await cliente.quitarVector('template1');
+    expect(consultas.at(-1)!.sql).toBe('DROP EXTENSION IF EXISTS "vector"');
+    expect(consultas.at(-1)!.sql).not.toMatch(/cascade/i);
+    const malo = new ClientePostgres(async () => ({
+      query: async () => {
+        throw Object.assign(new Error('cannot drop extension vector: SECRETO'), { code: '2BP01' });
+      },
+      end: async () => undefined,
+    }));
+    await malo.conectar(cx);
+    const e = await malo.quitarVector('x').catch((x: Error) => x);
+    expect((e as Error).message).toContain('No se pudo quitar pgvector de x');
+    expect((e as Error).message).not.toContain('SECRETO');
+  });
+
   it('tieneVector consulta pg_available_extensions', async () => {
     const a = montar(() => [{ n: 1 }]);
     await a.cliente.conectar(cx);

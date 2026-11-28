@@ -1233,6 +1233,45 @@ export function pedidoLentas(v: unknown): {
   };
 }
 
+/**
+ * Pedido de «Activar en varias bases» (D54b): nombres de PostgreSQL válidos, sin repetir y con tope.
+ * `confirmado` pasa tal cual (el núcleo exige exactamente true).
+ */
+export function pedidoVectorBases(v: unknown): {
+  bases: string[];
+  confirmado: boolean;
+  datosRealesConfirmadas: string[];
+} {
+  const o = objetoPlano<Record<string, unknown>>(v, 'pgvector');
+  soloClaves(o, ['bases', 'confirmado', 'datosRealesConfirmadas'], 'pgvector');
+  const lista = (x: unknown, nombre: string): string[] => {
+    if (!Array.isArray(x) || x.length > 200) throw new Error(`Argumento no válido: ${nombre}`);
+    return [...new Set(x.map((b) => nombreBase('postgresql', b, nombre)))];
+  };
+  return {
+    bases: lista(o['bases'], 'bases'),
+    confirmado: o['confirmado'] === true,
+    datosRealesConfirmadas:
+      o['datosRealesConfirmadas'] === undefined
+        ? []
+        : lista(o['datosRealesConfirmadas'], 'datosRealesConfirmadas'),
+  };
+}
+
+/** Pedido de activar o quitar pgvector en template1. */
+export function pedidoVectorPlantilla(v: unknown): { activar: boolean; confirmado: boolean } {
+  const o = objetoPlano<Record<string, unknown>>(v, 'pgvector');
+  soloClaves(o, ['activar', 'confirmado'], 'pgvector');
+  return { activar: booleano(o['activar'], 'activar'), confirmado: o['confirmado'] === true };
+}
+
+/** Instancia de PostgreSQL (no de otro motor) para pgvector. */
+export function objetivoPostgres(v: unknown): MotorBd | IdInstancia {
+  const { objetivo, motor } = objetivoBd(v);
+  if (motor !== 'postgresql') throw new Error('Argumento no válido: motor');
+  return objetivo;
+}
+
 /** Solo claves conocidas; cualquier otra hace fallar la llamada. */
 function soloClaves(
   o: Record<string, unknown>,

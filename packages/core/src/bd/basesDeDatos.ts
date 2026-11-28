@@ -35,6 +35,15 @@ import {
   type EsquemaBase,
 } from './esquema';
 import { nombreEjecutable } from '../plataforma/sistema';
+import {
+  activarVectorEnBases,
+  activarVectorEnPlantilla,
+  estadoVectorBases,
+  quitarVectorDePlantilla,
+  type EstadoVectorBases,
+  type PuertoVector,
+  type ResultadoBaseVector,
+} from './pgvectorBases';
 
 export {
   bloqueEnv,
@@ -674,6 +683,65 @@ export class BasesDeDatos {
   /** Activa pgvector en una base de PostgreSQL (la extensión es por base). */
   async activarVector(base: string, objetivo?: ObjetivoBd): Promise<void> {
     await this.conPostgres((c) => c.activarVector(base), objetivo);
+  }
+
+  /** Puerto de pgvector sobre una conexión de administrador (las sentencias viven en el cliente). */
+  private async conPuertoVector<T>(
+    objetivo: ObjetivoBd,
+    esDatosReales: (base: string) => Promise<boolean>,
+    fn: (p: PuertoVector) => Promise<T>,
+  ): Promise<T> {
+    if (motorDe(objetivo) !== 'postgresql') {
+      throw new Error('pgvector solo existe en PostgreSQL.');
+    }
+    return this.conPostgres(
+      (c) =>
+        fn({
+          listarBases: async () => (await c.listarBases()).map((b) => b.nombre),
+          servidorTieneVector: () => c.tieneVector(),
+          vectorActivo: (b) => c.vectorActivo(b),
+          activar: (b) => c.activarVector(b),
+          quitar: (b) => c.quitarVector(b),
+          esDatosReales,
+        }),
+      objetivo,
+    );
+  }
+
+  /** Qué bases tienen pgvector, cuáles son de datos reales y si `template1` lo lleva. */
+  async estadoVector(
+    objetivo: ObjetivoBd,
+    esDatosReales: (base: string) => Promise<boolean>,
+  ): Promise<EstadoVectorBases> {
+    return this.conPuertoVector(objetivo, esDatosReales, (p) => estadoVectorBases(p));
+  }
+
+  /** pgvector en varias bases de la instancia, con un informe por base. */
+  async activarVectorEnBases(
+    objetivo: ObjetivoBd,
+    o: {
+      bases: readonly string[];
+      confirmado: boolean;
+      datosRealesConfirmadas?: readonly string[];
+    },
+    esDatosReales: (base: string) => Promise<boolean>,
+  ): Promise<ResultadoBaseVector[]> {
+    return this.conPuertoVector(objetivo, esDatosReales, (p) => activarVectorEnBases(p, o));
+  }
+
+  /** Crea (o quita) pgvector en `template1`: solo afecta a las bases que se creen después. */
+  async vectorEnPlantilla(
+    objetivo: ObjetivoBd,
+    o: { activar: boolean; confirmado: boolean },
+  ): Promise<ResultadoBaseVector> {
+    return this.conPuertoVector(
+      objetivo,
+      async () => true,
+      (p) =>
+        o.activar
+          ? activarVectorEnPlantilla(p, { confirmado: o.confirmado })
+          : quitarVectorDePlantilla(p, { confirmado: o.confirmado }),
+    );
   }
 
   async borrar(objetivo: ObjetivoBd, nombre: string, confirmacion: string): Promise<void> {

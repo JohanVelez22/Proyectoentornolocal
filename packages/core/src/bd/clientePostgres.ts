@@ -788,6 +788,32 @@ export class ClientePostgres {
     }
   }
 
+  /** ¿La extensión vector está creada en `base` (también `template1`)? Sin interpolar nada. */
+  async vectorActivo(base: string): Promise<boolean> {
+    validarNombrePg(base);
+    try {
+      return await this.enBase(base, async (q) => {
+        const { rows } = await q.query(
+          'SELECT COUNT(*) AS n FROM pg_catalog.pg_extension WHERE extname = $1',
+          ['vector'],
+        );
+        return Number((rows[0] as { n?: unknown } | undefined)?.n ?? 0) > 0;
+      });
+    } catch (e) {
+      throw traducir(e, `revisar pgvector en ${base}`);
+    }
+  }
+
+  /** Quita pgvector de `base` sin CASCADE: si hay columnas que lo usan, falla y no borra nada. */
+  async quitarVector(base: string): Promise<void> {
+    validarNombrePg(base);
+    try {
+      await this.enBase(base, (q) => q.query('DROP EXTENSION IF EXISTS "vector"'));
+    } catch (e) {
+      throw traducir(e, `quitar pgvector de ${base}`);
+    }
+  }
+
   /** true si el servidor trae la extensión vector (pgvector compilada e instalada). */
   async tieneVector(): Promise<boolean> {
     const f = await this.filas(

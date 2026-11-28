@@ -134,6 +134,8 @@ import type {
   ProyectoDetectado,
   ResultadoAjustes,
   ResultadoAplicar,
+  ResultadoBaseVector,
+  EstadoVectorBases,
   ResultadoBuildTools,
   ResultadoCA,
   ResultadoCrear,
@@ -420,6 +422,8 @@ export type {
   ProyectoDetectado,
   ResultadoAjustes,
   ResultadoAplicar,
+  ResultadoBaseVector,
+  EstadoVectorBases,
   ResultadoBuildTools,
   ResultadoCA,
   ResultadoCrear,
@@ -593,6 +597,12 @@ export interface ProveedorSmtpPublico extends ProveedorSmtp {
 export const PUERTO_ADMINER = 8090;
 /** Puerto fijo de phpMyAdmin (igual que `PUERTO_PHPMYADMIN` del núcleo; solo se muestra). */
 export const PUERTO_PHPMYADMIN = 8091;
+
+export interface PedidoVectorBases {
+  bases: string[];
+  confirmado: boolean;
+  datosRealesConfirmadas?: string[];
+}
 
 export interface EstadoPgvector {
   buildTools: boolean;
@@ -988,6 +998,18 @@ export interface ApiEntorno {
     instalarBuildTools(): Promise<ResultadoBuildTools>;
     compilarEInstalar(): Promise<{ version: string }>;
     activar(base: string): Promise<void>;
+    /** Por base de una instancia: si ya la tiene, si es de datos reales y si template1 la lleva. */
+    estadoBases(motor: MotorBd | IdInstancia): Promise<EstadoVectorBases>;
+    /** «Activar en varias bases»: el núcleo exige confirmado === true. Informe por base. */
+    activarEnBases(
+      motor: MotorBd | IdInstancia,
+      pedido: PedidoVectorBases,
+    ): Promise<ResultadoBaseVector[]>;
+    /** «Activar también en las bases nuevas» (o quitarlo) en template1. */
+    plantilla(
+      motor: MotorBd | IdInstancia,
+      pedido: { activar: boolean; confirmado: boolean },
+    ): Promise<ResultadoBaseVector>;
   };
   https: {
     /** Autoridad local, puerto HTTPS y el programa ajeno que lo ocupa (si lo hay). */
@@ -2097,6 +2119,9 @@ export const RUTAS_IPC = [
   'pgvector.instalarBuildTools',
   'pgvector.compilarEInstalar',
   'pgvector.activar',
+  'pgvector.estadoBases',
+  'pgvector.activarEnBases',
+  'pgvector.plantilla',
   'https.estado',
   'https.instalarCA',
   'https.quitarCA',

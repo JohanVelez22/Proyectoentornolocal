@@ -165,6 +165,9 @@ import {
   objetivoConexionServicio,
   objetivoSql,
   pedidoLentas,
+  pedidoVectorBases,
+  pedidoVectorPlantilla,
+  objetivoPostgres,
   opcionesActualizar,
   opcionesNuevaRama,
   opcionesDesbloquear,
@@ -1221,6 +1224,11 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'pgvector.instalarBuildTools': (n) => n.instalarBuildTools(),
   'pgvector.compilarEInstalar': (n) => n.compilarPgvector(),
   'pgvector.activar': (n, _s, base) => n.activarVector(nombreBase('postgresql', base)),
+  'pgvector.estadoBases': (n, _s, motor) => n.estadoVectorBases(objetivoPostgres(motor)),
+  'pgvector.activarEnBases': (n, _s, motor, pedido) =>
+    n.activarVectorEnBases(objetivoPostgres(motor), pedidoVectorBases(pedido)),
+  'pgvector.plantilla': (n, _s, motor, pedido) =>
+    n.vectorEnPlantilla(objetivoPostgres(motor), pedidoVectorPlantilla(pedido)),
   'https.estado': (n) => n.estadoHttps(),
   'https.instalarCA': (n) => n.instalarCA(),
   'https.quitarCA': (n) => n.quitarCA(),

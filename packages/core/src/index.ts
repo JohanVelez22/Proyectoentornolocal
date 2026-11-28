@@ -84,6 +84,7 @@ export * from './bd/formato';
 export * from './bd/respaldos';
 export * from './bd/instantaneas';
 export * from './bd/pgvector';
+export * from './bd/pgvectorBases';
 export * from './bd/auditoriaClaves';
 export type {
   EntradaLenta,

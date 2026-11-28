@@ -73,6 +73,8 @@ export const PARAMETROS_ERROR = {
   'bd.encender_servicio': ['nombre'],
   'bd.sin_credenciales': ['nombre'],
   'bd.confirmacion_borrado': ['nombre'],
+  'bd.vector_confirmacion': [],
+  'bd.vector_no_instalado': [],
   'bd.mongosh_faltante': [],
   'bd.usuario_clave_distinta': ['usuario'],
   'bd.usuario_privilegiado': ['usuario'],
