@@ -440,8 +440,8 @@ export const TOPE_CUERPO_ELEVADO = 1_048_576;
 /**
  * Comando elevado (corto y de tamaño fijo): lee el cuerpo del script del archivo temporal,
  * comprueba su SHA-256 (incrustado aquí, que no se puede cambiar) y lo ejecuta. Un archivo
- * alterado, que ya no está, que es un enlace (ReparsePoint) o que pesa más del tope sale sin leer ni
- * ejecutar nada.
+ * alterado, que ya no está, que es un enlace (ReparsePoint) o que pesa más del tope sale sin
+ * ejecutar nada (el tamaño se mide en el mismo `FileStream` con el que se lee, con tope + 1).
  */
 export function scriptCargador(archivo: string, sha256: string): string {
   return [
@@ -451,8 +451,18 @@ export function scriptCargador(archivo: string, sha256: string): string {
     `if (-not [IO.File]::Exists($t)) { exit ${SALIDA_FIREWALL.sinTemporal} }`,
     // Antes de leerlo: ni un enlace (apuntaría a otro archivo) ni uno desmesurado.
     `if (([IO.File]::GetAttributes($t) -band [IO.FileAttributes]::ReparsePoint) -ne 0) { exit ${SALIDA_FIREWALL.temporalEnlace} }`,
-    `if (([IO.FileInfo]::new($t)).Length -gt ${TOPE_CUERPO_ELEVADO}) { exit ${SALIDA_FIREWALL.temporalGrande} }`,
-    '$b = [IO.File]::ReadAllBytes($t)',
+    // UN solo FileStream (nadie lo escribe mientras se lee): el tamaño se mide en ese mismo
+    // stream y se lee como máximo el tope + 1, así que un cuerpo que crece no se carga entero.
+    '$fs = $null',
+    `try { $fs = [IO.FileStream]::new($t, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read) } catch { exit ${SALIDA_FIREWALL.sinTemporal} }`,
+    'try {',
+    `  if ($fs.Length -gt ${TOPE_CUERPO_ELEVADO}) { exit ${SALIDA_FIREWALL.temporalGrande} }`,
+    `  $b = New-Object byte[] (${TOPE_CUERPO_ELEVADO} + 1)`,
+    '  $n = 0',
+    '  while ($n -lt $b.Length) { $r = $fs.Read($b, $n, $b.Length - $n); if ($r -le 0) { break }; $n += $r }',
+    '} finally { $fs.Dispose() }',
+    `if ($n -gt ${TOPE_CUERPO_ELEVADO}) { exit ${SALIDA_FIREWALL.temporalGrande} }`,
+    '$c = New-Object byte[] $n; [Array]::Copy($b, $c, $n); $b = $c',
     `if ((Get-HuellaWolf $b) -ne ${lit(sha256.toLowerCase())}) { exit ${SALIDA_FIREWALL.temporalAlterado} }`,
     '& ([scriptblock]::Create([Text.UTF8Encoding]::new($false).GetString($b)))',
     'exit $LASTEXITCODE',
