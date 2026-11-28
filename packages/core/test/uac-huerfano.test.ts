@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 import {
   codificarComando,
@@ -14,6 +14,20 @@ describe('F7: un UAC aceptado tarde no hace nada (el lanzador ya no existe)', ()
     expect(externo).toContain('GetProcessById(@@PID@@)');
     expect(externo).toContain(".Replace('@@PID@@'");
     expect(GUARDA_LANZADOR).toContain(`exit ${SALIDA_COPIA.huerfano}`);
+  });
+
+  it('la guarda lleva también el PID y la hora de inicio de la app (Menor 5)', () => {
+    const externo = scriptElevar(codificarComando('exit 0'), 4321);
+    expect(GUARDA_LANZADOR).toContain('GetProcessById(@@APID@@)');
+    expect(GUARDA_LANZADOR).toContain('@@AINICIO@@');
+    // El exterior lee la hora de inicio de la app al lanzar; si ya no existe, sale sin pedir el UAC.
+    expect(externo).toContain('GetProcessById(4321)');
+    expect(externo).toContain(".Replace('@@APID@@', '4321')");
+    expect(externo.indexOf('GetProcessById(4321)')).toBeLessThan(externo.indexOf('$i.Verb'));
+    // Por defecto, el PID de este proceso (el de la app).
+    expect(scriptElevar(codificarComando('exit 0'))).toContain(`GetProcessById(${process.pid})`);
+    expect(() => scriptElevar(codificarComando('exit 0'), 0)).toThrow();
+    expect(() => scriptElevar(codificarComando('exit 0'), 1.5)).toThrow();
   });
 
   it.skipIf(!hayPowerShell())('el exterior es PowerShell válido', () => {
@@ -33,8 +47,8 @@ describe('F7: un UAC aceptado tarde no hace nada (el lanzador ya no existe)', ()
         { encoding: 'utf8', windowsHide: true, timeout },
       );
     /** Lo que vale el comando elevado según el exterior: parte de `$i.Arguments`. */
-    const armado = (inner: string, mostrar = true): string => {
-      const externo = scriptElevar(codificarComando(inner));
+    const armado = (inner: string, mostrar = true, pidApp: number = process.pid): string => {
+      const externo = scriptElevar(codificarComando(inner), pidApp);
       const parte = externo.slice(0, externo.indexOf('; $i.Verb')).replace(/; \$/g, '\n$');
       return mostrar ? `${parte}\n[Console]::Out.Write($i.Arguments)` : parte;
     };
@@ -67,6 +81,49 @@ describe('F7: un UAC aceptado tarde no hace nada (el lanzador ya no existe)', ()
           `[Console]::Out.Write(([string]$p.ExitCode) + '|' + $o)`,
       );
       expect(r.stdout).toBe('0|HIZO');
+    });
+
+    it('con el lanzador vivo pero la app ya cerrada (cierre forzado), el comando elevado sale con «huérfano»', async () => {
+      // Una «app» de mentira: otra PowerShell que vive hasta que se la cierra.
+      const app = spawn(
+        'powershell',
+        ['-NoProfile', '-NonInteractive', '-Command', 'Start-Sleep -Seconds 120'],
+        { windowsHide: true, stdio: 'ignore' },
+      );
+      try {
+        expect(app.pid).toBeGreaterThan(0);
+        const pidApp = app.pid!;
+        // Con la app viva el comando elevado corre.
+        const hijo = (cmd: string): string =>
+          `$p = [Diagnostics.Process]::Start([Diagnostics.ProcessStartInfo]@{ FileName = 'powershell.exe'; Arguments = '-NoProfile -NonInteractive -EncodedCommand ' + ${cmd}; UseShellExecute = $false; RedirectStandardOutput = $true; CreateNoWindow = $true })
+` +
+          `$o = $p.StandardOutput.ReadToEnd(); $p.WaitForExit()
+`;
+        const cuerpo = (matar: boolean): string =>
+          `${armado("[Console]::Out.Write('HIZO'); exit 0", false, pidApp)}
+` +
+          `$cmd = $i.Arguments.Substring('-NoProfile -NonInteractive -EncodedCommand '.Length)
+` +
+          (matar
+            ? `Stop-Process -Id ${pidApp} -Force; Start-Sleep -Milliseconds 500
+`
+            : '') +
+          hijo('$cmd') +
+          `[Console]::Out.Write(([string]$p.ExitCode) + '|' + $o)`;
+        const viva = ps(cuerpo(false));
+        expect(viva.stdout).toBe('0|HIZO');
+        // Con la app muerta (el lanzador sigue vivo, que es lo que cambia) no hace nada.
+        const muerta = ps(cuerpo(true));
+        expect(muerta.stdout).toBe(`${SALIDA_COPIA.huerfano}|`);
+      } finally {
+        app.kill();
+      }
+    });
+    it('si la app ya no existe al lanzar, el exterior sale con «huérfano» sin pedir el UAC', () => {
+      const r = ps(`${armado('exit 0', false, 4_000_000)}
+[Console]::Out.Write('NO-DEBE-LLEGAR')`);
+      expect(r.status).toBe(SALIDA_COPIA.huerfano);
+      expect(r.stdout).toBe('');
     });
   });
 });

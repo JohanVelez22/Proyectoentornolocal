@@ -165,25 +165,34 @@ export const codificarComando = (script: string): string =>
  * Guarda que va al principio del comando elevado (F7). Windows no deja cerrar desde un proceso sin
  * elevar la ventana del UAC (consent.exe): si la app deja de esperar (plazo vencido, cancelada o
  * cerrada), esa ventana puede seguir en pantalla y alguien aceptarla más tarde. Para que entonces
- * no haga nada, el comando elevado comprueba, antes de cualquier otra cosa, que el lanzador sin
- * elevar que lo pidió sigue vivo (mismo PID y misma hora de inicio): la app lo corta cuando deja de
- * esperar, y entonces el comando sale con `huerfano` sin tocar nada. No depende del reloj ni del
- * plazo incrustado en cada script. Los marcadores los rellena el lanzador al ejecutarse.
+ * no haga nada, el comando elevado comprueba, antes de cualquier otra cosa, DOS procesos (mismo PID
+ * y misma hora de inicio cada uno): el lanzador sin elevar que lo pidió (la app lo corta cuando
+ * deja de esperar) y la propia app (si se cierra a la fuerza, el lanzador puede quedar vivo
+ * esperando, y sin esta segunda comprobación un UAC aceptado después ejecutaría el comando). Si
+ * alguno ya no es el mismo, sale con `huerfano` sin tocar nada. No depende del reloj ni del plazo
+ * incrustado en cada script. Los marcadores los rellena el lanzador al ejecutarse.
  */
-export const GUARDA_LANZADOR = `try { if ([Diagnostics.Process]::GetProcessById(@@PID@@).StartTime.ToUniversalTime().Ticks -ne @@INICIO@@) { exit ${SALIDA_COPIA.huerfano} } } catch { exit ${SALIDA_COPIA.huerfano} }; `;
+const COMPROBAR = (pid: string, inicio: string): string =>
+  `try { if ([Diagnostics.Process]::GetProcessById(${pid}).StartTime.ToUniversalTime().Ticks -ne ${inicio}) { exit ${SALIDA_COPIA.huerfano} } } catch { exit ${SALIDA_COPIA.huerfano} }; `;
+export const GUARDA_LANZADOR =
+  COMPROBAR('@@PID@@', '@@INICIO@@') + COMPROBAR('@@APID@@', '@@AINICIO@@');
 
 /**
  * PowerShell exterior (sin elevar) que pide el UAC y espera al script elevado. Solo .NET:
  * `Process.Start` con `runas` (sin `Start-Process`, que vive en un módulo). Se toma `Handle`
  * antes de esperar para que `ExitCode` no quede nulo, y se sale con `[int]`. Antepone al comando
- * elevado la guarda del lanzador (`GUARDA_LANZADOR`) con su propio PID y hora de inicio.
+ * elevado la guarda (`GUARDA_LANZADOR`) con el PID y la hora de inicio del propio lanzador y los
+ * de la app (`pidApp`, por defecto el de este proceso); si la app ya no existe al lanzar, sale con
+ * `huerfano` sin pedir el UAC.
  */
-export function scriptElevar(comandoCodificado: string): string {
+export function scriptElevar(comandoCodificado: string, pidApp: number = process.pid): string {
+  if (!Number.isInteger(pidApp) || pidApp <= 0) throw new Error(`PID no válido: ${pidApp}`);
   return [
     "$ErrorActionPreference = 'Stop'",
     "$i = [Diagnostics.ProcessStartInfo]::new([IO.Path]::Combine([Environment]::SystemDirectory, 'WindowsPowerShell', 'v1.0', 'powershell.exe'))",
     '$y = [Diagnostics.Process]::GetCurrentProcess()',
-    `$g = ${literal(GUARDA_LANZADOR)}.Replace('@@PID@@', [string]$y.Id).Replace('@@INICIO@@', [string]$y.StartTime.ToUniversalTime().Ticks)`,
+    `try { $a = [Diagnostics.Process]::GetProcessById(${pidApp}); $ai = $a.StartTime.ToUniversalTime().Ticks } catch { exit ${SALIDA_COPIA.huerfano} }`,
+    `$g = ${literal(GUARDA_LANZADOR)}.Replace('@@PID@@', [string]$y.Id).Replace('@@INICIO@@', [string]$y.StartTime.ToUniversalTime().Ticks).Replace('@@APID@@', '${pidApp}').Replace('@@AINICIO@@', [string]$ai)`,
     `$c = [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${comandoCodificado}'))`,
     "$i.Arguments = '-NoProfile -NonInteractive -EncodedCommand ' + [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($g + $c))",
     "$i.Verb = 'runas'",
