@@ -1,3 +1,4 @@
+import type { ResultadoLecturaAdmin } from '../discos/tipos';
 import type { AccesoPathUsuario, ResultadoEscritura } from './tipos';
 
 /** Lo que se bloquea con una carpeta de datos de prueba (`WOLFCORE_DATOS`). */
@@ -12,6 +13,7 @@ export const BLOQUEOS_AISLADO = [
   'quitarReglasFirewall',
   'restaurarReglasFirewall',
   'instalarVcRedist',
+  'saludDiscosAdmin',
   'limpiarEntradaRustup',
   'firefoxActivar',
 ] as const;
@@ -45,6 +47,15 @@ export function aislarPlataforma<T extends object>(
     quitarReglasFirewall: negado('quitarReglasFirewall'),
     restaurarReglasFirewall: negado('restaurarReglasFirewall'),
     instalarVcRedist: negado('instalarVcRedist'),
+    // Elevaría un UAC real: con datos de prueba nunca se pide.
+    saludDiscosAdmin: async (): Promise<ResultadoLecturaAdmin> => {
+      avisar('saludDiscosAdmin');
+      return {
+        ok: false,
+        motivo: 'denegado',
+        detalle: 'carpeta de datos de prueba (WOLFCORE_DATOS)',
+      };
+    },
     // Sin perfiles de Firefox a la vista, `ConfianzaCa.firefoxActivar` no toca ningún `user.js`
     // real (son del usuario, no de la carpeta de datos de prueba).
     perfilesFirefox: async (): Promise<[]> => {

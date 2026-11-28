@@ -8,6 +8,7 @@ import type { PerfilRed, ReglasEntrada } from './firewallWin';
 import type { Readable } from 'node:stream';
 import type { LanzadorOculto } from './lanzarOculto';
 import type { InfoEquipo } from '../equipo/tipos';
+import type { EventoDisco, LecturaDiscos, ResultadoLecturaAdmin } from '../discos/tipos';
 import type {
   AdaptadorRed,
   CarpetaCompartida,
@@ -375,6 +376,20 @@ export interface CapacidadesPlataforma {
    * va como `null` (la lectura entera fallida, un equipo desconocido).
    */
   infoEquipo(): Promise<InfoEquipo>;
+  /**
+   * Salud de los discos (D57): estado, tipo, bus, tamaño y modelo de cada disco físico, sus
+   * contadores de fiabilidad y la predicción de fallo SI se leen sin administrador, y las letras
+   * de unidad. Solo consulta, sin números de serie ni identificadores únicos. `null` si no se pudo
+   * leer nada (la lectura entera falló o este sistema aún no la tiene).
+   */
+  saludDiscos(): Promise<LecturaDiscos | null>;
+  /**
+   * La misma lectura con permisos de administrador (UAC), SOLO por la acción de la persona: nunca
+   * en segundo plano. Solo LEE; devuelve el resultado por un archivo temporal propio.
+   */
+  saludDiscosAdmin(): Promise<ResultadoLecturaAdmin>;
+  /** Eventos del disco de los últimos 30 días (registro System, solo lectura); `null` si falla. */
+  eventosDisco(): Promise<EventoDisco[] | null>;
   /**
    * Atributos de solo lectura y oculto de un archivo o carpeta (D55, «Info de archivo»). Solo
    * consulta; `null` si no se pudieron leer.

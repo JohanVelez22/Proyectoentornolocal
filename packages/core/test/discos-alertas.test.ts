@@ -3,6 +3,7 @@ import {
   decidirAlertas,
   estadoSaludVacio,
   INTERVALO_MIN_AVISO_MS,
+  VENTANA_REFERENCIA_CORREGIDOS_MS,
   leerEstadoGuardado,
 } from '../src/discos/alertas';
 import type { DiscoSalud, Veredicto } from '../src/discos/tipos';
@@ -107,6 +108,30 @@ describe('decidirAlertas', () => {
     expect(b.estado.discos['d0']?.corregidos).toBe(7);
   });
 
+  it('la referencia de errores corregidos se renueva solo pasada la ventana, o si baja', () => {
+    const c = (n: number) => ({
+      temperaturaC: null,
+      temperaturaMaxC: null,
+      desgastePct: null,
+      erroresLecturaCorregidos: n,
+      erroresLecturaNoCorregidos: null,
+      erroresEscrituraCorregidos: null,
+      erroresEscrituraNoCorregidos: null,
+      horasEncendido: null,
+    });
+    const a = decidirAlertas([disco('bien', { contadores: c(5) })], estadoSaludVacio(), T0);
+    const b = decidirAlertas([disco('bien', { contadores: c(9) })], a.estado, T0 + 60_000);
+    expect(b.estado.discos['d0']?.corregidos).toBe(5);
+    const d = decidirAlertas(
+      [disco('bien', { contadores: c(9) })],
+      b.estado,
+      T0 + VENTANA_REFERENCIA_CORREGIDOS_MS,
+    );
+    expect(d.estado.discos['d0']?.corregidos).toBe(9);
+    const e = decidirAlertas([disco('bien', { contadores: c(2) })], d.estado, T0 + 1);
+    expect(e.estado.discos['d0']?.corregidos).toBe(2);
+  });
+
   it('conserva los discos que no se vieron esta vez', () => {
     const a = decidirAlertas([disco('bien')], estadoSaludVacio(), T0);
     const b = decidirAlertas([], a.estado, T0 + 1);
@@ -129,7 +154,13 @@ describe('leerEstadoGuardado', () => {
       },
     });
     expect(r.discos).toEqual({
-      a: { veredicto: 'critico', corregidos: null, avisoNivel: 0, avisoEn: null },
+      a: {
+        veredicto: 'critico',
+        corregidos: null,
+        corregidosEn: null,
+        avisoNivel: 0,
+        avisoEn: null,
+      },
     });
   });
 });

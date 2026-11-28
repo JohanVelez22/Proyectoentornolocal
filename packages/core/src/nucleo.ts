@@ -108,6 +108,7 @@ import {
 import type { LanzadorSeparado } from './plataforma/terminalWin';
 import { Terminal } from './herramientas/terminal';
 import { DetectorEquipo } from './equipo/detector';
+import { SaludDiscos } from './discos/servicio';
 import {
   clasificarModelo,
   sugerirParaEquipo,
@@ -2000,6 +2001,8 @@ export class Nucleo {
     void nucleo.limpiezaVersiones.limpiarResiduos().catch(() => 0);
     nucleo.iniciarRevisionVencimientos();
     nucleo.iniciarRevisionNovedades(o.retrasoNovedadesMs ?? RETRASO_NOVEDADES_MS);
+    // Salud de los discos (D57): primera revisión diferida y cada 30 minutos, sin UAC.
+    nucleo.saludDiscos.iniciar();
     // Sin bloquear el arranque: un fallo queda en el estado del servicio y en un aviso.
     nucleo.arranqueAutomatico = nucleo
       .iniciarAutomaticos()
@@ -2737,6 +2740,23 @@ export class Nucleo {
   }
 
   private detectorEquipoServ?: DetectorEquipo;
+  private saludDiscosServ?: SaludDiscos;
+
+  /**
+   * Salud de los discos (D57): lectura de solo consulta, veredicto, eventos del disco y alertas
+   * por transición. La lectura con administrador solo ocurre por la acción de la persona.
+   */
+  get saludDiscos(): SaludDiscos {
+    this.saludDiscosServ ??= new SaludDiscos({
+      plataforma: this.plataforma,
+      archivoEstado: path.join(this.rutas.base, 'run', 'salud-discos.json'),
+      carpetaDatos: () => this.rutas.base,
+      carpetasProyectos: async () => (await this.sitios.listar()).map((s) => s.carpeta),
+      publicar: (a) => this.avisos.publicar(a),
+      avisosActivados: async () => (await this.config.leer()).avisos.tipos['salud-disco'],
+    });
+    return this.saludDiscosServ;
+  }
 
   /** Datos del equipo (D55): una sola lectura, con caché y plazo; lo que falle queda «desconocido». */
   infoEquipo(forzar = false): Promise<InfoEquipo> {
@@ -5373,6 +5393,7 @@ export class Nucleo {
     this.temporizadorNovedades = null;
     this.bajaFuentesAvisos?.();
     this.bajaFuentesAvisos = null;
+    await this.saludDiscosServ?.cerrar().catch(() => undefined);
     await this.avisos.guardado();
     // Primero lo que solo observa (vigilancia, métricas y registros), luego el MCP y al final
     // túneles, procesos y servicios.

@@ -1,3 +1,4 @@
+import type { EventoDisco, LecturaDiscos, ResultadoLecturaAdmin } from '../discos/tipos';
 import { equipoDesconocido, type InfoEquipo } from '../equipo/tipos';
 import { ErrorWolf } from '../errores';
 import {
@@ -552,6 +553,31 @@ export class PlataformaFalsa implements PlataformaCompleta {
 
   async infoEquipo(): Promise<InfoEquipo> {
     return structuredClone(this.equipo);
+  }
+
+  /** Lo que devuelve `saludDiscos` (D57); `null`: la lectura falló. */
+  discos: LecturaDiscos | null = null;
+  /** Lo que devuelve `saludDiscosAdmin`; por omisión, lo mismo que `discos`. No abre ningún UAC. */
+  discosAdmin: ResultadoLecturaAdmin | null = null;
+  /** Veces que se pidió la lectura elevada (las pruebas comprueban que nunca fue automática). */
+  lecturasAdminDiscos = 0;
+  /** Lo que devuelve `eventosDisco`. */
+  eventosDeDisco: EventoDisco[] | null = [];
+
+  async saludDiscos(): Promise<LecturaDiscos | null> {
+    return this.discos ? structuredClone(this.discos) : null;
+  }
+
+  async saludDiscosAdmin(): Promise<ResultadoLecturaAdmin> {
+    this.lecturasAdminDiscos++;
+    if (this.discosAdmin) return structuredClone(this.discosAdmin);
+    return this.discos
+      ? { ok: true, lectura: structuredClone(this.discos) }
+      : { ok: false, motivo: 'error' };
+  }
+
+  async eventosDisco(): Promise<EventoDisco[] | null> {
+    return this.eventosDeDisco ? structuredClone(this.eventosDeDisco) : null;
   }
 
   async aPapelera(ruta: string): Promise<boolean> {

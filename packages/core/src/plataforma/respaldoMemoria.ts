@@ -24,6 +24,9 @@ export const RESPALDO_MEMORIA_NEUTRO: Pick<
   | 'esAdministrador'
   | 'unidadesLocales'
   | 'infoEquipo'
+  | 'saludDiscos'
+  | 'saludDiscosAdmin'
+  | 'eventosDisco'
   | 'aPapelera'
   | 'registrarPapelera'
   | 'carpetasCompartidas'
@@ -53,6 +56,14 @@ export const RESPALDO_MEMORIA_NEUTRO: Pick<
   esAdministrador: async () => false,
   unidadesLocales: async () => [],
   infoEquipo: async () => equipoDesconocido(),
+  // Salud de los discos (D57): fuera de Windows aún no hay lectura (Etapa E).
+  saludDiscos: async () => null,
+  saludDiscosAdmin: async () => ({
+    ok: false,
+    motivo: 'error',
+    detalle: 'La salud de los discos no está disponible en este sistema',
+  }),
+  eventosDisco: async () => null,
   aPapelera: async () => false,
   registrarPapelera: () => undefined,
   // «Mi red» (D53): fuera de Windows aún no hay lectura de la red ni se cambia nada.

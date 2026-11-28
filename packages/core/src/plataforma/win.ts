@@ -102,6 +102,15 @@ import {
   type GpuNvidia,
 } from './equipoWin';
 import { equipoDesconocido, type InfoEquipo } from '../equipo/tipos';
+import { interpretarEventosDisco } from '../discos/eventos';
+import type { EventoDisco, LecturaDiscos, ResultadoLecturaAdmin } from '../discos/tipos';
+import {
+  cuerpoSaludDiscosAdmin,
+  interpretarSaludDiscos,
+  SALIDA_SALUD_ADMIN,
+  SCRIPT_EVENTOS_DISCO,
+  SCRIPT_SALUD_DISCOS,
+} from './saludDiscosWin';
 import {
   type AnclasLimpieza,
   interpretarAnclas,
@@ -1142,6 +1151,79 @@ export class PlataformaWindows implements PlataformaCompleta {
         : equipoDesconocido();
     } catch {
       return equipoDesconocido();
+    }
+  }
+
+  /** Salud de los discos (D57): solo consulta, sin administrador; `null` si no se pudo leer. */
+  async saludDiscos(): Promise<LecturaDiscos | null> {
+    try {
+      const r = await this.ejecutar(
+        rutaPowerShell(this.entorno),
+        codificarPowerShell(SCRIPT_SALUD_DISCOS),
+        { timeoutMs: 40_000 },
+      );
+      return r.codigo === 0 ? interpretarSaludDiscos(r.stdout) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Eventos del disco de los últimos 30 días (registro System), con plazo; `null` si falla. */
+  async eventosDisco(): Promise<EventoDisco[] | null> {
+    try {
+      const r = await this.ejecutar(
+        rutaPowerShell(this.entorno),
+        codificarPowerShell(SCRIPT_EVENTOS_DISCO),
+        { timeoutMs: 40_000 },
+      );
+      return r.codigo === 0 ? interpretarEventosDisco(r.stdout) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * La lectura de la salud de los discos con permisos de administrador (UAC). SOLO la llama quien
+   * ya tiene el clic de la persona (nunca el sondeo en segundo plano). Mismo patrón que los
+   * cambios del cortafuegos: cola de elevaciones, el cuerpo va en un temporal con su SHA-256
+   * comprobado dentro del comando elevado, ruta absoluta de PowerShell y plazo. El cuerpo SOLO
+   * LEE y deja el JSON en un segundo temporal propio, creado antes (y vacío) por la aplicación.
+   */
+  async saludDiscosAdmin(): Promise<ResultadoLecturaAdmin> {
+    const plazo = 90_000;
+    const id = `${process.pid}-${++this.contador}-${randomUUID().slice(0, 8)}`;
+    const cuerpoRuta = path.join(this.carpetaTemporal, `${PREFIJO_TEMPORAL_HOSTS}discos-${id}.txt`);
+    const salidaRuta = path.join(
+      this.carpetaTemporal,
+      `${PREFIJO_TEMPORAL_HOSTS}discos-${id}.json`,
+    );
+    try {
+      // Vacío y exclusivo (`wx`): si ya existiera, no se escribe nada.
+      await writeFile(salidaRuta, '', { flag: 'wx' });
+      const datos = Buffer.from(cuerpoSaludDiscosAdmin(salidaRuta), 'utf8');
+      await this.escribirTemporal(cuerpoRuta, datos);
+      const r = await this.enCola(() =>
+        this.elevarAhora(scriptCargador(cuerpoRuta, sha256Hex(datos)), plazo),
+      );
+      if (!r.ok) {
+        const codigo = /^código (\d+)$/.exec(r.detalle ?? '')?.[1];
+        if (codigo === String(SALIDA_SALUD_ADMIN.salidaInsegura)) {
+          return { ok: false, motivo: 'error', detalle: 'el archivo de salida no es de fiar' };
+        }
+        return { ok: false, motivo: r.motivo, ...(r.detalle ? { detalle: r.detalle } : {}) };
+      }
+      const info = await stat(salidaRuta);
+      if (info.size > 2_000_000)
+        return { ok: false, motivo: 'error', detalle: 'salida demasiado grande' };
+      const lectura = interpretarSaludDiscos(await readFile(salidaRuta, 'utf8'));
+      return lectura
+        ? { ok: true, lectura }
+        : { ok: false, motivo: 'error', detalle: 'la lectura no se pudo interpretar' };
+    } catch (e) {
+      return { ok: false, motivo: 'error', detalle: e instanceof Error ? e.message : String(e) };
+    } finally {
+      await rm(cuerpoRuta, { force: true }).catch(() => undefined);
+      await rm(salidaRuta, { force: true }).catch(() => undefined);
     }
   }
 

@@ -4,12 +4,20 @@ import type { DiscoSalud, Veredicto } from './tipos';
 /** Mínimo entre dos avisos del mismo disco, salvo que empeore a un nivel más grave que el último avisado. */
 export const INTERVALO_MIN_AVISO_MS = 6 * 60 * 60 * 1000;
 
+/**
+ * Los errores corregidos «suben» respecto de la lectura guardada hace como mucho esta ventana: la
+ * referencia se renueva una vez al día, así un aumento no se «consume» con la primera lectura.
+ */
+export const VENTANA_REFERENCIA_CORREGIDOS_MS = 24 * 60 * 60 * 1000;
+
 /** Lo que se recuerda de cada disco entre revisiones (clave sin número de serie). */
 export interface EstadoDiscoGuardado {
   /** Último veredicto conocido (nunca `no_disponible`: una lectura sin datos no lo cambia). */
   veredicto: Exclude<Veredicto, 'no_disponible'>;
   /** Último contador de errores de lectura corregidos visto; null si nunca se leyó. */
   corregidos: number | null;
+  /** Cuándo se guardó esa referencia (ms desde 1970). */
+  corregidosEn: number | null;
   /** Gravedad del último aviso publicado (0 = ninguno) y cuándo (ms desde 1970). */
   avisoNivel: number;
   avisoEn: number | null;
@@ -50,9 +58,22 @@ export function decidirAlertas(
   const avisos: AvisoDiscoPorPublicar[] = [];
   for (const d of actuales) {
     const antes = previo.discos[d.clave];
-    const corregidos = d.contadores?.erroresLecturaCorregidos ?? antes?.corregidos ?? null;
+    // Referencia de errores corregidos: se renueva si no había, si bajó o si pasó la ventana.
+    const actual = d.contadores?.erroresLecturaCorregidos ?? null;
+    let corregidos = antes?.corregidos ?? null;
+    let corregidosEn = antes?.corregidosEn ?? null;
+    if (
+      actual !== null &&
+      (corregidos === null ||
+        actual < corregidos ||
+        corregidosEn === null ||
+        ahora - corregidosEn >= VENTANA_REFERENCIA_CORREGIDOS_MS)
+    ) {
+      corregidos = actual;
+      corregidosEn = ahora;
+    }
     if (d.veredicto === 'no_disponible') {
-      if (antes) discos[d.clave] = { ...antes, corregidos };
+      if (antes) discos[d.clave] = { ...antes, corregidos, corregidosEn };
       continue;
     }
     const nivel = GRAVEDAD_VEREDICTO[d.veredicto];
@@ -73,7 +94,7 @@ export function decidirAlertas(
         avisoEn = ahora;
       }
     }
-    discos[d.clave] = { veredicto: d.veredicto, corregidos, avisoNivel, avisoEn };
+    discos[d.clave] = { veredicto: d.veredicto, corregidos, corregidosEn, avisoNivel, avisoEn };
   }
   // Los discos que no se vieron esta vez (desconectados) se conservan: si vuelven, sigue su historia.
   for (const [k, v] of Object.entries(previo.discos)) if (!(k in discos)) discos[k] = v;
@@ -101,6 +122,7 @@ export function leerEstadoGuardado(crudo: unknown): EstadoSaludGuardado {
     res.discos[k] = {
       veredicto: o['veredicto'],
       corregidos: esNumero(o['corregidos']) && o['corregidos'] >= 0 ? o['corregidos'] : null,
+      corregidosEn: esNumero(o['corregidosEn']) ? o['corregidosEn'] : null,
       avisoNivel: o['avisoNivel'] === 1 || o['avisoNivel'] === 2 ? o['avisoNivel'] : 0,
       avisoEn: esNumero(o['avisoEn']) ? o['avisoEn'] : null,
     };

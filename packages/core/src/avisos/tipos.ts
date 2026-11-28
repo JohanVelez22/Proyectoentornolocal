@@ -12,5 +12,6 @@ export const TIPOS_AVISO = [
   'doctor',
   'contenedor-detenido',
   'version-nueva',
+  'salud-disco',
 ] as const;
 export type TipoAviso = (typeof TIPOS_AVISO)[number];

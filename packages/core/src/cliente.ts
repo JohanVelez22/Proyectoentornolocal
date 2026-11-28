@@ -28,3 +28,5 @@ export {
 export { esNombreSecreto, esSoloVariables } from './clientehttp/sensibles';
 export { nombreDeRuta, segmentosDeRuta } from './rutas/nombreDeRuta';
 export { PLAN_VELOCIDAD } from './miRed/velocidad';
+export { UMBRALES_DISCO } from './discos/veredicto';
+export { DIAS_EVENTOS_DISCO, MAX_EVENTOS_DISCO } from './discos/eventos';

@@ -212,6 +212,11 @@ export const PARAMETROS_ERROR = {
   'memoria.modo_invalido': [],
   'memoria.plan_caducado': [],
   'memoria.no_disponible': [],
+  // salud de los discos (D57)
+  'discos.sin_lectura': [],
+  'discos.sin_eventos': [],
+  'discos.admin_cancelado': [],
+  'discos.admin_fallo': [],
   // limpieza de disco (D37)
   'disco.sin_confirmar': [],
   'disco.categoria_invalida': [],

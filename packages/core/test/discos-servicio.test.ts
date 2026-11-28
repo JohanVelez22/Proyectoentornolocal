@@ -1,0 +1,380 @@
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { EntradaAviso } from '../src/avisos/avisos';
+import { aislarPlataforma } from '../src/plataforma/aislada';
+import { SaludDiscos, unidadDeRuta, claveDisco } from '../src/discos/servicio';
+import type { DiscoLeido, EventoDisco, LecturaDiscos } from '../src/discos/tipos';
+import { PlataformaFalsa } from '../src/plataforma/falsa';
+import { codificarComando } from '../src/plataforma/hostsAdmin';
+import { PlataformaWindows } from '../src/plataforma/win';
+import { cuerpoSaludDiscosAdmin, SCRIPT_SALUD_DISCOS } from '../src/plataforma/saludDiscosWin';
+import { completarPlataforma } from '../src/plataforma/index';
+
+const contadoresNulos = {
+  temperaturaC: null,
+  temperaturaMaxC: null,
+  desgastePct: null,
+  erroresLecturaCorregidos: null,
+  erroresLecturaNoCorregidos: null,
+  erroresEscrituraCorregidos: null,
+  erroresEscrituraNoCorregidos: null,
+  horasEncendido: null,
+};
+
+const nvme = (extra: Partial<DiscoLeido> = {}): DiscoLeido => ({
+  numero: 0,
+  modelo: 'Disco NVMe de ejemplo',
+  medio: 'ssd',
+  bus: 'nvme',
+  tamanoBytes: 1_000_204_886_016,
+  salud: 'healthy',
+  operacional: ['OK'],
+  contadores: null,
+  motivoSinContadores: 'admin',
+  prediccionFallo: null,
+  unidades: ['C:'],
+  ...extra,
+});
+const usb = (): DiscoLeido => ({
+  numero: 2,
+  modelo: 'Memoria USB de ejemplo',
+  medio: null,
+  bus: 'usb',
+  tamanoBytes: 32_010_928_128,
+  salud: 'healthy',
+  operacional: ['OK'],
+  contadores: null,
+  motivoSinContadores: 'bus',
+  prediccionFallo: null,
+  unidades: ['E:'],
+});
+
+let carpeta: string;
+beforeEach(async () => {
+  carpeta = await mkdtemp(path.join(tmpdir(), 'pel-discos-'));
+});
+const creados: SaludDiscos[] = [];
+afterEach(async () => {
+  await Promise.all(creados.splice(0).map((x) => x.guardado()));
+  await rm(carpeta, { recursive: true, force: true });
+});
+
+function montar(lectura: LecturaDiscos | null, activados = true) {
+  const plataforma = new PlataformaFalsa();
+  plataforma.discos = lectura;
+  const avisos: EntradaAviso[] = [];
+  let ahora = 1_800_000_000_000;
+  const s = new SaludDiscos({
+    plataforma,
+    archivoEstado: path.join(carpeta, 'run', 'salud-discos.json'),
+    carpetaDatos: () => 'C:\\Users\\prueba\\AppData\\Local\\WolfCoreDev',
+    carpetasProyectos: async () => ['D:\\Proyectos\\web', 'C:\\Sitios\\otro'],
+    publicar: (a) => avisos.push(a),
+    avisosActivados: async () => activados,
+    ahora: () => ahora,
+  });
+  creados.push(s);
+  return { s, plataforma, avisos, avanzar: (ms: number) => (ahora += ms) };
+}
+
+describe('SaludDiscos', () => {
+  it('sin discos: resultado vacío, no un error', async () => {
+    const { s } = montar({ discos: [], prediccion: 'ok' });
+    const r = await s.leer();
+    expect(r.discos).toEqual([]);
+    expect(r.conAdmin).toBe(false);
+  });
+
+  it('sin lectura: error del catálogo', async () => {
+    const { s } = montar(null);
+    await expect(s.leer()).rejects.toMatchObject({ codigo: 'discos.sin_lectura' });
+  });
+
+  it('USB sin contadores: «bien» por su estado, sin inventar contadores', async () => {
+    const { s, avisos } = montar({ discos: [usb()], prediccion: 'no_disponible' });
+    const r = await s.leer();
+    expect(r.discos[0]).toMatchObject({
+      veredicto: 'bien',
+      contadores: null,
+      motivoSinContadores: 'bus',
+    });
+    expect(avisos).toEqual([]);
+  });
+
+  it('destaca el disco con los datos de WolfCore y el de los proyectos', async () => {
+    const { s } = montar({
+      discos: [nvme(), nvme({ numero: 1, modelo: 'Otro', unidades: ['D:'] }), usb()],
+      prediccion: 'ok',
+    });
+    const r = await s.leer();
+    expect(r.discos.map((d) => [d.contieneDatos, d.contieneProyectos])).toEqual([
+      [true, true],
+      [false, true],
+      [false, false],
+    ]);
+  });
+
+  it('NVMe con desgaste alto: atención y UN aviso con la acción hacia los respaldos', async () => {
+    const lectura: LecturaDiscos = {
+      discos: [nvme({ contadores: { ...contadoresNulos, desgastePct: 91, temperaturaC: 45 } })],
+      prediccion: 'ok',
+    };
+    const { s, avisos, avanzar } = montar(lectura);
+    const r = await s.leer();
+    expect(r.discos[0]?.veredicto).toBe('atencion');
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0]).toMatchObject({
+      tipo: 'salud-disco',
+      nivel: 'aviso',
+      codigo: 'avisos.disco_salud',
+      accion: { ruta: 'basesDeDatos' },
+      datos: { estado: 'atencion', modelo: 'Disco NVMe de ejemplo' },
+    });
+    // La revisión siguiente no repite el aviso.
+    avanzar(30 * 60_000);
+    await s.leer();
+    expect(avisos).toHaveLength(1);
+    await s.guardado();
+  });
+
+  it('un evento crítico del disco se lista con su disco y gravedad', async () => {
+    const { s, plataforma } = montar({ discos: [], prediccion: 'ok' });
+    const ev: EventoDisco = {
+      fecha: '2026-11-20T08:30:00.000Z',
+      id: 7,
+      proveedor: 'disk',
+      codigo: 'disco_7',
+      gravedad: 'critico',
+      disco: { tipo: 'disco', valor: '1' },
+      detalle: 'bad block',
+    };
+    plataforma.eventosDeDisco = [ev];
+    expect(await s.eventos()).toEqual([ev]);
+    plataforma.eventosDeDisco = null;
+    await expect(s.eventos()).rejects.toMatchObject({ codigo: 'discos.sin_eventos' });
+  });
+
+  it('con los avisos desactivados no avisa y la revisión ni siquiera lee', async () => {
+    const lectura: LecturaDiscos = {
+      discos: [nvme({ salud: 'unhealthy' })],
+      prediccion: 'ok',
+    };
+    const { s, avisos, plataforma } = montar(lectura, false);
+    const leer = vi.spyOn(plataforma, 'saludDiscos');
+    await s.revisar();
+    expect(leer).not.toHaveBeenCalled();
+    await s.leer();
+    expect(avisos).toEqual([]);
+  });
+
+  it('la revisión en segundo plano nunca pide administrador', async () => {
+    const { s, plataforma } = montar({ discos: [nvme()], prediccion: 'ok' });
+    await s.revisar();
+    await s.revisar();
+    expect(plataforma.lecturasAdminDiscos).toBe(0);
+  });
+
+  it('la lectura con administrador solo ocurre cuando se pide y sale marcada', async () => {
+    const { s, plataforma } = montar({ discos: [nvme()], prediccion: 'ok' });
+    const r = await s.leer({ admin: true });
+    expect(r.conAdmin).toBe(true);
+    expect(plataforma.lecturasAdminDiscos).toBe(1);
+  });
+
+  it('un UAC cancelado o fallido es un error del catálogo', async () => {
+    const { s, plataforma } = montar({ discos: [nvme()], prediccion: 'ok' });
+    plataforma.discosAdmin = { ok: false, motivo: 'cancelado' };
+    await expect(s.leer({ admin: true })).rejects.toMatchObject({
+      codigo: 'discos.admin_cancelado',
+    });
+    plataforma.discosAdmin = { ok: false, motivo: 'tiempo' };
+    await expect(s.leer({ admin: true })).rejects.toMatchObject({ codigo: 'discos.admin_fallo' });
+  });
+
+  it('guarda el estado sin series y vuelve a leerlo en otra instancia', async () => {
+    const lectura: LecturaDiscos = {
+      discos: [nvme({ contadores: { ...contadoresNulos, desgastePct: 85 } })],
+      prediccion: 'ok',
+    };
+    const a = montar(lectura);
+    await a.s.leer();
+    await a.s.guardado();
+    const texto = await readFile(path.join(carpeta, 'run', 'salud-discos.json'), 'utf8');
+    expect(texto).toContain('atencion');
+    expect(texto).not.toMatch(/serial|unique/i);
+    // Otra instancia con el mismo archivo no repite el aviso ya dado.
+    const b = montar(lectura);
+    await b.s.leer();
+    expect(b.avisos).toHaveLength(0);
+    const c = new SaludDiscos({
+      plataforma: a.plataforma,
+      archivoEstado: path.join(carpeta, 'run', 'salud-discos.json'),
+      carpetaDatos: () => 'C:\\x',
+      carpetasProyectos: async () => [],
+      publicar: () => {
+        throw new Error('no debía avisar');
+      },
+      avisosActivados: async () => true,
+    });
+    await c.leer();
+  });
+
+  it('iniciar difiere la primera revisión y cerrar la cancela', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+    try {
+      const { s, plataforma } = montar({ discos: [nvme()], prediccion: 'ok' });
+      const leer = vi.spyOn(plataforma, 'saludDiscos');
+      s.iniciar(1000, 5000);
+      expect(leer).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1001);
+      expect(leer).toHaveBeenCalledTimes(1);
+      await s.guardado();
+      await new Promise((r) => setImmediate(r));
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(leer).toHaveBeenCalledTimes(2);
+      await s.cerrar();
+      await vi.advanceTimersByTimeAsync(20_000);
+      expect(leer).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('ayudas', () => {
+  it('unidadDeRuta y claveDisco', () => {
+    expect(unidadDeRuta('d:\\x')).toBe('D:');
+    expect(unidadDeRuta('C:')).toBe('C:');
+    expect(unidadDeRuta('/home/x')).toBeNull();
+    expect(claveDisco({ modelo: null, tamanoBytes: null, numero: 3 })).toBe('disco|0|3');
+  });
+});
+
+describe('plataforma', () => {
+  it('con una carpeta de datos de prueba la lectura elevada se niega y no llega a la plataforma', async () => {
+    const real = new PlataformaFalsa();
+    const aislada = aislarPlataforma(real);
+    const r = await aislada.saludDiscosAdmin();
+    expect(r).toMatchObject({ ok: false, motivo: 'denegado' });
+    expect(real.lecturasAdminDiscos).toBe(0);
+  });
+
+  it('fuera de Windows se usa el respaldo neutro: sin lectura y sin PowerShell', async () => {
+    const respaldo = new PlataformaWindows();
+    const p = completarPlataforma({} as never, respaldo as never, 'linux');
+    expect(await p.saludDiscos()).toBeNull();
+    expect(await p.eventosDisco()).toBeNull();
+    expect(await p.saludDiscosAdmin()).toMatchObject({ ok: false, motivo: 'error' });
+  });
+});
+
+describe('PlataformaWindows (ejecutor falso)', () => {
+  const entorno = { SystemRoot: 'C:\\Windows' };
+  const JSON_OK = JSON.stringify({
+    p: 'ok',
+    discos: [
+      {
+        n: '0',
+        modelo: 'Disco de ejemplo',
+        medio: 'SSD',
+        bus: 'NVMe',
+        tam: 5e11,
+        salud: 'Healthy',
+        oper: ['OK'],
+        cs: 'admin',
+        c: null,
+        pf: null,
+        letras: ['C'],
+      },
+    ],
+  });
+
+  it('lee por la ruta absoluta de System32 con -EncodedCommand', async () => {
+    const ej = vi.fn(async () => ({ codigo: 0, stdout: JSON_OK, stderr: '' }));
+    const p = new PlataformaWindows(ej, undefined, { entorno, carpetaTemporal: carpeta });
+    const r = await p.saludDiscos();
+    expect(r?.discos[0]?.motivoSinContadores).toBe('admin');
+    const [cmd, args] = ej.mock.calls[0] as unknown as [string, string[]];
+    expect(cmd).toBe('C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe');
+    expect(args).toContain('-EncodedCommand');
+    expect(Buffer.from(args[args.length - 1]!, 'base64').toString('utf16le')).toBe(
+      SCRIPT_SALUD_DISCOS,
+    );
+  });
+
+  it('un fallo del ejecutor o una salida rara: null, sin lanzar', async () => {
+    const falla = new PlataformaWindows(
+      async () => {
+        throw new Error('x');
+      },
+      undefined,
+      { entorno, carpetaTemporal: carpeta },
+    );
+    expect(await falla.saludDiscos()).toBeNull();
+    expect(await falla.eventosDisco()).toBeNull();
+    const rara = new PlataformaWindows(
+      async () => ({ codigo: 0, stdout: 'basura', stderr: '' }),
+      undefined,
+      {
+        entorno,
+        carpetaTemporal: carpeta,
+      },
+    );
+    expect(await rara.saludDiscos()).toBeNull();
+    expect(await rara.eventosDisco()).toEqual([]);
+  });
+
+  it('elevada: cola + UAC por PowerShell de System32, lee el JSON del temporal y limpia todo', async () => {
+    const llamadas: string[][] = [];
+    const ej = vi.fn(async (cmd: string, args: string[]) => {
+      llamadas.push([cmd, ...args]);
+      // Hace de «script elevado»: deja el JSON en el temporal de salida que la app creó vacío.
+      const nombres = await readdir(carpeta);
+      const salida = nombres.find((n) => n.endsWith('.json'))!;
+      expect(await readFile(path.join(carpeta, salida), 'utf8')).toBe('');
+      await writeFile(path.join(carpeta, salida), '\uFEFF' + JSON_OK, 'utf8');
+      return { codigo: 0, stdout: '', stderr: '' };
+    });
+    const p = new PlataformaWindows(ej, undefined, { entorno, carpetaTemporal: carpeta });
+    const r = await p.saludDiscosAdmin();
+    expect(r.ok).toBe(true);
+    expect(llamadas).toHaveLength(1);
+    expect(llamadas[0]![0]).toBe('C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe');
+    expect(llamadas[0]!.join(' ')).toContain('runas');
+    expect(await readdir(carpeta)).toEqual([]);
+  });
+
+  it('elevada: el cuerpo que se verifica es de solo lectura y escribe únicamente su salida', async () => {
+    let cuerpo = '';
+    const ej = vi.fn(async () => {
+      const t = (await readdir(carpeta)).find((n) => n.endsWith('.txt'))!;
+      cuerpo = await readFile(path.join(carpeta, t), 'utf8');
+      return { codigo: 10, stdout: '', stderr: '' };
+    });
+    const p = new PlataformaWindows(ej, undefined, { entorno, carpetaTemporal: carpeta });
+    const r = await p.saludDiscosAdmin();
+    expect(r).toMatchObject({ ok: false, motivo: 'cancelado' });
+    expect(cuerpo).toContain('Get-PhysicalDisk');
+    expect(cuerpo).not.toMatch(
+      /Set-|Remove-|New-Item|Clear-|Format-Volume|Repair-|Start-Process|Invoke-Expression|\biex\b/i,
+    );
+    expect(cuerpo.match(/WriteAllText|WriteAllBytes|SetAttributes|Delete\(/g)).toEqual([
+      'WriteAllText',
+    ]);
+    expect(codificarComando('x')).toBeTypeOf('string');
+    expect(cuerpoSaludDiscosAdmin("C:\\a'b.json")).toContain("'C:\\a''b.json'");
+    expect(await readdir(carpeta)).toEqual([]);
+  });
+
+  it('elevada: una salida que no se interpreta es un error, no un valor inventado', async () => {
+    const ej = vi.fn(async () => {
+      const salida = (await readdir(carpeta)).find((n) => n.endsWith('.json'))!;
+      await writeFile(path.join(carpeta, salida), 'no es json', 'utf8');
+      return { codigo: 0, stdout: '', stderr: '' };
+    });
+    const p = new PlataformaWindows(ej, undefined, { entorno, carpetaTemporal: carpeta });
+    expect(await p.saludDiscosAdmin()).toMatchObject({ ok: false, motivo: 'error' });
+  });
+});
