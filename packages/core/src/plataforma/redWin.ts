@@ -269,8 +269,10 @@ export function argumentosPing(ip: string, o: OpcionesPing): string[] {
  */
 export function interpretarPing(salida: string, ip: string, enviados: number): ResultadoPing {
   const tiempos: number[] = [];
+  // La IP como token (en fr, ja, ko… no va pegada a «:»): sin dígitos ni puntos a los lados.
+  const conIp = new RegExp(`(?<![\\d.])${ip.replace(/\./g, '\\.')}(?![\\d.])`);
   for (const linea of salida.split(/\r?\n/)) {
-    if (!/\bTTL\s*=/i.test(linea) || !linea.includes(`${ip}:`)) continue;
+    if (!/\bTTL\s*=/i.test(linea) || !conIp.test(linea)) continue;
     const t = /([=<])\s*(\d+)\s*\p{L}+\s+TTL\s*=/iu.exec(linea);
     tiempos.push(t ? (t[1] === '<' ? 0 : Number(t[2])) : 0);
   }

@@ -218,6 +218,38 @@ describe('ping (D53)', () => {
     expect(interpretarPing(ru, '10.0.0.2', 1).tiemposMs).toEqual([4]);
   });
 
+  it('cuenta las respuestas en francés, chino, japonés, coreano y turco (la IP va como token)', () => {
+    const casos: [string, string][] = [
+      ['fr', 'Réponse de 192.168.1.5 : octets=32 temps<1ms TTL=128'],
+      ['zh', '来自 192.168.1.5 的回复: 字节=32 时间<1ms TTL=128'],
+      ['ja', '192.168.1.5 からの応答: バイト数 =32 時間 <1ms TTL=128'],
+      ['ko', '192.168.1.5의 응답: 바이트=32 시간<1ms TTL=128'],
+      ['tr', '192.168.1.5 yanıtı: bayt=32 süre<1ms TTL=128'],
+    ];
+    for (const [idioma, linea] of casos) {
+      expect(interpretarPing(linea, '192.168.1.5', 1), idioma).toMatchObject({
+        recibidos: 1,
+        tiemposMs: [0],
+      });
+    }
+    expect(
+      interpretarPing('Réponse de 192.168.1.5 : octets=32 temps=14ms TTL=128', '192.168.1.5', 1)
+        .tiemposMs,
+    ).toEqual([14]);
+  });
+
+  it('un «host inaccesible» de la puerta de enlace, un plazo agotado o una IP que solo la contiene no cuentan', () => {
+    const salida = [
+      'Respuesta desde 192.168.1.1: Host de destino inaccesible.',
+      'Tiempo de espera agotado para esta solicitud.',
+    ].join('\r\n');
+    expect(interpretarPing(salida, '192.168.1.5', 2).recibidos).toBe(0);
+    expect(interpretarPing(salida, '192.168.1.1', 2).recibidos).toBe(0);
+    const otra =
+      'Reply from 192.168.1.50: bytes=32 time=1ms TTL=64\nReply from 10.192.168.1.5: bytes=32 time=1ms TTL=64';
+    expect(interpretarPing(otra, '192.168.1.5', 2).recibidos).toBe(0);
+  });
+
   it('sin respuestas, o respuestas de otra IP, no cuentan', () => {
     expect(interpretarPing('Request timed out.\nRequest timed out.', '10.0.0.2', 2).recibidos).toBe(
       0,
