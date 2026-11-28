@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { computed, ref, shallowRef } from 'vue';
-import type { MuestraSistema, PuertoEnUso } from '../../shared/api';
+import type { MuestraSistema, PuertoEnUso, UnidadDisco } from '../../shared/api';
 import { mensajeDeError } from '../utilidades/errores';
 import { api } from '../api';
 import {
@@ -12,6 +12,9 @@ import {
 
 /** Cada cuánto se revisan los puertos en uso mientras el panel está abierto y visible. */
 export const INTERVALO_PUERTOS_MS = 30_000;
+
+/** Las unidades se piden con una consulta al sistema: se conservan 5 minutos. */
+export const CADUCIDAD_UNIDADES_MS = 5 * 60_000;
 
 /**
  * Métricas del panel de Inicio. El muestreo corre solo mientras la pantalla está abierta y la
@@ -25,6 +28,13 @@ export const useMetricas = defineStore('metricas', () => {
   /** Por qué no se pudo empezar o pausar el muestreo (se borra al lograrlo). */
   const errorMuestreo = ref<string | null>(null);
   const ultima = computed(() => serie.value[serie.value.length - 1] ?? null);
+
+  /** Unidades de disco y carpeta de datos: caché del almacén, con su caducidad (D54d). */
+  const unidades = shallowRef<UnidadDisco[]>([]);
+  const carpetaDatos = ref<string | null>(null);
+  const unidadesLeidas = ref(false);
+  let unidadesAl = 0;
+  let unidadesEnCurso: Promise<void> | null = null;
 
   let control: ControlMuestreo | null = null;
   let baja: (() => void) | null = null;
@@ -43,6 +53,29 @@ export const useMetricas = defineStore('metricas', () => {
     } catch {
       errorPuertos.value = true;
     }
+  }
+
+  /**
+   * Lee las unidades y la carpeta de datos una sola vez para quien las pida: una consulta en curso
+   * se comparte y una lectura fresca (menos de 5 min) se reutiliza. `forzar` la salta. Cada lectura
+   * por su lado: si una falla, la otra sigue valiendo y no se da el fallo por bueno (se reintenta).
+   */
+  function cargarUnidades(opciones: { forzar?: boolean } = {}): Promise<void> {
+    if (unidadesEnCurso) return unidadesEnCurso;
+    if (!opciones.forzar && unidadesAl && Date.now() - unidadesAl < CADUCIDAD_UNIDADES_MS)
+      return Promise.resolve();
+    unidadesEnCurso = (async () => {
+      try {
+        const [u, c] = await Promise.allSettled([api().discoUso.unidades(), api().carpetaDatos()]);
+        if (u.status === 'fulfilled') unidades.value = u.value;
+        if (c.status === 'fulfilled') carpetaDatos.value = c.value;
+        unidadesAl = u.status === 'fulfilled' && c.status === 'fulfilled' ? Date.now() : 0;
+      } finally {
+        unidadesLeidas.value = true;
+        unidadesEnCurso = null;
+      }
+    })();
+    return unidadesEnCurso;
   }
 
   function programarPuertos(): void {
@@ -112,6 +145,10 @@ export const useMetricas = defineStore('metricas', () => {
     errorPuertos,
     muestreando,
     errorMuestreo,
+    unidades,
+    carpetaDatos,
+    unidadesLeidas,
+    cargarUnidades,
     entrar,
     salir,
     cargarPuertos,

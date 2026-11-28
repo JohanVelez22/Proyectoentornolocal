@@ -4,11 +4,9 @@ import { NButton, NCard, NIcon, NProgress, NTag } from 'naive-ui';
 import MenuDesplegable from './MenuDesplegable.vue';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import type { UnidadDisco } from '../../shared/api';
-import { api } from '../api';
 import { solicitudes } from '../composables/solicitudes';
 import { textos } from '../i18n';
-import { useMetricas } from '../stores/metricas';
+import { CADUCIDAD_UNIDADES_MS, useMetricas } from '../stores/metricas';
 import { entradasDisco, peorNivel, porcentajeDe, type EntradaDisco } from '../utilidades/disco';
 import { formatoBytes } from '../utilidades/metricas';
 import DialogoLimpiarVersiones from './DialogoLimpiarVersiones.vue';
@@ -23,29 +21,13 @@ const t = textos.panel.discos;
 const router = useRouter();
 const metricas = useMetricas();
 
-const unidades = ref<UnidadDisco[]>([]);
-const carpetaDatos = ref<string | null>(null);
-const leido = ref(false);
 const limpiando = ref(false);
-/** Las unidades se piden con una consulta al sistema: se releen pocas veces. */
-const CADA_MS = 5 * 60_000;
+/** La caché y su caducidad viven en el almacén de métricas; aquí solo se pide al montar y cada 5 min. */
 let temporizador: ReturnType<typeof setInterval> | null = null;
 
-async function leer(): Promise<void> {
-  try {
-    // Cada lectura por su lado: si una falla, la otra sigue valiendo y la muestra de rendimiento
-    // completa lo que falte.
-    const [u, c] = await Promise.allSettled([api().discoUso.unidades(), api().carpetaDatos()]);
-    if (u.status === 'fulfilled') unidades.value = u.value;
-    if (c.status === 'fulfilled') carpetaDatos.value = c.value;
-  } finally {
-    leido.value = true;
-  }
-}
-
 onMounted(() => {
-  void leer();
-  temporizador = setInterval(() => void leer(), CADA_MS);
+  void metricas.cargarUnidades();
+  temporizador = setInterval(() => void metricas.cargarUnidades(), CADUCIDAD_UNIDADES_MS);
 });
 onBeforeUnmount(() => {
   if (temporizador) clearInterval(temporizador);
@@ -53,8 +35,8 @@ onBeforeUnmount(() => {
 
 const entradas = computed<EntradaDisco[]>(() =>
   entradasDisco({
-    unidades: unidades.value,
-    carpetaDatos: carpetaDatos.value,
+    unidades: metricas.unidades,
+    carpetaDatos: metricas.carpetaDatos,
     discoDatos: metricas.ultima?.discoDatos ?? null,
   }),
 );
@@ -106,7 +88,7 @@ function elegir(clave: string | number): void {
         />
       </li>
     </ul>
-    <p v-else class="leyendo">{{ leido ? '—' : t.leyendo }}</p>
+    <p v-else class="leyendo">{{ metricas.unidadesLeidas ? '—' : t.leyendo }}</p>
     <MenuDesplegable trigger="click" :options="opciones" @select="elegir">
       <NButton size="small" secondary icon-placement="right" class="liberar">
         {{ t.liberar }}
@@ -115,7 +97,10 @@ function elegir(clave: string | number): void {
         ></template>
       </NButton>
     </MenuDesplegable>
-    <DialogoLimpiarVersiones v-model:show="limpiando" @limpiado="leer" />
+    <DialogoLimpiarVersiones
+      v-model:show="limpiando"
+      @limpiado="metricas.cargarUnidades({ forzar: true })"
+    />
   </NCard>
 </template>
 

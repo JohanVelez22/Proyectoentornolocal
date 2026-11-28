@@ -88,10 +88,14 @@ describe('Inicio: avisos agrupados, disco y memoria (D54a)', () => {
     expect(disco).toContain('DialogoLimpiarVersiones');
     expect(disco).toContain("'limpiezaDisco'");
     expect(disco).toContain("'usoDisco'");
-    expect(disco).toContain('discoUso.unidades');
-    // Una lectura que falla no deja la tarjeta en «—»; el botón lleva el icono a la derecha.
-    expect(disco).toContain('Promise.allSettled');
-    expect(disco).not.toContain('Promise.all(');
+    // La lectura (y su caché) viven en el almacén de métricas desde D54d: ahí cada lectura va por
+    // su lado y una que falla no deja la tarjeta en «—».
+    expect(disco).toContain('cargarUnidades');
+    const almacen = fuente('stores', 'metricas.ts');
+    expect(almacen).toContain('discoUso.unidades');
+    expect(almacen).toContain('Promise.allSettled');
+    expect(almacen).not.toContain('Promise.all(');
+    // El botón lleva el icono a la derecha.
     expect(disco).toContain('icon-placement="right"');
     // Ninguna llamada de borrado en esta tarjeta.
     expect(disco).not.toMatch(/limpiar\(|limpiezaVersiones\.limpiar|eliminar|borrar/);
