@@ -162,9 +162,7 @@ describe('prueba de velocidad (D53)', () => {
       bytesBajada: pedidos,
       bytesSubida: 100_000,
       plazoBajadaMs: 10_000,
-    }).catch((e: unknown) => e);
-    // La subida contra este servidor no importa: la bajada ya quedó medida o cortada.
-    if (r instanceof Error) throw r;
+    });
     expect(r.bytesBajados).toBeGreaterThanOrEqual(pedidos);
     expect(r.bytesBajados).toBeLessThanOrEqual(pedidos + MARGEN_BAJADA + 64 * 1024);
     expect(r.bajadaMbps).toBeGreaterThan(0);
