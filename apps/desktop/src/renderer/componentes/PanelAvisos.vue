@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { Notifications } from '@vicons/ionicons5';
-import { NButton, NDrawer, NDrawerContent, NTag } from 'naive-ui';
+import { Notifications, Warning } from '@vicons/ionicons5';
+import { NButton, NDrawer, NDrawerContent, NIcon, NTag } from 'naive-ui';
 import EstadoVacio from './EstadoVacio.vue';
 import type { Aviso } from '../../shared/api';
 import { computed } from 'vue';
 import { formatearFecha, idioma, textos } from '../i18n';
 import { textoAviso } from '../../shared/textosAvisos';
 import { useAvisos } from '../stores/avisos';
+import { useProblemas } from '../stores/problemas';
 import { argsDeAviso } from '../stores/versiones';
 
 /** Historial de avisos en un panel lateral; cada aviso con acción lleva a su pantalla. */
@@ -14,6 +15,7 @@ const visible = defineModel<boolean>('visible', { required: true });
 const emit = defineEmits<{ abrir: [aviso: Aviso] }>();
 
 const avisos = useAvisos();
+const problemas = useProblemas();
 const t = textos.avisos;
 
 const TONO = { info: 'info', aviso: 'warning', error: 'error' } as const;
@@ -43,32 +45,42 @@ function ver(a: Aviso): void {
 <template>
   <NDrawer v-model:show="visible" :width="400" placement="right">
     <NDrawerContent :title="t.titulo" closable :native-scrollbar="false">
-      <div class="acciones">
+      <!-- Los mismos problemas que ve Inicio (almacén compartido): cuentan en la insignia. -->
+      <section
+        v-if="problemas.total"
+        class="problemas"
+        :aria-label="textos.panel.alertas.grupo(problemas.total)"
+      >
+        <h3>
+          <NIcon :size="16" aria-hidden="true"><Warning /></NIcon>
+          {{ textos.panel.alertas.grupo(problemas.total) }}
+        </h3>
+        <ul>
+          <li v-for="p in problemas.lista" :key="p.clave">{{ p.texto }}</li>
+        </ul>
+      </section>
+      <!-- Sin avisos no hay nada que marcar ni limpiar: los botones no se muestran. -->
+      <div v-if="avisos.lista.length > 0" class="acciones">
         <NButton
+          v-if="avisos.noLeidos > 0"
           size="small"
           secondary
-          :disabled="avisos.noLeidos === 0"
           @click="avisos.marcarLeidos().catch(() => undefined)"
         >
           {{ t.marcarTodos }}
         </NButton>
-        <NButton
-          size="small"
-          secondary
-          :disabled="avisos.lista.length === 0"
-          @click="avisos.limpiar().catch(() => undefined)"
-        >
+        <NButton size="small" secondary @click="avisos.limpiar().catch(() => undefined)">
           {{ t.limpiar }}
         </NButton>
       </div>
       <EstadoVacio
-        v-if="filas.length === 0"
+        v-if="filas.length === 0 && problemas.total === 0"
         pequena
         :icono="Notifications"
         :titulo="textos.estadosVacios.avisos.titulo"
         :texto="textos.estadosVacios.avisos.texto"
       />
-      <ul v-else class="lista">
+      <ul v-else-if="filas.length" class="lista">
         <li v-for="f in filas" :key="f.aviso.id" class="aviso" :class="{ nuevo: !f.aviso.leido }">
           <div class="cabecera">
             <NTag size="small" :type="TONO[f.aviso.nivel]" :bordered="false">
@@ -101,6 +113,26 @@ function ver(a: Aviso): void {
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 12px;
+}
+.problemas {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border-left: 3px solid #dc2626;
+  background: rgba(220, 38, 38, 0.08);
+  font-size: 13px;
+}
+.problemas h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.problemas ul {
+  margin: 0;
+  padding-inline-start: 22px;
 }
 .lista {
   list-style: none;
