@@ -11,6 +11,16 @@ import {
 } from './firewallCambiosWin';
 import { PROGRAMAS_VIGILADOS, type PerfilRed, type ReglasEntrada } from './firewallWin';
 import { resolverReal } from './rutaReal';
+import { argumentosPing } from './redWin';
+import type {
+  AdaptadorRed,
+  CarpetaCompartida,
+  OpcionesPing,
+  ResultadoPing,
+  ResultadoRecursos,
+  VecinoRed,
+} from './redWin';
+import { validarIpPrivada, validarNombreRecurso } from '../miRed/validacion';
 import { desinstalarEnCarpeta } from './rustupRegistro';
 import { chmod, mkdir, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -559,6 +569,102 @@ export class PlataformaFalsa implements PlataformaCompleta {
 
   registrarPapelera(): void {
     // La falsa no usa la de la app: `aPapelera` ya registra lo enviado.
+  }
+
+  // ---- Mi red (D53): todo simulado, no toca ninguna red ni ningún recurso del equipo ----
+
+  /** Lo que devuelve `carpetasCompartidas` (null: no se pudo leer). */
+  carpetasCompartidasFalsas: CarpetaCompartida[] | null = [];
+  /** Nombres que se «dejaron de compartir» con la elevación simulada. */
+  readonly carpetasQuitadas: string[] = [];
+  /** Veces que se pidió la elevación para dejar de compartir (también la cancelada). */
+  dejarDeCompartirLlamadas = 0;
+  /** Resultado forzado de `dejarDeCompartir` (por defecto se quita; `uacCancelado` lo cancela). */
+  resultadoDejarDeCompartir: ResultadoEscritura | null = null;
+  /** Lo que devuelve `adaptadoresRed` (null: no se pudo leer). */
+  adaptadoresFalsos: AdaptadorRed[] | null = [];
+  /** Lo que devuelve `vecinosRed` (null: no se pudo leer). */
+  vecinosFalsos: VecinoRed[] | null = [];
+  /** Lecturas de adaptadores y de ARP (para comprobar que la lectura pasiva no escanea). */
+  lecturasRed = 0;
+  /** Cada ping pedido, con sus opciones. */
+  readonly pingsPedidos: { ip: string; intentos: number }[] = [];
+  /** Respuesta de cada IP al ping (ms); sin entrada: no responde. */
+  readonly respuestasPing = new Map<string, number>();
+  /** Espera simulada de cada ping (ms), cancelable: sirve para probar la cancelación. */
+  retardoPingMs = 0;
+  /** Pings en curso a la vez y el máximo visto. */
+  pingsActivos = 0;
+  maxPingsActivos = 0;
+  /** Resultado de `recursosDeEquipo` por IP; sin entrada: no accesible. */
+  readonly recursosFalsos = new Map<string, ResultadoRecursos>();
+  /** IP a las que se les pidió ver sus carpetas compartidas. */
+  readonly recursosPedidos: string[] = [];
+
+  async carpetasCompartidas(): Promise<CarpetaCompartida[] | null> {
+    return this.carpetasCompartidasFalsas?.map((c) => ({ ...c })) ?? null;
+  }
+
+  async dejarDeCompartir(nombre: string): Promise<ResultadoEscritura> {
+    validarNombreRecurso(nombre);
+    this.dejarDeCompartirLlamadas++;
+    if (this.uacCancelado) return { ok: false, motivo: 'cancelado' };
+    if (this.resultadoDejarDeCompartir) return this.resultadoDejarDeCompartir;
+    this.carpetasQuitadas.push(nombre);
+    if (this.carpetasCompartidasFalsas) {
+      this.carpetasCompartidasFalsas = this.carpetasCompartidasFalsas.filter(
+        (c) => c.nombre !== nombre,
+      );
+    }
+    return { ok: true };
+  }
+
+  async adaptadoresRed(): Promise<AdaptadorRed[] | null> {
+    this.lecturasRed++;
+    return this.adaptadoresFalsos?.map((a) => ({ ...a })) ?? null;
+  }
+
+  async vecinosRed(): Promise<VecinoRed[] | null> {
+    this.lecturasRed++;
+    return this.vecinosFalsos?.map((v) => ({ ...v })) ?? null;
+  }
+
+  async pingEquipo(ip: string, o: OpcionesPing): Promise<ResultadoPing> {
+    argumentosPing(ip, o);
+    this.pingsPedidos.push({ ip, intentos: o.intentos });
+    this.pingsActivos++;
+    this.maxPingsActivos = Math.max(this.maxPingsActivos, this.pingsActivos);
+    try {
+      if (this.retardoPingMs > 0) {
+        await new Promise<void>((resolver) => {
+          const t = setTimeout(fin, this.retardoPingMs);
+          function fin(): void {
+            clearTimeout(t);
+            o.senal?.removeEventListener('abort', fin);
+            resolver();
+          }
+          o.senal?.addEventListener('abort', fin, { once: true });
+        });
+      }
+    } finally {
+      this.pingsActivos--;
+    }
+    if (o.senal?.aborted)
+      return { enviados: o.intentos, recibidos: 0, tiemposMs: [], cancelado: true };
+    const ms = this.respuestasPing.get(ip);
+    const tiempos = ms === undefined ? [] : Array<number>(o.intentos).fill(ms);
+    return {
+      enviados: o.intentos,
+      recibidos: tiempos.length,
+      tiemposMs: tiempos,
+      cancelado: false,
+    };
+  }
+
+  async recursosDeEquipo(ip: string): Promise<ResultadoRecursos> {
+    validarIpPrivada(ip);
+    this.recursosPedidos.push(ip);
+    return this.recursosFalsos.get(ip) ?? { ok: false, motivo: 'inaccesible' };
   }
 
   async reglasEntradaPermitidas(): Promise<ReglasEntrada> {

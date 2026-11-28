@@ -26,6 +26,12 @@ export const RESPALDO_MEMORIA_NEUTRO: Pick<
   | 'infoEquipo'
   | 'aPapelera'
   | 'registrarPapelera'
+  | 'carpetasCompartidas'
+  | 'dejarDeCompartir'
+  | 'adaptadoresRed'
+  | 'vecinosRed'
+  | 'pingEquipo'
+  | 'recursosDeEquipo'
 > = {
   procesosDelUsuario: async () => [],
   cerrarVentanaPrincipal: async () => 'no-se-pudo',
@@ -49,4 +55,20 @@ export const RESPALDO_MEMORIA_NEUTRO: Pick<
   infoEquipo: async () => equipoDesconocido(),
   aPapelera: async () => false,
   registrarPapelera: () => undefined,
+  // «Mi red» (D53): fuera de Windows aún no hay lectura de la red ni se cambia nada.
+  carpetasCompartidas: async () => null,
+  dejarDeCompartir: async () => ({
+    ok: false,
+    motivo: 'error',
+    detalle: 'Mi red no está disponible en este sistema',
+  }),
+  adaptadoresRed: async () => null,
+  vecinosRed: async () => null,
+  pingEquipo: async (_ip, o) => ({
+    enviados: o.intentos,
+    recibidos: 0,
+    tiemposMs: [],
+    cancelado: false,
+  }),
+  recursosDeEquipo: async () => ({ ok: false, motivo: 'error' }),
 };

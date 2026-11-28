@@ -70,6 +70,28 @@ import {
 } from './procesosWin';
 import { ProcesosUsuarioWindows } from './procesosUsuarioWin';
 import { interpretarAtributos } from './atributosWin';
+import {
+  SALIDA_QUITAR_CARPETA,
+  SCRIPT_ADAPTADORES,
+  SCRIPT_CARPETAS_COMPARTIDAS,
+  SCRIPT_VECINOS,
+  argumentosPing,
+  interpretarAdaptadores,
+  interpretarCarpetasCompartidas,
+  interpretarNetView,
+  interpretarPing,
+  interpretarVecinos,
+  motivoNetView,
+  scriptQuitarCarpeta,
+  type AdaptadorRed,
+  type CarpetaCompartida,
+  type OpcionesPing,
+  type ResultadoPing,
+  type ResultadoRecursos,
+  type VecinoRed,
+} from './redWin';
+import { validarNombreRecurso } from '../miRed/validacion';
+import { validarIpPrivada } from '../miRed/validacion';
 import { interpretarUnidades, SCRIPT_UNIDADES } from './unidadesWin';
 import {
   interpretarEquipo,
@@ -753,8 +775,9 @@ export class PlataformaWindows implements PlataformaCompleta {
     const ctl = new AbortController();
     this.elevaciones.add(ctl);
     try {
+      // El PowerShell exterior (sin elevar) también por su ruta absoluta de System32.
       const r = await this.ejecutar(
-        'powershell',
+        rutaPowerShell(this.entorno),
         ['-NoProfile', '-Command', scriptElevar(codificarComando(interno))],
         { timeoutMs: tiempoLimiteMs, senal: ctl.signal },
       );
@@ -1132,6 +1155,86 @@ export class PlataformaWindows implements PlataformaCompleta {
       return r.codigo === 0 && r.stdout.trim().toLowerCase() === 'true';
     } catch {
       return false;
+    }
+  }
+
+  // ---- Mi red (D53) ----
+
+  /** Lee algo de la red con el PowerShell de System32 (ruta absoluta, -EncodedCommand), sin elevar. */
+  private async leerRed<T>(
+    script: string,
+    interpretar: (salida: string) => T | null,
+  ): Promise<T | null> {
+    try {
+      const r = await this.ejecutar(rutaPowerShell(this.entorno), codificarPowerShell(script), {
+        timeoutMs: 30_000,
+      });
+      return r.codigo === 0 ? interpretar(r.stdout) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  carpetasCompartidas(): Promise<CarpetaCompartida[] | null> {
+    return this.leerRed(SCRIPT_CARPETAS_COMPARTIDAS, interpretarCarpetasCompartidas);
+  }
+
+  adaptadoresRed(): Promise<AdaptadorRed[] | null> {
+    return this.leerRed(SCRIPT_ADAPTADORES, interpretarAdaptadores);
+  }
+
+  vecinosRed(): Promise<VecinoRed[] | null> {
+    return this.leerRed(SCRIPT_VECINOS, interpretarVecinos);
+  }
+
+  /**
+   * Quita un recurso compartido con elevación (UAC). El nombre se valida aquí también (nunca los
+   * que terminan en `$`) y el plazo del script elevado se calcula cuando de verdad empieza, tras
+   * esperar la cola: si el UAC se contesta pasado el plazo, el script sale sin tocar nada.
+   */
+  async dejarDeCompartir(nombre: string): Promise<ResultadoEscritura> {
+    validarNombreRecurso(nombre);
+    const plazo = 90_000;
+    const margen = 15_000;
+    const r = await this.enCola(() =>
+      this.elevarAhora(scriptQuitarCarpeta(nombre, Date.now() + plazo - margen), plazo),
+    );
+    if (r.ok || r.motivo !== 'error') return r;
+    const salida = /^código (\d+)$/.exec(r.detalle ?? '')?.[1];
+    // Ya no estaba compartida: el resultado que se quería.
+    if (salida === String(SALIDA_QUITAR_CARPETA.noExiste)) return { ok: true };
+    if (salida === String(SALIDA_QUITAR_CARPETA.vencido)) return { ok: false, motivo: 'tiempo' };
+    if (salida === String(SALIDA_QUITAR_CARPETA.noPermitida)) {
+      return { ok: false, motivo: 'denegado', detalle: 'no es una carpeta compartida normal' };
+    }
+    return r;
+  }
+
+  /** `ping.exe` de System32 por ruta absoluta, sin shell; cancelable (se mata el proceso). */
+  async pingEquipo(ip: string, o: OpcionesPing): Promise<ResultadoPing> {
+    const args = argumentosPing(ip, o);
+    if (o.senal?.aborted)
+      return { enviados: o.intentos, recibidos: 0, tiemposMs: [], cancelado: true };
+    const r = await this.ejecutar(rutaSistema32(this.entorno, 'ping.exe'), args, {
+      timeoutMs: o.intentos * (o.plazoMs + 1000) + 3000,
+      ...(o.senal ? { senal: o.senal } : {}),
+    });
+    const res = interpretarPing(r.stdout, ip, o.intentos);
+    return o.senal?.aborted ? { ...res, cancelado: true } : res;
+  }
+
+  /** `net.exe view` de System32 por ruta absoluta, sin shell: una consulta SMB, no un escaneo. */
+  async recursosDeEquipo(ip: string, senal?: AbortSignal): Promise<ResultadoRecursos> {
+    validarIpPrivada(ip);
+    try {
+      const r = await this.ejecutar(rutaSistema32(this.entorno, 'net.exe'), ['view', `\\\\${ip}`], {
+        timeoutMs: 20_000,
+        ...(senal ? { senal } : {}),
+      });
+      if (r.codigo === 0) return { ok: true, recursos: interpretarNetView(r.stdout) };
+      return { ok: false, motivo: motivoNetView(`${r.stdout} ${r.stderr}`) };
+    } catch {
+      return { ok: false, motivo: 'error' };
     }
   }
 

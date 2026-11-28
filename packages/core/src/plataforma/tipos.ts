@@ -8,6 +8,14 @@ import type { PerfilRed, ReglasEntrada } from './firewallWin';
 import type { Readable } from 'node:stream';
 import type { LanzadorOculto } from './lanzarOculto';
 import type { InfoEquipo } from '../equipo/tipos';
+import type {
+  AdaptadorRed,
+  CarpetaCompartida,
+  OpcionesPing,
+  ResultadoPing,
+  ResultadoRecursos,
+  VecinoRed,
+} from './redWin';
 
 export type ResultadoEscritura =
   | { ok: true }
@@ -380,6 +388,32 @@ export interface CapacidadesPlataforma {
   aPapelera(ruta: string): Promise<boolean>;
   /** La app inyecta aquí cómo se manda algo a la papelera. */
   registrarPapelera(enviar: (ruta: string) => Promise<void>): void;
+  /**
+   * Carpetas y recursos que ESTE equipo comparte en la red (D53, «Mi red»), con las
+   * administrativas marcadas. Solo consulta; `null` si no se pudo leer.
+   */
+  carpetasCompartidas(): Promise<CarpetaCompartida[] | null>;
+  /**
+   * Deja de compartir una carpeta de este equipo, con elevación (UAC). SOLO la llama quien ya
+   * recibió la confirmación firme de la persona. El script elevado vuelve a comprobar que sea una
+   * carpeta normal (no administrativa) y trae un plazo: un UAC contestado tarde no hace nada.
+   * Nunca corre en segundo plano ni por su cuenta; si el UAC se cancela o vence, lo dice.
+   */
+  dejarDeCompartir(nombre: string): Promise<ResultadoEscritura>;
+  /** Adaptadores IPv4 con su subred y el perfil de red (privada, pública, dominio). Solo consulta. */
+  adaptadoresRed(): Promise<AdaptadorRed[] | null>;
+  /** Tabla ARP del equipo (equipos privados vistos). Lectura pasiva: no genera tráfico. */
+  vecinosRed(): Promise<VecinoRed[] | null>;
+  /**
+   * Ping a UNA IPv4 privada (ICMP, 1 a 10 paquetes). Cancelable con la señal (mata el proceso).
+   * Rechaza IP públicas o raras: el sistema nunca recibe otra cosa.
+   */
+  pingEquipo(ip: string, opciones: OpcionesPing): Promise<ResultadoPing>;
+  /**
+   * Carpetas compartidas de OTRO equipo (con `net view`): una consulta SMB del propio sistema, no
+   * un escaneo. La IP debe ser privada.
+   */
+  recursosDeEquipo(ip: string, senal?: AbortSignal): Promise<ResultadoRecursos>;
 }
 
 /** Atributos de un archivo o carpeta que el sistema de archivos de Node no da en Windows. */

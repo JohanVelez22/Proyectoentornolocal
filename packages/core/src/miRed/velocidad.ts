@@ -72,7 +72,6 @@ const esCorte = (e: unknown): boolean =>
 const SIN_DATOS: RequestInit = {
   credentials: 'omit',
   referrerPolicy: 'no-referrer',
-  cache: 'no-store',
   redirect: 'error',
 };
 

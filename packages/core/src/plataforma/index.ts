@@ -63,6 +63,16 @@ export {
 } from './diagnosticoWin';
 export { interpretarDescendientes } from './procesosWin';
 export { nombreEjecutable, sistemaActual } from './sistema';
+export type {
+  AdaptadorRed,
+  CarpetaCompartida,
+  MotivoSinRecursos,
+  OpcionesPing,
+  RecursoRed,
+  ResultadoPing,
+  ResultadoRecursos,
+  VecinoRed,
+} from './redWin';
 
 export function crearPlataforma(): Plataforma {
   if (sistemaActual() === 'win32') return new PlataformaWindows();
@@ -127,6 +137,12 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'atributosArchivo',
   'aPapelera',
   'registrarPapelera',
+  'carpetasCompartidas',
+  'dejarDeCompartir',
+  'adaptadoresRed',
+  'vecinosRed',
+  'pingEquipo',
+  'recursosDeEquipo',
 ];
 
 /**
