@@ -324,6 +324,21 @@ export const en: Textos = {
       'diff.caducado': 'That comparison is no longer available: compare again.',
       'diff.archivo_invalido': 'That file can no longer be compared: it changed or disappeared.',
       'diff.fallo': 'The comparison failed.',
+      'red.sin_confirmar': 'Confirm the action in the dialog before continuing.',
+      'red.rango_no_permitido':
+        'Only private networks (10.x, 172.16 to 172.31 and 192.168.x) of up to 254 devices are explored.',
+      'red.sin_adaptador': 'There is no active network to explore.',
+      'red.red_publica': 'Other devices are not explored on public networks.',
+      'red.perfil_desconocido':
+        'Could not check whether the network is private or public, so other devices are not explored.',
+      'red.ocupado': 'Another My network operation is already running: wait for it to finish.',
+      'red.equipo_no_valido': 'Only private IPv4 addresses of the local network are accepted.',
+      'red.equipo_desconocido': 'That device is not in the list: read the network again.',
+      'red.recurso_no_valido': 'That resource is not in the device’s list.',
+      'red.carpeta_no_valida': 'That shared folder cannot be removed from here.',
+      'red.lectura_fallo': 'Could not read this computer’s network.',
+      'red.quitar_fallo': 'Could not stop sharing the folder.',
+      'red.velocidad_fallo': 'Could not measure the speed: check the connection.',
       'compartir.confirmacion_requerida':
         'Sharing on the internet must be confirmed in the WolfCore Dev window.',
       'compartir.ocupado': 'Something is already shared: stop sharing first.',
@@ -3725,6 +3740,11 @@ export const en: Textos = {
         nombre: 'Share folder or file',
         descripcion: 'Publish a folder or a file on the internet with a temporary, read-only link.',
       },
+      miRed: {
+        nombre: 'My network',
+        descripcion:
+          'Folders this computer shares, devices on the local network and a speed test. No remote control.',
+      },
       usoDisco: {
         nombre: 'Disk usage',
         descripcion:
@@ -4140,6 +4160,126 @@ export const en: Textos = {
         vacioTexto: 'Each time someone opens the link it will appear here.',
         col: { hora: 'Time', ip: 'IP', ruta: 'Path', codigo: 'Code' },
         sinPermiso: '(without the right code)',
+      },
+    },
+    miRed: {
+      explicacion:
+        'See your network without controlling any device: the folders this computer shares, the devices on the local network and a speed test. It only reads and queries: there is no remote control, remote desktop or execution on other devices.',
+      carpetas: {
+        titulo: 'Folders shared by this computer',
+        ayuda:
+          'What other devices on the network can open on this computer. The Windows administrative shares (C$, ADMIN$, IPC$) are hidden and cannot be removed from here.',
+        mostrarAdministrativas: 'Show administrative shares',
+        administrativa: 'Administrative',
+        col: {
+          nombre: 'Name',
+          ruta: 'Folder',
+          descripcion: 'Description',
+          usuarios: 'Connections',
+          acciones: 'Actions',
+        },
+        dejar: 'Stop sharing',
+        vacioTitulo: 'No folders shared',
+        vacioTexto: 'No folder on this computer is shared on the network.',
+        confirmar: {
+          titulo: 'Stop sharing a folder',
+          pregunta: (nombre: string) => `Stop sharing “${nombre}”?`,
+          efecto:
+            'Other devices will no longer see this folder. Its files are not deleted or moved.',
+          uac: 'This requires administrator permissions: Windows will show a User Account Control (UAC) prompt that you must accept. If you cancel it or do not answer in time, nothing is changed.',
+          entiendo:
+            'I understand that administrator permissions will be requested and that the folder will stop being shared.',
+          boton: 'Continue',
+        },
+        resultado: {
+          quitada: (nombre: string) => `“${nombre}” is no longer shared.`,
+          cancelado: 'The Windows prompt was cancelled: nothing was changed.',
+          tiempo: 'Time ran out to accept the Windows prompt: nothing was changed.',
+        },
+      },
+      equipos: {
+        titulo: 'Devices on the local network',
+        ayuda:
+          'Reading uses this computer’s ARP table (the devices it has already talked to): it is immediate and sends nothing to the network.',
+        leer: 'Read the network',
+        redActiva: 'Active network',
+        perfil: {
+          privado: 'private network',
+          publico: 'public network',
+          dominio: 'domain network',
+          desconocido: 'unknown profile',
+        },
+        publica: 'Other devices are not explored on public networks.',
+        perfilDesconocido:
+          'Could not check whether the network is private or public, so other devices are not explored.',
+        sinRed: 'There is no active private network to explore.',
+        escanear: 'Find devices',
+        progreso: (hechos: number, total: number) => `Checked ${hechos} of ${total} addresses…`,
+        escaneoListo: (cantidad: number, red: string) =>
+          `Search finished on ${red}: ${cantidad} devices in the list.`,
+        escaneoCancelado: (hechos: number, total: number) =>
+          `Search cancelled after checking ${hechos} of ${total} addresses.`,
+        vacioTitulo: 'No devices to show',
+        vacioTexto:
+          'Press “Read the network” to see the devices this computer already knows, without sending anything to the network. If you have already read it, try “Find devices”.',
+        col: {
+          ip: 'IP address',
+          nombre: 'Name',
+          mac: 'MAC',
+          fabricante: 'Manufacturer',
+          ping: 'Last ping',
+        },
+        ping: 'Ping',
+        verCarpetas: 'View folders',
+        confirmar: {
+          titulo: 'Find devices on your network',
+          texto: (red: string, cantidad: number) =>
+            `A ping will be sent to each of the ${cantidad} addresses of ${red}, one after another and at a limited rate, to find devices.`,
+          limites:
+            'Only your active private network is explored (at most 254 addresses). No ports are tested and no device is accessed. You can cancel at any time.',
+          boton: 'Find devices',
+        },
+      },
+      ping: {
+        resultado: (recibidos: number, enviados: number, media: number) =>
+          `${recibidos} of ${enviados} replies · average ${media} ms`,
+        sinRespuesta: (enviados: number) => `0 of ${enviados} · no reply`,
+      },
+      recursos: {
+        titulo: (ip: string) => `Folders shared by ${ip}`,
+        vacio: 'This device does not share any visible folders.',
+        ayuda:
+          'They open in File Explorer. If the device asks for a user name and password, Windows asks for them, not this application.',
+        abrir: 'Open',
+        fallo: {
+          denegado: 'The device does not let you see its folders without credentials.',
+          inaccesible: 'Could not connect to the device.',
+          error: 'Could not query that device’s folders.',
+        },
+      },
+      velocidad: {
+        titulo: 'Speed test',
+        ayuda: (mb: number) =>
+          `Measures the latency, download and upload speed of your internet connection. It uses about ${mb} MB of data.`,
+        medir: 'Measure speed',
+        fases: {
+          latencia: 'Measuring latency…',
+          bajada: 'Measuring download…',
+          subida: 'Measuring upload…',
+        },
+        latencia: 'Latency',
+        bajada: 'Download',
+        subida: 'Upload',
+        cancelada: 'Measurement cancelled: what was measured so far is shown.',
+        incompleta: 'One of the measurements reached its time limit: that value is approximate.',
+        confirmar: {
+          titulo: 'Measure the speed',
+          texto: (bajada: number, subida: number, total: number) =>
+            `About ${bajada} MB will be downloaded and about ${subida} MB uploaded to Cloudflare (speed.cloudflare.com): about ${total} MB of data in total. If your connection has a data cap, keep this usage in mind.`,
+          privacidad:
+            'None of your data is sent: what is uploaded is zeros. You can cancel at any time.',
+          boton: 'Measure',
+        },
       },
     },
     usoDisco: {

@@ -62,6 +62,20 @@ export const zhExtra: TextosParciales = {
       'diff.caducado': '该比较已不可用：请重新比较。',
       'diff.archivo_invalido': '该文件已无法比较：它已被更改或已消失。',
       'diff.fallo': '比较失败。',
+      'red.sin_confirmar': '请先在对话框中确认该操作，然后再继续。',
+      'red.rango_no_permitido':
+        '仅探测最多 254 台设备的专用网络（10.x、172.16 至 172.31 和 192.168.x）。',
+      'red.sin_adaptador': '没有可探测的活动网络。',
+      'red.red_publica': '在公用网络中不会探测其他设备。',
+      'red.perfil_desconocido': '无法确认网络是专用还是公用，因此不会探测其他设备。',
+      'red.ocupado': '“我的网络”已有另一项操作正在进行：请等待其完成。',
+      'red.equipo_no_valido': '仅接受本地网络的专用 IPv4 地址。',
+      'red.equipo_desconocido': '该设备不在列表中：请重新读取网络。',
+      'red.recurso_no_valido': '该资源不在设备的列表中。',
+      'red.carpeta_no_valida': '无法在此处删除该共享文件夹。',
+      'red.lectura_fallo': '无法读取本机的网络。',
+      'red.quitar_fallo': '无法停止共享该文件夹。',
+      'red.velocidad_fallo': '无法测量速度：请检查网络连接。',
       'compartir.confirmacion_requerida': '在互联网上共享必须在 WolfCore Dev 窗口中确认。',
       'compartir.ocupado': '已有内容正在共享：请先停止共享。',
       'compartir.ruta_invalida': '请选择存在的文件夹或文件。',
@@ -497,6 +511,10 @@ export const zhExtra: TextosParciales = {
         nombre: '共享文件夹或文件',
         descripcion: '通过临时的只读链接，在互联网上发布文件夹或文件。',
       },
+      miRed: {
+        nombre: '我的网络',
+        descripcion: '本机共享的文件夹、本地网络中的设备和网速测试。不提供远程控制。',
+      },
       usoDisco: {
         nombre: '磁盘使用情况',
         descripcion:
@@ -642,6 +660,122 @@ export const zhExtra: TextosParciales = {
         vacioTexto: '每当有人打开该链接，就会显示在这里。',
         col: { hora: '时间', ip: 'IP', ruta: '路径', codigo: '状态码' },
         sinPermiso: '（密钥码不正确）',
+      },
+    },
+    miRed: {
+      explicacion:
+        '您可以查看自己的网络，而无需控制任何设备：本机共享的文件夹、本地网络中的设备以及网速测试。本功能只读取和查询：没有远程控制、远程桌面，也不会在其他设备上执行任何操作。',
+      carpetas: {
+        titulo: '本机共享的文件夹',
+        ayuda:
+          '网络中的其他设备可以在本机上打开的内容。Windows 的管理共享（C$、ADMIN$、IPC$）已隐藏，无法在此处删除。',
+        mostrarAdministrativas: '显示管理共享',
+        administrativa: '管理共享',
+        col: {
+          nombre: '名称',
+          ruta: '文件夹',
+          descripcion: '说明',
+          usuarios: '连接数',
+          acciones: '操作',
+        },
+        dejar: '停止共享',
+        vacioTitulo: '没有共享的文件夹',
+        vacioTexto: '本机没有任何文件夹在网络中共享。',
+        confirmar: {
+          titulo: '停止共享文件夹',
+          pregunta: (nombre: string) => `要停止共享“${nombre}”吗？`,
+          efecto: '其他设备将不再看到此文件夹。其中的文件不会被删除或移动。',
+          uac: '此操作需要管理员权限：Windows 将显示用户账户控制（UAC）提示，需要您确认。如果您取消或未及时响应，则不会更改任何内容。',
+          entiendo: '我了解将会请求管理员权限，并且该文件夹将不再共享。',
+          boton: '继续',
+        },
+        resultado: {
+          quitada: (nombre: string) => `“${nombre}”已不再共享。`,
+          cancelado: '已取消 Windows 提示：未更改任何内容。',
+          tiempo: '确认 Windows 提示的时间已到：未更改任何内容。',
+        },
+      },
+      equipos: {
+        titulo: '本地网络中的设备',
+        ayuda:
+          '读取使用本机的 ARP 表（本机已通信过的设备）：读取立即完成，不会向网络发送任何内容。',
+        leer: '读取网络',
+        redActiva: '当前网络',
+        perfil: {
+          privado: '专用网络',
+          publico: '公用网络',
+          dominio: '域网络',
+          desconocido: '配置文件未知',
+        },
+        publica: '在公用网络中不会探测其他设备。',
+        perfilDesconocido: '无法确认网络是专用还是公用，因此不会探测其他设备。',
+        sinRed: '没有可探测的活动专用网络。',
+        escanear: '查找设备',
+        progreso: (hechos: number, total: number) => `已检查 ${hechos}/${total} 个地址…`,
+        escaneoListo: (cantidad: number, red: string) =>
+          `已在 ${red} 完成查找：列表中有 ${cantidad} 台设备。`,
+        escaneoCancelado: (hechos: number, total: number) =>
+          `查找已取消，已检查 ${hechos}/${total} 个地址。`,
+        vacioTitulo: '没有可显示的设备',
+        vacioTexto:
+          '请点击“读取网络”，查看本机已知的设备，不会向网络发送任何内容。如果已经读取过，请尝试“查找设备”。',
+        col: {
+          ip: 'IP 地址',
+          nombre: '名称',
+          mac: 'MAC',
+          fabricante: '制造商',
+          ping: '最近一次 Ping',
+        },
+        ping: '执行 Ping',
+        verCarpetas: '查看文件夹',
+        confirmar: {
+          titulo: '在您的网络中查找设备',
+          texto: (red: string, cantidad: number) =>
+            `将依次向 ${red} 的 ${cantidad} 个地址各发送一次 Ping，并限制速度，以查找设备。`,
+          limites:
+            '仅探测您当前的专用网络（最多 254 个地址）。不会测试端口，也不会访问任何设备。您可以随时取消。',
+          boton: '查找设备',
+        },
+      },
+      ping: {
+        resultado: (recibidos: number, enviados: number, media: number) =>
+          `收到 ${recibidos}/${enviados} 个回复 · 平均 ${media} 毫秒`,
+        sinRespuesta: (enviados: number) => `0/${enviados} · 无回复`,
+      },
+      recursos: {
+        titulo: (ip: string) => `${ip} 共享的文件夹`,
+        vacio: '此设备没有共享可见的文件夹。',
+        ayuda:
+          '它们将在文件资源管理器中打开。如果设备要求输入用户名和密码，则由 Windows 提示，而不是本应用。',
+        abrir: '打开',
+        fallo: {
+          denegado: '没有凭据时，该设备不允许查看其文件夹。',
+          inaccesible: '无法连接到该设备。',
+          error: '无法查询该设备的文件夹。',
+        },
+      },
+      velocidad: {
+        titulo: '网速测试',
+        ayuda: (mb: number) =>
+          `测量您的互联网连接的延迟、下载速度和上传速度。大约使用 ${mb} MB 流量。`,
+        medir: '测量速度',
+        fases: {
+          latencia: '正在测量延迟…',
+          bajada: '正在测量下载速度…',
+          subida: '正在测量上传速度…',
+        },
+        latencia: '延迟',
+        bajada: '下载',
+        subida: '上传',
+        cancelada: '测量已取消：显示的是此前已测得的结果。',
+        incompleta: '其中一项测量已达到时限：该数值为近似值。',
+        confirmar: {
+          titulo: '测量速度',
+          texto: (bajada: number, subida: number, total: number) =>
+            `将向 Cloudflare（speed.cloudflare.com）下载约 ${bajada} MB 并上传约 ${subida} MB：总共约 ${total} MB 流量。如果您的网络有流量限制，请注意这部分消耗。`,
+          privacidad: '不会发送您的任何数据：上传的内容全是零。您可以随时取消。',
+          boton: '开始测量',
+        },
       },
     },
     usoDisco: {

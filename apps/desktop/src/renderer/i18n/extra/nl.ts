@@ -79,6 +79,22 @@ export const nlExtra: TextosParciales = {
       'diff.archivo_invalido':
         'Dat bestand kan niet meer worden vergeleken: het is gewijzigd of verdwenen.',
       'diff.fallo': 'De vergelijking is mislukt.',
+      'red.sin_confirmar': 'Bevestig de actie in het dialoogvenster voordat u verdergaat.',
+      'red.rango_no_permitido':
+        'Alleen privénetwerken (10.x, 172.16 tot 172.31 en 192.168.x) met maximaal 254 apparaten worden verkend.',
+      'red.sin_adaptador': 'Er is geen actief netwerk om te verkennen.',
+      'red.red_publica': 'In openbare netwerken worden geen andere apparaten verkend.',
+      'red.perfil_desconocido':
+        'Er kon niet worden gecontroleerd of het netwerk privé of openbaar is, dus er worden geen andere apparaten verkend.',
+      'red.ocupado': 'Er loopt al een andere bewerking van Mijn netwerk: wacht tot die klaar is.',
+      'red.equipo_no_valido':
+        'Alleen privé-IPv4-adressen van het lokale netwerk worden geaccepteerd.',
+      'red.equipo_desconocido': 'Dat apparaat staat niet in de lijst: lees het netwerk opnieuw.',
+      'red.recurso_no_valido': 'Die bron staat niet in de lijst van het apparaat.',
+      'red.carpeta_no_valida': 'Die gedeelde map kan hier niet worden verwijderd.',
+      'red.lectura_fallo': 'Het netwerk van deze computer kon niet worden gelezen.',
+      'red.quitar_fallo': 'Het delen van de map kon niet worden gestopt.',
+      'red.velocidad_fallo': 'De snelheid kon niet worden gemeten: controleer de verbinding.',
       'compartir.confirmacion_requerida':
         'Delen op internet moet worden bevestigd in het venster van WolfCore Dev.',
       'compartir.ocupado': 'Er wordt al iets gedeeld: stop eerst met delen.',
@@ -622,6 +638,11 @@ export const nlExtra: TextosParciales = {
         descripcion:
           'Een map of een bestand op internet publiceren met een tijdelijke alleen-lezen link.',
       },
+      miRed: {
+        nombre: 'Mijn netwerk',
+        descripcion:
+          'Mappen die deze computer deelt, apparaten in het lokale netwerk en een snelheidstest. Zonder beheer op afstand.',
+      },
       usoDisco: {
         nombre: 'Schijfgebruik',
         descripcion:
@@ -796,6 +817,129 @@ export const nlExtra: TextosParciales = {
           codigo: 'Code',
         },
         sinPermiso: '(zonder de juiste code)',
+      },
+    },
+    miRed: {
+      explicacion:
+        'Bekijk uw netwerk zonder een apparaat te besturen: de mappen die deze computer deelt, de apparaten in het lokale netwerk en een snelheidstest. Er wordt alleen gelezen en opgevraagd: er is geen beheer op afstand, geen extern bureaublad en geen uitvoering op andere apparaten.',
+      carpetas: {
+        titulo: 'Gedeelde mappen van deze computer',
+        ayuda:
+          'Wat andere apparaten in het netwerk op deze computer kunnen openen. De beheershares van Windows (C$, ADMIN$, IPC$) zijn verborgen en kunnen hier niet worden verwijderd.',
+        mostrarAdministrativas: 'Beheershares tonen',
+        administrativa: 'Beheer',
+        col: {
+          nombre: 'Naam',
+          ruta: 'Map',
+          descripcion: 'Beschrijving',
+          usuarios: 'Verbindingen',
+          acciones: 'Acties',
+        },
+        dejar: 'Delen stoppen',
+        vacioTitulo: 'Geen gedeelde mappen',
+        vacioTexto: 'Er wordt geen map van deze computer in het netwerk gedeeld.',
+        confirmar: {
+          titulo: 'Het delen van een map stoppen',
+          pregunta: (nombre: string) => `Het delen van “${nombre}” stoppen?`,
+          efecto:
+            'Andere apparaten zien deze map dan niet meer. De bestanden worden niet verwijderd of verplaatst.',
+          uac: 'Hiervoor zijn beheerdersrechten nodig: Windows toont een melding van Gebruikersaccountbeheer (UAC) die u moet accepteren. Als u de melding annuleert of niet op tijd beantwoordt, wordt er niets gewijzigd.',
+          entiendo:
+            'Ik begrijp dat er beheerdersrechten worden gevraagd en dat de map niet meer wordt gedeeld.',
+          boton: 'Doorgaan',
+        },
+        resultado: {
+          quitada: (nombre: string) => `“${nombre}” wordt niet meer gedeeld.`,
+          cancelado: 'De Windows-melding is geannuleerd: er is niets gewijzigd.',
+          tiempo:
+            'De tijd om de Windows-melding te accepteren is verstreken: er is niets gewijzigd.',
+        },
+      },
+      equipos: {
+        titulo: 'Apparaten in het lokale netwerk',
+        ayuda:
+          'Het lezen gebruikt de ARP-tabel van deze computer (de apparaten waarmee hij al heeft gecommuniceerd): het gaat direct en er wordt niets naar het netwerk verstuurd.',
+        leer: 'Netwerk lezen',
+        redActiva: 'Actief netwerk',
+        perfil: {
+          privado: 'privénetwerk',
+          publico: 'openbaar netwerk',
+          dominio: 'domeinnetwerk',
+          desconocido: 'onbekend profiel',
+        },
+        publica: 'In openbare netwerken worden geen andere apparaten verkend.',
+        perfilDesconocido:
+          'Er kon niet worden gecontroleerd of het netwerk privé of openbaar is, dus er worden geen andere apparaten verkend.',
+        sinRed: 'Er is geen actief privénetwerk om te verkennen.',
+        escanear: 'Apparaten zoeken',
+        progreso: (hechos: number, total: number) =>
+          `${hechos} van ${total} adressen gecontroleerd…`,
+        escaneoListo: (cantidad: number, red: string) =>
+          `Zoeken in ${red} voltooid: ${cantidad} apparaten in de lijst.`,
+        escaneoCancelado: (hechos: number, total: number) =>
+          `Zoeken geannuleerd na het controleren van ${hechos} van ${total} adressen.`,
+        vacioTitulo: 'Geen apparaten om te tonen',
+        vacioTexto:
+          'Klik op “Netwerk lezen” om de apparaten te zien die deze computer al kent, zonder iets naar het netwerk te sturen. Hebt u dat al gedaan, probeer dan “Apparaten zoeken”.',
+        col: {
+          ip: 'IP-adres',
+          nombre: 'Naam',
+          mac: 'MAC',
+          fabricante: 'Fabrikant',
+          ping: 'Laatste ping',
+        },
+        ping: 'Ping uitvoeren',
+        verCarpetas: 'Mappen bekijken',
+        confirmar: {
+          titulo: 'Apparaten in uw netwerk zoeken',
+          texto: (red: string, cantidad: number) =>
+            `Naar elk van de ${cantidad} adressen van ${red} wordt een ping gestuurd, een voor een en met beperkte snelheid, om apparaten te vinden.`,
+          limites:
+            'Alleen uw actieve privénetwerk wordt verkend (hoogstens 254 adressen). Er worden geen poorten getest en er wordt geen toegang tot een apparaat verkregen. U kunt op elk moment annuleren.',
+          boton: 'Apparaten zoeken',
+        },
+      },
+      ping: {
+        resultado: (recibidos: number, enviados: number, media: number) =>
+          `${recibidos} van ${enviados} antwoorden · gemiddeld ${media} ms`,
+        sinRespuesta: (enviados: number) => `0 van ${enviados} · geen antwoord`,
+      },
+      recursos: {
+        titulo: (ip: string) => `Gedeelde mappen van ${ip}`,
+        vacio: 'Dit apparaat deelt geen zichtbare mappen.',
+        ayuda:
+          'Ze worden geopend in Verkenner. Vraagt het apparaat om een gebruikersnaam en wachtwoord, dan vraagt Windows erom, niet deze toepassing.',
+        abrir: 'Openen',
+        fallo: {
+          denegado: 'Het apparaat toont zijn mappen niet zonder inloggegevens.',
+          inaccesible: 'Er kon geen verbinding met het apparaat worden gemaakt.',
+          error: 'De mappen van dat apparaat konden niet worden opgevraagd.',
+        },
+      },
+      velocidad: {
+        titulo: 'Snelheidstest',
+        ayuda: (mb: number) =>
+          `Meet de latentie en de download- en uploadsnelheid van uw internetverbinding. Er worden ongeveer ${mb} MB aan gegevens gebruikt.`,
+        medir: 'Snelheid meten',
+        fases: {
+          latencia: 'Latentie wordt gemeten…',
+          bajada: 'Download wordt gemeten…',
+          subida: 'Upload wordt gemeten…',
+        },
+        latencia: 'Latentie',
+        bajada: 'Download',
+        subida: 'Upload',
+        cancelada: 'Meting geannuleerd: wat tot nu toe is gemeten, wordt getoond.',
+        incompleta:
+          'Een van de metingen heeft de tijdslimiet bereikt: die waarde is bij benadering.',
+        confirmar: {
+          titulo: 'De snelheid meten',
+          texto: (bajada: number, subida: number, total: number) =>
+            `Er worden ongeveer ${bajada} MB gedownload en ongeveer ${subida} MB geüpload naar Cloudflare (speed.cloudflare.com): in totaal ongeveer ${total} MB aan gegevens. Heeft uw verbinding een datalimiet, houd dan rekening met dit verbruik.`,
+          privacidad:
+            'Er worden geen gegevens van u verstuurd: wat wordt geüpload zijn nullen. U kunt op elk moment annuleren.',
+          boton: 'Meten',
+        },
       },
     },
     usoDisco: {

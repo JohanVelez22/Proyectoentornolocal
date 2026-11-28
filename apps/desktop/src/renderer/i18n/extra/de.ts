@@ -80,6 +80,25 @@ export const deExtra: TextosParciales = {
       'diff.archivo_invalido':
         'Diese Datei kann nicht mehr verglichen werden: Sie wurde geändert oder ist verschwunden.',
       'diff.fallo': 'Der Vergleich ist fehlgeschlagen.',
+      'red.sin_confirmar': 'Bestätigen Sie die Aktion im Dialog, bevor Sie fortfahren.',
+      'red.rango_no_permitido':
+        'Es werden nur private Netzwerke (10.x, 172.16 bis 172.31 und 192.168.x) mit bis zu 254 Geräten erkundet.',
+      'red.sin_adaptador': 'Es gibt kein aktives Netzwerk zum Erkunden.',
+      'red.red_publica': 'In öffentlichen Netzwerken werden keine anderen Geräte erkundet.',
+      'red.perfil_desconocido':
+        'Es konnte nicht geprüft werden, ob das Netzwerk privat oder öffentlich ist; daher werden keine anderen Geräte erkundet.',
+      'red.ocupado':
+        'Es läuft bereits ein anderer Vorgang von Mein Netzwerk: Warten Sie, bis er beendet ist.',
+      'red.equipo_no_valido':
+        'Es werden nur private IPv4-Adressen des lokalen Netzwerks akzeptiert.',
+      'red.equipo_desconocido':
+        'Dieses Gerät ist nicht in der Liste: Lesen Sie das Netzwerk erneut.',
+      'red.recurso_no_valido': 'Diese Ressource ist nicht in der Liste des Geräts.',
+      'red.carpeta_no_valida': 'Diese Freigabe kann von hier aus nicht entfernt werden.',
+      'red.lectura_fallo': 'Das Netzwerk dieses Computers konnte nicht gelesen werden.',
+      'red.quitar_fallo': 'Die Freigabe des Ordners konnte nicht beendet werden.',
+      'red.velocidad_fallo':
+        'Die Geschwindigkeit konnte nicht gemessen werden: Prüfen Sie die Verbindung.',
       'compartir.confirmacion_requerida':
         'Die Freigabe im Internet muss im Fenster von WolfCore Dev bestätigt werden.',
       'compartir.ocupado': 'Es ist bereits etwas freigegeben: Beenden Sie zuerst die Freigabe.',
@@ -629,6 +648,11 @@ export const deExtra: TextosParciales = {
         descripcion:
           'Einen Ordner oder eine Datei mit einem temporären, schreibgeschützten Link im Internet veröffentlichen.',
       },
+      miRed: {
+        nombre: 'Mein Netzwerk',
+        descripcion:
+          'Ordner, die dieser Computer freigibt, Geräte im lokalen Netzwerk und Geschwindigkeitstest. Ohne Fernsteuerung.',
+      },
       usoDisco: {
         nombre: 'Speicherbelegung',
         descripcion:
@@ -804,6 +828,127 @@ export const deExtra: TextosParciales = {
           codigo: 'Code',
         },
         sinPermiso: '(ohne den richtigen Code)',
+      },
+    },
+    miRed: {
+      explicacion:
+        'Sehen Sie Ihr Netzwerk, ohne ein Gerät zu steuern: die Ordner, die dieser Computer freigibt, die Geräte im lokalen Netzwerk und einen Geschwindigkeitstest. Es wird nur gelesen und abgefragt: Es gibt keine Fernsteuerung, keinen Remotedesktop und keine Ausführung auf anderen Geräten.',
+      carpetas: {
+        titulo: 'Freigegebene Ordner dieses Computers',
+        ayuda:
+          'Was andere Geräte im Netzwerk auf diesem Computer öffnen können. Die administrativen Freigaben von Windows (C$, ADMIN$, IPC$) sind ausgeblendet und können von hier aus nicht entfernt werden.',
+        mostrarAdministrativas: 'Administrative Freigaben anzeigen',
+        administrativa: 'Administrativ',
+        col: {
+          nombre: 'Name',
+          ruta: 'Ordner',
+          descripcion: 'Beschreibung',
+          usuarios: 'Verbindungen',
+          acciones: 'Aktionen',
+        },
+        dejar: 'Freigabe beenden',
+        vacioTitulo: 'Keine Ordner freigegeben',
+        vacioTexto: 'Kein Ordner dieses Computers ist im Netzwerk freigegeben.',
+        confirmar: {
+          titulo: 'Freigabe eines Ordners beenden',
+          pregunta: (nombre: string) => `Freigabe von „${nombre}“ beenden?`,
+          efecto:
+            'Andere Geräte sehen diesen Ordner dann nicht mehr. Seine Dateien werden weder gelöscht noch verschoben.',
+          uac: 'Dafür sind Administratorrechte erforderlich: Windows zeigt eine Benutzerkontensteuerung (UAC) an, die Sie bestätigen müssen. Wenn Sie sie abbrechen oder nicht rechtzeitig antworten, wird nichts geändert.',
+          entiendo:
+            'Ich verstehe, dass Administratorrechte angefordert werden und der Ordner nicht mehr freigegeben sein wird.',
+          boton: 'Fortfahren',
+        },
+        resultado: {
+          quitada: (nombre: string) => `„${nombre}“ ist nicht mehr freigegeben.`,
+          cancelado: 'Die Windows-Abfrage wurde abgebrochen: Es wurde nichts geändert.',
+          tiempo:
+            'Die Zeit zum Bestätigen der Windows-Abfrage ist abgelaufen: Es wurde nichts geändert.',
+        },
+      },
+      equipos: {
+        titulo: 'Geräte im lokalen Netzwerk',
+        ayuda:
+          'Das Lesen nutzt die ARP-Tabelle dieses Computers (die Geräte, mit denen er bereits kommuniziert hat): Es geschieht sofort und sendet nichts ins Netzwerk.',
+        leer: 'Netzwerk lesen',
+        redActiva: 'Aktives Netzwerk',
+        perfil: {
+          privado: 'privates Netzwerk',
+          publico: 'öffentliches Netzwerk',
+          dominio: 'Domänennetzwerk',
+          desconocido: 'unbekanntes Profil',
+        },
+        publica: 'In öffentlichen Netzwerken werden keine anderen Geräte erkundet.',
+        perfilDesconocido:
+          'Es konnte nicht geprüft werden, ob das Netzwerk privat oder öffentlich ist; daher werden keine anderen Geräte erkundet.',
+        sinRed: 'Es gibt kein aktives privates Netzwerk zum Erkunden.',
+        escanear: 'Geräte suchen',
+        progreso: (hechos: number, total: number) => `${hechos} von ${total} Adressen geprüft …`,
+        escaneoListo: (cantidad: number, red: string) =>
+          `Suche in ${red} beendet: ${cantidad} Geräte in der Liste.`,
+        escaneoCancelado: (hechos: number, total: number) =>
+          `Suche abgebrochen, nachdem ${hechos} von ${total} Adressen geprüft wurden.`,
+        vacioTitulo: 'Keine Geräte anzuzeigen',
+        vacioTexto:
+          'Klicken Sie auf „Netzwerk lesen“, um die Geräte zu sehen, die dieser Computer bereits kennt, ohne etwas ins Netzwerk zu senden. Falls Sie das schon getan haben, versuchen Sie „Geräte suchen“.',
+        col: {
+          ip: 'IP-Adresse',
+          nombre: 'Name',
+          mac: 'MAC',
+          fabricante: 'Hersteller',
+          ping: 'Letzter Ping',
+        },
+        ping: 'Ping senden',
+        verCarpetas: 'Ordner anzeigen',
+        confirmar: {
+          titulo: 'Geräte in Ihrem Netzwerk suchen',
+          texto: (red: string, cantidad: number) =>
+            `An jede der ${cantidad} Adressen von ${red} wird nacheinander und mit begrenzter Geschwindigkeit ein Ping gesendet, um Geräte zu finden.`,
+          limites:
+            'Es wird nur Ihr aktives privates Netzwerk erkundet (höchstens 254 Adressen). Es werden keine Ports getestet und auf kein Gerät zugegriffen. Sie können jederzeit abbrechen.',
+          boton: 'Geräte suchen',
+        },
+      },
+      ping: {
+        resultado: (recibidos: number, enviados: number, media: number) =>
+          `${recibidos} von ${enviados} Antworten · Durchschnitt ${media} ms`,
+        sinRespuesta: (enviados: number) => `0 von ${enviados} · keine Antwort`,
+      },
+      recursos: {
+        titulo: (ip: string) => `Freigegebene Ordner von ${ip}`,
+        vacio: 'Dieses Gerät gibt keine sichtbaren Ordner frei.',
+        ayuda:
+          'Sie werden im Datei-Explorer geöffnet. Fragt das Gerät nach Benutzername und Kennwort, fragt Windows danach, nicht diese Anwendung.',
+        abrir: 'Öffnen',
+        fallo: {
+          denegado: 'Das Gerät zeigt seine Ordner nicht ohne Anmeldedaten an.',
+          inaccesible: 'Es konnte keine Verbindung zum Gerät hergestellt werden.',
+          error: 'Die Ordner dieses Geräts konnten nicht abgefragt werden.',
+        },
+      },
+      velocidad: {
+        titulo: 'Geschwindigkeitstest',
+        ayuda: (mb: number) =>
+          `Misst Latenz sowie Download- und Upload-Geschwindigkeit Ihrer Internetverbindung. Es werden etwa ${mb} MB Daten verbraucht.`,
+        medir: 'Geschwindigkeit messen',
+        fases: {
+          latencia: 'Latenz wird gemessen …',
+          bajada: 'Download wird gemessen …',
+          subida: 'Upload wird gemessen …',
+        },
+        latencia: 'Latenz',
+        bajada: 'Download',
+        subida: 'Upload',
+        cancelada: 'Messung abgebrochen: Es wird angezeigt, was bis dahin gemessen wurde.',
+        incompleta: 'Eine der Messungen hat ihr Zeitlimit erreicht: Dieser Wert ist ungefähr.',
+        confirmar: {
+          titulo: 'Geschwindigkeit messen',
+          texto: (bajada: number, subida: number, total: number) =>
+            `Es werden etwa ${bajada} MB heruntergeladen und etwa ${subida} MB zu Cloudflare (speed.cloudflare.com) hochgeladen: insgesamt etwa ${total} MB Daten. Hat Ihre Verbindung ein Datenlimit, beachten Sie diesen Verbrauch.`,
+          privacidad:
+            'Es werden keine Daten von Ihnen gesendet: Hochgeladen werden Nullen. Sie können jederzeit abbrechen.',
+          boton: 'Messen',
+        },
       },
     },
     usoDisco: {

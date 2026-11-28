@@ -331,6 +331,21 @@ export const pt: Textos = {
       'diff.caducado': 'Essa comparação não está mais disponível: compare de novo.',
       'diff.archivo_invalido': 'Esse arquivo não pode mais ser comparado: mudou ou desapareceu.',
       'diff.fallo': 'A comparação falhou.',
+      'red.sin_confirmar': 'Confirme a ação na janela antes de continuar.',
+      'red.rango_no_permitido':
+        'Só são exploradas redes privadas (10.x, 172.16 a 172.31 e 192.168.x), de até 254 computadores.',
+      'red.sin_adaptador': 'Não há uma rede ativa para explorar.',
+      'red.red_publica': 'Em redes públicas, outros computadores não são explorados.',
+      'red.perfil_desconocido':
+        'Não foi possível verificar se a rede é privada ou pública, então outros computadores não são explorados.',
+      'red.ocupado': 'Já há outra operação de Minha rede em andamento: aguarde o término.',
+      'red.equipo_no_valido': 'Só são aceitos endereços IPv4 privados da rede local.',
+      'red.equipo_desconocido': 'Esse computador não está na lista: leia a rede novamente.',
+      'red.recurso_no_valido': 'Esse recurso não está na lista do computador.',
+      'red.carpeta_no_valida': 'Essa pasta compartilhada não pode ser removida daqui.',
+      'red.lectura_fallo': 'Não foi possível ler a rede deste computador.',
+      'red.quitar_fallo': 'Não foi possível parar de compartilhar a pasta.',
+      'red.velocidad_fallo': 'Não foi possível medir a velocidade: verifique a conexão.',
       'compartir.confirmacion_requerida':
         'Compartilhar na internet exige confirmação na janela do WolfCore Dev.',
       'compartir.ocupado': 'Já há algo compartilhado: deixe de compartilhar primeiro.',
@@ -3766,6 +3781,11 @@ export const pt: Textos = {
         descripcion:
           'Publica uma pasta ou um arquivo na internet com um link temporário, somente leitura.',
       },
+      miRed: {
+        nombre: 'Minha rede',
+        descripcion:
+          'Pastas que este computador compartilha, computadores da rede local e teste de velocidade. Sem controle remoto.',
+      },
       usoDisco: {
         nombre: 'Uso do disco',
         descripcion:
@@ -4183,6 +4203,126 @@ export const pt: Textos = {
         vacioTexto: 'Cada vez que alguém abrir o link, aparecerá aqui.',
         col: { hora: 'Hora', ip: 'IP', ruta: 'Caminho', codigo: 'Código' },
         sinPermiso: '(sem o código correto)',
+      },
+    },
+    miRed: {
+      explicacion:
+        'Veja a sua rede sem controlar nenhum computador: as pastas que este computador compartilha, os computadores da rede local e um teste de velocidade. Só lê e consulta: não há controle remoto, área de trabalho remota nem execução em outros computadores.',
+      carpetas: {
+        titulo: 'Pastas compartilhadas por este computador',
+        ayuda:
+          'O que outros computadores da rede podem abrir neste computador. As administrativas do Windows (C$, ADMIN$, IPC$) ficam ocultas e não podem ser removidas daqui.',
+        mostrarAdministrativas: 'Mostrar as administrativas',
+        administrativa: 'Administrativa',
+        col: {
+          nombre: 'Nome',
+          ruta: 'Pasta',
+          descripcion: 'Descrição',
+          usuarios: 'Conexões',
+          acciones: 'Ações',
+        },
+        dejar: 'Parar de compartilhar',
+        vacioTitulo: 'Nenhuma pasta compartilhada',
+        vacioTexto: 'Nenhuma pasta deste computador está compartilhada na rede.',
+        confirmar: {
+          titulo: 'Parar de compartilhar uma pasta',
+          pregunta: (nombre: string) => `Parar de compartilhar «${nombre}»?`,
+          efecto:
+            'Os demais computadores deixarão de ver esta pasta. Os arquivos dela não são apagados nem movidos.',
+          uac: 'Exige permissões de administrador: o Windows mostrará um aviso de controle de conta de usuário (UAC) que você deve aceitar. Se você cancelar ou não responder a tempo, nada será alterado.',
+          entiendo:
+            'Entendo que serão pedidas permissões de administrador e que a pasta deixará de ser compartilhada.',
+          boton: 'Continuar',
+        },
+        resultado: {
+          quitada: (nombre: string) => `«${nombre}» não está mais compartilhada.`,
+          cancelado: 'O aviso do Windows foi cancelado: nada foi alterado.',
+          tiempo: 'O tempo para aceitar o aviso do Windows acabou: nada foi alterado.',
+        },
+      },
+      equipos: {
+        titulo: 'Computadores da rede local',
+        ayuda:
+          'A leitura usa a tabela ARP deste computador (os computadores com os quais ele já se comunicou): é imediata e não envia nada à rede.',
+        leer: 'Ler a rede',
+        redActiva: 'Rede ativa',
+        perfil: {
+          privado: 'rede privada',
+          publico: 'rede pública',
+          dominio: 'rede de domínio',
+          desconocido: 'perfil desconhecido',
+        },
+        publica: 'Em redes públicas, outros computadores não são explorados.',
+        perfilDesconocido:
+          'Não foi possível verificar se a rede é privada ou pública, então outros computadores não são explorados.',
+        sinRed: 'Não há uma rede privada ativa para explorar.',
+        escanear: 'Procurar computadores',
+        progreso: (hechos: number, total: number) => `${hechos} de ${total} endereços verificados…`,
+        escaneoListo: (cantidad: number, red: string) =>
+          `Busca concluída em ${red}: ${cantidad} computadores na lista.`,
+        escaneoCancelado: (hechos: number, total: number) =>
+          `Busca cancelada após verificar ${hechos} de ${total} endereços.`,
+        vacioTitulo: 'Nenhum computador para mostrar',
+        vacioTexto:
+          'Clique em «Ler a rede» para ver os computadores que este já conhece, sem enviar nada à rede. Se já leu, tente «Procurar computadores».',
+        col: {
+          ip: 'Endereço IP',
+          nombre: 'Nome',
+          mac: 'MAC',
+          fabricante: 'Fabricante',
+          ping: 'Último ping',
+        },
+        ping: 'Fazer ping',
+        verCarpetas: 'Ver pastas',
+        confirmar: {
+          titulo: 'Procurar computadores na sua rede',
+          texto: (red: string, cantidad: number) =>
+            `Será enviado um ping a cada um dos ${cantidad} endereços de ${red}, um após o outro e com limite de velocidade, para encontrar computadores.`,
+          limites:
+            'Só a sua rede privada ativa é explorada (no máximo 254 endereços). Nenhuma porta é testada e nenhum computador é acessado. Você pode cancelar a qualquer momento.',
+          boton: 'Procurar computadores',
+        },
+      },
+      ping: {
+        resultado: (recibidos: number, enviados: number, media: number) =>
+          `${recibidos} de ${enviados} respostas · média ${media} ms`,
+        sinRespuesta: (enviados: number) => `0 de ${enviados} · sem resposta`,
+      },
+      recursos: {
+        titulo: (ip: string) => `Pastas compartilhadas de ${ip}`,
+        vacio: 'Este computador não compartilha pastas visíveis.',
+        ayuda:
+          'Elas abrem no Explorador de Arquivos. Se o computador pedir usuário e senha, quem pede é o Windows, não este aplicativo.',
+        abrir: 'Abrir',
+        fallo: {
+          denegado: 'O computador não permite ver suas pastas sem credenciais.',
+          inaccesible: 'Não foi possível conectar ao computador.',
+          error: 'Não foi possível consultar as pastas desse computador.',
+        },
+      },
+      velocidad: {
+        titulo: 'Teste de velocidade',
+        ayuda: (mb: number) =>
+          `Mede a latência, o download e o upload da sua conexão com a internet. Usa cerca de ${mb} MB de dados.`,
+        medir: 'Medir velocidade',
+        fases: {
+          latencia: 'Medindo a latência…',
+          bajada: 'Medindo o download…',
+          subida: 'Medindo o upload…',
+        },
+        latencia: 'Latência',
+        bajada: 'Download',
+        subida: 'Upload',
+        cancelada: 'Medição cancelada: é mostrado o que foi medido até então.',
+        incompleta: 'Uma das medições atingiu o prazo: esse valor é aproximado.',
+        confirmar: {
+          titulo: 'Medir a velocidade',
+          texto: (bajada: number, subida: number, total: number) =>
+            `Serão baixados cerca de ${bajada} MB e enviados cerca de ${subida} MB à Cloudflare (speed.cloudflare.com): cerca de ${total} MB de dados no total. Se a sua conexão tem limite de dados, considere esse consumo.`,
+          privacidad:
+            'Nenhum dado seu é enviado: o que se envia são zeros. Você pode cancelar a qualquer momento.',
+          boton: 'Medir',
+        },
       },
     },
     usoDisco: {

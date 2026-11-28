@@ -69,6 +69,22 @@ export const jaExtra: TextosParciales = {
       'diff.caducado': 'その比較はもう利用できません。もう一度比較してください。',
       'diff.archivo_invalido': 'そのファイルはもう比較できません。変更されたか、なくなっています。',
       'diff.fallo': '比較に失敗しました。',
+      'red.sin_confirmar': '続行する前に、ダイアログで操作を確認してください。',
+      'red.rango_no_permitido':
+        '探索できるのは、最大 254 台のプライベートネットワーク（10.x、172.16 から 172.31、192.168.x）のみです。',
+      'red.sin_adaptador': '探索できる使用中のネットワークがありません。',
+      'red.red_publica': 'パブリックネットワークでは、他の機器を探索しません。',
+      'red.perfil_desconocido':
+        'ネットワークがプライベートかパブリックかを確認できなかったため、他の機器は探索しません。',
+      'red.ocupado': 'マイネットワークの別の操作がすでに実行中です。完了するまでお待ちください。',
+      'red.equipo_no_valido': 'ローカルネットワークのプライベート IPv4 アドレスのみ使用できます。',
+      'red.equipo_desconocido':
+        'その機器は一覧にありません。ネットワークをもう一度読み取ってください。',
+      'red.recurso_no_valido': 'そのリソースは、機器の一覧にありません。',
+      'red.carpeta_no_valida': 'その共有フォルダーは、ここから削除できません。',
+      'red.lectura_fallo': 'このコンピューターのネットワークを読み取れませんでした。',
+      'red.quitar_fallo': 'フォルダーの共有を停止できませんでした。',
+      'red.velocidad_fallo': '速度を測定できませんでした。接続を確認してください。',
       'compartir.confirmacion_requerida':
         'インターネットでの共有は、WolfCore Dev のウィンドウで確認する必要があります。',
       'compartir.ocupado': 'すでに何かを共有中です。先に共有を停止してください。',
@@ -582,6 +598,11 @@ export const jaExtra: TextosParciales = {
         descripcion:
           'フォルダーまたはファイルを、読み取り専用の一時リンクでインターネットに公開します。',
       },
+      miRed: {
+        nombre: 'マイネットワーク',
+        descripcion:
+          'このコンピューターが共有しているフォルダー、ローカルネットワーク上の機器、速度テスト。リモート操作はありません。',
+      },
       usoDisco: {
         nombre: 'ディスク使用量',
         descripcion:
@@ -744,6 +765,127 @@ export const jaExtra: TextosParciales = {
         vacioTexto: '誰かがリンクを開くたびに、ここに表示されます。',
         col: { hora: '時刻', ip: 'IP', ruta: 'パス', codigo: 'コード' },
         sinPermiso: '（正しいコードなし）',
+      },
+    },
+    miRed: {
+      explicacion:
+        '機器を操作することなく、ネットワークの状況を確認できます。このコンピューターが共有しているフォルダー、ローカルネットワーク上の機器、速度テストを表示します。読み取りと照会のみを行い、リモート操作、リモートデスクトップ、他の機器での実行は一切ありません。',
+      carpetas: {
+        titulo: 'このコンピューターの共有フォルダー',
+        ayuda:
+          'ネットワーク上の他の機器がこのコンピューターで開ける内容です。Windows の管理用共有（C$、ADMIN$、IPC$）は非表示で、ここから削除することはできません。',
+        mostrarAdministrativas: '管理用共有を表示',
+        administrativa: '管理用',
+        col: {
+          nombre: '名前',
+          ruta: 'フォルダー',
+          descripcion: '説明',
+          usuarios: '接続数',
+          acciones: '操作',
+        },
+        dejar: '共有を停止',
+        vacioTitulo: '共有しているフォルダーはありません',
+        vacioTexto: 'このコンピューターのフォルダーはネットワークで共有されていません。',
+        confirmar: {
+          titulo: 'フォルダーの共有を停止',
+          pregunta: (nombre: string) => `「${nombre}」の共有を停止しますか？`,
+          efecto:
+            '他の機器からこのフォルダーが見えなくなります。ファイルが削除されたり移動されたりすることはありません。',
+          uac: '管理者権限が必要です。Windows にユーザーアカウント制御（UAC）の確認が表示されますので、許可してください。キャンセルした場合や時間内に応答しなかった場合は、何も変更されません。',
+          entiendo:
+            '管理者権限が要求されること、およびフォルダーの共有が停止されることを理解しました。',
+          boton: '続行',
+        },
+        resultado: {
+          quitada: (nombre: string) => `「${nombre}」は共有されなくなりました。`,
+          cancelado: 'Windows の確認がキャンセルされました。何も変更されていません。',
+          tiempo: 'Windows の確認を許可する時間が過ぎました。何も変更されていません。',
+        },
+      },
+      equipos: {
+        titulo: 'ローカルネットワーク上の機器',
+        ayuda:
+          'このコンピューターの ARP テーブル（すでに通信したことのある機器）を読み取ります。すぐに完了し、ネットワークには何も送信しません。',
+        leer: 'ネットワークを読み取る',
+        redActiva: '使用中のネットワーク',
+        perfil: {
+          privado: 'プライベートネットワーク',
+          publico: 'パブリックネットワーク',
+          dominio: 'ドメインネットワーク',
+          desconocido: 'プロファイル不明',
+        },
+        publica: 'パブリックネットワークでは、他の機器を探索しません。',
+        perfilDesconocido:
+          'ネットワークがプライベートかパブリックかを確認できなかったため、他の機器は探索しません。',
+        sinRed: '探索できる使用中のプライベートネットワークがありません。',
+        escanear: '機器を検索',
+        progreso: (hechos: number, total: number) =>
+          `${total} 件中 ${hechos} 件のアドレスを確認しました…`,
+        escaneoListo: (cantidad: number, red: string) =>
+          `${red} での検索が完了しました。一覧に ${cantidad} 台の機器があります。`,
+        escaneoCancelado: (hechos: number, total: number) =>
+          `${total} 件中 ${hechos} 件のアドレスを確認した時点で検索をキャンセルしました。`,
+        vacioTitulo: '表示する機器がありません',
+        vacioTexto:
+          '「ネットワークを読み取る」をクリックすると、ネットワークに何も送信せずに、このコンピューターがすでに把握している機器を表示します。すでに読み取り済みの場合は「機器を検索」をお試しください。',
+        col: {
+          ip: 'IP アドレス',
+          nombre: '名前',
+          mac: 'MAC',
+          fabricante: 'メーカー',
+          ping: '最後の ping',
+        },
+        ping: 'ping を実行',
+        verCarpetas: 'フォルダーを表示',
+        confirmar: {
+          titulo: 'ネットワーク上の機器を検索',
+          texto: (red: string, cantidad: number) =>
+            `${red} の ${cantidad} 件のアドレスそれぞれに、速度を制限して順番に ping を送信し、機器を探します。`,
+          limites:
+            '使用中のプライベートネットワークのみを探索します（最大 254 件のアドレス）。ポートのテストや機器へのアクセスは行いません。いつでもキャンセルできます。',
+          boton: '機器を検索',
+        },
+      },
+      ping: {
+        resultado: (recibidos: number, enviados: number, media: number) =>
+          `${enviados} 回中 ${recibidos} 回応答 · 平均 ${media} ms`,
+        sinRespuesta: (enviados: number) => `${enviados} 回中 0 回 · 応答なし`,
+      },
+      recursos: {
+        titulo: (ip: string) => `${ip} の共有フォルダー`,
+        vacio: 'この機器は表示可能なフォルダーを共有していません。',
+        ayuda:
+          'エクスプローラーで開きます。機器がユーザー名とパスワードを要求する場合、要求するのはこのアプリではなく Windows です。',
+        abrir: '開く',
+        fallo: {
+          denegado: '資格情報がないと、この機器のフォルダーは表示できません。',
+          inaccesible: 'この機器に接続できませんでした。',
+          error: 'この機器のフォルダーを照会できませんでした。',
+        },
+      },
+      velocidad: {
+        titulo: '速度テスト',
+        ayuda: (mb: number) =>
+          `インターネット接続のレイテンシー、ダウンロード速度、アップロード速度を測定します。約 ${mb} MB のデータを使用します。`,
+        medir: '速度を測定',
+        fases: {
+          latencia: 'レイテンシーを測定しています…',
+          bajada: 'ダウンロード速度を測定しています…',
+          subida: 'アップロード速度を測定しています…',
+        },
+        latencia: 'レイテンシー',
+        bajada: 'ダウンロード',
+        subida: 'アップロード',
+        cancelada: '測定をキャンセルしました。それまでに測定できた結果を表示しています。',
+        incompleta: '測定の 1 つが制限時間に達しました。その値は概算です。',
+        confirmar: {
+          titulo: '速度の測定',
+          texto: (bajada: number, subida: number, total: number) =>
+            `Cloudflare（speed.cloudflare.com）から約 ${bajada} MB をダウンロードし、約 ${subida} MB をアップロードします。合計で約 ${total} MB のデータを使用します。通信量に上限がある場合は、この使用量にご注意ください。`,
+          privacidad:
+            'お客様のデータは一切送信されません。アップロードされるのはゼロのデータだけです。いつでもキャンセルできます。',
+          boton: '測定する',
+        },
       },
     },
     usoDisco: {

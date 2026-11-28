@@ -73,6 +73,21 @@ export const trExtra: TextosParciales = {
       'diff.caducado': 'Bu karşılaştırma artık kullanılamıyor: yeniden karşılaştırın.',
       'diff.archivo_invalido': 'Bu dosya artık karşılaştırılamıyor: değişti veya kayboldu.',
       'diff.fallo': 'Karşılaştırma başarısız oldu.',
+      'red.sin_confirmar': 'Devam etmeden önce eylemi iletişim kutusunda onaylayın.',
+      'red.rango_no_permitido':
+        'Yalnızca en fazla 254 cihazlık özel ağlar (10.x, 172.16 ile 172.31 arası ve 192.168.x) taranır.',
+      'red.sin_adaptador': 'Taranacak etkin bir ağ yok.',
+      'red.red_publica': 'Genel ağlarda diğer cihazlar taranmaz.',
+      'red.perfil_desconocido':
+        'Ağın özel mi genel mi olduğu denetlenemedi, bu nedenle diğer cihazlar taranmaz.',
+      'red.ocupado': 'Ağım’ın başka bir işlemi zaten sürüyor: bitmesini bekleyin.',
+      'red.equipo_no_valido': 'Yalnızca yerel ağın özel IPv4 adresleri kabul edilir.',
+      'red.equipo_desconocido': 'Bu cihaz listede yok: ağı yeniden okuyun.',
+      'red.recurso_no_valido': 'Bu kaynak, cihazın listesinde yok.',
+      'red.carpeta_no_valida': 'Bu paylaşılan klasör buradan kaldırılamaz.',
+      'red.lectura_fallo': 'Bu bilgisayarın ağı okunamadı.',
+      'red.quitar_fallo': 'Klasörün paylaşımı durdurulamadı.',
+      'red.velocidad_fallo': 'Hız ölçülemedi: bağlantıyı denetleyin.',
       'compartir.confirmacion_requerida':
         'İnternette paylaşım WolfCore Dev penceresinde onaylanmalıdır.',
       'compartir.ocupado': 'Zaten bir şey paylaşılıyor: önce paylaşımı durdurun.',
@@ -578,6 +593,11 @@ export const trExtra: TextosParciales = {
         descripcion:
           'Bir klasörü veya dosyayı geçici, salt okunur bir bağlantıyla internette yayınlayın.',
       },
+      miRed: {
+        nombre: 'Ağım',
+        descripcion:
+          'Bu bilgisayarın paylaştığı klasörler, yerel ağdaki cihazlar ve hız testi. Uzaktan denetim yoktur.',
+      },
       usoDisco: {
         nombre: 'Disk kullanımı',
         descripcion:
@@ -739,6 +759,127 @@ export const trExtra: TextosParciales = {
         vacioTexto: 'Biri bağlantıyı her açtığında burada görünecek.',
         col: { hora: 'Saat', ip: 'IP', ruta: 'Yol', codigo: 'Kod' },
         sinPermiso: '(doğru kod olmadan)',
+      },
+    },
+    miRed: {
+      explicacion:
+        'Hiçbir cihazı denetlemeden ağınızı görün: bu bilgisayarın paylaştığı klasörler, yerel ağdaki cihazlar ve bir hız testi. Yalnızca okur ve sorgular: uzaktan denetim, uzak masaüstü veya diğer cihazlarda çalıştırma yoktur.',
+      carpetas: {
+        titulo: 'Bu bilgisayarın paylaştığı klasörler',
+        ayuda:
+          'Ağdaki diğer cihazların bu bilgisayarda açabildikleri. Windows’un yönetimsel paylaşımları (C$, ADMIN$, IPC$) gizlidir ve buradan kaldırılamaz.',
+        mostrarAdministrativas: 'Yönetimsel paylaşımları göster',
+        administrativa: 'Yönetimsel',
+        col: {
+          nombre: 'Ad',
+          ruta: 'Klasör',
+          descripcion: 'Açıklama',
+          usuarios: 'Bağlantılar',
+          acciones: 'İşlemler',
+        },
+        dejar: 'Paylaşımı durdur',
+        vacioTitulo: 'Paylaşılan klasör yok',
+        vacioTexto: 'Bu bilgisayarın hiçbir klasörü ağda paylaşılmıyor.',
+        confirmar: {
+          titulo: 'Bir klasörün paylaşımını durdur',
+          pregunta: (nombre: string) => `“${nombre}” paylaşımı durdurulsun mu?`,
+          efecto:
+            'Diğer cihazlar bu klasörü artık göremez. Klasördeki dosyalar silinmez veya taşınmaz.',
+          uac: 'Yönetici izinleri gerekir: Windows, onaylamanız gereken bir Kullanıcı Hesabı Denetimi (UAC) uyarısı gösterecektir. Uyarıyı iptal ederseniz veya zamanında yanıtlamazsanız hiçbir şey değiştirilmez.',
+          entiendo:
+            'Yönetici izinlerinin isteneceğini ve klasörün artık paylaşılmayacağını anlıyorum.',
+          boton: 'Devam',
+        },
+        resultado: {
+          quitada: (nombre: string) => `“${nombre}” artık paylaşılmıyor.`,
+          cancelado: 'Windows uyarısı iptal edildi: hiçbir şey değiştirilmedi.',
+          tiempo: 'Windows uyarısını onaylama süresi doldu: hiçbir şey değiştirilmedi.',
+        },
+      },
+      equipos: {
+        titulo: 'Yerel ağdaki cihazlar',
+        ayuda:
+          'Okuma, bu bilgisayarın ARP tablosunu (daha önce iletişim kurduğu cihazlar) kullanır: anında olur ve ağa hiçbir şey göndermez.',
+        leer: 'Ağı oku',
+        redActiva: 'Etkin ağ',
+        perfil: {
+          privado: 'özel ağ',
+          publico: 'genel ağ',
+          dominio: 'etki alanı ağı',
+          desconocido: 'profil bilinmiyor',
+        },
+        publica: 'Genel ağlarda diğer cihazlar taranmaz.',
+        perfilDesconocido:
+          'Ağın özel mi genel mi olduğu denetlenemedi, bu nedenle diğer cihazlar taranmaz.',
+        sinRed: 'Taranacak etkin bir özel ağ yok.',
+        escanear: 'Cihaz ara',
+        progreso: (hechos: number, total: number) =>
+          `${total} adresten ${hechos} tanesi denetlendi…`,
+        escaneoListo: (cantidad: number, red: string) =>
+          `${red} içindeki arama tamamlandı: listede ${cantidad} cihaz var.`,
+        escaneoCancelado: (hechos: number, total: number) =>
+          `${total} adresten ${hechos} tanesi denetlendikten sonra arama iptal edildi.`,
+        vacioTitulo: 'Gösterilecek cihaz yok',
+        vacioTexto:
+          'Ağa hiçbir şey göndermeden bu bilgisayarın zaten bildiği cihazları görmek için “Ağı oku” düğmesine tıklayın. Zaten okuduysanız “Cihaz ara” seçeneğini deneyin.',
+        col: {
+          ip: 'IP adresi',
+          nombre: 'Ad',
+          mac: 'MAC',
+          fabricante: 'Üretici',
+          ping: 'Son ping',
+        },
+        ping: 'Ping at',
+        verCarpetas: 'Klasörleri gör',
+        confirmar: {
+          titulo: 'Ağınızda cihaz arayın',
+          texto: (red: string, cantidad: number) =>
+            `Cihazları bulmak için ${red} içindeki ${cantidad} adresin her birine, hız sınırlı olarak ve sırayla bir ping gönderilecek.`,
+          limites:
+            'Yalnızca etkin özel ağınız taranır (en fazla 254 adres). Hiçbir bağlantı noktası denenmez ve hiçbir cihaza erişilmez. İstediğiniz zaman iptal edebilirsiniz.',
+          boton: 'Cihaz ara',
+        },
+      },
+      ping: {
+        resultado: (recibidos: number, enviados: number, media: number) =>
+          `${enviados} yanıttan ${recibidos} tanesi geldi · ortalama ${media} ms`,
+        sinRespuesta: (enviados: number) => `${enviados} yanıttan 0 · yanıt yok`,
+      },
+      recursos: {
+        titulo: (ip: string) => `${ip} cihazının paylaştığı klasörler`,
+        vacio: 'Bu cihaz görünür klasör paylaşmıyor.',
+        ayuda:
+          'Dosya Gezgini’nde açılırlar. Cihaz kullanıcı adı ve parola isterse bunları bu uygulama değil, Windows ister.',
+        abrir: 'Aç',
+        fallo: {
+          denegado: 'Cihaz, kimlik bilgileri olmadan klasörlerini göstermiyor.',
+          inaccesible: 'Cihaza bağlanılamadı.',
+          error: 'Bu cihazın klasörleri sorgulanamadı.',
+        },
+      },
+      velocidad: {
+        titulo: 'Hız testi',
+        ayuda: (mb: number) =>
+          `İnternet bağlantınızın gecikmesini, indirme ve yükleme hızını ölçer. Yaklaşık ${mb} MB veri kullanır.`,
+        medir: 'Hızı ölç',
+        fases: {
+          latencia: 'Gecikme ölçülüyor…',
+          bajada: 'İndirme hızı ölçülüyor…',
+          subida: 'Yükleme hızı ölçülüyor…',
+        },
+        latencia: 'Gecikme',
+        bajada: 'İndirme',
+        subida: 'Yükleme',
+        cancelada: 'Ölçüm iptal edildi: o ana kadar ölçülenler gösteriliyor.',
+        incompleta: 'Ölçümlerden biri süre sınırına ulaştı: bu değer yaklaşıktır.',
+        confirmar: {
+          titulo: 'Hızı ölç',
+          texto: (bajada: number, subida: number, total: number) =>
+            `Cloudflare’e (speed.cloudflare.com) yaklaşık ${bajada} MB indirilecek ve yaklaşık ${subida} MB yüklenecek: toplam yaklaşık ${total} MB veri. Bağlantınızda veri sınırı varsa bu tüketimi göz önünde bulundurun.`,
+          privacidad:
+            'Hiçbir verinizi göndermez: yüklenen yalnızca sıfırlardır. İstediğiniz zaman iptal edebilirsiniz.',
+          boton: 'Ölç',
+        },
       },
     },
     usoDisco: {

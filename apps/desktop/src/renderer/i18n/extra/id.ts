@@ -71,6 +71,21 @@ export const idExtra: TextosParciales = {
       'diff.caducado': 'Perbandingan itu tidak tersedia lagi: bandingkan ulang.',
       'diff.archivo_invalido': 'Berkas itu tidak dapat dibandingkan lagi: berubah atau hilang.',
       'diff.fallo': 'Perbandingan gagal.',
+      'red.sin_confirmar': 'Konfirmasikan tindakan di dialog sebelum melanjutkan.',
+      'red.rango_no_permitido':
+        'Hanya jaringan pribadi (10.x, 172.16 hingga 172.31, dan 192.168.x) dengan paling banyak 254 perangkat yang dijelajahi.',
+      'red.sin_adaptador': 'Tidak ada jaringan aktif untuk dijelajahi.',
+      'red.red_publica': 'Di jaringan publik, perangkat lain tidak dijelajahi.',
+      'red.perfil_desconocido':
+        'Tidak dapat memeriksa apakah jaringan ini pribadi atau publik, sehingga perangkat lain tidak dijelajahi.',
+      'red.ocupado': 'Operasi Jaringan saya yang lain sedang berjalan: tunggu hingga selesai.',
+      'red.equipo_no_valido': 'Hanya alamat IPv4 pribadi dari jaringan lokal yang diterima.',
+      'red.equipo_desconocido': 'Perangkat itu tidak ada dalam daftar: baca jaringan lagi.',
+      'red.recurso_no_valido': 'Sumber daya itu tidak ada dalam daftar perangkat.',
+      'red.carpeta_no_valida': 'Folder bersama itu tidak dapat dihapus dari sini.',
+      'red.lectura_fallo': 'Jaringan komputer ini tidak dapat dibaca.',
+      'red.quitar_fallo': 'Berbagi folder tidak dapat dihentikan.',
+      'red.velocidad_fallo': 'Kecepatan tidak dapat diukur: periksa koneksi.',
       'compartir.confirmacion_requerida':
         'Berbagi di internet harus dikonfirmasi di jendela WolfCore Dev.',
       'compartir.ocupado': 'Sesuatu sedang dibagikan: hentikan dulu pembagiannya.',
@@ -569,6 +584,11 @@ export const idExtra: TextosParciales = {
         descripcion:
           'Publikasikan folder atau berkas di internet dengan tautan sementara yang hanya baca.',
       },
+      miRed: {
+        nombre: 'Jaringan saya',
+        descripcion:
+          'Folder yang dibagikan komputer ini, perangkat di jaringan lokal, dan uji kecepatan. Tanpa kendali jarak jauh.',
+      },
       usoDisco: {
         nombre: 'Penggunaan disk',
         descripcion:
@@ -734,6 +754,127 @@ export const idExtra: TextosParciales = {
         vacioTexto: 'Setiap kali seseorang membuka tautan, akan muncul di sini.',
         col: { hora: 'Waktu', ip: 'IP', ruta: 'Jalur', codigo: 'Kode' },
         sinPermiso: '(tanpa kode yang benar)',
+      },
+    },
+    miRed: {
+      explicacion:
+        'Lihat jaringan Anda tanpa mengendalikan perangkat apa pun: folder yang dibagikan komputer ini, perangkat di jaringan lokal, dan uji kecepatan. Hanya membaca dan menanyakan: tidak ada kendali jarak jauh, desktop jarak jauh, atau eksekusi di perangkat lain.',
+      carpetas: {
+        titulo: 'Folder yang dibagikan komputer ini',
+        ayuda:
+          'Apa yang dapat dibuka perangkat lain di jaringan pada komputer ini. Berbagi administratif Windows (C$, ADMIN$, IPC$) disembunyikan dan tidak dapat dihapus dari sini.',
+        mostrarAdministrativas: 'Tampilkan berbagi administratif',
+        administrativa: 'Administratif',
+        col: {
+          nombre: 'Nama',
+          ruta: 'Folder',
+          descripcion: 'Deskripsi',
+          usuarios: 'Koneksi',
+          acciones: 'Tindakan',
+        },
+        dejar: 'Hentikan berbagi',
+        vacioTitulo: 'Tidak ada folder yang dibagikan',
+        vacioTexto: 'Tidak ada folder di komputer ini yang dibagikan di jaringan.',
+        confirmar: {
+          titulo: 'Hentikan berbagi folder',
+          pregunta: (nombre: string) => `Hentikan berbagi “${nombre}”?`,
+          efecto:
+            'Perangkat lain tidak akan lagi melihat folder ini. File di dalamnya tidak dihapus atau dipindahkan.',
+          uac: 'Memerlukan izin administrator: Windows akan menampilkan pemberitahuan Kontrol Akun Pengguna (UAC) yang harus Anda setujui. Jika Anda membatalkannya atau tidak menjawab tepat waktu, tidak ada yang diubah.',
+          entiendo:
+            'Saya memahami bahwa izin administrator akan diminta dan folder tidak akan dibagikan lagi.',
+          boton: 'Lanjutkan',
+        },
+        resultado: {
+          quitada: (nombre: string) => `“${nombre}” tidak lagi dibagikan.`,
+          cancelado: 'Pemberitahuan Windows dibatalkan: tidak ada yang diubah.',
+          tiempo: 'Waktu untuk menyetujui pemberitahuan Windows habis: tidak ada yang diubah.',
+        },
+      },
+      equipos: {
+        titulo: 'Perangkat di jaringan lokal',
+        ayuda:
+          'Pembacaan menggunakan tabel ARP komputer ini (perangkat yang sudah pernah berkomunikasi dengannya): berlangsung seketika dan tidak mengirim apa pun ke jaringan.',
+        leer: 'Baca jaringan',
+        redActiva: 'Jaringan aktif',
+        perfil: {
+          privado: 'jaringan pribadi',
+          publico: 'jaringan publik',
+          dominio: 'jaringan domain',
+          desconocido: 'profil tidak diketahui',
+        },
+        publica: 'Di jaringan publik, perangkat lain tidak dijelajahi.',
+        perfilDesconocido:
+          'Tidak dapat memeriksa apakah jaringan ini pribadi atau publik, sehingga perangkat lain tidak dijelajahi.',
+        sinRed: 'Tidak ada jaringan pribadi aktif untuk dijelajahi.',
+        escanear: 'Cari perangkat',
+        progreso: (hechos: number, total: number) =>
+          `${hechos} dari ${total} alamat telah diperiksa…`,
+        escaneoListo: (cantidad: number, red: string) =>
+          `Pencarian di ${red} selesai: ${cantidad} perangkat dalam daftar.`,
+        escaneoCancelado: (hechos: number, total: number) =>
+          `Pencarian dibatalkan setelah memeriksa ${hechos} dari ${total} alamat.`,
+        vacioTitulo: 'Tidak ada perangkat untuk ditampilkan',
+        vacioTexto:
+          'Klik “Baca jaringan” untuk melihat perangkat yang sudah dikenal komputer ini tanpa mengirim apa pun ke jaringan. Jika sudah membacanya, coba “Cari perangkat”.',
+        col: {
+          ip: 'Alamat IP',
+          nombre: 'Nama',
+          mac: 'MAC',
+          fabricante: 'Produsen',
+          ping: 'Ping terakhir',
+        },
+        ping: 'Kirim ping',
+        verCarpetas: 'Lihat folder',
+        confirmar: {
+          titulo: 'Cari perangkat di jaringan Anda',
+          texto: (red: string, cantidad: number) =>
+            `Satu ping akan dikirim ke masing-masing dari ${cantidad} alamat di ${red}, satu per satu dan dengan kecepatan terbatas, untuk menemukan perangkat.`,
+          limites:
+            'Hanya jaringan pribadi aktif Anda yang dijelajahi (paling banyak 254 alamat). Tidak ada port yang diuji dan tidak ada perangkat yang diakses. Anda dapat membatalkan kapan saja.',
+          boton: 'Cari perangkat',
+        },
+      },
+      ping: {
+        resultado: (recibidos: number, enviados: number, media: number) =>
+          `${recibidos} dari ${enviados} balasan · rata-rata ${media} md`,
+        sinRespuesta: (enviados: number) => `0 dari ${enviados} · tidak ada balasan`,
+      },
+      recursos: {
+        titulo: (ip: string) => `Folder yang dibagikan ${ip}`,
+        vacio: 'Perangkat ini tidak membagikan folder yang terlihat.',
+        ayuda:
+          'Folder dibuka di File Explorer. Jika perangkat meminta nama pengguna dan kata sandi, yang memintanya adalah Windows, bukan aplikasi ini.',
+        abrir: 'Buka',
+        fallo: {
+          denegado: 'Perangkat tidak menampilkan foldernya tanpa kredensial.',
+          inaccesible: 'Tidak dapat terhubung ke perangkat.',
+          error: 'Folder perangkat tersebut tidak dapat ditanyakan.',
+        },
+      },
+      velocidad: {
+        titulo: 'Uji kecepatan',
+        ayuda: (mb: number) =>
+          `Mengukur latensi, kecepatan unduh, dan kecepatan unggah koneksi internet Anda. Menggunakan sekitar ${mb} MB data.`,
+        medir: 'Ukur kecepatan',
+        fases: {
+          latencia: 'Mengukur latensi…',
+          bajada: 'Mengukur kecepatan unduh…',
+          subida: 'Mengukur kecepatan unggah…',
+        },
+        latencia: 'Latensi',
+        bajada: 'Unduh',
+        subida: 'Unggah',
+        cancelada: 'Pengukuran dibatalkan: yang ditampilkan adalah hasil hingga saat itu.',
+        incompleta: 'Salah satu pengukuran mencapai batas waktu: nilai tersebut hanya perkiraan.',
+        confirmar: {
+          titulo: 'Ukur kecepatan',
+          texto: (bajada: number, subida: number, total: number) =>
+            `Sekitar ${bajada} MB akan diunduh dan sekitar ${subida} MB akan diunggah ke Cloudflare (speed.cloudflare.com): total sekitar ${total} MB data. Jika koneksi Anda memiliki batas kuota, perhatikan pemakaian ini.`,
+          privacidad:
+            'Tidak ada data Anda yang dikirim: yang diunggah hanyalah angka nol. Anda dapat membatalkan kapan saja.',
+          boton: 'Ukur',
+        },
       },
     },
     usoDisco: {

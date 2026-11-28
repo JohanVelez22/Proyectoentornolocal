@@ -340,6 +340,22 @@ export const fr: Textos = {
       'diff.caducado': 'Cette comparaison n’est plus disponible : relancez-la.',
       'diff.archivo_invalido': 'Ce fichier ne peut plus être comparé : il a changé ou a disparu.',
       'diff.fallo': 'La comparaison a échoué.',
+      'red.sin_confirmar': 'Confirmez l’action dans la boîte de dialogue avant de continuer.',
+      'red.rango_no_permitido':
+        'Seuls les réseaux privés (10.x, 172.16 à 172.31 et 192.168.x), jusqu’à 254 appareils, sont explorés.',
+      'red.sin_adaptador': 'Aucun réseau actif à explorer.',
+      'red.red_publica': 'Sur les réseaux publics, les autres appareils ne sont pas explorés.',
+      'red.perfil_desconocido':
+        'Impossible de vérifier si le réseau est privé ou public ; les autres appareils ne sont donc pas explorés.',
+      'red.ocupado':
+        'Une autre opération de Mon réseau est déjà en cours : attendez qu’elle se termine.',
+      'red.equipo_no_valido': 'Seules les adresses IPv4 privées du réseau local sont acceptées.',
+      'red.equipo_desconocido': 'Cet appareil n’est pas dans la liste : lisez à nouveau le réseau.',
+      'red.recurso_no_valido': 'Cette ressource n’est pas dans la liste de l’appareil.',
+      'red.carpeta_no_valida': 'Ce dossier partagé ne peut pas être supprimé d’ici.',
+      'red.lectura_fallo': 'Impossible de lire le réseau de cet ordinateur.',
+      'red.quitar_fallo': 'Impossible d’arrêter le partage du dossier.',
+      'red.velocidad_fallo': 'Impossible de mesurer le débit : vérifiez la connexion.',
       'compartir.confirmacion_requerida':
         'Le partage sur internet doit être confirmé dans la fenêtre de WolfCore Dev.',
       'compartir.ocupado': 'Quelque chose est déjà partagé : arrêtez d’abord le partage.',
@@ -3866,6 +3882,11 @@ export const fr: Textos = {
         descripcion:
           'Publiez un dossier ou un fichier sur internet avec un lien temporaire, en lecture seule.',
       },
+      miRed: {
+        nombre: 'Mon réseau',
+        descripcion:
+          'Dossiers partagés par cet ordinateur, appareils du réseau local et test de débit. Sans contrôle à distance.',
+      },
       usoDisco: {
         nombre: 'Utilisation du disque',
         descripcion:
@@ -4291,6 +4312,126 @@ export const fr: Textos = {
         vacioTexto: 'Chaque fois que quelqu’un ouvrira le lien, il apparaîtra ici.',
         col: { hora: 'Heure', ip: 'IP', ruta: 'Chemin', codigo: 'Code' },
         sinPermiso: '(sans le bon code)',
+      },
+    },
+    miRed: {
+      explicacion:
+        'Consultez votre réseau sans contrôler aucun appareil : les dossiers que cet ordinateur partage, les appareils du réseau local et un test de débit. Seules la lecture et la consultation sont possibles : il n’y a ni contrôle à distance, ni bureau à distance, ni exécution sur d’autres appareils.',
+      carpetas: {
+        titulo: 'Dossiers partagés par cet ordinateur',
+        ayuda:
+          'Ce que les autres appareils du réseau peuvent ouvrir sur cet ordinateur. Les partages administratifs de Windows (C$, ADMIN$, IPC$) sont masqués et ne peuvent pas être supprimés d’ici.',
+        mostrarAdministrativas: 'Afficher les partages administratifs',
+        administrativa: 'Administratif',
+        col: {
+          nombre: 'Nom',
+          ruta: 'Dossier',
+          descripcion: 'Description',
+          usuarios: 'Connexions',
+          acciones: 'Actions',
+        },
+        dejar: 'Arrêter le partage',
+        vacioTitulo: 'Aucun dossier partagé',
+        vacioTexto: 'Aucun dossier de cet ordinateur n’est partagé sur le réseau.',
+        confirmar: {
+          titulo: 'Arrêter le partage d’un dossier',
+          pregunta: (nombre: string) => `Arrêter le partage de « ${nombre} » ?`,
+          efecto:
+            'Les autres appareils ne verront plus ce dossier. Ses fichiers ne sont ni supprimés ni déplacés.',
+          uac: 'Cette action nécessite des droits d’administrateur : Windows affichera une invite de contrôle de compte d’utilisateur (UAC) que vous devrez accepter. Si vous l’annulez ou n’y répondez pas à temps, rien n’est modifié.',
+          entiendo:
+            'Je comprends que des droits d’administrateur seront demandés et que le dossier ne sera plus partagé.',
+          boton: 'Continuer',
+        },
+        resultado: {
+          quitada: (nombre: string) => `« ${nombre} » n’est plus partagé.`,
+          cancelado: 'L’invite de Windows a été annulée : rien n’a été modifié.',
+          tiempo: 'Le délai pour accepter l’invite de Windows est écoulé : rien n’a été modifié.',
+        },
+      },
+      equipos: {
+        titulo: 'Appareils du réseau local',
+        ayuda:
+          'La lecture utilise la table ARP de cet ordinateur (les appareils avec lesquels il a déjà communiqué) : elle est immédiate et n’envoie rien sur le réseau.',
+        leer: 'Lire le réseau',
+        redActiva: 'Réseau actif',
+        perfil: {
+          privado: 'réseau privé',
+          publico: 'réseau public',
+          dominio: 'réseau de domaine',
+          desconocido: 'profil inconnu',
+        },
+        publica: 'Sur les réseaux publics, les autres appareils ne sont pas explorés.',
+        perfilDesconocido:
+          'Impossible de vérifier si le réseau est privé ou public ; les autres appareils ne sont donc pas explorés.',
+        sinRed: 'Aucun réseau privé actif à explorer.',
+        escanear: 'Rechercher des appareils',
+        progreso: (hechos: number, total: number) => `${hechos} adresses sur ${total} vérifiées…`,
+        escaneoListo: (cantidad: number, red: string) =>
+          `Recherche terminée sur ${red} : ${cantidad} appareils dans la liste.`,
+        escaneoCancelado: (hechos: number, total: number) =>
+          `Recherche annulée après la vérification de ${hechos} adresses sur ${total}.`,
+        vacioTitulo: 'Aucun appareil à afficher',
+        vacioTexto:
+          'Cliquez sur « Lire le réseau » pour voir les appareils que cet ordinateur connaît déjà, sans rien envoyer sur le réseau. Si vous l’avez déjà fait, essayez « Rechercher des appareils ».',
+        col: {
+          ip: 'Adresse IP',
+          nombre: 'Nom',
+          mac: 'MAC',
+          fabricante: 'Fabricant',
+          ping: 'Dernier ping',
+        },
+        ping: 'Envoyer un ping',
+        verCarpetas: 'Voir les dossiers',
+        confirmar: {
+          titulo: 'Rechercher des appareils sur votre réseau',
+          texto: (red: string, cantidad: number) =>
+            `Un ping sera envoyé à chacune des ${cantidad} adresses de ${red}, l’une après l’autre et à débit limité, pour trouver des appareils.`,
+          limites:
+            'Seul votre réseau privé actif est exploré (254 adresses au maximum). Aucun port n’est testé et aucun appareil n’est consulté. Vous pouvez annuler à tout moment.',
+          boton: 'Rechercher des appareils',
+        },
+      },
+      ping: {
+        resultado: (recibidos: number, enviados: number, media: number) =>
+          `${recibidos} réponses sur ${enviados} · moyenne ${media} ms`,
+        sinRespuesta: (enviados: number) => `0 sur ${enviados} · aucune réponse`,
+      },
+      recursos: {
+        titulo: (ip: string) => `Dossiers partagés de ${ip}`,
+        vacio: 'Cet appareil ne partage aucun dossier visible.',
+        ayuda:
+          'Ils s’ouvrent dans l’Explorateur de fichiers. Si l’appareil demande un nom d’utilisateur et un mot de passe, c’est Windows qui les demande, pas cette application.',
+        abrir: 'Ouvrir',
+        fallo: {
+          denegado: 'L’appareil ne permet pas de voir ses dossiers sans identifiants.',
+          inaccesible: 'Impossible de se connecter à l’appareil.',
+          error: 'Impossible de consulter les dossiers de cet appareil.',
+        },
+      },
+      velocidad: {
+        titulo: 'Test de débit',
+        ayuda: (mb: number) =>
+          `Mesure la latence, le débit descendant et le débit montant de votre connexion internet. Utilise environ ${mb} Mo de données.`,
+        medir: 'Mesurer le débit',
+        fases: {
+          latencia: 'Mesure de la latence…',
+          bajada: 'Mesure du débit descendant…',
+          subida: 'Mesure du débit montant…',
+        },
+        latencia: 'Latence',
+        bajada: 'Débit descendant',
+        subida: 'Débit montant',
+        cancelada: 'Mesure annulée : les valeurs mesurées jusque-là sont affichées.',
+        incompleta: 'Une des mesures a atteint son délai : cette valeur est approximative.',
+        confirmar: {
+          titulo: 'Mesurer le débit',
+          texto: (bajada: number, subida: number, total: number) =>
+            `Environ ${bajada} Mo seront téléchargés et environ ${subida} Mo envoyés à Cloudflare (speed.cloudflare.com) : environ ${total} Mo de données au total. Si votre connexion a un forfait de données limité, tenez compte de cette consommation.`,
+          privacidad:
+            'Aucune de vos données n’est envoyée : ce qui est envoyé, ce sont des zéros. Vous pouvez annuler à tout moment.',
+          boton: 'Mesurer',
+        },
       },
     },
     usoDisco: {

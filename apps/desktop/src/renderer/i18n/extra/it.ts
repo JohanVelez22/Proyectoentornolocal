@@ -79,6 +79,22 @@ export const itExtra: TextosParciales = {
       'diff.archivo_invalido':
         'Quel file non può più essere confrontato: è cambiato o è scomparso.',
       'diff.fallo': 'Il confronto non è riuscito.',
+      'red.sin_confirmar': 'Confermi l’azione nella finestra prima di continuare.',
+      'red.rango_no_permitido':
+        'Si esplorano solo reti private (10.x, da 172.16 a 172.31 e 192.168.x), fino a 254 dispositivi.',
+      'red.sin_adaptador': 'Non c’è una rete attiva da esplorare.',
+      'red.red_publica': 'Nelle reti pubbliche non si esplorano altri dispositivi.',
+      'red.perfil_desconocido':
+        'Non è stato possibile verificare se la rete è privata o pubblica, quindi non si esplorano altri dispositivi.',
+      'red.ocupado': 'È già in corso un’altra operazione di La mia rete: attenda che termini.',
+      'red.equipo_no_valido': 'Sono accettati solo indirizzi IPv4 privati della rete locale.',
+      'red.equipo_desconocido': 'Quel dispositivo non è nell’elenco: legga di nuovo la rete.',
+      'red.recurso_no_valido': 'Quella risorsa non è nell’elenco del dispositivo.',
+      'red.carpeta_no_valida': 'Quella cartella condivisa non può essere rimossa da qui.',
+      'red.lectura_fallo': 'Non è stato possibile leggere la rete di questo computer.',
+      'red.quitar_fallo': 'Non è stato possibile interrompere la condivisione della cartella.',
+      'red.velocidad_fallo':
+        'Non è stato possibile misurare la velocità: controlli la connessione.',
       'compartir.confirmacion_requerida':
         'La condivisione su internet deve essere confermata nella finestra di WolfCore Dev.',
       'compartir.ocupado': 'Qualcosa è già condiviso: interrompa prima la condivisione.',
@@ -617,6 +633,11 @@ export const itExtra: TextosParciales = {
         descripcion:
           'Pubblichi una cartella o un file su internet con un link temporaneo di sola lettura.',
       },
+      miRed: {
+        nombre: 'La mia rete',
+        descripcion:
+          'Cartelle condivise da questo computer, dispositivi della rete locale e test di velocità. Senza controllo remoto.',
+      },
       usoDisco: {
         nombre: 'Utilizzo del disco',
         descripcion:
@@ -791,6 +812,128 @@ export const itExtra: TextosParciales = {
           codigo: 'Codice',
         },
         sinPermiso: '(senza il codice corretto)',
+      },
+    },
+    miRed: {
+      explicacion:
+        'Veda la sua rete senza controllare alcun dispositivo: le cartelle condivise da questo computer, i dispositivi della rete locale e un test di velocità. Si limita a leggere e consultare: non ci sono controllo remoto, desktop remoto né esecuzione su altri dispositivi.',
+      carpetas: {
+        titulo: 'Cartelle condivise da questo computer',
+        ayuda:
+          'Ciò che gli altri dispositivi della rete possono aprire su questo computer. Le condivisioni amministrative di Windows (C$, ADMIN$, IPC$) sono nascoste e non si possono rimuovere da qui.',
+        mostrarAdministrativas: 'Mostra le condivisioni amministrative',
+        administrativa: 'Amministrativa',
+        col: {
+          nombre: 'Nome',
+          ruta: 'Cartella',
+          descripcion: 'Descrizione',
+          usuarios: 'Connessioni',
+          acciones: 'Azioni',
+        },
+        dejar: 'Interrompi la condivisione',
+        vacioTitulo: 'Nessuna cartella condivisa',
+        vacioTexto: 'Nessuna cartella di questo computer è condivisa in rete.',
+        confirmar: {
+          titulo: 'Interrompere la condivisione di una cartella',
+          pregunta: (nombre: string) => `Interrompere la condivisione di «${nombre}»?`,
+          efecto:
+            'Gli altri dispositivi non vedranno più questa cartella. I suoi file non vengono eliminati né spostati.',
+          uac: 'Sono necessari i permessi di amministratore: Windows mostrerà un avviso di controllo dell’account utente (UAC) che Lei deve accettare. Se lo annulla o non risponde in tempo, non viene modificato nulla.',
+          entiendo:
+            'Comprendo che verranno richiesti i permessi di amministratore e che la cartella non sarà più condivisa.',
+          boton: 'Continua',
+        },
+        resultado: {
+          quitada: (nombre: string) => `«${nombre}» non è più condivisa.`,
+          cancelado: 'L’avviso di Windows è stato annullato: non è stato modificato nulla.',
+          tiempo:
+            'Il tempo per accettare l’avviso di Windows è scaduto: non è stato modificato nulla.',
+        },
+      },
+      equipos: {
+        titulo: 'Dispositivi della rete locale',
+        ayuda:
+          'La lettura usa la tabella ARP di questo computer (i dispositivi con cui ha già comunicato): è immediata e non invia nulla alla rete.',
+        leer: 'Leggi la rete',
+        redActiva: 'Rete attiva',
+        perfil: {
+          privado: 'rete privata',
+          publico: 'rete pubblica',
+          dominio: 'rete di dominio',
+          desconocido: 'profilo sconosciuto',
+        },
+        publica: 'Nelle reti pubbliche non si esplorano altri dispositivi.',
+        perfilDesconocido:
+          'Non è stato possibile verificare se la rete è privata o pubblica, quindi non si esplorano altri dispositivi.',
+        sinRed: 'Non c’è una rete privata attiva da esplorare.',
+        escanear: 'Cerca dispositivi',
+        progreso: (hechos: number, total: number) => `Controllati ${hechos} indirizzi su ${total}…`,
+        escaneoListo: (cantidad: number, red: string) =>
+          `Ricerca terminata in ${red}: ${cantidad} dispositivi nell’elenco.`,
+        escaneoCancelado: (hechos: number, total: number) =>
+          `Ricerca annullata dopo aver controllato ${hechos} indirizzi su ${total}.`,
+        vacioTitulo: 'Nessun dispositivo da mostrare',
+        vacioTexto:
+          'Faccia clic su «Leggi la rete» per vedere i dispositivi che questo computer già conosce, senza inviare nulla alla rete. Se l’ha già fatto, provi «Cerca dispositivi».',
+        col: {
+          ip: 'Indirizzo IP',
+          nombre: 'Nome',
+          mac: 'MAC',
+          fabricante: 'Produttore',
+          ping: 'Ultimo ping',
+        },
+        ping: 'Esegui ping',
+        verCarpetas: 'Vedi cartelle',
+        confirmar: {
+          titulo: 'Cercare dispositivi nella sua rete',
+          texto: (red: string, cantidad: number) =>
+            `Verrà inviato un ping a ciascuno dei ${cantidad} indirizzi di ${red}, uno dopo l’altro e con velocità limitata, per trovare dispositivi.`,
+          limites:
+            'Viene esplorata solo la sua rete privata attiva (al massimo 254 indirizzi). Non si testano porte né si accede ad alcun dispositivo. Può annullare in qualsiasi momento.',
+          boton: 'Cerca dispositivi',
+        },
+      },
+      ping: {
+        resultado: (recibidos: number, enviados: number, media: number) =>
+          `${recibidos} risposte su ${enviados} · media ${media} ms`,
+        sinRespuesta: (enviados: number) => `0 su ${enviados} · nessuna risposta`,
+      },
+      recursos: {
+        titulo: (ip: string) => `Cartelle condivise di ${ip}`,
+        vacio: 'Questo dispositivo non condivide cartelle visibili.',
+        ayuda:
+          'Si aprono in Esplora file. Se il dispositivo chiede nome utente e password, li chiede Windows, non questa applicazione.',
+        abrir: 'Apri',
+        fallo: {
+          denegado: 'Il dispositivo non consente di vedere le sue cartelle senza credenziali.',
+          inaccesible: 'Non è stato possibile connettersi al dispositivo.',
+          error: 'Non è stato possibile consultare le cartelle di quel dispositivo.',
+        },
+      },
+      velocidad: {
+        titulo: 'Test di velocità',
+        ayuda: (mb: number) =>
+          `Misura la latenza, il download e l’upload della sua connessione a internet. Usa circa ${mb} MB di dati.`,
+        medir: 'Misura la velocità',
+        fases: {
+          latencia: 'Misurazione della latenza…',
+          bajada: 'Misurazione del download…',
+          subida: 'Misurazione dell’upload…',
+        },
+        latencia: 'Latenza',
+        bajada: 'Download',
+        subida: 'Upload',
+        cancelada: 'Misurazione annullata: viene mostrato quanto misurato fino a quel momento.',
+        incompleta:
+          'Una delle misurazioni ha raggiunto il limite di tempo: quel valore è approssimativo.',
+        confirmar: {
+          titulo: 'Misurare la velocità',
+          texto: (bajada: number, subida: number, total: number) =>
+            `Verranno scaricati circa ${bajada} MB e caricati circa ${subida} MB su Cloudflare (speed.cloudflare.com): circa ${total} MB di dati in totale. Se la sua connessione ha un limite di dati, tenga conto di questo consumo.`,
+          privacidad:
+            'Non viene inviato alcun suo dato: ciò che si carica sono zeri. Può annullare in qualsiasi momento.',
+          boton: 'Misura',
+        },
       },
     },
     usoDisco: {

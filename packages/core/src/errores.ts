@@ -325,7 +325,6 @@ export const PARAMETROS_ERROR = {
   'red.equipo_desconocido': [],
   'red.recurso_no_valido': [],
   'red.carpeta_no_valida': [],
-  'red.no_disponible': [],
   'red.lectura_fallo': [],
   'red.quitar_fallo': [],
   'red.velocidad_fallo': [],

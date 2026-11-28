@@ -69,6 +69,21 @@ export const koExtra: TextosParciales = {
       'diff.caducado': '해당 비교를 더 이상 사용할 수 없습니다. 다시 비교하십시오.',
       'diff.archivo_invalido': '해당 파일은 더 이상 비교할 수 없습니다. 변경되었거나 사라졌습니다.',
       'diff.fallo': '비교에 실패했습니다.',
+      'red.sin_confirmar': '계속하기 전에 대화 상자에서 작업을 확인해 주십시오.',
+      'red.rango_no_permitido':
+        '최대 254대의 개인 네트워크(10.x, 172.16~172.31, 192.168.x)만 탐색합니다.',
+      'red.sin_adaptador': '탐색할 수 있는 사용 중인 네트워크가 없습니다.',
+      'red.red_publica': '공용 네트워크에서는 다른 장치를 탐색하지 않습니다.',
+      'red.perfil_desconocido':
+        '네트워크가 개인용인지 공용인지 확인할 수 없어 다른 장치를 탐색하지 않습니다.',
+      'red.ocupado': '내 네트워크의 다른 작업이 이미 진행 중입니다. 끝날 때까지 기다려 주십시오.',
+      'red.equipo_no_valido': '로컬 네트워크의 개인 IPv4 주소만 사용할 수 있습니다.',
+      'red.equipo_desconocido': '해당 장치가 목록에 없습니다. 네트워크를 다시 읽어 주십시오.',
+      'red.recurso_no_valido': '해당 리소스가 장치의 목록에 없습니다.',
+      'red.carpeta_no_valida': '해당 공유 폴더는 여기에서 제거할 수 없습니다.',
+      'red.lectura_fallo': '이 컴퓨터의 네트워크를 읽을 수 없습니다.',
+      'red.quitar_fallo': '폴더 공유를 중지할 수 없습니다.',
+      'red.velocidad_fallo': '속도를 측정할 수 없습니다. 연결을 확인해 주십시오.',
       'compartir.confirmacion_requerida': '인터넷 공유는 WolfCore Dev 창에서 확인해야 합니다.',
       'compartir.ocupado': '이미 공유 중인 항목이 있습니다. 먼저 공유를 중지하십시오.',
       'compartir.ruta_invalida': '존재하는 폴더 또는 파일을 선택하십시오.',
@@ -558,6 +573,11 @@ export const koExtra: TextosParciales = {
         nombre: '폴더 또는 파일 공유',
         descripcion: '읽기 전용 임시 링크로 폴더 또는 파일을 인터넷에 게시합니다.',
       },
+      miRed: {
+        nombre: '내 네트워크',
+        descripcion:
+          '이 컴퓨터가 공유하는 폴더, 로컬 네트워크의 장치, 속도 테스트. 원격 제어는 없습니다.',
+      },
       usoDisco: {
         nombre: '디스크 사용량',
         descripcion:
@@ -718,6 +738,126 @@ export const koExtra: TextosParciales = {
         vacioTexto: '누군가 링크를 열 때마다 여기에 표시됩니다.',
         col: { hora: '시간', ip: 'IP', ruta: '경로', codigo: '코드' },
         sinPermiso: '(올바른 코드 없음)',
+      },
+    },
+    miRed: {
+      explicacion:
+        '장치를 제어하지 않고 네트워크를 확인하실 수 있습니다. 이 컴퓨터가 공유하는 폴더, 로컬 네트워크의 장치, 속도 테스트를 보여 드립니다. 읽기와 조회만 하며, 원격 제어, 원격 데스크톱, 다른 장치에서의 실행은 없습니다.',
+      carpetas: {
+        titulo: '이 컴퓨터의 공유 폴더',
+        ayuda:
+          '네트워크의 다른 장치가 이 컴퓨터에서 열 수 있는 항목입니다. Windows 관리 공유(C$, ADMIN$, IPC$)는 숨겨져 있으며 여기에서 제거할 수 없습니다.',
+        mostrarAdministrativas: '관리 공유 표시',
+        administrativa: '관리용',
+        col: {
+          nombre: '이름',
+          ruta: '폴더',
+          descripcion: '설명',
+          usuarios: '연결 수',
+          acciones: '작업',
+        },
+        dejar: '공유 중지',
+        vacioTitulo: '공유 중인 폴더가 없습니다',
+        vacioTexto: '이 컴퓨터의 폴더가 네트워크에서 공유되고 있지 않습니다.',
+        confirmar: {
+          titulo: '폴더 공유 중지',
+          pregunta: (nombre: string) => `“${nombre}” 공유를 중지하시겠습니까?`,
+          efecto:
+            '다른 장치에서 이 폴더가 더 이상 보이지 않습니다. 폴더의 파일은 삭제되거나 이동되지 않습니다.',
+          uac: '관리자 권한이 필요합니다. Windows에서 사용자 계정 컨트롤(UAC) 알림이 표시되며, 직접 허용하셔야 합니다. 취소하시거나 제때 응답하지 않으시면 아무것도 변경되지 않습니다.',
+          entiendo: '관리자 권한이 요청되며 폴더 공유가 중지된다는 점을 이해합니다.',
+          boton: '계속',
+        },
+        resultado: {
+          quitada: (nombre: string) => `“${nombre}” 폴더는 더 이상 공유되지 않습니다.`,
+          cancelado: 'Windows 알림이 취소되었습니다. 아무것도 변경되지 않았습니다.',
+          tiempo: 'Windows 알림을 허용할 시간이 지났습니다. 아무것도 변경되지 않았습니다.',
+        },
+      },
+      equipos: {
+        titulo: '로컬 네트워크의 장치',
+        ayuda:
+          '이 컴퓨터의 ARP 테이블(이미 통신한 적이 있는 장치)을 읽습니다. 즉시 완료되며 네트워크로는 아무것도 보내지 않습니다.',
+        leer: '네트워크 읽기',
+        redActiva: '사용 중인 네트워크',
+        perfil: {
+          privado: '개인 네트워크',
+          publico: '공용 네트워크',
+          dominio: '도메인 네트워크',
+          desconocido: '프로필 알 수 없음',
+        },
+        publica: '공용 네트워크에서는 다른 장치를 탐색하지 않습니다.',
+        perfilDesconocido:
+          '네트워크가 개인용인지 공용인지 확인할 수 없어 다른 장치를 탐색하지 않습니다.',
+        sinRed: '탐색할 수 있는 사용 중인 개인 네트워크가 없습니다.',
+        escanear: '장치 찾기',
+        progreso: (hechos: number, total: number) =>
+          `주소 ${total}개 중 ${hechos}개를 확인했습니다…`,
+        escaneoListo: (cantidad: number, red: string) =>
+          `${red}에서 검색을 마쳤습니다. 목록에 장치 ${cantidad}대가 있습니다.`,
+        escaneoCancelado: (hechos: number, total: number) =>
+          `주소 ${total}개 중 ${hechos}개를 확인한 후 검색이 취소되었습니다.`,
+        vacioTitulo: '표시할 장치가 없습니다',
+        vacioTexto:
+          '“네트워크 읽기”를 누르시면 네트워크로 아무것도 보내지 않고 이 컴퓨터가 이미 알고 있는 장치를 보여 드립니다. 이미 읽으셨다면 “장치 찾기”를 사용해 보십시오.',
+        col: {
+          ip: 'IP 주소',
+          nombre: '이름',
+          mac: 'MAC',
+          fabricante: '제조업체',
+          ping: '마지막 ping',
+        },
+        ping: 'ping 실행',
+        verCarpetas: '폴더 보기',
+        confirmar: {
+          titulo: '네트워크에서 장치 찾기',
+          texto: (red: string, cantidad: number) =>
+            `장치를 찾기 위해 ${red}의 주소 ${cantidad}개 각각에 속도를 제한하여 차례로 ping을 보냅니다.`,
+          limites:
+            '사용 중인 개인 네트워크만 탐색합니다(최대 주소 254개). 포트를 검사하지 않으며 어떤 장치에도 접속하지 않습니다. 언제든지 취소하실 수 있습니다.',
+          boton: '장치 찾기',
+        },
+      },
+      ping: {
+        resultado: (recibidos: number, enviados: number, media: number) =>
+          `${enviados}회 중 ${recibidos}회 응답 · 평균 ${media}ms`,
+        sinRespuesta: (enviados: number) => `${enviados}회 중 0회 · 응답 없음`,
+      },
+      recursos: {
+        titulo: (ip: string) => `${ip}의 공유 폴더`,
+        vacio: '이 장치는 표시되는 폴더를 공유하지 않습니다.',
+        ayuda:
+          '파일 탐색기에서 열립니다. 장치가 사용자 이름과 암호를 요구하는 경우, 이 애플리케이션이 아니라 Windows에서 요청합니다.',
+        abrir: '열기',
+        fallo: {
+          denegado: '자격 증명이 없으면 이 장치의 폴더를 볼 수 없습니다.',
+          inaccesible: '장치에 연결할 수 없습니다.',
+          error: '이 장치의 폴더를 조회할 수 없습니다.',
+        },
+      },
+      velocidad: {
+        titulo: '속도 테스트',
+        ayuda: (mb: number) =>
+          `인터넷 연결의 지연 시간, 다운로드 속도, 업로드 속도를 측정합니다. 약 ${mb}MB의 데이터를 사용합니다.`,
+        medir: '속도 측정',
+        fases: {
+          latencia: '지연 시간을 측정하는 중…',
+          bajada: '다운로드 속도를 측정하는 중…',
+          subida: '업로드 속도를 측정하는 중…',
+        },
+        latencia: '지연 시간',
+        bajada: '다운로드',
+        subida: '업로드',
+        cancelada: '측정이 취소되었습니다. 그때까지 측정된 결과를 표시합니다.',
+        incompleta: '측정 중 하나가 제한 시간에 도달했습니다. 해당 값은 근삿값입니다.',
+        confirmar: {
+          titulo: '속도 측정',
+          texto: (bajada: number, subida: number, total: number) =>
+            `Cloudflare(speed.cloudflare.com)에서 약 ${bajada}MB를 내려받고 약 ${subida}MB를 올립니다. 총 약 ${total}MB의 데이터를 사용합니다. 데이터 사용량 제한이 있는 연결이라면 이 사용량을 고려하십시오.`,
+          privacidad:
+            '회원님의 데이터는 전송되지 않습니다. 업로드되는 것은 0으로 채워진 데이터뿐입니다. 언제든지 취소하실 수 있습니다.',
+          boton: '측정',
+        },
       },
     },
     usoDisco: {

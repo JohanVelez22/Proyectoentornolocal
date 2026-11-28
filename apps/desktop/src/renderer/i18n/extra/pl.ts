@@ -81,6 +81,22 @@ export const plExtra: TextosParciales = {
       'diff.caducado': 'To porównanie nie jest już dostępne: porównaj ponownie.',
       'diff.archivo_invalido': 'Tego pliku nie można już porównać: zmienił się lub zniknął.',
       'diff.fallo': 'Porównanie nie powiodło się.',
+      'red.sin_confirmar':
+        'Proszę potwierdzić akcję w oknie dialogowym, zanim przejdą Państwo dalej.',
+      'red.rango_no_permitido':
+        'Przeszukiwane są tylko sieci prywatne (10.x, od 172.16 do 172.31 i 192.168.x) do 254 urządzeń.',
+      'red.sin_adaptador': 'Brak aktywnej sieci do przeszukania.',
+      'red.red_publica': 'W sieciach publicznych inne urządzenia nie są przeszukiwane.',
+      'red.perfil_desconocido':
+        'Nie udało się sprawdzić, czy sieć jest prywatna, czy publiczna, więc inne urządzenia nie są przeszukiwane.',
+      'red.ocupado': 'Trwa już inna operacja w Mojej sieci: proszę poczekać na jej zakończenie.',
+      'red.equipo_no_valido': 'Akceptowane są tylko prywatne adresy IPv4 sieci lokalnej.',
+      'red.equipo_desconocido': 'Tego urządzenia nie ma na liście: proszę ponownie odczytać sieć.',
+      'red.recurso_no_valido': 'Tego zasobu nie ma na liście urządzenia.',
+      'red.carpeta_no_valida': 'Tego udostępnionego folderu nie można stąd usunąć.',
+      'red.lectura_fallo': 'Nie udało się odczytać sieci tego komputera.',
+      'red.quitar_fallo': 'Nie udało się zakończyć udostępniania folderu.',
+      'red.velocidad_fallo': 'Nie udało się zmierzyć szybkości: proszę sprawdzić połączenie.',
       'compartir.confirmacion_requerida':
         'Udostępnienie w internecie trzeba potwierdzić w oknie WolfCore Dev.',
       'compartir.ocupado': 'Coś jest już udostępnione: najpierw zatrzymaj udostępnianie.',
@@ -611,6 +627,11 @@ export const plExtra: TextosParciales = {
         nombre: 'Udostępnij folder lub plik',
         descripcion: 'Publikuje folder lub plik w internecie tymczasowym linkiem tylko do odczytu.',
       },
+      miRed: {
+        nombre: 'Moja sieć',
+        descripcion:
+          'Foldery udostępniane przez ten komputer, urządzenia w sieci lokalnej i test szybkości. Bez zdalnego sterowania.',
+      },
       usoDisco: {
         nombre: 'Użycie dysku',
         descripcion:
@@ -786,6 +807,126 @@ export const plExtra: TextosParciales = {
           codigo: 'Kod',
         },
         sinPermiso: '(bez właściwego kodu)',
+      },
+    },
+    miRed: {
+      explicacion:
+        'Proszę zobaczyć swoją sieć bez sterowania żadnym urządzeniem: foldery udostępniane przez ten komputer, urządzenia w sieci lokalnej i test szybkości. Aplikacja tylko odczytuje i odpytuje: nie ma zdalnego sterowania, pulpitu zdalnego ani uruchamiania na innych urządzeniach.',
+      carpetas: {
+        titulo: 'Foldery udostępniane przez ten komputer',
+        ayuda:
+          'To, co inne urządzenia w sieci mogą otworzyć na tym komputerze. Udziały administracyjne systemu Windows (C$, ADMIN$, IPC$) są ukryte i nie można ich stąd usunąć.',
+        mostrarAdministrativas: 'Pokaż udziały administracyjne',
+        administrativa: 'Administracyjny',
+        col: {
+          nombre: 'Nazwa',
+          ruta: 'Folder',
+          descripcion: 'Opis',
+          usuarios: 'Połączenia',
+          acciones: 'Akcje',
+        },
+        dejar: 'Zakończ udostępnianie',
+        vacioTitulo: 'Brak udostępnianych folderów',
+        vacioTexto: 'Żaden folder tego komputera nie jest udostępniany w sieci.',
+        confirmar: {
+          titulo: 'Zakończenie udostępniania folderu',
+          pregunta: (nombre: string) => `Zakończyć udostępnianie „${nombre}”?`,
+          efecto:
+            'Inne urządzenia przestaną widzieć ten folder. Jego pliki nie są usuwane ani przenoszone.',
+          uac: 'Wymaga to uprawnień administratora: system Windows wyświetli monit Kontroli konta użytkownika (UAC), który trzeba zaakceptować. Jeśli Państwo go anulują lub nie odpowiedzą na czas, nic nie zostanie zmienione.',
+          entiendo:
+            'Rozumiem, że zostaną wymagane uprawnienia administratora i że folder przestanie być udostępniany.',
+          boton: 'Kontynuuj',
+        },
+        resultado: {
+          quitada: (nombre: string) => `Folder „${nombre}” nie jest już udostępniany.`,
+          cancelado: 'Monit systemu Windows został anulowany: nic nie zmieniono.',
+          tiempo: 'Upłynął czas na zaakceptowanie monitu systemu Windows: nic nie zmieniono.',
+        },
+      },
+      equipos: {
+        titulo: 'Urządzenia w sieci lokalnej',
+        ayuda:
+          'Odczyt korzysta z tablicy ARP tego komputera (urządzeń, z którymi już się komunikował): jest natychmiastowy i nic nie wysyła do sieci.',
+        leer: 'Odczytaj sieć',
+        redActiva: 'Aktywna sieć',
+        perfil: {
+          privado: 'sieć prywatna',
+          publico: 'sieć publiczna',
+          dominio: 'sieć domenowa',
+          desconocido: 'nieznany profil',
+        },
+        publica: 'W sieciach publicznych inne urządzenia nie są przeszukiwane.',
+        perfilDesconocido:
+          'Nie udało się sprawdzić, czy sieć jest prywatna, czy publiczna, więc inne urządzenia nie są przeszukiwane.',
+        sinRed: 'Brak aktywnej sieci prywatnej do przeszukania.',
+        escanear: 'Szukaj urządzeń',
+        progreso: (hechos: number, total: number) => `Sprawdzono ${hechos} z ${total} adresów…`,
+        escaneoListo: (cantidad: number, red: string) =>
+          `Wyszukiwanie w ${red} zakończone: ${cantidad} urządzeń na liście.`,
+        escaneoCancelado: (hechos: number, total: number) =>
+          `Wyszukiwanie anulowano po sprawdzeniu ${hechos} z ${total} adresów.`,
+        vacioTitulo: 'Brak urządzeń do pokazania',
+        vacioTexto:
+          'Proszę kliknąć „Odczytaj sieć”, aby zobaczyć urządzenia, które ten komputer już zna, bez wysyłania czegokolwiek do sieci. Jeśli już to zrobiono, proszę spróbować „Szukaj urządzeń”.',
+        col: {
+          ip: 'Adres IP',
+          nombre: 'Nazwa',
+          mac: 'MAC',
+          fabricante: 'Producent',
+          ping: 'Ostatni ping',
+        },
+        ping: 'Wyślij ping',
+        verCarpetas: 'Pokaż foldery',
+        confirmar: {
+          titulo: 'Wyszukiwanie urządzeń w Państwa sieci',
+          texto: (red: string, cantidad: number) =>
+            `Ping zostanie wysłany pod każdy z ${cantidad} adresów w ${red}, jeden po drugim i z ograniczoną szybkością, aby znaleźć urządzenia.`,
+          limites:
+            'Przeszukiwana jest tylko Państwa aktywna sieć prywatna (najwyżej 254 adresy). Nie są testowane porty ani nie ma dostępu do żadnego urządzenia. Można anulować w dowolnej chwili.',
+          boton: 'Szukaj urządzeń',
+        },
+      },
+      ping: {
+        resultado: (recibidos: number, enviados: number, media: number) =>
+          `${recibidos} z ${enviados} odpowiedzi · średnio ${media} ms`,
+        sinRespuesta: (enviados: number) => `0 z ${enviados} · brak odpowiedzi`,
+      },
+      recursos: {
+        titulo: (ip: string) => `Foldery udostępniane przez ${ip}`,
+        vacio: 'To urządzenie nie udostępnia widocznych folderów.',
+        ayuda:
+          'Otwierają się w Eksploratorze plików. Jeśli urządzenie prosi o nazwę użytkownika i hasło, prosi o nie system Windows, a nie ta aplikacja.',
+        abrir: 'Otwórz',
+        fallo: {
+          denegado: 'Urządzenie nie pokazuje swoich folderów bez poświadczeń.',
+          inaccesible: 'Nie udało się połączyć z urządzeniem.',
+          error: 'Nie udało się odpytać folderów tego urządzenia.',
+        },
+      },
+      velocidad: {
+        titulo: 'Test szybkości',
+        ayuda: (mb: number) =>
+          `Mierzy opóźnienie oraz szybkość pobierania i wysyłania Państwa połączenia z internetem. Zużywa około ${mb} MB danych.`,
+        medir: 'Zmierz szybkość',
+        fases: {
+          latencia: 'Pomiar opóźnienia…',
+          bajada: 'Pomiar pobierania…',
+          subida: 'Pomiar wysyłania…',
+        },
+        latencia: 'Opóźnienie',
+        bajada: 'Pobieranie',
+        subida: 'Wysyłanie',
+        cancelada: 'Pomiar anulowany: pokazano to, co zmierzono do tej pory.',
+        incompleta: 'Jeden z pomiarów osiągnął limit czasu: ta wartość jest przybliżona.',
+        confirmar: {
+          titulo: 'Pomiar szybkości',
+          texto: (bajada: number, subida: number, total: number) =>
+            `Zostanie pobranych około ${bajada} MB i wysłanych około ${subida} MB do Cloudflare (speed.cloudflare.com): łącznie około ${total} MB danych. Jeśli połączenie ma limit danych, proszę uwzględnić to zużycie.`,
+          privacidad:
+            'Żadne Państwa dane nie są wysyłane: wysyłane są same zera. Można anulować w dowolnej chwili.',
+          boton: 'Zmierz',
+        },
       },
     },
     usoDisco: {

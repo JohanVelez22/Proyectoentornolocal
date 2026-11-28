@@ -327,6 +327,21 @@ export const es = {
       'diff.caducado': 'Esa comparación ya no está disponible: vuelva a comparar.',
       'diff.archivo_invalido': 'Ese archivo ya no se puede comparar: cambió o desapareció.',
       'diff.fallo': 'La comparación falló.',
+      'red.sin_confirmar': 'Confirme la acción en el diálogo antes de continuar.',
+      'red.rango_no_permitido':
+        'Solo se exploran redes privadas (10.x, 172.16 a 172.31 y 192.168.x), de hasta 254 equipos.',
+      'red.sin_adaptador': 'No hay una red activa que explorar.',
+      'red.red_publica': 'En redes públicas no se exploran otros equipos.',
+      'red.perfil_desconocido':
+        'No se pudo comprobar si la red es privada o pública, así que no se exploran otros equipos.',
+      'red.ocupado': 'Ya hay otra operación de Mi red en curso: espere a que termine.',
+      'red.equipo_no_valido': 'Solo se admiten direcciones IPv4 privadas de la red local.',
+      'red.equipo_desconocido': 'Ese equipo no está en la lista: vuelva a leer la red.',
+      'red.recurso_no_valido': 'Ese recurso no está en la lista del equipo.',
+      'red.carpeta_no_valida': 'Esa carpeta compartida no se puede quitar desde aquí.',
+      'red.lectura_fallo': 'No se pudo leer la red de este equipo.',
+      'red.quitar_fallo': 'No se pudo dejar de compartir la carpeta.',
+      'red.velocidad_fallo': 'No se pudo medir la velocidad: compruebe la conexión.',
       'compartir.confirmacion_requerida':
         'Compartir en internet exige confirmarlo en la ventana de WolfCore Dev.',
       'compartir.ocupado': 'Ya hay algo compartido: deje de compartir primero.',
@@ -3755,6 +3770,11 @@ export const es = {
         descripcion:
           'Publica una carpeta o un archivo con un enlace temporal en internet, de solo lectura.',
       },
+      miRed: {
+        nombre: 'Mi red',
+        descripcion:
+          'Carpetas que comparte este equipo, equipos de la red local y prueba de velocidad. Sin control remoto.',
+      },
       usoDisco: {
         nombre: 'Uso del disco',
         descripcion:
@@ -4171,6 +4191,126 @@ export const es = {
         vacioTexto: 'Cada vez que alguien abra el enlace aparecerá aquí.',
         col: { hora: 'Hora', ip: 'IP', ruta: 'Ruta', codigo: 'Código' },
         sinPermiso: '(sin el código correcto)',
+      },
+    },
+    miRed: {
+      explicacion:
+        'Vea su red sin controlar ningún equipo: las carpetas que este equipo comparte, los equipos de la red local y una prueba de velocidad. Solo lee y consulta: no hay control remoto, escritorio remoto ni ejecución en otros equipos.',
+      carpetas: {
+        titulo: 'Carpetas compartidas de este equipo',
+        ayuda:
+          'Lo que otros equipos de la red pueden abrir de este equipo. Las administrativas de Windows (C$, ADMIN$, IPC$) se ocultan y no se pueden quitar desde aquí.',
+        mostrarAdministrativas: 'Mostrar las administrativas',
+        administrativa: 'Administrativa',
+        col: {
+          nombre: 'Nombre',
+          ruta: 'Carpeta',
+          descripcion: 'Descripción',
+          usuarios: 'Conexiones',
+          acciones: 'Acciones',
+        },
+        dejar: 'Dejar de compartir',
+        vacioTitulo: 'No comparte ninguna carpeta',
+        vacioTexto: 'Ninguna carpeta de este equipo está compartida en la red.',
+        confirmar: {
+          titulo: 'Dejar de compartir una carpeta',
+          pregunta: (nombre: string) => `¿Dejar de compartir «${nombre}»?`,
+          efecto:
+            'Los demás equipos dejarán de ver esta carpeta. Sus archivos no se borran ni se mueven.',
+          uac: 'Requiere permisos de administrador: Windows mostrará un aviso de control de cuentas (UAC) que usted debe aceptar. Si lo cancela o no lo responde a tiempo, no se cambia nada.',
+          entiendo:
+            'Entiendo que se pedirán permisos de administrador y que la carpeta dejará de estar compartida.',
+          boton: 'Continuar',
+        },
+        resultado: {
+          quitada: (nombre: string) => `«${nombre}» ya no está compartida.`,
+          cancelado: 'Se canceló el aviso de Windows: no se cambió nada.',
+          tiempo: 'Se acabó el tiempo para aceptar el aviso de Windows: no se cambió nada.',
+        },
+      },
+      equipos: {
+        titulo: 'Equipos de la red local',
+        ayuda:
+          'La lectura usa la tabla ARP de este equipo (los equipos con los que ya se comunicó): es inmediata y no envía nada a la red.',
+        leer: 'Leer la red',
+        redActiva: 'Red activa',
+        perfil: {
+          privado: 'red privada',
+          publico: 'red pública',
+          dominio: 'red de dominio',
+          desconocido: 'perfil desconocido',
+        },
+        publica: 'En redes públicas no se exploran otros equipos.',
+        perfilDesconocido:
+          'No se pudo comprobar si la red es privada o pública, así que no se exploran otros equipos.',
+        sinRed: 'No hay una red privada activa que explorar.',
+        escanear: 'Buscar equipos',
+        progreso: (hechos: number, total: number) => `Revisadas ${hechos} de ${total} direcciones…`,
+        escaneoListo: (cantidad: number, red: string) =>
+          `Búsqueda terminada en ${red}: ${cantidad} equipos en la lista.`,
+        escaneoCancelado: (hechos: number, total: number) =>
+          `Búsqueda cancelada tras revisar ${hechos} de ${total} direcciones.`,
+        vacioTitulo: 'No hay equipos que mostrar',
+        vacioTexto:
+          'Pulse «Leer la red» para ver los equipos que este equipo ya conoce, sin enviar nada a la red. Si ya la leyó, pruebe «Buscar equipos».',
+        col: {
+          ip: 'Dirección IP',
+          nombre: 'Nombre',
+          mac: 'MAC',
+          fabricante: 'Fabricante',
+          ping: 'Último ping',
+        },
+        ping: 'Hacer ping',
+        verCarpetas: 'Ver carpetas',
+        confirmar: {
+          titulo: 'Buscar equipos en su red',
+          texto: (red: string, cantidad: number) =>
+            `Se enviará un ping a cada una de las ${cantidad} direcciones de ${red}, una tras otra y con límite de velocidad, para encontrar equipos.`,
+          limites:
+            'Solo se explora su red privada activa (como mucho 254 direcciones). No se prueban puertos ni se entra en ningún equipo. Puede cancelar en cualquier momento.',
+          boton: 'Buscar equipos',
+        },
+      },
+      ping: {
+        resultado: (recibidos: number, enviados: number, media: number) =>
+          `${recibidos} de ${enviados} respuestas · media ${media} ms`,
+        sinRespuesta: (enviados: number) => `0 de ${enviados} · sin respuesta`,
+      },
+      recursos: {
+        titulo: (ip: string) => `Carpetas compartidas de ${ip}`,
+        vacio: 'Este equipo no comparte carpetas visibles.',
+        ayuda:
+          'Se abren en el Explorador de archivos. Si el equipo pide usuario y contraseña, los pide Windows, no esta aplicación.',
+        abrir: 'Abrir',
+        fallo: {
+          denegado: 'El equipo no deja ver sus carpetas sin credenciales.',
+          inaccesible: 'No se pudo conectar con el equipo.',
+          error: 'No se pudieron consultar las carpetas de ese equipo.',
+        },
+      },
+      velocidad: {
+        titulo: 'Prueba de velocidad',
+        ayuda: (mb: number) =>
+          `Mide la latencia, la bajada y la subida de su conexión a internet. Usa unos ${mb} MB de datos.`,
+        medir: 'Medir velocidad',
+        fases: {
+          latencia: 'Midiendo la latencia…',
+          bajada: 'Midiendo la bajada…',
+          subida: 'Midiendo la subida…',
+        },
+        latencia: 'Latencia',
+        bajada: 'Bajada',
+        subida: 'Subida',
+        cancelada: 'Medición cancelada: se muestra lo medido hasta ese momento.',
+        incompleta: 'Una de las mediciones llegó a su plazo: ese valor es aproximado.',
+        confirmar: {
+          titulo: 'Medir la velocidad',
+          texto: (bajada: number, subida: number, total: number) =>
+            `Se descargarán unos ${bajada} MB y se subirán unos ${subida} MB a Cloudflare (speed.cloudflare.com): unos ${total} MB de datos en total. Si su conexión tiene límite de datos, tenga en cuenta este consumo.`,
+          privacidad:
+            'No se envía ningún dato suyo: lo que se sube son ceros. Puede cancelar en cualquier momento.',
+          boton: 'Medir',
+        },
       },
     },
     usoDisco: {
