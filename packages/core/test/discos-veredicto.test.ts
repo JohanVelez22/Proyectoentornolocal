@@ -129,3 +129,73 @@ describe('evaluarDisco', () => {
     expect(r.motivos).toEqual(['desgaste', 'temperatura']);
   });
 });
+
+describe('«Bien» exige el estado Healthy (I2)', () => {
+  it('sin el estado de Windows y con contadores sanos: no disponible, no «Bien»', () => {
+    const r = evaluarDisco(
+      base({ salud: null, contadores: contadores({ temperaturaC: 35, desgastePct: 3 }) }),
+    );
+    expect(r).toEqual({ veredicto: 'no_disponible', motivos: [] });
+  });
+
+  it('sin el estado de Windows pero con algo que avisar, se avisa igual', () => {
+    expect(
+      evaluarDisco(base({ salud: null, contadores: contadores({ desgastePct: 90 }) })),
+    ).toEqual({ veredicto: 'atencion', motivos: ['desgaste'] });
+    expect(evaluarDisco(base({ salud: null, prediccionFallo: true })).veredicto).toBe('critico');
+  });
+
+  it('Healthy sin contadores sigue siendo «Bien» (la interfaz lo matiza)', () => {
+    expect(evaluarDisco(base({ contadores: null })).veredicto).toBe('bien');
+  });
+});
+
+describe('desgaste de 0 a 255 (I3)', () => {
+  it('por encima de 100 es «Atención»', () => {
+    for (const w of [100, 101, 200, 255]) {
+      expect(evaluarDisco(base({ contadores: contadores({ desgastePct: w }) }))).toEqual({
+        veredicto: 'atencion',
+        motivos: ['desgaste'],
+      });
+    }
+  });
+});
+
+describe('Crítico devuelve todos los motivos (M6)', () => {
+  it('también los de «Atención»', () => {
+    const r = evaluarDisco(
+      base({
+        salud: 'warning',
+        contadores: contadores({ desgastePct: 95, temperaturaC: 75, temperaturaMaxC: 70 }),
+      }),
+    );
+    expect(r.veredicto).toBe('critico');
+    expect(r.motivos).toEqual(['estado_warning', 'desgaste', 'temperatura']);
+  });
+});
+
+describe('TemperatureMax por debajo de 45 °C se ignora (M7)', () => {
+  it('con un máximo de 30 °C se usa el umbral por tipo', () => {
+    const c = contadores({ temperaturaC: 40, temperaturaMaxC: 30 });
+    expect(limiteTemperatura({ medio: 'ssd', bus: 'sata', contadores: c })).toEqual({
+      valor: 60,
+      origen: 'tipo',
+      estricto: false,
+    });
+    expect(evaluarDisco(base({ contadores: c })).veredicto).toBe('bien');
+    // 45 sí vale.
+    const c45 = contadores({ temperaturaC: 46, temperaturaMaxC: 45 });
+    expect(evaluarDisco(base({ contadores: c45 })).motivos).toEqual(['temperatura']);
+  });
+});
+
+describe('estados operacionales nuevos (M9)', () => {
+  it('Failed Media y Transient Error son críticos', () => {
+    for (const o of ['Failed Media', 'Transient Error']) {
+      expect(evaluarDisco(base({ operacional: [o] }))).toEqual({
+        veredicto: 'critico',
+        motivos: ['estado_operacional'],
+      });
+    }
+  });
+});

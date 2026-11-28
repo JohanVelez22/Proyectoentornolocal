@@ -21,6 +21,11 @@ export const UMBRALES_DISCO = {
   /** Fuera de este rango un valor de temperatura no es creíble (p. ej. 0 de un controlador mudo). */
   temperaturaMinCreible: 1,
   temperaturaMaxCreible: 150,
+  /**
+   * Un `TemperatureMax` por debajo de esto no es creíble (ningún disco declara un máximo tan bajo):
+   * se ignora y se usa el umbral por tipo.
+   */
+  temperaturaMaxFabricanteMin: 45,
 } as const;
 
 /** `OperationalStatus` que equivalen a un fallo del disco. */
@@ -30,6 +35,8 @@ export const ESTADOS_OPERACIONALES_CRITICOS: readonly string[] = [
   'lost communication',
   'no contact',
   'predictive failure',
+  'failed media',
+  'transient error',
 ];
 
 export interface EntradaVeredicto {
@@ -66,7 +73,11 @@ export function temperaturaCreible(n: number | null): number | null {
 export function limiteTemperatura(
   e: Pick<EntradaVeredicto, 'medio' | 'bus' | 'contadores'>,
 ): { valor: number; origen: 'fabricante' | 'tipo'; estricto: boolean } | null {
-  const max = temperaturaCreible(e.contadores?.temperaturaMaxC ?? null);
+  const declarado = temperaturaCreible(e.contadores?.temperaturaMaxC ?? null);
+  const max =
+    declarado !== null && declarado >= UMBRALES_DISCO.temperaturaMaxFabricanteMin
+      ? declarado
+      : null;
   if (max !== null) return { valor: max, origen: 'fabricante', estricto: true };
   if (e.medio === 'ssd' || e.bus === 'nvme') {
     return { valor: UMBRALES_DISCO.temperaturaSsdAtencion, origen: 'tipo', estricto: false };
@@ -89,8 +100,14 @@ export const tieneContadores = (c: ContadoresDisco | null): boolean =>
  * - **Atención**: desgaste ≥ 80 %, temperatura por encima del máximo del fabricante (o, sin él,
  *   ≥ 60 °C en SSD/NVMe y ≥ 50 °C en HDD) o errores de lectura corregidos que SUBEN respecto de la
  *   lectura anterior guardada (`corregidosPrevios`).
- * - **Bien**: estado Healthy y nada de lo anterior.
- * - **No disponible**: ni estado ni contadores ni predicción (datos insuficientes).
+ * - **Bien**: estado Healthy (`salud === 'healthy'`) y nada de lo anterior. Sin el estado que
+ *   informa Windows (`salud === null`) y sin nada que avisar, no hay base para decir «Bien»: es
+ *   «No disponible».
+ * - **No disponible**: ni estado ni contadores ni predicción (datos insuficientes), o sin estado
+ *   y sin nada que avisar.
+ *
+ * Un disco «Crítico» devuelve TODOS los motivos, también los de «Atención» (desgaste,
+ * temperatura…), para que la persona vea el cuadro completo.
  */
 export function evaluarDisco(
   e: EntradaVeredicto,
@@ -110,7 +127,6 @@ export function evaluarDisco(
     criticos.push('errores_sin_corregir');
   }
   if (e.prediccionFallo === true) criticos.push('prediccion_fallo');
-  if (criticos.length > 0) return { veredicto: 'critico', motivos: criticos };
 
   const atencion: MotivoVeredicto[] = [];
   if (c?.desgastePct != null && c.desgastePct >= UMBRALES_DISCO.desgasteAtencion) {
@@ -129,7 +145,10 @@ export function evaluarDisco(
   if (corregidos !== null && corregidosPrevios !== null && corregidos > corregidosPrevios) {
     atencion.push('errores_corregidos_suben');
   }
+  if (criticos.length > 0) return { veredicto: 'critico', motivos: [...criticos, ...atencion] };
   if (atencion.length > 0) return { veredicto: 'atencion', motivos: atencion };
+  // «Bien» solo con el estado de Windows en `Healthy`: sin él no hay nada que lo respalde.
+  if (e.salud !== 'healthy') return { veredicto: 'no_disponible', motivos: [] };
   return { veredicto: 'bien', motivos: [] };
 }
 

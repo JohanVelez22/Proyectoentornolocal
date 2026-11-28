@@ -43,7 +43,7 @@ export interface ContadoresDisco {
   temperaturaC: number | null;
   /** Temperatura máxima que declara el fabricante (null si no la da). */
   temperaturaMaxC: number | null;
-  /** Desgaste en %, de 0 a 100 (SSD); null en un HDD o si no se informa. */
+  /** Desgaste en %, de 0 a 255 (SSD; en NVMe puede pasar de 100); null en un HDD o si no se informa. */
   desgastePct: number | null;
   erroresLecturaCorregidos: number | null;
   erroresLecturaNoCorregidos: number | null;

@@ -370,7 +370,8 @@ function interpretarContadores(c: unknown): ContadoresDisco | null {
   const r: ContadoresDisco = {
     temperaturaC: temp(o['t']),
     temperaturaMaxC: temp(o['tm']),
-    desgastePct: contador(o['w'], 100),
+    // El desgaste NVMe puede pasar de 100 (hasta 255): por encima de 100 el disco ya agotó su vida útil.
+    desgastePct: contador(o['w'], 255),
     erroresLecturaCorregidos: contador(o['rc']),
     erroresLecturaNoCorregidos: contador(o['ru']),
     erroresEscrituraCorregidos: contador(o['wc']),

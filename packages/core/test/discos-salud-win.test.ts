@@ -259,3 +259,19 @@ describe.skipIf(process.platform !== 'win32')(
     });
   },
 );
+
+describe('desgaste de 0 a 255 (I3)', () => {
+  const con = (w: unknown) =>
+    interpretarSaludDiscos(
+      JSON.stringify({ p: 'ok', discos: [{ ...NVME_DESGASTADO, c: { ...NVME_DESGASTADO.c, w } }] }),
+    )?.discos[0]?.contadores?.desgastePct;
+
+  it('acepta valores por encima de 100 hasta 255 y descarta lo demás', () => {
+    expect(con(100)).toBe(100);
+    expect(con(180)).toBe(180);
+    expect(con(255)).toBe(255);
+    expect(con(256)).toBeNull();
+    expect(con(-1)).toBeNull();
+    expect(con(null)).toBeNull();
+  });
+});
