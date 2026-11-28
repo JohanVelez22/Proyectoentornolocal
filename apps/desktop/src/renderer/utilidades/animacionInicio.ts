@@ -65,6 +65,9 @@ export interface OpcionesAnimacion {
 export function iniciarAnimacion(o: OpcionesAnimacion): ControlAnimacion {
   let fase: FaseAnimacion = 'animando';
   let temporizador: ReturnType<typeof setTimeout> | null = null;
+  // Tras detener (capa desmontada) nada más cambia de fase, aunque un oyente siguiera colgado:
+  // no se confía solo en removeEventListener (en algunos entornos no retira el de captura).
+  let detenida = false;
   const alPuntero = (): void => saltar();
   const alTeclado = (e: Event): void => {
     if ((e as KeyboardEvent).key === 'Escape') saltar();
@@ -81,10 +84,10 @@ export function iniciarAnimacion(o: OpcionesAnimacion): ControlAnimacion {
   };
   const terminar = (): void => {
     limpiar();
-    cambiar('terminada');
+    if (!detenida) cambiar('terminada');
   };
   function saltar(): void {
-    if (fase !== 'animando') return;
+    if (detenida || fase !== 'animando') return;
     if (temporizador !== null) clearTimeout(temporizador);
     cambiar('saliendo');
     temporizador = setTimeout(terminar, FUNDIDO_SALTO_MS);
@@ -100,6 +103,9 @@ export function iniciarAnimacion(o: OpcionesAnimacion): ControlAnimacion {
   return {
     fase: () => fase,
     saltar,
-    detener: limpiar,
+    detener: () => {
+      detenida = true;
+      limpiar();
+    },
   };
 }
