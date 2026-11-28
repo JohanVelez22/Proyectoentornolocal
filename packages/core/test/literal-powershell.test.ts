@@ -110,3 +110,13 @@ describe('los nombres de regla hostiles se rechazan antes de generar nada', () =
     for (const v of VALORES_HOSTILES) expect(() => scriptExportarReglas([v])).toThrow();
   });
 });
+
+describe('scriptServicios valida y usa el literal compartido (D54b)', () => {
+  it('rechaza nombres hostiles y listas vacías dentro de la propia función', async () => {
+    const { scriptServicios } = await import('../src/plataforma/diagnosticoWin');
+    for (const v of VALORES_HOSTILES) expect(() => scriptServicios([v])).toThrow(/no válido/);
+    expect(() => scriptServicios(["x'; calc"])).toThrow(/no válido/);
+    expect(() => scriptServicios([])).toThrow();
+    expect(scriptServicios(['Spooler', 'W32Time'])).toContain("-Name 'Spooler','W32Time'");
+  });
+});

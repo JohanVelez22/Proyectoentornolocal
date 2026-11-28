@@ -24,7 +24,12 @@ export const NOMBRE_SERVICIO = /^[A-Za-z0-9_.-]{1,80}$/;
 
 /** Script de una sola consulta: `nombre|estado` por cada servicio que existe. */
 export function scriptServicios(nombres: string[]): string {
-  const lista = nombres.map((n) => `'${n}'`).join(',');
+  // Se valida aquí (no solo en quien llama) y cada nombre va como literal compartido.
+  if (nombres.length === 0) throw new Error('Sin nombres de servicio.');
+  for (const n of nombres) {
+    if (!NOMBRE_SERVICIO.test(n)) throw new Error(`Nombre de servicio no válido: ${n}`);
+  }
+  const lista = nombres.map((n) => literalPowerShell(n)).join(',');
   return [
     "$ErrorActionPreference = 'SilentlyContinue'",
     `Get-Service -Name ${lista} | ForEach-Object { '{0}|{1}' -f $_.Name,$_.Status }`,
