@@ -555,6 +555,10 @@ export const jaExtra: TextosParciales = {
         },
         prediccionSinFallo: '故障の予測なし',
         prediccionFallo: '故障が予測されています',
+        bienSoloEstado: '良好（Windows が報告する状態のみ）',
+        noAplicaHdd: '該当しません（HDD）',
+        ultimoDatoAdmin: '管理者権限での最新データ：{fecha}',
+        ultimoDatoContadores: 'カウンターの最新データ：{fecha}',
         horasValor: '{n} 時間',
         criterios: {
           titulo: '判定はどのように決まりますか？',
@@ -594,6 +598,9 @@ export const jaExtra: TextosParciales = {
           disco_52: 'ディスクが故障すると予測しています。',
           disco_55: 'ドライブのファイルシステムで破損が検出されました。',
           disco_129: 'ディスクのコントローラーが応答しなかったため、Windows がリセットしました。',
+          disco_98: 'Windows がボリュームを確認し、正常な状態です。',
+          disco_140:
+            'システムがボリュームのトランザクション ログにデータを書き込めませんでした。破損が発生する可能性があります。',
           disco_153: 'ディスクの操作が失敗し、再試行されました。',
           disco_157: 'ディスクが予期せず切断されました。',
         },

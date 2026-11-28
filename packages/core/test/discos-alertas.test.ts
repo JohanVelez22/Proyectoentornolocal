@@ -31,6 +31,17 @@ const disco = (veredicto: Veredicto, extra: Partial<DiscoSalud> = {}): DiscoSalu
 
 const T0 = 1_000_000_000_000;
 
+const CTR = {
+  temperaturaC: 40,
+  temperaturaMaxC: null,
+  desgastePct: 95,
+  erroresLecturaCorregidos: 0,
+  erroresLecturaNoCorregidos: 0,
+  erroresEscrituraCorregidos: 0,
+  erroresEscrituraNoCorregidos: 0,
+  horasEncendido: 10,
+};
+
 describe('decidirAlertas', () => {
   it('un disco que está bien no avisa y se recuerda', () => {
     const r = decidirAlertas([disco('bien')], estadoSaludVacio(), T0);
@@ -187,7 +198,13 @@ describe('estado guardado: fechas del futuro (M3)', () => {
       base({
         corregidosEn: AHORA + 1,
         avisoEn: AHORA + 5_000,
-        ultimo: { veredicto: 'critico', motivos: ['desgaste'], en: AHORA + 1, origen: 'admin' },
+        ultimo: {
+          veredicto: 'critico',
+          motivos: ['desgaste'],
+          en: AHORA + 1,
+          origen: 'admin',
+          contadores: CTR,
+        },
       }),
       AHORA,
     ).discos['d0'];
@@ -204,6 +221,7 @@ describe('estado guardado: fechas del futuro (M3)', () => {
           motivos: ['desgaste', 'x'],
           en: AHORA - 5,
           origen: 'admin',
+          contadores: CTR,
         },
       }),
       AHORA,
@@ -212,14 +230,20 @@ describe('estado guardado: fechas del futuro (M3)', () => {
       corregidos: 5,
       corregidosEn: AHORA - 1000,
       avisoEn: AHORA,
-      ultimo: { veredicto: 'critico', motivos: ['desgaste'], en: AHORA - 5, origen: 'admin' },
+      ultimo: {
+        veredicto: 'critico',
+        motivos: ['desgaste'],
+        en: AHORA - 5,
+        origen: 'admin',
+        contadores: CTR,
+      },
     });
   });
 
   it('un último dato mal formado se descarta', () => {
     for (const ultimo of [
       5,
-      { veredicto: 'raro', en: 1, origen: 'admin' },
+      { veredicto: 'raro', en: 1, origen: 'admin', contadores: CTR },
       { veredicto: 'bien', en: 1, origen: 'x' },
     ]) {
       expect(leerEstadoGuardado(base({ ultimo }), AHORA).discos['d0']?.ultimo).toBeNull();
@@ -253,6 +277,7 @@ describe('una lectura con menos información no rebaja el veredicto (I1)', () =>
       motivos: ['desgaste'],
       en: T,
       origen: 'admin',
+      contadores: ctr,
     });
     // Una lectura sin contadores no borra ni cambia el último dato.
     const s = decidirAlertas([disco('bien')], r.estado, T + 1000);
@@ -265,11 +290,12 @@ describe('una lectura con menos información no rebaja el veredicto (I1)', () =>
       motivos: ['errores_sin_corregir' as const],
       en: T,
       origen: 'admin' as const,
+      contadores: CTR,
     };
     expect(conservarVeredicto({ veredicto: 'bien', motivos: [] }, false, ultimo)).toEqual({
       veredicto: 'critico',
       motivos: ['errores_sin_corregir'],
-      conservado: { en: new Date(T).toISOString(), origen: 'admin' },
+      conservado: { en: new Date(T).toISOString(), origen: 'admin', contadores: CTR },
     });
     // Si lo nuevo es igual o peor, manda lo nuevo; si trae contadores, también.
     expect(

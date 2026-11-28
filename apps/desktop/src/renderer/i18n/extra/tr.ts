@@ -545,6 +545,10 @@ export const trExtra: TextosParciales = {
         },
         prediccionSinFallo: 'Arıza beklenmiyor',
         prediccionFallo: 'Arıza bekleniyor',
+        bienSoloEstado: 'İyi (yalnızca Windows’un bildirdiği durum)',
+        noAplicaHdd: 'Uygulanamaz (HDD)',
+        ultimoDatoAdmin: 'Yönetici izinleriyle alınan son veri: {fecha}',
+        ultimoDatoContadores: 'Sayaçlardan alınan son veri: {fecha}',
         horasValor: '{n} sa',
         criterios: {
           titulo: 'Değerlendirme nasıl belirlenir?',
@@ -585,6 +589,8 @@ export const trExtra: TextosParciales = {
           disco_55: 'Bir sürücünün dosya sisteminde bozulma algılandı.',
           disco_129:
             'Disk denetleyicisi yanıt vermediği için Windows onu sıfırlamak zorunda kaldı.',
+          disco_98: 'Windows birimi denetledi ve birim sağlıklı.',
+          disco_140: 'Sistem, birimin işlem günlüğüne veri yazamadı; veri bozulması olabilir.',
           disco_153: 'Bir disk işlemi başarısız oldu ve yeniden denendi.',
           disco_157: 'Disk beklenmedik şekilde bağlantıyı kaybetti.',
         },

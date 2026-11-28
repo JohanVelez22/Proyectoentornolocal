@@ -584,6 +584,10 @@ export const plExtra: TextosParciales = {
         },
         prediccionSinFallo: 'Awaria nie jest przewidywana',
         prediccionFallo: 'Przewidywana awaria',
+        bienSoloEstado: 'Dobrze (tylko stan zgłaszany przez system Windows)',
+        noAplicaHdd: 'Nie dotyczy (HDD)',
+        ultimoDatoAdmin: 'Ostatnie dane z uprawnieniami administratora: {fecha}',
+        ultimoDatoContadores: 'Ostatnie dane z liczników: {fecha}',
         horasValor: '{n} godz.',
         criterios: {
           titulo: 'Jak ustalana jest ocena?',
@@ -624,6 +628,9 @@ export const plExtra: TextosParciales = {
           disco_52: 'Dysk przewiduje, że ulegnie awarii.',
           disco_55: 'Wykryto uszkodzenie systemu plików dysku logicznego.',
           disco_129: 'System Windows musiał zresetować kontroler dysku, ponieważ nie odpowiadał.',
+          disco_98: 'System Windows sprawdził wolumin i jest on w dobrym stanie.',
+          disco_140:
+            'System nie mógł zapisać danych w dzienniku transakcji woluminu; może dojść do uszkodzenia danych.',
           disco_153: 'Operacja na dysku nie powiodła się i została ponowiona.',
           disco_157: 'Dysk został nieoczekiwanie odłączony.',
         },

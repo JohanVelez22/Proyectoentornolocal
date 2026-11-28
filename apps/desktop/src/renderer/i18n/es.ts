@@ -4122,6 +4122,10 @@ export const es = {
         },
         prediccionSinFallo: 'Sin fallo previsto',
         prediccionFallo: 'Fallo previsto',
+        bienSoloEstado: 'Bien (solo el estado que informa Windows)',
+        noAplicaHdd: 'No aplica (HDD)',
+        ultimoDatoAdmin: 'Último dato con permisos de administrador: {fecha}',
+        ultimoDatoContadores: 'Último dato de los contadores: {fecha}',
         horasValor: '{n} h',
         criterios: {
           titulo: '¿Cómo se decide el veredicto?',
@@ -4161,6 +4165,9 @@ export const es = {
           disco_52: 'El disco predice que va a fallar.',
           disco_55: 'Se detectó corrupción en el sistema de archivos de una unidad.',
           disco_129: 'Windows tuvo que reiniciar el controlador del disco porque no respondía.',
+          disco_98: 'Windows comprobó el volumen y está en buen estado.',
+          disco_140:
+            'El sistema no pudo guardar datos en el registro de transacciones del volumen; podría haber corrupción.',
           disco_153: 'Una operación del disco falló y se reintentó.',
           disco_157: 'El disco se desconectó de forma inesperada.',
         },

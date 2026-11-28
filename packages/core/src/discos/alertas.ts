@@ -1,5 +1,11 @@
 import { GRAVEDAD_VEREDICTO, tieneContadores, type ResultadoVeredicto } from './veredicto';
-import type { DatoConservado, DiscoSalud, MotivoVeredicto, Veredicto } from './tipos';
+import type {
+  ContadoresDisco,
+  DatoConservado,
+  DiscoSalud,
+  MotivoVeredicto,
+  Veredicto,
+} from './tipos';
 
 /** Mínimo entre dos avisos del mismo disco, salvo que empeore a un nivel más grave que el último avisado. */
 export const INTERVALO_MIN_AVISO_MS = 6 * 60 * 60 * 1000;
@@ -27,6 +33,8 @@ export interface UltimoContadores {
   en: number;
   /** `admin`: lectura con permisos de administrador; `sondeo`: la normal, sin ellos. */
   origen: 'admin' | 'sondeo';
+  /** Los contadores de esa lectura (para mostrar los números de sus motivos). */
+  contadores: ContadoresDisco;
 }
 
 /** Lo que se recuerda de cada disco entre revisiones (clave sin número de serie). */
@@ -57,14 +65,14 @@ export function resultadoDeContadores(
   ahora: number,
   origen: 'admin' | 'sondeo',
 ): UltimoContadores | null {
-  if (!tieneContadores(d.contadores)) return null;
+  if (!d.contadores || !tieneContadores(d.contadores)) return null;
   const motivos = d.motivos.filter((m) => MOTIVOS_DE_CONTADORES.includes(m));
   const veredicto = motivos.includes('errores_sin_corregir')
     ? 'critico'
     : motivos.length > 0
       ? 'atencion'
       : 'bien';
-  return { veredicto, motivos, en: ahora, origen };
+  return { veredicto, motivos, en: ahora, origen, contadores: d.contadores };
 }
 
 /**
@@ -89,7 +97,11 @@ export function conservarVeredicto(
   return {
     veredicto: ultimo.veredicto,
     motivos,
-    conservado: { en: new Date(ultimo.en).toISOString(), origen: ultimo.origen },
+    conservado: {
+      en: new Date(ultimo.en).toISOString(),
+      origen: ultimo.origen,
+      contadores: ultimo.contadores,
+    },
   };
 }
 
@@ -188,7 +200,34 @@ function ultimoGuardado(v: unknown, ahora: number): UltimoContadores | null {
         MOTIVOS_DE_CONTADORES.includes(m as MotivoVeredicto),
       )
     : [];
-  return { veredicto: o['veredicto'], motivos, en: o['en'], origen: o['origen'] };
+  const contadores = contadoresGuardados(o['contadores']);
+  if (contadores === null) return null;
+  return { veredicto: o['veredicto'], motivos, en: o['en'], origen: o['origen'], contadores };
+}
+
+const CLAVES_CONTADORES = [
+  'temperaturaC',
+  'temperaturaMaxC',
+  'desgastePct',
+  'erroresLecturaCorregidos',
+  'erroresLecturaNoCorregidos',
+  'erroresEscrituraCorregidos',
+  'erroresEscrituraNoCorregidos',
+  'horasEncendido',
+] as const;
+
+/** Contadores guardados: solo números o null en sus claves conocidas; otra cosa, no se acepta. */
+function contadoresGuardados(v: unknown): ContadoresDisco | null {
+  if (typeof v !== 'object' || v === null) return null;
+  const o = v as Record<string, unknown>;
+  const r = {} as Record<string, number | null>;
+  for (const k of CLAVES_CONTADORES) {
+    const x = o[k];
+    if (x === null || x === undefined) r[k] = null;
+    else if (esNumero(x) && x >= 0) r[k] = x;
+    else return null;
+  }
+  return r as unknown as ContadoresDisco;
 }
 
 /**

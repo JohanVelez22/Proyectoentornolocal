@@ -591,6 +591,10 @@ export const itExtra: TextosParciales = {
         },
         prediccionSinFallo: 'Nessun guasto previsto',
         prediccionFallo: 'Guasto previsto',
+        bienSoloEstado: 'Buono (solo lo stato indicato da Windows)',
+        noAplicaHdd: 'Non applicabile (HDD)',
+        ultimoDatoAdmin: 'Ultimi dati con permessi di amministratore: {fecha}',
+        ultimoDatoContadores: 'Ultimi dati dei contatori: {fecha}',
         horasValor: '{n} h',
         criterios: {
           titulo: 'Come viene deciso il verdetto?',
@@ -630,6 +634,9 @@ export const itExtra: TextosParciales = {
           disco_52: 'Il disco prevede che si guasterà.',
           disco_55: 'È stata rilevata una corruzione nel file system di un’unità.',
           disco_129: 'Windows ha dovuto reimpostare il controller del disco perché non rispondeva.',
+          disco_98: 'Windows ha controllato il volume ed è in buono stato.',
+          disco_140:
+            'Il sistema non è riuscito a scrivere i dati nel registro delle transazioni del volume; potrebbe verificarsi un danneggiamento.',
           disco_153: 'Un’operazione del disco è fallita ed è stata ritentata.',
           disco_157: 'Il disco è stato scollegato in modo imprevisto.',
         },

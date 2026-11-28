@@ -4135,6 +4135,10 @@ export const pt: Textos = {
         },
         prediccionSinFallo: 'Nenhuma falha prevista',
         prediccionFallo: 'Falha prevista',
+        bienSoloEstado: 'Bom (apenas o estado informado pelo Windows)',
+        noAplicaHdd: 'Não se aplica (HDD)',
+        ultimoDatoAdmin: 'Último dado com permissões de administrador: {fecha}',
+        ultimoDatoContadores: 'Último dado dos contadores: {fecha}',
         horasValor: '{n} h',
         criterios: {
           titulo: 'Como o veredito é decidido?',
@@ -4175,6 +4179,9 @@ export const pt: Textos = {
           disco_55: 'Foi detectada corrupção no sistema de arquivos de uma unidade.',
           disco_129:
             'O Windows precisou reiniciar o controlador do disco porque ele não respondia.',
+          disco_98: 'O Windows verificou o volume e ele está em bom estado.',
+          disco_140:
+            'O sistema não conseguiu gravar dados no registro de transações do volume; pode haver corrupção.',
           disco_153: 'Uma operação do disco falhou e foi repetida.',
           disco_157: 'O disco foi desconectado de forma inesperada.',
         },

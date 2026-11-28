@@ -4093,6 +4093,10 @@ export const en: Textos = {
         },
         prediccionSinFallo: 'No failure expected',
         prediccionFallo: 'Failure expected',
+        bienSoloEstado: 'Good (only the status reported by Windows)',
+        noAplicaHdd: 'Not applicable (HDD)',
+        ultimoDatoAdmin: 'Last data with administrator permissions: {fecha}',
+        ultimoDatoContadores: 'Last counter data: {fecha}',
         horasValor: '{n} h',
         criterios: {
           titulo: 'How is the verdict decided?',
@@ -4131,6 +4135,9 @@ export const en: Textos = {
           disco_52: 'The disk predicts that it is going to fail.',
           disco_55: 'Corruption was detected in the file system of a drive.',
           disco_129: 'Windows had to reset the disk controller because it was not responding.',
+          disco_98: 'Windows checked the volume and it is healthy.',
+          disco_140:
+            'The system could not write data to the volume’s transaction log; corruption may occur.',
           disco_153: 'A disk operation failed and was retried.',
           disco_157: 'The disk was disconnected unexpectedly.',
         },

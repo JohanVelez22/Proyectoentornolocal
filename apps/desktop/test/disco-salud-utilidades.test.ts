@@ -10,10 +10,13 @@ import {
   etiquetasDisco,
   filasContadores,
   hayDatosDeAdministrador,
+  pideRespaldo,
   textoCopiaEventos,
+  textoDatoConservado,
   textoDiscoEvento,
   textoMotivo,
   textoUnidades,
+  textoVeredicto,
 } from '../src/renderer/utilidades/saludDiscos';
 import { textoEvidencia } from '../src/renderer/utilidades/doctor';
 import { textoAviso } from '../src/shared/textosAvisos';
@@ -241,5 +244,104 @@ describe('privacidad', () => {
       'utf8',
     );
     expect(fuente).not.toMatch(/SerialNumber|UniqueId|serial:/i);
+  });
+});
+
+describe('interfaz de la salud de los discos tras la revisión de seguridad', () => {
+  const sano = {
+    temperaturaC: 40,
+    temperaturaMaxC: null,
+    desgastePct: 3,
+    erroresLecturaCorregidos: 0,
+    erroresLecturaNoCorregidos: 0,
+    erroresEscrituraCorregidos: 0,
+    erroresEscrituraNoCorregidos: 0,
+    horasEncendido: 100,
+  };
+
+  it('el desgaste de 100 o más se muestra «≥ 100 %»', () => {
+    const fila = (n: number) =>
+      filasContadores(disco({ contadores: { ...sano, desgastePct: n } }), 'ok', t).find(
+        (f) => f.clave === 'desgaste',
+      )!;
+    expect(fila(99).valor).toBe('99 %');
+    expect(fila(100).valor).toBe('≥ 100 %');
+    expect(fila(180).valor).toBe('≥ 100 %');
+    expect(
+      textoMotivo(disco({ contadores: { ...sano, desgastePct: 200 } }), 'desgaste', t),
+    ).toContain('≥ 100 %');
+  });
+
+  it('en un HDD el desgaste es «No aplica (HDD)»', () => {
+    const d = disco({ medio: 'hdd', bus: 'sata', contadores: { ...sano, desgastePct: null } });
+    const f = filasContadores(d, 'ok', t).find((x) => x.clave === 'desgaste')!;
+    expect(f.valor).toBe(t.noAplicaHdd);
+    expect(f.valor).toBe('No aplica (HDD)');
+    // Sin ningún contador también: no se confunde con «No disponible».
+    const sin = filasContadores(disco({ medio: 'hdd', bus: 'sata' }), 'ok', t).find(
+      (x) => x.clave === 'desgaste',
+    )!;
+    expect(sin.valor).toBe(t.noAplicaHdd);
+  });
+
+  it('los motivos no inventan ceros: si falta el dato, «No disponible»', () => {
+    const d = disco({ contadores: null, motivos: ['errores_sin_corregir'] });
+    const txt = textoMotivo(d, 'errores_sin_corregir', t);
+    expect(txt).toContain(t.noDisponible);
+    expect(txt).not.toMatch(/(^|[\s:])0(\D|$)/);
+    expect(textoMotivo(disco({ operacional: [] }), 'estado_operacional', t)).toContain(
+      t.noDisponible,
+    );
+    expect(textoMotivo(disco({ medio: null, bus: null }), 'temperatura', t)).not.toMatch(/\b0\b/);
+  });
+
+  it('«Bien» sin contadores se matiza; con contadores, no', () => {
+    expect(textoVeredicto(disco({ veredicto: 'bien', contadores: null }), t)).toBe(
+      'Bien (solo el estado que informa Windows)',
+    );
+    expect(textoVeredicto(disco({ veredicto: 'bien', contadores: sano }), t)).toBe('Bien');
+    expect(textoVeredicto(disco({ veredicto: 'critico', contadores: null }), t)).toBe('Crítico');
+  });
+
+  it('«Último dato con permisos de administrador: <fecha>» y los motivos con los números de entonces', () => {
+    const d = disco({
+      veredicto: 'critico',
+      motivos: ['errores_sin_corregir'],
+      contadores: null,
+      datoConservado: {
+        en: '2026-11-20T08:30:00.000Z',
+        origen: 'admin',
+        contadores: { ...sano, erroresLecturaNoCorregidos: 7 },
+      },
+    });
+    expect(textoDatoConservado(d, t, () => '20/11/2026')).toBe(
+      'Último dato con permisos de administrador: 20/11/2026',
+    );
+    expect(textoMotivo(d, 'errores_sin_corregir', t)).toContain('lectura: 7');
+    expect(
+      textoDatoConservado(
+        { ...d, datoConservado: { ...d.datoConservado!, origen: 'sondeo' } },
+        t,
+        () => 'x',
+      ),
+    ).toBe('Último dato de los contadores: x');
+    expect(textoDatoConservado(disco(), t, () => 'x')).toBeNull();
+  });
+
+  it('«Hacer respaldo ahora» solo en Atención y Crítico', () => {
+    expect(pideRespaldo({ veredicto: 'atencion' })).toBe(true);
+    expect(pideRespaldo({ veredicto: 'critico' })).toBe(true);
+    expect(pideRespaldo({ veredicto: 'bien' })).toBe(false);
+    expect(pideRespaldo({ veredicto: 'no_disponible' })).toBe(false);
+    expect(es.avisos.hacerRespaldo).toBe('Hacer respaldo ahora');
+  });
+
+  it('los eventos nuevos de NTFS (98 y 140) tienen su explicación en todos los idiomas', () => {
+    for (const id of IDIOMAS_UI) {
+      const e = (diccionarios[id] as typeof es).herramientas.entorno.eventosDisco
+        .explicaciones as Record<string, string>;
+      expect(e['disco_98'], id).toBeTruthy();
+      expect(e['disco_140'], id).toBeTruthy();
+    }
   });
 });

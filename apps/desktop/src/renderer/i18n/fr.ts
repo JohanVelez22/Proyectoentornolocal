@@ -4241,6 +4241,10 @@ export const fr: Textos = {
         },
         prediccionSinFallo: 'Aucune panne prévue',
         prediccionFallo: 'Panne prévue',
+        bienSoloEstado: 'Bon (uniquement l’état indiqué par Windows)',
+        noAplicaHdd: 'Sans objet (HDD)',
+        ultimoDatoAdmin: 'Dernières données avec les droits d’administrateur : {fecha}',
+        ultimoDatoContadores: 'Dernières données des compteurs : {fecha}',
         horasValor: '{n} h',
         criterios: {
           titulo: 'Comment le verdict est-il établi ?',
@@ -4280,6 +4284,9 @@ export const fr: Textos = {
           disco_52: 'Le disque prédit qu’il va tomber en panne.',
           disco_55: 'Une corruption a été détectée dans le système de fichiers d’un lecteur.',
           disco_129: 'Windows a dû réinitialiser le contrôleur du disque, qui ne répondait plus.',
+          disco_98: 'Windows a vérifié le volume : il est en bon état.',
+          disco_140:
+            'Le système n’a pas pu écrire les données dans le journal des transactions du volume ; une corruption est possible.',
           disco_153: 'Une opération sur le disque a échoué et a été retentée.',
           disco_157: 'Le disque a été déconnecté de manière inattendue.',
         },

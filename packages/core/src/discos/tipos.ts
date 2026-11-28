@@ -84,6 +84,8 @@ export interface DatoConservado {
   /** ISO. */
   en: string;
   origen: 'admin' | 'sondeo';
+  /** Los contadores de esa lectura: dan los números de los motivos que se conservan. */
+  contadores: ContadoresDisco;
 }
 
 export interface DiscoSalud extends DiscoLeido {

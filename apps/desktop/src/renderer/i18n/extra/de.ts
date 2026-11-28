@@ -607,6 +607,10 @@ export const deExtra: TextosParciales = {
         },
         prediccionSinFallo: 'Kein Ausfall zu erwarten',
         prediccionFallo: 'Ausfall zu erwarten',
+        bienSoloEstado: 'In Ordnung (nur der von Windows gemeldete Zustand)',
+        noAplicaHdd: 'Nicht zutreffend (HDD)',
+        ultimoDatoAdmin: 'Letzte Daten mit Administratorrechten: {fecha}',
+        ultimoDatoContadores: 'Letzte Zählerdaten: {fecha}',
         horasValor: '{n} Std.',
         criterios: {
           titulo: 'Wie wird die Bewertung festgelegt?',
@@ -648,6 +652,9 @@ export const deExtra: TextosParciales = {
           disco_55: 'Im Dateisystem eines Laufwerks wurde eine Beschädigung erkannt.',
           disco_129:
             'Windows musste den Laufwerkcontroller zurücksetzen, weil er nicht antwortete.',
+          disco_98: 'Windows hat das Volume geprüft und es ist in Ordnung.',
+          disco_140:
+            'Das System konnte keine Daten in das Transaktionsprotokoll des Volumes schreiben; es kann zu Beschädigungen kommen.',
           disco_153: 'Ein Laufwerkvorgang ist fehlgeschlagen und wurde wiederholt.',
           disco_157: 'Das Laufwerk wurde unerwartet getrennt.',
         },

@@ -531,6 +531,10 @@ export const koExtra: TextosParciales = {
         },
         prediccionSinFallo: '예상되는 고장 없음',
         prediccionFallo: '고장이 예상됨',
+        bienSoloEstado: '양호(Windows가 보고한 상태만 해당)',
+        noAplicaHdd: '해당 없음(HDD)',
+        ultimoDatoAdmin: '관리자 권한으로 읽은 마지막 데이터: {fecha}',
+        ultimoDatoContadores: '카운터의 마지막 데이터: {fecha}',
         horasValor: '{n}시간',
         criterios: {
           titulo: '판정은 어떻게 결정되나요?',
@@ -569,6 +573,9 @@ export const koExtra: TextosParciales = {
           disco_52: '디스크가 곧 고장 날 것으로 예측하고 있습니다.',
           disco_55: '드라이브의 파일 시스템에서 손상이 감지되었습니다.',
           disco_129: '디스크 컨트롤러가 응답하지 않아 Windows가 재설정했습니다.',
+          disco_98: 'Windows가 볼륨을 검사했으며 상태가 양호합니다.',
+          disco_140:
+            '시스템이 볼륨의 트랜잭션 로그에 데이터를 기록하지 못했습니다. 손상이 발생할 수 있습니다.',
           disco_153: '디스크 작업이 실패하여 다시 시도되었습니다.',
           disco_157: '디스크가 예기치 않게 분리되었습니다.',
         },

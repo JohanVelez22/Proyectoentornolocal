@@ -596,6 +596,10 @@ export const nlExtra: TextosParciales = {
         },
         prediccionSinFallo: 'Geen storing verwacht',
         prediccionFallo: 'Storing verwacht',
+        bienSoloEstado: 'Goed (alleen de status die Windows meldt)',
+        noAplicaHdd: 'Niet van toepassing (HDD)',
+        ultimoDatoAdmin: 'Laatste gegevens met beheerdersrechten: {fecha}',
+        ultimoDatoContadores: 'Laatste gegevens van de tellers: {fecha}',
         horasValor: '{n} u',
         criterios: {
           titulo: 'Hoe wordt het oordeel bepaald?',
@@ -635,6 +639,9 @@ export const nlExtra: TextosParciales = {
           disco_52: 'De schijf voorspelt dat hij zal uitvallen.',
           disco_55: 'In het bestandssysteem van een station is beschadiging gedetecteerd.',
           disco_129: 'Windows moest de schijfcontroller resetten omdat hij niet reageerde.',
+          disco_98: 'Windows heeft het volume gecontroleerd en het is in orde.',
+          disco_140:
+            'Het systeem kon geen gegevens naar het transactielogboek van het volume schrijven; er kan beschadiging optreden.',
           disco_153: 'Een schijfbewerking is mislukt en opnieuw geprobeerd.',
           disco_157: 'De schijf is onverwacht losgekoppeld.',
         },

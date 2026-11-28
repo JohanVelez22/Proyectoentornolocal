@@ -7,6 +7,7 @@
 import {
   DIAS_EVENTOS_DISCO,
   MAX_EVENTOS_DISCO,
+  limiteTemperatura,
   UMBRALES_DISCO,
   type DiscoSalud,
   type EstadoPrediccion,
@@ -57,28 +58,55 @@ export const nombreDisco = (d: DiscoSalud, t: TextosDiscos): string =>
 export const textoUnidades = (d: DiscoSalud, t: TextosDiscos): string =>
   d.unidades.length > 0 ? rellenar(t.unidades, { u: d.unidades.join(' ') }) : t.sinUnidades;
 
-/** Frase de un motivo del veredicto, con los números que lo explican. */
+/** El desgaste de un NVMe puede pasar de 100: de ahí en adelante se muestra «≥ 100 %». */
+export const textoDesgaste = (n: number): string => (n >= 100 ? '≥ 100 %' : `${n} %`);
+
+/**
+ * Frase de un motivo del veredicto, con los números que lo explican. Si falta un dato NO se
+ * rellena con un 0: sale «No disponible» (nunca un número inventado).
+ */
 export function textoMotivo(d: DiscoSalud, m: MotivoVeredicto, t: TextosDiscos): string {
-  const c = d.contadores;
+  // Un veredicto conservado de una lectura anterior usa los números de aquella lectura.
+  const c = d.contadores ?? d.datoConservado?.contadores ?? null;
+  const dato = (v: number | null | undefined, formato: (n: number) => string = String): string =>
+    v === null || v === undefined ? t.noDisponible : formato(v);
   return rellenar(t.motivos[m], {
-    estado: d.operacional.join(', '),
-    lectura: c?.erroresLecturaNoCorregidos ?? 0,
-    escritura: c?.erroresEscrituraNoCorregidos ?? 0,
-    desgaste: c?.desgastePct ?? 0,
+    estado: d.operacional.length > 0 ? d.operacional.join(', ') : t.noDisponible,
+    lectura: dato(c?.erroresLecturaNoCorregidos),
+    escritura: dato(c?.erroresEscrituraNoCorregidos),
+    // La plantilla trae «{desgaste} %»: con el tope («≥ 100») el signo va aquí y no se repite.
+    desgaste: dato(c?.desgastePct, (n) => (n >= 100 ? '≥ 100' : String(n))),
     umbral: UMBRALES_DISCO.desgasteAtencion,
-    temperatura: c?.temperaturaC ?? 0,
-    limite: limiteMostrado(d),
-    cantidad: c?.erroresLecturaCorregidos ?? 0,
+    temperatura: dato(c?.temperaturaC),
+    limite:
+      limiteTemperatura({ medio: d.medio, bus: d.bus, contadores: c })?.valor ?? t.noDisponible,
+    cantidad: dato(c?.erroresLecturaCorregidos),
   });
 }
 
-function limiteMostrado(d: DiscoSalud): number {
-  const max = d.contadores?.temperaturaMaxC ?? null;
-  if (max !== null && max >= UMBRALES_DISCO.temperaturaMinCreible) return max;
-  return d.medio === 'hdd'
-    ? UMBRALES_DISCO.temperaturaHddAtencion
-    : UMBRALES_DISCO.temperaturaSsdAtencion;
+/** Texto de la etiqueta del veredicto: «Bien» sin contadores se matiza. */
+export function textoVeredicto(d: DiscoSalud, t: TextosDiscos): string {
+  return d.veredicto === 'bien' && d.contadores === null
+    ? t.bienSoloEstado
+    : t.veredictos[d.veredicto];
 }
+
+/** «Último dato con permisos de administrador: <fecha>» si el veredicto viene de una lectura anterior. */
+export function textoDatoConservado(
+  d: DiscoSalud,
+  t: TextosDiscos,
+  fecha: (iso: string) => string,
+): string | null {
+  const c = d.datoConservado;
+  if (!c) return null;
+  return rellenar(c.origen === 'admin' ? t.ultimoDatoAdmin : t.ultimoDatoContadores, {
+    fecha: fecha(c.en),
+  });
+}
+
+/** ¿Merece la acción «Hacer respaldo ahora»? Solo Atención y Crítico. */
+export const pideRespaldo = (d: Pick<DiscoSalud, 'veredicto'>): boolean =>
+  d.veredicto === 'atencion' || d.veredicto === 'critico';
 
 export interface FilaContador {
   clave: string;
@@ -112,7 +140,10 @@ export function filasContadores(
   const c2 = t.contadores;
   const filas: FilaContador[] = [
     num('temperatura', c2.temperatura, c?.temperaturaC, (n) => `${n} °C`),
-    num('desgaste', c2.desgaste, c?.desgastePct, (n) => `${n} %`),
+    // En un HDD no hay desgaste que medir: no es «No disponible», es que no aplica.
+    d.medio === 'hdd' && (c?.desgastePct ?? null) === null
+      ? { clave: 'desgaste', etiqueta: c2.desgaste, valor: t.noAplicaHdd, disponible: false }
+      : num('desgaste', c2.desgaste, c?.desgastePct, textoDesgaste),
     num('lecturaCorregidos', c2.lecturaCorregidos, c?.erroresLecturaCorregidos),
     num('lecturaNoCorregidos', c2.lecturaNoCorregidos, c?.erroresLecturaNoCorregidos),
     num('escrituraCorregidos', c2.escrituraCorregidos, c?.erroresEscrituraCorregidos),

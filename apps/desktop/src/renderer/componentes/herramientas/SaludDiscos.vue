@@ -2,6 +2,7 @@
 import { Refresh, ShieldCheckmark } from '@vicons/ionicons5';
 import { NButton, NCollapse, NCollapseItem, NIcon, NSpin, NTag } from 'naive-ui';
 import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { UMBRALES_DISCO } from '@pel/core';
 import type { DiscoSalud, ResultadoSalud } from '../../../shared/api';
 import { api } from '../../api';
@@ -15,8 +16,11 @@ import {
   filasContadores,
   hayDatosDeAdministrador,
   nombreDisco,
+  pideRespaldo,
+  textoDatoConservado,
   textoMotivo,
   textoUnidades,
+  textoVeredicto,
 } from '../../utilidades/saludDiscos';
 
 /**
@@ -25,6 +29,10 @@ import {
  */
 const t = textos.herramientas.entorno.discos;
 const { ejecutar, ocupado } = useAccion();
+const router = useRouter();
+const textoRespaldo = textos.avisos.hacerRespaldo;
+const fechaCorta = (iso: string): string =>
+  formatearFecha(iso, { dateStyle: 'short', timeStyle: 'short' });
 
 const resultado = ref<ResultadoSalud | null>(null);
 
@@ -48,7 +56,10 @@ const discos = computed(() =>
     nombre: nombreDisco(d, t),
     etiquetas: etiquetasDisco(d, t),
     unidades: textoUnidades(d, t),
+    veredicto: textoVeredicto(d, t),
     motivos: d.motivos.map((m) => textoMotivo(d, m, t)),
+    conservado: textoDatoConservado(d, t, fechaCorta),
+    respaldo: pideRespaldo(d),
     ...resumirFilas(d),
   })),
 );
@@ -60,7 +71,12 @@ const discos = computed(() =>
 function resumirFilas(d: DiscoSalud): { sinContadores: string | null; filas: FilaContador[] } {
   const todas = filasContadores(d, resultado.value?.prediccion ?? 'no_disponible', t);
   if (d.contadores !== null) return { sinContadores: null, filas: todas };
-  return { sinContadores: todas[0]?.valor ?? t.noDisponible, filas: todas.slice(-1) };
+  // En un HDD el desgaste «No aplica»: es una respuesta, no una falta de datos.
+  const desgasteHdd = d.medio === 'hdd' ? todas.filter((f) => f.clave === 'desgaste') : [];
+  return {
+    sinContadores: todas[0]?.valor ?? t.noDisponible,
+    filas: [...desgasteHdd, ...todas.slice(-1)],
+  };
 }
 
 const pideAdmin = computed(
@@ -73,6 +89,11 @@ const pideAdmin = computed(
 async function cargar(): Promise<void> {
   const r = await ejecutar('discos', () => api().herramientas.saludDiscos());
   if (r) resultado.value = r;
+}
+
+/** «Hacer respaldo ahora»: lleva a los respaldos de las bases de datos (como el aviso). */
+function irARespaldos(): void {
+  void router.push({ name: 'basesDeDatos' });
 }
 
 /** Pide el UAC de Windows: solo por este clic, nunca por su cuenta. */
@@ -125,7 +146,7 @@ onMounted(() => void cargar());
         <div class="cabecera">
           <strong class="nombre">{{ x.nombre }}</strong>
           <NTag size="small" :type="TONO_VEREDICTO[x.d.veredicto]" :bordered="false" round>
-            {{ t.veredictos[x.d.veredicto] }}
+            {{ x.veredicto }}
           </NTag>
         </div>
         <div class="herr-fila etiquetas">
@@ -141,6 +162,14 @@ onMounted(() => void cargar());
         <ul v-if="x.motivos.length" class="motivos">
           <li v-for="(m, i) in x.motivos" :key="i">{{ m }}</li>
         </ul>
+        <p v-if="x.conservado" class="herr-tenue" data-testid="dato-conservado">
+          {{ x.conservado }}
+        </p>
+        <div v-if="x.respaldo" class="herr-fila">
+          <NButton size="small" secondary data-testid="disco-respaldo" @click="irARespaldos">
+            {{ textoRespaldo }}
+          </NButton>
+        </div>
         <p v-if="x.sinContadores" class="herr-tenue sin-contadores" data-testid="sin-contadores">
           {{ x.sinContadores }}
         </p>
