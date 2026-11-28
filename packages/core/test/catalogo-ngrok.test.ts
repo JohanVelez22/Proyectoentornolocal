@@ -61,7 +61,7 @@ describe('fuente de ngrok', () => {
 
   it('ignora enlaces de otro host o de otro producto y sumas mal formadas', () => {
     const falso = (url: string, suma: string): string =>
-      `<a href="${url}" class="btn"></a><div><input type="text" readonly value="${suma}"></div>`;
+      `<div class="link"><a href="${url}" class="btn"></a><div><input type="text" readonly value="${suma}"></div></div>`;
     for (const html of [
       falso('https://evil.example.com/a/x/ngrok-v3-3.39.13-windows-amd64.zip', 'a'.repeat(64)),
       falso('https://bin.equinox.io/a/x/otro-3.39.13-windows-amd64.zip', 'a'.repeat(64)),
@@ -72,10 +72,31 @@ describe('fuente de ngrok', () => {
     }
   });
 
+  it('un bloque de Windows x64 sin su suma descarta el índice entero (no se presta la del vecino)', () => {
+    const html = fixture('ngrok-archivo.html');
+    // Se quita la suma del bloque x64 de la 3.39.12: la del bloque siguiente NO la sustituye.
+    const sinSuma = html.replace(/value="05181f79[0-9a-f]{56}"/, 'value="pendiente"');
+    expect(sinSuma).not.toBe(html);
+    expect(() => interpretarArchivoNgrok(sinSuma)).toThrow(/sin SHA-256/);
+    // Una suma en un bloque ARM64 no cuenta para el bloque x64 de al lado.
+    const bloque = (url: string, suma: string | null): string =>
+      `<div class="link"><a href="${url}" class="btn"></a>${suma ? `<input readonly value="${suma}">` : ''}</div>`;
+    const x64 = 'https://bin.equinox.io/a/x/ngrok-v3-3.39.13-windows-amd64.zip';
+    const arm = 'https://bin.equinox.io/a/y/ngrok-v3-3.39.13-windows-arm64.zip';
+    expect(() => interpretarArchivoNgrok(bloque(x64, null) + bloque(arm, 'b'.repeat(64)))).toThrow(
+      IndiceMalformado,
+    );
+    expect(
+      interpretarArchivoNgrok(bloque(arm, 'b'.repeat(64)) + bloque(x64, 'c'.repeat(64)))[0],
+    ).toMatchObject({
+      sha256: 'c'.repeat(64),
+    });
+  });
+
   it('solo se ofrecen las versiones más nuevas y se ordenan por número, no por texto', () => {
     const bloque = (v: string, n: number): string =>
-      `<a href="https://bin.equinox.io/a/id${n}/ngrok-v3-${v}-windows-amd64.zip" class="btn"></a>` +
-      `<input type="text" readonly value="${n.toString(16).padStart(64, '0')}">`;
+      `<div class="link"><a href="https://bin.equinox.io/a/id${n}/ngrok-v3-${v}-windows-amd64.zip" class="btn"></a>` +
+      `<input type="text" readonly value="${n.toString(16).padStart(64, '0')}"></div>`;
     const versiones = ['3.9.0', '3.10.0', '3.2.1', '3.39.13', '3.39.2', '3.20.0', '3.1.0'];
     const v = interpretarArchivoNgrok(versiones.map(bloque).join('\n'));
     expect(v.map((x) => x.version)).toEqual(['3.39.13', '3.39.2', '3.20.0', '3.10.0', '3.9.0']);
@@ -107,6 +128,18 @@ describe('ngrok en el catálogo', () => {
       urlOficial('https://bin.equinox.io/a/VUnfuMhAnU/ngrok-v3-3.39.13-windows-amd64.zip'),
     ).toBe(true);
     expect(urlOficial('https://bin.equinox.io/b/x/ngrok.zip')).toBe(false);
+    // bin.equinox.io solo sirve el zip de ngrok para Windows x64, con ese nombre exacto (sin el
+    // prefijo /c/…, que otras apps de Equinox también usan).
+    for (const mala of [
+      'https://bin.equinox.io/a/x/ngrok.zip',
+      'https://bin.equinox.io/a/x/otra-app-1.2.3-windows-amd64.zip',
+      'https://bin.equinox.io/a/x/ngrok-v3-3.39.13-windows-arm64.zip',
+      'https://bin.equinox.io/a/x/ngrok-v3-3.39.13-windows-amd64.zip.exe',
+      'https://bin.equinox.io/a/x/ngrok-v3-3.39-windows-amd64.zip',
+      'https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-3.39.13-windows-amd64.zip',
+    ]) {
+      expect(urlOficial(mala), mala).toBe(false);
+    }
     expect(urlOficial('http://bin.equinox.io/a/x/ngrok.zip')).toBe(false);
     expect(urlOficial('https://bin.equinox.io/a/x%2f..%2fy/ngrok.zip')).toBe(false);
     expect(urlOficial('https://evil.equinox.io/a/x/ngrok.zip')).toBe(false);

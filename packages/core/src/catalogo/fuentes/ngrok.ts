@@ -16,15 +16,29 @@ const MAX_VERSIONES = 5;
 /** El archivo pesa ~2,6 MB: se admite el doble. */
 const MAX_BYTES = 5 * 1024 * 1024;
 
+/** Cada versión y plataforma va en su propio bloque `<div class="link">…</div>`. */
+const BLOQUE = '<div class="link">';
 /** `https://bin.equinox.io/a/<id>/ngrok-v3-3.39.13-windows-amd64.zip`, la versión sale del nombre. */
 const ENLACE =
-  /href="(https:\/\/bin\.equinox\.io\/a\/[A-Za-z0-9]{1,40}\/ngrok-v3-(\d{1,3}\.\d{1,3}\.\d{1,3})-windows-amd64\.zip)"[^]{0,800}?<input[^>]*\bvalue="([0-9a-f]{64})"/g;
+  /href="(https:\/\/bin\.equinox\.io\/a\/[A-Za-z0-9]{1,40}\/ngrok-v3-(\d{1,3}\.\d{1,3}\.\d{1,3})-windows-amd64\.zip)"/;
+/** El SHA-256 del bloque: el `<input readonly value="…">` de ese mismo bloque. */
+const SUMA = /<input[^>]*\bvalue="([0-9a-f]{64})"/;
 
-/** Lo que dice el archivo para Windows x64: versión, URL y SHA-256, de la más nueva a la más vieja. */
+/**
+ * Lo que dice el archivo para Windows x64: versión, URL y SHA-256, de la más nueva a la más vieja.
+ * Se trocea por bloque: si un bloque de Windows x64 no trae SU suma (no se la presta el del
+ * vecino), el índice entero se descarta.
+ */
 export function interpretarArchivoNgrok(html: string): VersionDisponible[] {
   const vistas = new Map<string, VersionDisponible>();
-  for (const m of html.matchAll(ENLACE)) {
-    const [, url, version, suma] = m as unknown as [string, string, string, string];
+  for (const crudo of html.split(BLOQUE).slice(1)) {
+    // El bloque termina donde empieza el encabezado de la versión siguiente.
+    const bloque = crudo.split('<h2')[0]!;
+    const e = ENLACE.exec(bloque);
+    if (!e) continue;
+    const [, url, version] = e as unknown as [string, string, string];
+    const suma = SUMA.exec(bloque)?.[1];
+    if (!suma) throw new IndiceMalformado(`ngrok ${version} sin SHA-256 en su bloque`);
     const previa = vistas.get(version);
     if (previa) {
       // La misma versión no puede traer dos sumas distintas: delata un archivo manipulado.

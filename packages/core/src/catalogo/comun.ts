@@ -89,7 +89,15 @@ export const RUTAS_ACOTADAS: Readonly<Record<string, readonly string[]>> = {
   ],
   // ngrok: solo su archivo de descargas y sus zips (el host es de Equinox, que sirve a otras apps).
   'dl.equinox.io': ['/ngrok/ngrok-v3/stable/archive'],
-  'bin.equinox.io': ['/a/', '/c/bNyj1mQVY4c/'],
+  'bin.equinox.io': ['/a/'],
+};
+
+/**
+ * Hosts compartidos en los que, además, el NOMBRE del archivo (último tramo de la ruta) debe tener
+ * una forma exacta: en `bin.equinox.io` solo el zip de ngrok para Windows x64.
+ */
+export const NOMBRES_ACOTADOS: Readonly<Record<string, RegExp>> = {
+  'bin.equinox.io': /^ngrok-v3-\d{1,3}\.\d{1,3}\.\d{1,3}-windows-amd64\.zip$/,
 };
 
 /** Con `/` final, prefijo; sin él, la ruta exacta o una subruta (`/o` y `/o/…`, nunca `/otro`). */
@@ -97,6 +105,13 @@ function rutaDentro(ruta: string, prefijo: string): boolean {
   return prefijo.endsWith('/')
     ? ruta.startsWith(prefijo)
     : ruta === prefijo || ruta.startsWith(`${prefijo}/`);
+}
+
+function nombreAcotadoValido(u: URL): boolean {
+  const patron = Object.hasOwn(NOMBRES_ACOTADOS, u.hostname)
+    ? NOMBRES_ACOTADOS[u.hostname]
+    : undefined;
+  return patron === undefined || patron.test(u.pathname.slice(u.pathname.lastIndexOf('/') + 1));
 }
 
 function urlEn(texto: string, hosts: readonly string[]): boolean {
@@ -113,7 +128,8 @@ function urlEn(texto: string, hosts: readonly string[]): boolean {
       u.username === '' &&
       u.password === '' &&
       u.port === '' &&
-      (prefijos === undefined || prefijos.some((p) => rutaDentro(u.pathname, p)))
+      (prefijos === undefined || prefijos.some((p) => rutaDentro(u.pathname, p))) &&
+      nombreAcotadoValido(u)
     );
   } catch {
     return false;
