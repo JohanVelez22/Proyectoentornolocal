@@ -23,6 +23,8 @@ export const usePreferencias = defineStore('preferencias', () => {
   const avisoCostoAgentes = ref(false);
   /** Muestra las secciones avanzadas de la barra lateral (Contenedores). */
   const seccionesAvanzadas = ref(false);
+  /** Animación del logo al abrir la aplicación (D56). */
+  const animacionInicio = ref(true);
   const cargado = ref(false);
 
   function aplicar(p: PreferenciasUi): void {
@@ -31,6 +33,7 @@ export const usePreferencias = defineStore('preferencias', () => {
     asistenteVisto.value = p.asistenteVisto;
     avisoCostoAgentes.value = p.avisoCostoAgentes;
     seccionesAvanzadas.value = p.seccionesAvanzadas === true;
+    animacionInicio.value = p.animacionInicio !== false;
     if (p.idioma) cambiarIdioma(p.idioma);
   }
 
@@ -50,6 +53,7 @@ export const usePreferencias = defineStore('preferencias', () => {
       asistenteVisto: asistenteVisto.value,
       avisoCostoAgentes: avisoCostoAgentes.value,
       seccionesAvanzadas: seccionesAvanzadas.value,
+      animacionInicio: animacionInicio.value,
     };
     aplicar({ ...previo, ...cambios });
     try {
@@ -67,6 +71,7 @@ export const usePreferencias = defineStore('preferencias', () => {
     asistenteVisto,
     avisoCostoAgentes,
     seccionesAvanzadas,
+    animacionInicio,
     cargado,
     cargar,
     guardar,
@@ -75,6 +80,7 @@ export const usePreferencias = defineStore('preferencias', () => {
     cambiarAcento: (a: string | null) => guardar({ acento: a }),
     marcarAsistenteVisto: () => guardar({ asistenteVisto: true }),
     cambiarSeccionesAvanzadas: (v: boolean) => guardar({ seccionesAvanzadas: v }),
+    cambiarAnimacionInicio: (v: boolean) => guardar({ animacionInicio: v }),
     marcarAvisoCostoAgentes: () => guardar({ avisoCostoAgentes: true }),
   };
 });

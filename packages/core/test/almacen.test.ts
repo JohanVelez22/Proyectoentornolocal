@@ -121,7 +121,10 @@ describe('Almacen', () => {
     expect(archivos.some((f) => f.startsWith('config.corrupto'))).toBe(false);
   });
   it('animacionInicio (D56): una `ui` anterior sin el campo la recibe activada; false se conserva y un valor raro vuelve a activada', async () => {
-    await writeFile(rutas.config(), JSON.stringify({ ui: { tema: 'oscuro', asistenteVisto: true } }));
+    await writeFile(
+      rutas.config(),
+      JSON.stringify({ ui: { tema: 'oscuro', asistenteVisto: true } }),
+    );
     let d = await new Almacen(rutas).leer();
     expect(d.ui.animacionInicio).toBe(true);
     expect(d.ui.tema).toBe('oscuro');

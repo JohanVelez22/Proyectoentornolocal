@@ -49,7 +49,8 @@ import { abrirGrabadora } from './grabadora';
 import { imprimirHtmlAPdf } from './conversorPdf';
 import { crearEjecutorUtilityProcess } from './conversorProceso';
 import { crearEjecutorDiffUtilityProcess } from './diffProceso';
-import { carpetaDeHumo } from './carpetaHumo';
+import { PARAMETRO_SIN_ANIMACION } from '../shared/animacion';
+import { carpetaDeHumo, esModoHumo } from './carpetaHumo';
 import { crearEjecutorDiscoUtilityProcess } from './discoProceso';
 import { registrarIpcCaptura, ServicioCaptura } from './captura';
 import { crearDepsElectron } from './capturaElectron';
@@ -277,9 +278,19 @@ function crearVentana(rutas: Rutas): BrowserWindow {
     if (!urlPropia(url)) e.preventDefault();
   });
 
+  // En la prueba de humo la animación de inicio queda apagada (el renderer lee este parámetro).
+  const sinAnimacion = esModoHumo(process.argv);
   const dev = process.env['ELECTRON_RENDERER_URL'];
-  if (dev) void v.loadURL(dev);
-  else void v.loadFile(join(__dirname, '../renderer/index.html'));
+  if (dev) {
+    const url = new URL(dev);
+    if (sinAnimacion) url.searchParams.set(PARAMETRO_SIN_ANIMACION, '1');
+    void v.loadURL(url.toString());
+  } else {
+    void v.loadFile(
+      join(__dirname, '../renderer/index.html'),
+      sinAnimacion ? { query: { [PARAMETRO_SIN_ANIMACION]: '1' } } : undefined,
+    );
+  }
   return v;
 }
 

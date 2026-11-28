@@ -115,6 +115,30 @@ describe('secciones avanzadas', () => {
   });
 });
 
+describe('animación de inicio', () => {
+  it('está activada por defecto, se apaga al instante y se guarda', async () => {
+    const api = apiFalsa({ tema: 'sistema', idioma: 'es', acento: null, asistenteVisto: true });
+    const p = usePreferencias();
+    expect(p.animacionInicio).toBe(true);
+    await p.cargar(); // el proceso principal aún no la devuelve (config anterior): sigue activada
+    expect(p.animacionInicio).toBe(true);
+    const promesa = p.cambiarAnimacionInicio(false);
+    expect(p.animacionInicio).toBe(false);
+    await promesa;
+    expect(api.preferencias.guardar).toHaveBeenCalledWith({ animacionInicio: false });
+    expect(p.animacionInicio).toBe(false);
+  });
+
+  it('si guardar falla vuelve a activarse', async () => {
+    const api = apiFalsa({ tema: 'sistema', idioma: 'es', acento: null, asistenteVisto: true });
+    const p = usePreferencias();
+    await p.cargar();
+    api.preferencias.guardar.mockRejectedValueOnce(new Error('disco lleno'));
+    await expect(p.cambiarAnimacionInicio(false)).rejects.toThrow('disco lleno');
+    expect(p.animacionInicio).toBe(true);
+  });
+});
+
 describe('tema y acento', () => {
   it('el acento por defecto es el índigo de siempre en ambos modos', () => {
     expect(primarioDe(null, false)).toBe('#4f5bd5');

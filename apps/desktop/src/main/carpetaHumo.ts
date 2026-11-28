@@ -37,3 +37,12 @@ export async function carpetaDeHumo(
     return null;
   }
 }
+
+/**
+ * ¿Es la prueba de humo (o un script de capturas que la imita)? Basta el argumento `--wolfcore-humo`:
+ * solo lo pasan `humo.mjs` y los scripts automáticos. La ventana principal lo usa para no mostrar la
+ * animación de inicio (D56), que solo estorba a una prueba que no la mira.
+ */
+export function esModoHumo(argv: readonly string[]): boolean {
+  return argv.includes(ARG_HUMO);
+}
