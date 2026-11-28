@@ -43,7 +43,7 @@ La auditoría `docs/superpowers/auditorias/2026-11-27-diseno-ui.md` y CONTINUAR 
 | 9   | Motivo de CPU en «ram-justo»      | Añadir al texto de «ram-justo» (D55) el motivo de CPU cuando la CPU es lo que limita. Es el texto anotado en D55.                                                                                  | 1.5   | `packages/core/src/doctor/` y `ia/ollama.ts` (D55) (verificar).                                                           | Bajo. Sin red.                                                                                       | Imprescindible |
 | 10  | PHP «Actualizar a 8.3.x»          | Botón que lleva una instalación de PHP 8.3 a su último parche, con copia previa de la `php.ini`.                                                                                                   | 2     | `packages/core/src/php/` y el catálogo en vivo (`catalogo/`). Descarga con huella verificada.                              | Medio. Descarga con huella (red) y reemplaza binarios. No pide administrador.                         | Muy útil      |
 | 11  | Job Object para cloudflared       | Meter el proceso de cloudflared en un Job Object de Windows, para que muera con WolfCore Dev y no deje túneles huérfanos.                                                                           | 3     | Módulo de túneles y `packages/core/src/procesos/` (verificar). Es capa `plataforma/` (solo Windows).                       | Medio. Es código nativo de Windows y un túnel público abierto. Revisión opus. No pide administrador. | Muy útil      |
-| 12  | Optimizador de memoria            | Anotado por QA. Parte puede estar ya cubierto por la tarea de memoria de D54b (Liviano, Moderado y Profundo). Hay que revisar qué falta antes de estimar.                                          | 2     | `packages/core/src/sistema/liberarMemoria.ts` y `memoria.ts`.                                                              | Medio. Termina procesos y el nivel Profundo pide administrador. Revisión opus.                        | Puede esperar |
+| 12 | Optimizador de memoria (quitada) | Se quita de la Etapa F: lo cubrió D54b (Liviano, Moderado y Profundo). | 0 | `sistema/liberarMemoria.ts`. | Sin trabajo. | Quitada |
 
 ### Grupo C. IA
 
@@ -61,14 +61,14 @@ La auditoría `docs/superpowers/auditorias/2026-11-27-diseno-ui.md` y CONTINUAR 
 | #   | Idea                  | Qué es                                                                                                                                                                                                                                  | Horas | Dependencias                                                                                                                          | Seguridad y permisos                                                                                                                                                                                            | Prioridad     |
 | --- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
 | 17  | Diagrama de la base   | Visor de tablas, relaciones, PK y FK, al estilo DBeaver, con zoom y arrastre. Solo lectura. Lo pidió el usuario en D54b y estaba en la tabla de pedidos.                                                                                  | 8     | `packages/core/src/bd/esquema.ts` (ya tiene `EsquemaBase`, `ClaveForaneaEsquema` y el tope `MAX_TABLAS_ESQUEMA` de 2000), `bd/clienteMysql.ts`, `bd/clientePostgres.ts`. | Bajo. Solo lee el esquema (`information_schema`), no filas de datos. Hay que respetar el filtro de datos reales de las bases de sitios con `datosReales`. Sin red; sin administrador.                          | Muy útil      |
-| 18  | Respaldos en la nube  | Subir los respaldos (`bd/respaldos.ts`) y las instantáneas de perfiles a un destino remoto (carpeta sincronizada, S3 o WebDAV), siempre cifrados antes de salir del equipo.                                                              | 10    | `bd/respaldos.ts`, `perfiles/cifrado.ts`, `perfiles/exportar.ts`, `perfiles/importar.ts`, secretos.                                    | **Alto.** Los datos salen del equipo y se guardan credenciales del destino. Cumple R3 (credenciales en el almacén, nunca en la URL) y cifrado antes de subir. Pide red. Sin administrador. Revisión opus.            | Muy útil      |
+| 18 | Respaldos en la nube (carpeta sincronizada) | WolfCore Dev deja el archivo de respaldo ya cifrado en una carpeta que el usuario elige y que sincroniza Google Drive, OneDrive o Dropbox de escritorio; el cliente de esa nube lo sube. WolfCore no habla con ninguna nube y no guarda credenciales nuevas. Incluye elegir la carpeta, escritura atómica, retención de copias y restaurar desde ella. | 4-6 (≈5) | `bd/respaldos.ts`, `perfiles/cifrado.ts`, `perfiles/exportar.ts`, `perfiles/importar.ts`. | **Medio.** El archivo sale del equipo por el cliente de la nube, pero solo cifrado (la clave de cifrado nunca va a la carpeta). Sin credenciales nuevas (R3). Sin red propia ni administrador. Revisión opus por el cifrado y la ruta elegida. | Muy útil |
 
 ### Grupo E. Aplicación, comunicación y control
 
 | #   | Idea                | Qué es                                                                                                                                                                                                                        | Horas | Dependencias                                                                                                                                                | Seguridad y permisos                                                                                                                                                                                                                                                       | Prioridad     |
 | --- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
 | 19 | Actualizador de la app | Al abrir, una ventana con «Actualizar ahora», «Más tarde» y «Omitir esta versión», más Ajustes › Actualizaciones. Usa GitHub Releases, con descarga verificada y respaldo antes de instalar. | 6-8 (≈7) | `apps/desktop/electron-builder.yml`. No hay `electron-updater` en el proyecto (comprobado). Ajustes (idea 3), respaldo de perfiles (`perfiles/exportar.ts`). | **Alto.** Actualización sin firma de código: SmartScreen y solo la huella como garantía de integridad. Descarga y ejecuta un instalador. Pide red. Sin administrador si es instalación por usuario (verificar). Revisión opus. | Imprescindible |
-| 20  | Telegram            | Un bot de Telegram para **avisos** (un servicio cayó, un respaldo terminó, un proceso de proyecto falló) y, solo si el usuario lo decide, **control remoto mínimo** (ver estado e iniciar o detener servicios). Descripción sacada de la idea del usuario; en `progress.md` no hay más detalle. | 8     | `apps/desktop/src/main/notificaciones.ts`, `packages/core/src/avisos/`, `cli/servidor.ts` (órdenes), secretos.                                              | **Alto.** Saca información a un servicio externo y, con control remoto, acepta órdenes desde fuera. Cumple R3: el token del bot va al almacén de secretos, nunca en config, URL ni registros (la API de Telegram lleva el token en la URL, así que se registra solo el método). Lista de chats permitidos obligatoria. Sin administrador. Revisión opus. Recomendado empezar solo con avisos. | Puede esperar |
+| 20 | Telegram: avisos y control remoto | Un bot de Telegram para **avisos** (un servicio cayó, un respaldo terminó, un proceso de proyecto falló) y para **control remoto** (ver estado e iniciar o detener servicios). Lista obligatoria de chats permitidos y confirmación para las acciones que apagan cosas. | 10-14 (≈12) | `apps/desktop/src/main/notificaciones.ts`, `packages/core/src/avisos/`, `cli/servidor.ts` (órdenes de la CLI `wolf`), secretos. | **Alto.** Saca información a un servicio externo y acepta órdenes desde fuera. Cumple R3: el token del bot va al almacén de secretos, nunca en config, URL ni registros (la API de Telegram lleva el token en la URL, así que solo se registra el método). Sin lista de chats permitidos no arranca; los chats no permitidos se ignoran; apagar, detener o reiniciar pide confirmación en un segundo mensaje. Pide red. Sin administrador. Revisión opus. | Muy útil |
 | 21 | Simular región | Abre Chrome o Edge en un perfil temporal con otro idioma, otra zona horaria y otra geolocalización (flags o CDP; nunca el perfil real del usuario), y se borra al cerrar. Añade encabezados Accept-Language por país en el Cliente HTTP. Incluye una guía corta de Proton VPN gratis o Tor, sin integrarlos. | 4-6 (≈5) | `clientehttp/`, detección de navegadores, carpeta temporal de la app. | Bajo. El perfil es temporal y se borra al cerrar. El puerto de CDP, si se usa, escucha solo en 127.0.0.1 (R2). Sin red propia ni administrador; sin cortafuegos (R5). | Puede esperar |
 | 22 | «Lobo», asistente flotante | Asistente con forma de lobo-bot que se arrastra por toda la interfaz. Responde solo sobre WolfCore Dev, con el manual y el estado de la app en solo lectura. Funciona con Ollama local o con el proveedor de la nube configurado. Rechaza lo que no tenga que ver con la app y nunca envía secretos ni datos reales a la nube. Más adelante podría usar el MCP de la app. | 10-14 (≈12) | `ia/gestorIa.ts`, `ia/ollama.ts`, `ia/proveedores.ts`, `docs/manual/`, `patronesSecretos.ts` (filtro de secretos), `AnimacionInicio.vue` y la marca del lobo; luego `mcp/servidor.ts` (idea 13). | **Medio.** Riesgo de fuga de datos a la nube (R3) y de prompt injection desde el manual o el estado; solo lectura y sin herramientas que escriban. Pide red solo si se usa la nube. Sin administrador. Revisión opus. | Muy útil |
 
@@ -76,12 +76,13 @@ La auditoría `docs/superpowers/auditorias/2026-11-27-diseno-ui.md` y CONTINUAR 
 
 | #   | Idea                          | Qué es                                                                                                                                                                                                                                       | Horas | Dependencias                                                                                                                                  | Seguridad y permisos                                                                                                                                                                                       | Prioridad     |
 | --- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| 23  | Terminal integrada            | Una terminal dentro de la app, con pestañas y la carpeta del proyecto, en vez de abrir una externa.                                                                                                                                          | 9     | No hay `node-pty` ni `xterm` en el proyecto (comprobado): es una dependencia nativa nueva que hay que compilar para Electron. Detección de terminales de D (QA).                              | **Medio.** Ejecuta comandos con los permisos del usuario. Debe quedar fuera del alcance de la web del renderer (solo por IPC validado). Sin red; sin administrador. Revisión opus por el proceso nativo.     | Muy útil      |
-| 24  | Grabación de terminal         | Grabar una sesión de la terminal y reproducirla o exportarla. Anotado por QA.                                                                                                                                                                | 4     | Depende de 23. `apps/desktop/src/main/grabadora.ts` ya existe (verificar si sirve de base).                                                   | Medio. Lo grabado puede contener secretos escritos en la terminal: se guarda local, con aviso, y se ofrece ocultar valores con `patronesSecretos.ts`. Sin red.                                              | Puede esperar |
-| 25  | WSL                           | Detectar WSL, listar distribuciones, abrir una terminal en ellas y, como mucho, usarlas para ejecutar herramientas de Linux. No es la Etapa E: no se compila nada para Linux.                                                               | 8     | `plataforma/` (Windows), `wsl.exe`. Se apoya en 23 si se quiere dentro de la app.                                                              | Medio. Lanza procesos dentro de WSL y expone puertos a Windows: el reenvío debe seguir en 127.0.0.1 (R2). Activar WSL desde cero pide administrador y reinicio: se explica, no se hace. Sin cortafuegos (R5). | Puede esperar |
-| 26  | Sandbox                       | Abrir Windows Sandbox con un perfil para probar instaladores o un proyecto sin tocar el equipo. Anotado por QA. No existe en Windows 11 Home.                                                                                                | 5     | `plataforma/`, archivo `.wsb` generado. Depende de que el equipo no sea Home.                                                                  | **Medio.** Activar la función de Windows pide administrador y reinicio. La carpeta compartida con el sandbox es lectura/escritura sobre una ruta del usuario. Sin cortafuegos (R5). Revisión opus.            | Puede esperar |
+| 23 | Terminal integrada (opcional, por decidir) | Una terminal dentro de la app, con pestañas y la carpeta del proyecto. **Decisión del usuario:** por ahora se queda la terminal externa (Windows Terminal o PowerShell en la carpeta del proyecto, `herramientas/terminal.ts`). Esta idea es opcional, después de F1 a F5, y por decidir. | 9 | No hay `node-pty` ni `xterm` en el proyecto (comprobado): es una dependencia nativa nueva que hay que compilar para Electron y para el CI. | **Medio.** Ejecuta comandos con los permisos del usuario; solo por IPC validado. Sin red; sin administrador. Revisión opus por el proceso nativo. | Puede esperar |
+| 24 | Grabación de terminal (opcional, por decidir) | Grabar una sesión de la terminal y reproducirla o exportarla. Opcional, después de F1 a F5, y por decidir. Depende de 23. | 4 | Depende de 23. `apps/desktop/src/main/grabadora.ts` ya existe (verificar si sirve de base). | Medio. Lo grabado puede contener secretos: se guarda local, con aviso y ocultando valores con `patronesSecretos.ts`. Sin red. | Puede esperar |
+| 25 | WSL | Detectar WSL, listar distribuciones, abrir una terminal en ellas y usarlas para ejecutar herramientas de Linux. No es la Etapa E: no se compila nada para Linux. Se mantiene: el usuario pasará a Windows Pro. | 8 | `plataforma/` (Windows), `wsl.exe`. Se apoya en 33 si el equipo aún es Home. | Medio. Lanza procesos dentro de WSL y expone puertos a Windows: el reenvío debe seguir en 127.0.0.1 (R2). Activar WSL desde cero pide administrador y reinicio: se explica, no se hace. Sin cortafuegos (R5). | Puede esperar |
+| 26 | Sandbox (tras pasar a Pro) | Abrir Windows Sandbox con un perfil para probar instaladores o un proyecto sin tocar el equipo. Se mantiene y deja de estar condicionado a «si no es Home»: va **tras pasar a Pro** (idea 33). | 5 | `plataforma/`, archivo `.wsb` generado. Depende de 33. | **Medio.** Activar la función de Windows pide administrador y reinicio. La carpeta compartida con el sandbox es lectura/escritura sobre una ruta del usuario. Sin cortafuegos (R5). Revisión opus. | Puede esperar |
 | 27  | Oh My Posh guiado             | Detectar PowerShell, instalar Oh My Posh con la fuente adecuada y escribir el `$PROFILE` con vista previa. Anotado por QA.                                                                                                                  | 3     | Detección de terminales (D, QA), `agentes/configArchivo.ts` (R4 para el `$PROFILE`).                                                           | Medio. Modifica el perfil de PowerShell del usuario (R4: vista previa, respaldo y escritura atómica). Descarga con huella. No pide administrador.                                                          | Puede esperar |
 | 28  | Recetas Go y otros lenguajes  | Recetas de proyecto (como las de rails, springboot, aspnet y node) para Go y otros lenguajes ya en el catálogo, con `HOST=127.0.0.1`.                                                                                                         | 4     | `packages/core/src/runtimes/lenguajes.ts`, `runtimes/rust.ts`, `asistentes/asistentes.ts`. Hay que comprobar qué lenguajes quedaron en el catálogo tras D.                                        | Bajo. Solo plantillas. Debe seguir en 127.0.0.1 (R2). Sin red nueva ni administrador.                                                                                                                      | Muy útil      |
+| 33 | Pasar de Home a Pro guiado | Detecta la edición de Windows. Si es Home, explica la diferencia y abre la vía oficial: `ms-settings:activation` o la Microsoft Store para comprar la actualización, o «Cambiar clave de producto» con una clave legítima del usuario. Nunca incluye claves, activadores KMS ni herramientas de terceros para saltarse la licencia, y no guarda la clave. | 2-3 (≈2,5) | `plataforma/` (lectura de la edición de Windows). Habilita 25 y 26. | Bajo. Solo lee la edición y abre pantallas oficiales de Windows. No pide ni guarda la clave (R3). Sin red propia; el administrador lo pide Windows en su propio flujo. | Puede esperar |
 
 ### Grupo G. Idiomas y guía
 
@@ -92,34 +93,36 @@ La auditoría `docs/superpowers/auditorias/2026-11-27-diseno-ui.md` y CONTINUAR 
 
 ## 3. Resumen
 
-- **32 ideas.** Las 3 de imágenes (16, 31 y 32) sustituyen a «imágenes con IA».
-- **Horas totales: 161,5 h** (con el punto medio de cada rango).
+- **32 ideas activas** (33 menos la 12, quitada porque la cubrió D54b). Las 3 de imágenes (16, 31 y 32) sustituyen a «imágenes con IA».
+- **Horas totales: 161 h** (con el punto medio de cada rango). De ellas, **60 h** son las tandas F1 a F5, que son lo que el usuario eligió hacer primero.
 - Por prioridad:
   - Imprescindible: 1, 2, 3, 8, 9, 13 y 19 (27,5 h).
-  - Muy útil: 4, 5, 10, 11, 14, 15, 16, 17, 18, 22, 23, 28 y 31 (75 h).
-  - Puede esperar: 6, 7, 12, 20, 21, 24, 25, 26, 27, 29, 30 y 32 (59 h).
+  - Muy útil: 4, 5, 10, 11, 14, 15, 16, 17, 18, 20, 22, 28 y 31 (82 h).
+  - Puede esperar: 6, 7, 21, 23, 24, 25, 26, 27, 29, 30, 32 y 33 (51,5 h).
+  - Quitada: 12.
 
-Nota: las sumas por prioridad son orientativas. La suma exacta de las tandas de abajo es la que vale (161,5 h).
+Nota: las sumas por prioridad son orientativas. La suma exacta de las tandas de abajo es la que vale (161 h).
 
 ## 4. Tandas
 
-Un día son unas 10 h de agentes. Cada tanda se puede partir. Primero van lo imprescindible y lo de bajo riesgo; el actualizador va pronto, con revisión opus; lo de seguridad y red va después.
+Un día son unas 10 h de agentes. Cada tanda se puede partir. **El usuario decidió hacer primero F1 a F5.** Las demás (F6 a F12) quedan para después, si da el tiempo. Primero van lo imprescindible y lo de bajo riesgo; el actualizador va pronto, con revisión opus.
 
-| Tanda     | Duración | Contenido (ideas)                    | Horas     | Riesgo                |
-| --------- | -------- | ------------------------------------ | --------- | --------------------- |
-| F1        | 1 día    | 8, 9, 10, 2, 3                       | 11,5      | Bajo                  |
-| F2        | 1-2 días | 1, 4, 7                              | 14        | Bajo                  |
-| F3        | 1 día    | 19 (actualizador), 13 (`wolf mcp`)   | 12        | Alto (opus)           |
-| F4        | 1 día    | 14, 15, 31                           | 10,5      | Medio                 |
-| F5        | 1 día    | 17, 28                               | 12        | Bajo                  |
-| F6        | 1-2 días | 29, 27, 12, 30                       | 14        | Bajo y medio          |
-| F7        | 1 día    | 5, 6                                 | 11        | Bajo                  |
-| F8        | 2 días   | 23, 24, 11                           | 16        | Medio                 |
-| F9        | 2 días   | 18 (nube), 16 (mejora IA)            | 17,5      | Alto (opus)           |
-| F10       | 2 días   | 22 (Lobo), 32 (vectorizar)           | 17        | Medio (opus en Lobo)  |
-| F11       | 1-2 días | 20 (Telegram), 21 (región)           | 13        | Alto (opus en Telegram) |
-| F12       | 1-2 días | 25, 26                               | 13        | Medio (opus en 26)    |
-| **Total** |          | 32 ideas                             | **161,5** |                       |
+| Tanda     | Duración | Contenido (ideas)                                      | Horas   | Riesgo                  | Estado                   |
+| --------- | -------- | ------------------------------------------------------ | ------- | ----------------------- | ------------------------ |
+| F1        | 1 día    | 8, 9, 10, 2, 3                                         | 11,5    | Bajo                    | **Primero**              |
+| F2        | 1-2 días | 1, 4, 7                                                | 14      | Bajo                    | **Primero**              |
+| F3        | 1 día    | 19 (actualizador), 13 (`wolf mcp`)                     | 12      | Alto (opus)             | **Primero**              |
+| F4        | 1 día    | 14, 15, 31                                             | 10,5    | Medio                   | **Primero**              |
+| F5        | 1 día    | 17, 28                                                 | 12      | Bajo                    | **Primero**              |
+| **F1-F5** |          |                                                        | **60**  |                         |                          |
+| F6        | 1 día    | 29, 27, 30                                             | 12      | Bajo y medio            | Después                  |
+| F7        | 1 día    | 5, 6                                                   | 11      | Bajo                    | Después                  |
+| F8        | 1-2 días | 11 (Job Object); 23 y 24 (terminal integrada, 13 h)    | 3 + 13  | Medio                   | Después; 23 y 24 por decidir |
+| F9        | 1-2 días | 18 (nube por carpeta), 16 (mejora IA)                  | 12,5    | Medio (opus)            | Después                  |
+| F10       | 2 días   | 22 (Lobo), 32 (vectorizar)                             | 17      | Medio (opus en Lobo)    | Después                  |
+| F11       | 2 días   | 20 (Telegram con control), 21 (región)                 | 17      | Alto (opus en Telegram) | Después                  |
+| F12       | 1-2 días | 33 (Home a Pro), 25 (WSL), 26 (Sandbox, tras Pro)      | 15,5    | Medio (opus en 26)      | Después                  |
+| **Total** |          | 32 ideas                                               | **161** |                         |                          |
 
 ### Qué tendría que probar el usuario a mano en cada tanda
 
@@ -128,24 +131,50 @@ Un día son unas 10 h de agentes. Cada tanda se puede partir. Primero van lo imp
 - **F3.** Actualizador: con una versión de prueba en GitHub Releases, ver la ventana al abrir, probar «Más tarde» y «Omitir esta versión» (no debe volver a avisar de esa), confirmar el respaldo previo y el aviso de SmartScreen. `wolf mcp`: abrir Claude Desktop y Cursor por fuera de la app y comprobar que ven las herramientas; verificar que el `claude_desktop_config.json` no contiene el token y que hay respaldo.
 - **F4.** Escribir reglas de IA en un proyecto de prueba con vista previa; aplicar un combo y revisar el `.env`; redimensionar una imagen por píxeles, porcentaje y DPI, y un lote de varias, comprobando que el original no se toca.
 - **F5.** Abrir el diagrama de una base con varias tablas y claves foráneas (MySQL y PostgreSQL) y ver que una base grande no cuelga la app; probar una receta de Go y de otro lenguaje con `127.0.0.1`.
-- **F6.** Cambiar a cada idioma nuevo y ver si falta algún texto; instalar Oh My Posh con la vista previa; reproducir un vídeo de la guía sin conexión.
+- **F6.** Cambiar a cada idioma nuevo y ver si falta algún texto; reproducir un vídeo de la guía sin conexión; instalar Oh My Posh con la vista previa.
 - **F7.** Proyectos plegado y desplegado con varios proyectos; Cliente HTTP con una respuesta larga, Intro para enviar y el historial.
-- **F8.** Abrir, redimensionar y cerrar varias pestañas de la terminal; ejecutar un comando largo y cerrar la app; grabar y reproducir una sesión; abrir un túnel y comprobar que cloudflared termina al cerrar WolfCore Dev.
-- **F9.** Hacer un respaldo a la nube, comprobar que lo subido está cifrado y restaurarlo (el primer envío real, con el usuario). Descargar Real-ESRGAN, ver la huella verificada y mejorar una foto, un dibujo y un rostro en ×2 y ×4 con la vista de antes y después; probarlo también sin GPU Vulkan.
+- **F8.** Abrir un túnel y comprobar que cloudflared termina al cerrar WolfCore Dev. Solo si se decide hacer 23 y 24: abrir, redimensionar y cerrar pestañas de la terminal integrada, ejecutar un comando largo, y grabar y reproducir una sesión.
+- **F9.** Elegir una carpeta sincronizada (Google Drive, OneDrive o Dropbox), hacer un respaldo, comprobar que el archivo que aparece está cifrado y que no hay credenciales ni la clave de cifrado en la carpeta, y restaurarlo (el primer envío real, con el usuario). Descargar Real-ESRGAN, ver la huella verificada y mejorar una foto, un dibujo y un rostro en ×2 y ×4 con la vista de antes y después; probarlo también sin GPU Vulkan.
 - **F10.** Lobo: arrastrarlo por varias pantallas; preguntarle por la app y por algo ajeno (debe rechazarlo); con Ollama local y con un proveedor de la nube; intentar que revele una clave o siga una instrucción escondida en el manual (no debe). Vectorizar un logo y un dibujo a SVG.
-- **F11.** Crear un bot de Telegram de prueba, recibir un aviso y, si se activa el control, mandar una orden desde un chat no permitido (debe rechazarla). Simular región: abrir Chrome o Edge con otro idioma, zona horaria y geolocalización, ver que usa un perfil temporal que se borra al cerrar y que el perfil real no se toca; probar Accept-Language por país en el Cliente HTTP.
-- **F12.** WSL: listar distribuciones y abrir una terminal. Sandbox: solo si el equipo no es Home, y con el usuario por la activación de la función (administrador).
+- **F11.** Telegram: crear un bot de prueba y añadir solo un chat a la lista; recibir un aviso; pedir el estado desde ese chat; pedir detener un servicio y comprobar que pide confirmación; escribir desde un chat no permitido (debe ignorarlo) y arrancar sin lista de chats (no debe arrancar). Simular región: abrir Chrome o Edge con otro idioma, zona horaria y geolocalización, ver que usa un perfil temporal que se borra al cerrar y que el perfil real no se toca; probar Accept-Language por país en el Cliente HTTP.
+- **F12.** «Home a Pro»: comprobar que detecta la edición y abre `ms-settings:activation`, sin pedir ni guardar ninguna clave. WSL: listar distribuciones y abrir una terminal. Sandbox: solo cuando el equipo ya sea Pro, y con el usuario por la activación de la función (administrador).
 
-## 5. Decisiones que debe tomar el usuario
+## 5. Etapa F2 (después)
 
-1. **Qué tandas entran.** Solo F1 a F5 (lo imprescindible y de bajo riesgo), o también las de seguridad y red (F9 y F11).
-2. **Telegram.** Solo avisos, o también control remoto. Recomendación: avisos primero.
-3. **Respaldos en la nube.** Qué destino (carpeta sincronizada, S3, WebDAV).
-4. **Terminal integrada.** Aceptar una dependencia nativa nueva (`node-pty`), que complica la compilación y el CI en los 3 sistemas.
-5. **WSL y Sandbox.** Si se mantienen, sabiendo que Sandbox no existe en Windows 11 Home y que activarlo pide administrador.
-6. **Optimizador.** Revisar si D54b ya lo cubrió y quitarlo.
-7. **Qué queda para después de F.** Lo que el plan de etapas dejó en F y no está en este borrador (DNS propio y comodín, Apache/Caddy, FrankenPHP/Octane, contenedores, Meilisearch/RabbitMQ/Reverb, inspectores, perfilado, rama como subdominio, WordPress completo, pruebas por sitio, arranque perezoso, modo portable, sincronizar entre equipos, RAG con pgvector, restos de la CA, FTP y restauración, y las pruebas pendientes de pgvector multibase y la revisión nativa de los 14 idiomas no base): si entran en este orden o van a una Etapa F2.
+Lo que el plan de etapas (`docs/superpowers/roadmap/2026-11-19-plan-etapas.md`) y CONTINUAR §4.2 dejaban en la Etapa F y no está en este borrador. Sin estimar; se estimará si el usuario lo elige:
 
-Ya resueltas por el usuario: qué es «Lobo», qué es «Simular región», el actualizador (GitHub Releases, sin firma, Imprescindible) y el reparto de las imágenes en tres.
+- DNS propio y comodín `*.proyecto.test`;
+- Apache/Caddy y `.htaccess`;
+- FrankenPHP/Octane;
+- contenedores (Podman/Docker);
+- Meilisearch, RabbitMQ y Reverb (alternativa S3 mantenida a MinIO);
+- inspectores de SQL, jobs, HTTP y webhooks;
+- perfilado;
+- rama como subdominio con `git worktree`;
+- WordPress completo;
+- pruebas por sitio;
+- arranque perezoso;
+- modo portable;
+- sincronizar entre equipos;
+- RAG local con pgvector;
+- restos técnicos de la CA, FTP y restauración;
+- pruebas pendientes: pgvector multibase y herencia desde `template1` contra un PostgreSQL real, y revisión nativa de los textos nuevos en los 14 idiomas no base.
+
+## 6. Decisiones que debe tomar el usuario
+
+1. **Terminal integrada (23) y grabación (24).** Si se hacen después de F1 a F5 o se descartan (por ahora se queda la terminal externa).
+2. **Qué hacer con F6 a F12** cuando terminen F1 a F5, según el tiempo que quede.
+3. **Etapa F2.** Cuáles de esa lista se estiman y cuándo.
+
+**Resueltas el 2026-11-28:**
+
+- Se hacen primero F1 a F5; el resto, si da el tiempo.
+- Telegram (20): avisos y control remoto, con lista obligatoria de chats permitidos, confirmación para acciones que apagan cosas y revisión opus. Pasa a Muy útil (12 h).
+- Respaldos en la nube (18): carpeta sincronizada (Google Drive, OneDrive o Dropbox de escritorio), archivo cifrado y sin credenciales nuevas. Riesgo medio, 5 h.
+- Terminal: se queda la externa; la integrada (23) y la grabación (24) son opcionales, después de F1 a F5.
+- WSL y Sandbox se mantienen porque el usuario pasará a Windows Pro; Sandbox va tras pasar a Pro. Idea nueva 33, «Pasar de Home a Pro guiado».
+- Optimizador (12): quitado, lo cubrió D54b.
+- Lo que el plan antiguo dejaba en F va a «Etapa F2 (después)», sin estimar.
+- Antes: qué es «Lobo», qué es «Simular región», el actualizador (GitHub Releases, sin firma, Imprescindible) y el reparto de las imágenes en tres.
 
 **Nada de la Etapa F se implementa sin la aprobación del usuario.** Este borrador solo sirve para elegir. Cada tanda elegida pasa por un plan detallado antes de tocar código, y lo que toque seguridad, red o administrador lleva revisión opus.
