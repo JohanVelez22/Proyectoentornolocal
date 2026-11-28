@@ -96,6 +96,8 @@ export const es = {
       'asistentes.vista_desfasada':
         'El archivo cambió después de la vista previa. Revísela de nuevo.',
       'asistentes.sin_carpeta': 'La carpeta de configuración de {asistente} no existe.',
+      'asistentes.entrada_no_editable':
+        'La entrada wolfcore de {archivo} tiene un formato que no se puede editar sin riesgo; edítela a mano.',
       'git.cambios_locales':
         'Hay cambios sin guardar en la carpeta: guárdelos (commit) o descártelos antes de traer cambios. No se tocó nada.',
       'git.divergencia':

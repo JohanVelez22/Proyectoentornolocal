@@ -29,6 +29,8 @@ export const trExtra: TextosParciales = {
       'asistentes.vista_desfasada':
         'Dosya önizlemeden sonra değişti. Lütfen önizlemeyi yeniden inceleyin.',
       'asistentes.sin_carpeta': '{asistente} yapılandırma klasörü yok.',
+      'asistentes.entrada_no_editable':
+        '{archivo} içindeki wolfcore girdisi güvenle düzenlenemeyen bir biçime sahip; lütfen elle düzenleyiniz.',
       'discos.sin_lectura': 'Disk sağlığı okunamadı. Lütfen yeniden deneyin.',
       'discos.sin_eventos': 'Disk olayları okunamadı.',
       'discos.admin_cancelado': 'Yönetici izni iptal edildi: hiçbir şey okunmadı.',

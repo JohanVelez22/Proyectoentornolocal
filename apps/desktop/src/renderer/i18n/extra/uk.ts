@@ -37,6 +37,8 @@ export const ukExtra: TextosParciales = {
       'asistentes.vista_desfasada':
         'Файл змінився після попереднього перегляду. Будь ласка, перегляньте його ще раз.',
       'asistentes.sin_carpeta': 'Папки налаштувань {asistente} не існує.',
+      'asistentes.entrada_no_editable':
+        'Запис wolfcore у {archivo} має формат, який не можна безпечно змінити; відредагуйте його вручну.',
       'discos.sin_lectura': 'Не вдалося прочитати стан дисків. Спробуйте ще раз.',
       'discos.sin_eventos': 'Не вдалося прочитати події диска.',
       'discos.admin_cancelado': 'Дозвіл адміністратора скасовано: нічого не прочитано.',

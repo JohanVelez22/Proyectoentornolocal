@@ -37,6 +37,8 @@ export const plExtra: TextosParciales = {
       'asistentes.vista_desfasada':
         'Plik zmienił się po podglądzie. Proszę sprawdzić podgląd ponownie.',
       'asistentes.sin_carpeta': 'Folder konfiguracji programu {asistente} nie istnieje.',
+      'asistentes.entrada_no_editable':
+        'Wpis wolfcore w pliku {archivo} ma format, którego nie można bezpiecznie edytować; proszę edytować go ręcznie.',
       'discos.sin_lectura': 'Nie udało się odczytać kondycji dysków. Proszę spróbować ponownie.',
       'discos.sin_eventos': 'Nie udało się odczytać zdarzeń dysku.',
       'discos.admin_cancelado': 'Anulowano zgodę administratora: nic nie odczytano.',

@@ -33,6 +33,8 @@ export const nlExtra: TextosParciales = {
       'asistentes.vista_desfasada':
         'Het bestand is gewijzigd na het voorbeeld. Bekijk het voorbeeld opnieuw.',
       'asistentes.sin_carpeta': 'De configuratiemap van {asistente} bestaat niet.',
+      'asistentes.entrada_no_editable':
+        'De wolfcore-vermelding in {archivo} heeft een indeling die niet zonder risico kan worden bewerkt; bewerk deze alstublieft handmatig.',
       'discos.sin_lectura':
         'De gezondheid van de schijven kon niet worden gelezen. Probeer het opnieuw.',
       'discos.sin_eventos': 'De schijfgebeurtenissen konden niet worden gelezen.',

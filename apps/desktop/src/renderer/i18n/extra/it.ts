@@ -32,6 +32,8 @@ export const itExtra: TextosParciales = {
       'asistentes.vista_desfasada':
         'Il file è cambiato dopo l’anteprima. Riveda di nuovo l’anteprima.',
       'asistentes.sin_carpeta': 'La cartella di configurazione di {asistente} non esiste.',
+      'asistentes.entrada_no_editable':
+        'La voce wolfcore di {archivo} ha un formato che non si può modificare senza rischi; la modifichi a mano.',
       'discos.sin_lectura': 'Non è stato possibile leggere lo stato di salute dei dischi. Riprovi.',
       'discos.sin_eventos': 'Non è stato possibile leggere gli eventi del disco.',
       'discos.admin_cancelado':

@@ -24,6 +24,8 @@ export const zhExtra: TextosParciales = {
       'asistentes.enlace_rechazado': '{archivo} 是链接（符号链接或联接点），未作修改。',
       'asistentes.vista_desfasada': '预览之后文件发生了变化，请重新查看预览。',
       'asistentes.sin_carpeta': '{asistente}的配置文件夹不存在。',
+      'asistentes.entrada_no_editable':
+        '{archivo}中的 wolfcore 条目格式无法安全编辑，请您手动编辑。',
       'discos.sin_lectura': '无法读取磁盘健康状况。请重试。',
       'discos.sin_eventos': '无法读取磁盘事件。',
       'discos.admin_cancelado': '管理员权限已取消：未读取任何内容。',

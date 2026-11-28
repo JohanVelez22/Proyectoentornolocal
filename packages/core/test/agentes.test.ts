@@ -512,7 +512,7 @@ describe('Agentes: registro del MCP', () => {
     expect(() =>
       editarEntradaMcp('json', '{"mcpServers": 3}', 'mcpServers', { url: 'u' }, 'x.json'),
     ).toThrow(expect.objectContaining({ codigo: 'agentes.config_ilegible' }));
-    // wolfcore definido con claves con punto: el borrado por tablas no lo alcanza.
+    // wolfcore definido con claves con punto: error propio, no se edita.
     expect(() =>
       editarEntradaMcp(
         'toml',
@@ -521,7 +521,7 @@ describe('Agentes: registro del MCP', () => {
         { url: 'u' },
         'c.toml',
       ),
-    ).toThrow(expect.objectContaining({ codigo: 'agentes.config_ilegible' }));
+    ).toThrow(expect.objectContaining({ codigo: 'asistentes.entrada_no_editable' }));
   });
 
   it('sin confirmación no toca nada', async () => {

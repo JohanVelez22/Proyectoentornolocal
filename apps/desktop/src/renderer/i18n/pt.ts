@@ -102,6 +102,8 @@ export const pt: Textos = {
       'asistentes.vista_desfasada':
         'O arquivo mudou depois da pré-visualização. Revise-a novamente.',
       'asistentes.sin_carpeta': 'A pasta de configuração de {asistente} não existe.',
+      'asistentes.entrada_no_editable':
+        'A entrada wolfcore de {archivo} tem um formato que não pode ser editado sem risco; edite-a manualmente.',
       'git.cambios_locales':
         'Há alterações não salvas na pasta: salve-as (commit) ou descarte-as antes de trazer mudanças. Nada foi alterado.',
       'git.divergencia':

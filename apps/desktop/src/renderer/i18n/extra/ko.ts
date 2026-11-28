@@ -26,6 +26,8 @@ export const koExtra: TextosParciales = {
       'asistentes.vista_desfasada':
         '미리 보기 이후 파일이 변경되었습니다. 미리 보기를 다시 확인해 주십시오.',
       'asistentes.sin_carpeta': '{asistente}의 설정 폴더가 없습니다.',
+      'asistentes.entrada_no_editable':
+        '{archivo}의 wolfcore 항목은 안전하게 편집할 수 없는 형식입니다. 직접 편집해 주십시오.',
       'discos.sin_lectura': '디스크 상태를 읽을 수 없습니다. 다시 시도해 주십시오.',
       'discos.sin_eventos': '디스크 이벤트를 읽을 수 없습니다.',
       'discos.admin_cancelado': '관리자 권한 요청이 취소되었습니다. 아무것도 읽지 않았습니다.',

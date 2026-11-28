@@ -98,6 +98,8 @@ export const en: Textos = {
       'asistentes.vista_desfasada':
         'The file changed after the preview. Please review the preview again.',
       'asistentes.sin_carpeta': 'The settings folder of {asistente} does not exist.',
+      'asistentes.entrada_no_editable':
+        'The wolfcore entry in {archivo} has a format that cannot be edited safely; please edit it by hand.',
       'git.cambios_locales':
         'There are unsaved changes in the folder: commit or discard them before pulling. Nothing was touched.',
       'git.divergencia':

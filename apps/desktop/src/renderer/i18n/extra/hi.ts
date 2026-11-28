@@ -26,6 +26,8 @@ export const hiExtra: TextosParciales = {
       'asistentes.enlace_rechazado': '{archivo} एक लिंक (सिम्बॉलिक लिंक या जंक्शन) है: इसे बदला नहीं गया।',
       'asistentes.vista_desfasada': 'पूर्वावलोकन के बाद फ़ाइल बदल गई है। कृपया पूर्वावलोकन दोबारा देखें।',
       'asistentes.sin_carpeta': '{asistente} का कॉन्फ़िगरेशन फ़ोल्डर मौजूद नहीं है।',
+      'asistentes.entrada_no_editable':
+        '{archivo} में wolfcore प्रविष्टि का प्रारूप ऐसा है जिसे बिना जोखिम के संपादित नहीं किया जा सकता; कृपया इसे स्वयं संपादित करें।',
       'discos.sin_lectura': 'डिस्क की सेहत नहीं पढ़ी जा सकी। कृपया दोबारा प्रयास करें।',
       'discos.sin_eventos': 'डिस्क की घटनाएँ नहीं पढ़ी जा सकीं।',
       'discos.admin_cancelado': 'व्यवस्थापक अनुमति रद्द कर दी गई: कुछ भी नहीं पढ़ा गया।',

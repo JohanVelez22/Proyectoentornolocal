@@ -652,6 +652,7 @@ export const PARAMETROS_ERROR = {
   'asistentes.no_compatible': ['asistente'],
   'asistentes.enlace_rechazado': ['archivo'],
   'asistentes.vista_desfasada': [],
+  'asistentes.entrada_no_editable': ['archivo'],
   'asistentes.sin_carpeta': ['asistente'],
   'agentes.proveedor_incompatible': ['agente'],
   'agentes.sin_cambios_preparados': [],

@@ -28,6 +28,8 @@ export const idExtra: TextosParciales = {
       'asistentes.vista_desfasada':
         'Berkas berubah setelah pratinjau. Mohon tinjau pratinjau sekali lagi.',
       'asistentes.sin_carpeta': 'Folder konfigurasi {asistente} tidak ada.',
+      'asistentes.entrada_no_editable':
+        'Entri wolfcore di {archivo} memiliki format yang tidak dapat diedit dengan aman; silakan edit secara manual.',
       'discos.sin_lectura': 'Kesehatan disk tidak dapat dibaca. Silakan coba lagi.',
       'discos.sin_eventos': 'Peristiwa disk tidak dapat dibaca.',
       'discos.admin_cancelado': 'Izin administrator dibatalkan: tidak ada yang dibaca.',

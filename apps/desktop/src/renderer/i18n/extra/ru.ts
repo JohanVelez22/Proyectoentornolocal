@@ -37,6 +37,8 @@ export const ruExtra: TextosParciales = {
       'asistentes.vista_desfasada':
         'Файл изменился после предпросмотра. Пожалуйста, проверьте предпросмотр заново.',
       'asistentes.sin_carpeta': 'Папка настроек {asistente} не существует.',
+      'asistentes.entrada_no_editable':
+        'Запись wolfcore в {archivo} имеет формат, который нельзя безопасно изменить; отредактируйте её вручную.',
       'discos.sin_lectura': 'Не удалось прочитать состояние дисков. Повторите попытку.',
       'discos.sin_eventos': 'Не удалось прочитать события диска.',
       'discos.admin_cancelado': 'Разрешение администратора отменено: ничего не прочитано.',

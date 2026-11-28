@@ -26,6 +26,8 @@ export const jaExtra: TextosParciales = {
       'asistentes.vista_desfasada':
         'プレビューの後にファイルが変更されました。プレビューをもう一度ご確認ください。',
       'asistentes.sin_carpeta': '{asistente} の設定フォルダーがありません。',
+      'asistentes.entrada_no_editable':
+        '{archivo} の wolfcore エントリーは、安全に編集できない形式です。お手数ですが、手動で編集してください。',
       'discos.sin_lectura': 'ディスクの健全性を読み取れませんでした。もう一度お試しください。',
       'discos.sin_eventos': 'ディスクのイベントを読み取れませんでした。',
       'discos.admin_cancelado': '管理者の許可が取り消されました。何も読み取っていません。',

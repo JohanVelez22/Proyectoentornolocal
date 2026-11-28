@@ -33,6 +33,8 @@ export const deExtra: TextosParciales = {
       'asistentes.vista_desfasada':
         'Die Datei hat sich nach der Vorschau geändert. Bitte prüfen Sie die Vorschau erneut.',
       'asistentes.sin_carpeta': 'Der Konfigurationsordner von {asistente} existiert nicht.',
+      'asistentes.entrada_no_editable':
+        'Der Eintrag wolfcore in {archivo} hat ein Format, das sich nicht risikofrei bearbeiten lässt; bitte bearbeiten Sie ihn von Hand.',
       'discos.sin_lectura':
         'Der Zustand der Laufwerke konnte nicht gelesen werden. Bitte versuchen Sie es erneut.',
       'discos.sin_eventos': 'Die Laufwerkereignisse konnten nicht gelesen werden.',

@@ -102,6 +102,8 @@ export const fr: Textos = {
         '{archivo} est un lien (symbolique ou jonction) : il n’a pas été modifié.',
       'asistentes.vista_desfasada': 'Le fichier a changé après l’aperçu. Veuillez revoir l’aperçu.',
       'asistentes.sin_carpeta': 'Le dossier de configuration de {asistente} n’existe pas.',
+      'asistentes.entrada_no_editable':
+        'L’entrée wolfcore de {archivo} a un format qui ne peut pas être modifié sans risque ; veuillez la modifier à la main.',
       'git.cambios_locales':
         'Le dossier contient des modifications non enregistrées : enregistrez-les (commit) ou abandonnez-les avant de récupérer des changements. Rien n’a été modifié.',
       'git.divergencia':
