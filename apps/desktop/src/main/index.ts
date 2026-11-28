@@ -26,6 +26,7 @@ import {
   type PreferenciasUi,
   type Rutas,
   type TemaUi,
+  validarRutaRecursoRed,
 } from '@pel/core';
 import type { ApiSistema } from '../shared/api';
 import { Notificador } from './notificaciones';
@@ -122,6 +123,11 @@ const sistema: ApiSistema = {
   abrirGrabadora: () => abrirGrabadora(process.platform, (uri) => shell.openExternal(uri)),
   async abrirCarpeta(ruta) {
     const error = await shell.openPath(await carpetaExistente(ruta));
+    if (error) throw new Error(error);
+  },
+  // Carpeta compartida de otro equipo (D53): última barrera antes de `shell.openPath`.
+  async abrirRecursoRed(ruta) {
+    const error = await shell.openPath(validarRutaRecursoRed(ruta));
     if (error) throw new Error(error);
   },
   async copiar(texto) {

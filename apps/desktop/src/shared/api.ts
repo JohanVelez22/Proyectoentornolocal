@@ -239,6 +239,15 @@ import type {
   ArchivoEditor,
   RiesgoEditor,
   HuellaArchivo,
+  LecturaRed,
+  CarpetaCompartida,
+  ResultadoDejarDeCompartir,
+  ResultadoEscaneoRed,
+  ResultadoPingEquipo,
+  ResultadoCarpetasDeEquipo,
+  ResultadoVelocidad,
+  ProgresoEscaneoRed,
+  ProgresoVelocidad,
 } from '@pel/core';
 import type {
   EstadoCapturaUi,
@@ -249,6 +258,15 @@ import type {
 } from './captura';
 
 export type {
+  LecturaRed,
+  CarpetaCompartida,
+  ResultadoDejarDeCompartir,
+  ResultadoEscaneoRed,
+  ResultadoPingEquipo,
+  ResultadoCarpetasDeEquipo,
+  ResultadoVelocidad,
+  ProgresoEscaneoRed,
+  ProgresoVelocidad,
   AccionContenedor,
   Contenedor,
   EstadoMotor,
@@ -618,6 +636,12 @@ export interface ApiSistema {
    */
   abrirGrabadora(): Promise<ResultadoGrabadora>;
   abrirCarpeta(ruta: string): Promise<void>;
+  /**
+   * Abre en el Explorador una carpeta compartida de OTRO equipo (`\IP\recurso`, D53) con
+   * `shell.openPath`. Solo el proceso principal real lo implementa; vuelve a validar la ruta
+   * (IP privada y nombre de recurso) y solo se llama por el clic de la persona.
+   */
+  abrirRecursoRed?(ruta: string): Promise<void>;
   copiar(texto: string): Promise<void>;
   version(): Promise<string>;
   /**
@@ -1697,6 +1721,40 @@ export interface ApiEntorno {
      */
     abrirCarpeta(idAnalisis: string, idFila: number): Promise<void>;
   };
+  miRed: {
+    /** Carpetas que este equipo comparte, con las administrativas marcadas. */
+    carpetas(): Promise<CarpetaCompartida[]>;
+    /**
+     * Deja de compartir una carpeta de este equipo. `confirmado` solo vale `true` tras el diálogo
+     * firme (explica el permiso de administrador y el UAC); abre UN UAC y nunca corre en segundo
+     * plano. UAC cancelado o vencido: `estado` lo dice. No admite las administrativas.
+     */
+    dejarDeCompartir(nombre: string, confirmado: true): Promise<ResultadoDejarDeCompartir>;
+    /** Lectura pasiva: adaptadores, subred y tabla ARP. No envía paquetes. */
+    lectura(): Promise<LecturaRed>;
+    /**
+     * Escaneo por ping de la red del adaptador activo (solo privada, máximo un /24, nunca en una
+     * red pública de Windows). `confirmado` solo vale `true` tras el diálogo; avance por `red:escaneo`.
+     */
+    escanear(confirmado: true): Promise<ResultadoEscaneoRed>;
+    cancelarEscaneo(): Promise<boolean>;
+    /** Ping (4 paquetes) a un equipo de la lista. */
+    ping(ip: string): Promise<ResultadoPingEquipo>;
+    /** Carpetas compartidas de un equipo de la lista (consulta SMB, no un escaneo). */
+    carpetasDeEquipo(ip: string): Promise<ResultadoCarpetasDeEquipo>;
+    /** Abre un recurso listado por `carpetasDeEquipo`, solo por el clic de la persona. */
+    abrirRecurso(ip: string, recurso: string): Promise<void>;
+    /**
+     * Prueba de velocidad con speed.cloudflare.com (unos 25 MB de bajada y 10 MB de subida).
+     * `confirmado` solo vale `true` tras el aviso de datos; cancelable; no envía datos personales.
+     */
+    medirVelocidad(
+      confirmado: true,
+    ): Promise<
+      ResultadoVelocidad & { plan: { bajadaMb: number; subidaMb: number; totalMb: number } }
+    >;
+    cancelarVelocidad(): Promise<boolean>;
+  };
   compartir: {
     /**
      * Elige con el diálogo nativo lo que se va a compartir (una carpeta o un archivo); la ruta solo
@@ -2230,6 +2288,16 @@ export const RUTAS_IPC = [
   'discoUso.analizarUnidad',
   'discoUso.cancelar',
   'discoUso.abrirCarpeta',
+  'miRed.carpetas',
+  'miRed.dejarDeCompartir',
+  'miRed.lectura',
+  'miRed.escanear',
+  'miRed.cancelarEscaneo',
+  'miRed.ping',
+  'miRed.carpetasDeEquipo',
+  'miRed.abrirRecurso',
+  'miRed.medirVelocidad',
+  'miRed.cancelarVelocidad',
   'compartir.elegir',
   'compartir.vista',
   'compartir.estado',
@@ -2341,6 +2409,8 @@ export const EVENTOS_IPC = [
   'busqueda:resultado',
   'busqueda:fin',
   'disco:progreso',
+  'red:escaneo',
+  'red:velocidad',
   'compartir:estado',
   'compartir:acceso',
   'captura:imagen',

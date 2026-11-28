@@ -576,6 +576,18 @@ const api: ApiEntorno = {
     cancelar: () => invocar('discoUso.cancelar'),
     abrirCarpeta: (idAnalisis, idFila) => invocar('discoUso.abrirCarpeta', idAnalisis, idFila),
   },
+  miRed: {
+    carpetas: () => invocar('miRed.carpetas'),
+    dejarDeCompartir: (nombre, confirmado) => invocar('miRed.dejarDeCompartir', nombre, confirmado),
+    lectura: () => invocar('miRed.lectura'),
+    escanear: (confirmado) => invocar('miRed.escanear', confirmado),
+    cancelarEscaneo: () => invocar('miRed.cancelarEscaneo'),
+    ping: (ip) => invocar('miRed.ping', ip),
+    carpetasDeEquipo: (ip) => invocar('miRed.carpetasDeEquipo', ip),
+    abrirRecurso: (ip, recurso) => invocar('miRed.abrirRecurso', ip, recurso),
+    medirVelocidad: (confirmado) => invocar('miRed.medirVelocidad', confirmado),
+    cancelarVelocidad: () => invocar('miRed.cancelarVelocidad'),
+  },
   compartir: {
     elegir: (tipo) => invocar('compartir.elegir', tipo),
     vista: (ruta) => invocar('compartir.vista', ruta),

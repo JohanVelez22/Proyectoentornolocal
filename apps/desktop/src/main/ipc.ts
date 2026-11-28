@@ -2100,6 +2100,25 @@ const TABLA: Record<RutaIpc, Manejador> = {
     s.abrirCarpeta(
       await n.usoDisco.carpetaDe(idCorto(id, 'análisis', 64), enteroPositivo(fila, 'fila')),
     ),
+  // ---- Mi red (D53): solo equipos privados de la lista del propio núcleo; nada de control remoto ----
+  // Lo que la ventana manda son textos acotados y confirmaciones exactas (`true`): el núcleo vuelve
+  // a validar IP privadas, recursos y la red activa. Nada llega al sistema sin el clic de la persona.
+  'miRed.carpetas': (n) => n.miRed.carpetas(),
+  'miRed.dejarDeCompartir': (n, _s, nombre, confirmacion) =>
+    n.miRed.dejarDeCompartir(textoAcotado(nombre, 1, 80, 'carpeta'), confirmado(confirmacion)),
+  'miRed.lectura': (n) => n.miRed.lectura(),
+  'miRed.escanear': (n, _s, confirmacion) => n.miRed.escanear(confirmado(confirmacion)),
+  'miRed.cancelarEscaneo': (n) => n.miRed.cancelarEscaneo(),
+  'miRed.ping': (n, _s, ip) => n.miRed.ping(textoAcotado(ip, 7, 15, 'ip')),
+  'miRed.carpetasDeEquipo': (n, _s, ip) => n.miRed.carpetasDeEquipo(textoAcotado(ip, 7, 15, 'ip')),
+  'miRed.abrirRecurso': async (n, s, ip, recurso) => {
+    if (!s.abrirRecursoRed) throw new Error('No disponible');
+    await s.abrirRecursoRed(
+      n.miRed.rutaRecurso(textoAcotado(ip, 7, 15, 'ip'), textoAcotado(recurso, 1, 80, 'recurso')),
+    );
+  },
+  'miRed.medirVelocidad': (n, _s, confirmacion) => n.miRed.medirVelocidad(confirmado(confirmacion)),
+  'miRed.cancelarVelocidad': (n) => n.miRed.cancelarVelocidad(),
   // ---- Compartir carpeta o archivo (D52): publica en internet; la ruta solo sale del diálogo ----
   'compartir.elegir': async (_n, s, tipo) => {
     if (tipo !== 'carpeta' && tipo !== 'archivo') throw new Error('Argumento no válido: tipo');
