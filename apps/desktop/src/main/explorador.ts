@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { join } from 'node:path';
+import { win32 } from 'node:path';
 import { validarRutaRecursoRed } from '@pel/core';
 
 /**
@@ -22,7 +22,8 @@ export const lanzarSinShell: LanzadorSinShell = (exe, args) => {
 /** Ruta absoluta de `explorer.exe` en la carpeta del sistema. */
 export function rutaExplorer(entorno: NodeJS.ProcessEnv = process.env): string {
   const raiz = entorno['SystemRoot'] ?? entorno['SYSTEMROOT'] ?? 'C:\\Windows';
-  return join(raiz, 'explorer.exe');
+  // Siempre con separadores de Windows: explorer.exe solo existe allí (y así las pruebas dan lo mismo en CI).
+  return win32.join(raiz, 'explorer.exe');
 }
 
 export function abrirRecursoEnExplorador(
