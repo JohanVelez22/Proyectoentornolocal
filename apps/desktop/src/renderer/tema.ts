@@ -46,6 +46,11 @@ function pasosLegibles(texto: string): Record<string, string> {
   };
 }
 
+/** Fondo de cajones y diálogos, y de menús y globos flotantes, en el tema oscuro. */
+export const SUPERFICIE_OSCURA = '#1b1c22';
+export const FLOTANTE_OSCURO = '#23252d';
+const BORDE_OSCURO = '1px solid #2d2f38';
+
 /** Acentos que se ofrecen en Ajustes; `null` en la configuración es el índigo de siempre. */
 export const ACENTOS = [
   { id: 'indigo', claro: '#4f5bd5', oscuro: '#8b93ff' },
@@ -153,9 +158,19 @@ export function temaDe(oscuro: boolean, acento: string | null): GlobalThemeOverr
       },
       Empty: { textColor: 'rgba(255, 255, 255, 0.66)' },
       Layout: { siderColor: '#17181d', headerColor: '#121317', color: '#121317' },
-      Card: { ...objetivosDeClic.Card, color: '#1a1b21', borderColor: '#2a2c34' },
-      Drawer: objetivosDeClic.Drawer,
-      Dialog: objetivosDeClic.Dialog,
+      Card: {
+        ...objetivosDeClic.Card,
+        color: '#1a1b21',
+        borderColor: '#2a2c34',
+        actionColor: '#15161b',
+      },
+      // Superficies elevadas (D54b C2): cajones, diálogos y menús flotantes parten del mismo fondo
+      // que las tarjetas, un poco más claro, en vez del gris de Naive UI (#2c2c32 y #48484e).
+      Drawer: { ...objetivosDeClic.Drawer, color: SUPERFICIE_OSCURA },
+      Dialog: { ...objetivosDeClic.Dialog, color: SUPERFICIE_OSCURA, border: BORDE_OSCURO },
+      Popover: { color: FLOTANTE_OSCURO },
+      Dropdown: { color: FLOTANTE_OSCURO },
+      InternalSelectMenu: { color: FLOTANTE_OSCURO },
       Switch: objetivosDeClic.Switch,
       Steps: pasosLegibles('rgba(255, 255, 255, 0.68)'),
     };
