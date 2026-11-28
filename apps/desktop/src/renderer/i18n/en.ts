@@ -743,6 +743,14 @@ export const en: Textos = {
       'doctor.path_duplicados': 'The user PATH has {cantidad} repeated WolfCore Dev entries.',
       'doctor.path_ajeno_delante':
         'Another folder with {programa} ({origen}) comes before WolfCore Dev in the PATH: terminals will use that one.',
+      'discos.sin_lectura': 'The health of the disks could not be read. Please try again.',
+      'discos.sin_eventos': 'The disk events could not be read.',
+      'discos.admin_cancelado': 'The administrator permission was cancelled: nothing was read.',
+      'discos.admin_fallo':
+        'The health of the disks could not be read with administrator permissions.',
+      'doctor.disco_atencion': 'The disk {modelo} needs attention.',
+      'doctor.disco_critico':
+        'The disk {modelo} is in a critical state: make a backup as soon as possible.',
       'doctor.vcredist_ausente':
         'Microsoft Visual C++ 2015-2022 (x64) is missing: PHP and other services will not start without it.',
       'doctor.enlazador_msvc_ausente':
@@ -2124,6 +2132,7 @@ export const en: Textos = {
         'receta-terminada': 'A project recipe finished',
         doctor: 'Diagnostics (Doctor)',
         'contenedor-detenido': 'A container stopped',
+        'salud-disco': 'Disk health alerts',
         'version-nueva': 'A new version of an installed service',
       } as Record<string, string>,
       errorGuardar: 'The notice settings could not be saved',
@@ -4027,6 +4036,107 @@ export const en: Textos = {
       imagenOmitida: (alt: string) => `[image${alt ? `: ${alt}` : ''}]`,
     },
     entorno: {
+      discos: {
+        titulo: 'Disk health',
+        intro:
+          'The state of each disk as reported by Windows, with nothing to install. Read-only: nothing on the disks is changed.',
+        actualizar: 'Refresh',
+        leerAdmin: 'Read with administrator permissions',
+        leerAdminAyuda:
+          'Windows will ask for your permission (UAC) only when you press this button. It only reads data and never happens on its own.',
+        sinDiscos: 'Windows did not report any physical disk.',
+        numeroDisco: 'Disk {n}',
+        unidades: 'Drives: {u}',
+        sinUnidades: 'No drive letter',
+        datosWolf: 'WolfCore Dev data',
+        proyectos: 'Projects',
+        tipoDesconocido: 'Type not reported',
+        veredictos: {
+          bien: 'Good',
+          atencion: 'Attention',
+          critico: 'Critical',
+          no_disponible: 'Not available',
+        },
+        motivos: {
+          estado_warning: 'Windows reports the “Warning” state.',
+          estado_unhealthy: 'Windows reports the “Unhealthy” state.',
+          estado_operacional: 'The operational status indicates a failure ({estado}).',
+          errores_sin_corregir:
+            'There are uncorrected errors (read: {lectura}, write: {escritura}).',
+          prediccion_fallo: 'The disk predicts a failure (SMART).',
+          desgaste: 'Wear of {desgaste}% (threshold: {umbral}%).',
+          temperatura: 'Temperature of {temperatura} °C (limit: {limite} °C).',
+          errores_corregidos_suben:
+            'Corrected read errors went up since the previous reading ({cantidad} in total).',
+        },
+        contadores: {
+          temperatura: 'Temperature',
+          desgaste: 'Wear',
+          lecturaCorregidos: 'Corrected read errors',
+          lecturaNoCorregidos: 'Uncorrected read errors',
+          escrituraCorregidos: 'Corrected write errors',
+          escrituraNoCorregidos: 'Uncorrected write errors',
+          horas: 'Power-on hours',
+          prediccion: 'Failure prediction',
+        },
+        noDisponible: 'Not available',
+        noDisponibleMotivo: 'Not available ({motivo})',
+        motivoSin: {
+          admin: 'requires administrator permissions',
+          bus: 'this kind of connection (USB or RAID) does not expose counters',
+          no_soportado: 'the disk or its controller does not support them',
+          no_leidos: 'Windows returned no values',
+        },
+        prediccionSin: {
+          sin_acceso: 'requires administrator permissions',
+          no_disponible: 'this computer does not offer it',
+        },
+        prediccionSinFallo: 'No failure expected',
+        prediccionFallo: 'Failure expected',
+        horasValor: '{n} h',
+        criterios: {
+          titulo: 'How is the verdict decided?',
+          critico:
+            'Critical: Windows reports the Warning or Unhealthy state or an operational failure, there are uncorrected errors, or the disk predicts a failure.',
+          atencion:
+            'Attention: wear of {desgaste}% or more, a temperature above the manufacturer’s maximum (without it, {ssd} °C or more on SSD and NVMe, {hdd} °C or more on HDD), or corrected read errors that rise compared with the previous reading.',
+          bien: 'Good: Healthy state and none of the above.',
+          noDisponible: 'Not available: Windows gave too little data about that disk.',
+        },
+        leidoAdmin: 'Data read with administrator permissions.',
+        requiereAdminAviso:
+          'Some data requires administrator permissions. You can read it with the button above: Windows will ask for your permission only then.',
+        nota: 'This reading is a guide, not a guarantee: a good sign does not prevent a failure. Keep backups of what matters.',
+        privacidad: 'Serial numbers and unique identifiers are neither read nor shown.',
+      },
+      eventosDisco: {
+        titulo: 'Disk events',
+        intro: 'Windows System log entries about the disks over the last {dias} days. Read-only.',
+        actualizar: 'Refresh events',
+        copiar: 'Copy events',
+        copiado: 'Events copied',
+        vacio: 'There are no disk events in the last {dias} days.',
+        sinDisco: 'Disk not indicated',
+        disco: 'Disk {n}',
+        unidad: 'Drive {u}',
+        gravedad: {
+          info: 'Informational',
+          aviso: 'Warning',
+          critico: 'Critical',
+        },
+        explicaciones: {
+          disco_7: 'The disk has a bad block.',
+          disco_11: 'The controller detected an error on the disk.',
+          disco_51: 'An error occurred on the disk during a paging operation.',
+          disco_52: 'The disk predicts that it is going to fail.',
+          disco_55: 'Corruption was detected in the file system of a drive.',
+          disco_129: 'Windows had to reset the disk controller because it was not responding.',
+          disco_153: 'A disk operation failed and was retried.',
+          disco_157: 'The disk was disconnected unexpectedly.',
+        },
+        tope: 'At most {n} events are shown.',
+        cabeceraCopia: 'Disk events (last {dias} days)',
+      },
       equipo: {
         titulo: 'My computer',
         copiarResumen: 'Copy summary',
@@ -4921,6 +5031,14 @@ export const en: Textos = {
       antivirus_sin_exclusion:
         'The antivirus is active and the WolfCore Dev data folder is not excluded.',
       enlazador_ausente: 'The C++ tools of Visual Studio Build Tools were not found.',
+      disco_modelo: '{modelo} (disk {numero})',
+      disco_estado: 'Windows reports the {estado} state.',
+      disco_operacional: 'Operational status: {estado}.',
+      disco_errores: 'Uncorrected errors: {lectura} read and {escritura} write.',
+      disco_prediccion: 'The disk predicts a failure (SMART).',
+      disco_desgaste: 'Wear of {desgaste}% (threshold: {umbral}%).',
+      disco_temperatura: 'Temperature of {temperatura} °C (limit: {limite} °C).',
+      disco_corregidos: 'Corrected read errors went up ({cantidad} in total).',
       vcredist_ausente: 'Microsoft Visual C++ 2015-2022 (x64) is not installed.',
       firewall_no_comprobado: 'The firewall rules could not be read (administrator may be needed).',
       firewall_reglas: 'WolfCore Dev: {propias} · Leftovers from WolfCore tests: {pruebas}',
@@ -4963,6 +5081,7 @@ export const en: Textos = {
       hosts: 'Hosts file',
       path: 'User PATH',
       vcredist: 'Visual C++',
+      discos: 'Disk health',
       'enlazador-msvc': 'C++ linker',
       antivirus: 'Antivirus',
       firewall: 'Firewall',
@@ -5556,6 +5675,7 @@ export const en: Textos = {
     utilidades: 'Utilities',
   },
   avisos: {
+    hacerRespaldo: 'Back up now',
     campana: 'Notices',
     campanaConNuevos: (n: number) => `Notices: ${n} unread`,
     titulo: 'Notice center',

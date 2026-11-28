@@ -792,6 +792,14 @@ export const fr: Textos = {
         'Le PATH de l’utilisateur contient {cantidad} entrées répétées de WolfCore Dev.',
       'doctor.path_ajeno_delante':
         'Un autre dossier contenant {programa} ({origen}) précède WolfCore Dev dans le PATH : les terminaux utiliseront celui-là.',
+      'discos.sin_lectura': 'Impossible de lire la santé des disques. Veuillez réessayer.',
+      'discos.sin_eventos': 'Impossible de lire les événements du disque.',
+      'discos.admin_cancelado': 'L’autorisation d’administrateur a été annulée : rien n’a été lu.',
+      'discos.admin_fallo':
+        'Impossible de lire la santé des disques avec les droits d’administrateur.',
+      'doctor.disco_atencion': 'Le disque {modelo} demande de l’attention.',
+      'doctor.disco_critico':
+        'Le disque {modelo} est dans un état critique : faites une sauvegarde dès que possible.',
       'doctor.vcredist_ausente':
         'Microsoft Visual C++ 2015-2022 (x64) manque : PHP et d’autres services ne démarrent pas sans lui.',
       'doctor.enlazador_msvc_ausente':
@@ -2210,6 +2218,7 @@ export const fr: Textos = {
         'receta-terminada': 'Une recette de projet est terminée',
         doctor: 'Diagnostic (Doctor)',
         'contenedor-detenido': 'Un conteneur s’est arrêté',
+        'salud-disco': 'Alertes de santé du disque',
         'version-nueva': 'Une nouvelle version d’un service installé est disponible',
       } as Record<string, string>,
       errorGuardar: 'Impossible d’enregistrer les avis',
@@ -4175,6 +4184,108 @@ export const fr: Textos = {
       imagenOmitida: (alt: string) => `[image${alt ? ` : ${alt}` : ''}]`,
     },
     entorno: {
+      discos: {
+        titulo: 'Santé des disques',
+        intro:
+          'L’état de chaque disque selon Windows, sans rien installer. Lecture seule : rien n’est modifié sur les disques.',
+        actualizar: 'Actualiser',
+        leerAdmin: 'Lire avec les droits d’administrateur',
+        leerAdminAyuda:
+          'Windows demandera votre autorisation (UAC) uniquement lorsque vous cliquerez sur ce bouton. Il ne fait que lire des données et ne se déclenche jamais de lui-même.',
+        sinDiscos: 'Windows n’a signalé aucun disque physique.',
+        numeroDisco: 'Disque {n}',
+        unidades: 'Lecteurs : {u}',
+        sinUnidades: 'Sans lettre de lecteur',
+        datosWolf: 'Données de WolfCore Dev',
+        proyectos: 'Projets',
+        tipoDesconocido: 'Type non indiqué',
+        veredictos: {
+          bien: 'Bon',
+          atencion: 'Attention',
+          critico: 'Critique',
+          no_disponible: 'Indisponible',
+        },
+        motivos: {
+          estado_warning: 'Windows signale l’état « Warning » (avertissement).',
+          estado_unhealthy: 'Windows signale l’état « Unhealthy » (défaillant).',
+          estado_operacional: 'L’état opérationnel indique une défaillance ({estado}).',
+          errores_sin_corregir:
+            'Il y a des erreurs non corrigées (lecture : {lectura}, écriture : {escritura}).',
+          prediccion_fallo: 'Le disque prédit une panne (SMART).',
+          desgaste: 'Usure de {desgaste} % (seuil : {umbral} %).',
+          temperatura: 'Température de {temperatura} °C (limite : {limite} °C).',
+          errores_corregidos_suben:
+            'Les erreurs de lecture corrigées ont augmenté depuis la lecture précédente ({cantidad} au total).',
+        },
+        contadores: {
+          temperatura: 'Température',
+          desgaste: 'Usure',
+          lecturaCorregidos: 'Erreurs de lecture corrigées',
+          lecturaNoCorregidos: 'Erreurs de lecture non corrigées',
+          escrituraCorregidos: 'Erreurs d’écriture corrigées',
+          escrituraNoCorregidos: 'Erreurs d’écriture non corrigées',
+          horas: 'Heures de fonctionnement',
+          prediccion: 'Prédiction de panne',
+        },
+        noDisponible: 'Indisponible',
+        noDisponibleMotivo: 'Indisponible ({motivo})',
+        motivoSin: {
+          admin: 'nécessite les droits d’administrateur',
+          bus: 'ce type de connexion (USB ou RAID) n’expose pas de compteurs',
+          no_soportado: 'le disque ou son contrôleur ne les prend pas en charge',
+          no_leidos: 'Windows n’a renvoyé aucune valeur',
+        },
+        prediccionSin: {
+          sin_acceso: 'nécessite les droits d’administrateur',
+          no_disponible: 'cet ordinateur ne la propose pas',
+        },
+        prediccionSinFallo: 'Aucune panne prévue',
+        prediccionFallo: 'Panne prévue',
+        horasValor: '{n} h',
+        criterios: {
+          titulo: 'Comment le verdict est-il établi ?',
+          critico:
+            'Critique : Windows signale l’état Warning ou Unhealthy ou une défaillance opérationnelle, il y a des erreurs non corrigées ou le disque prédit une panne.',
+          atencion:
+            'Attention : usure de {desgaste} % ou plus, température supérieure au maximum du fabricant (à défaut, {ssd} °C ou plus sur SSD et NVMe, {hdd} °C ou plus sur disque dur) ou erreurs de lecture corrigées en hausse par rapport à la lecture précédente.',
+          bien: 'Bon : état Healthy et rien de ce qui précède.',
+          noDisponible: 'Indisponible : Windows n’a pas fourni assez de données sur ce disque.',
+        },
+        leidoAdmin: 'Données lues avec les droits d’administrateur.',
+        requiereAdminAviso:
+          'Certaines données nécessitent les droits d’administrateur. Vous pouvez les lire avec le bouton ci-dessus : Windows ne demandera votre autorisation qu’à ce moment-là.',
+        nota: 'Cette lecture est indicative et ne garantit rien : un bon signe n’empêche pas une panne. Conservez des sauvegardes de l’essentiel.',
+        privacidad: 'Les numéros de série et les identifiants uniques ne sont ni lus ni affichés.',
+      },
+      eventosDisco: {
+        titulo: 'Événements du disque',
+        intro:
+          'Entrées du journal System de Windows concernant les disques au cours des {dias} derniers jours. Lecture seule.',
+        actualizar: 'Actualiser les événements',
+        copiar: 'Copier les événements',
+        copiado: 'Événements copiés',
+        vacio: 'Aucun événement de disque au cours des {dias} derniers jours.',
+        sinDisco: 'Disque non indiqué',
+        disco: 'Disque {n}',
+        unidad: 'Lecteur {u}',
+        gravedad: {
+          info: 'Information',
+          aviso: 'Avertissement',
+          critico: 'Critique',
+        },
+        explicaciones: {
+          disco_7: 'Le disque comporte un bloc défectueux.',
+          disco_11: 'Le contrôleur a détecté une erreur sur le disque.',
+          disco_51: 'Une erreur est survenue sur le disque pendant une opération de pagination.',
+          disco_52: 'Le disque prédit qu’il va tomber en panne.',
+          disco_55: 'Une corruption a été détectée dans le système de fichiers d’un lecteur.',
+          disco_129: 'Windows a dû réinitialiser le contrôleur du disque, qui ne répondait plus.',
+          disco_153: 'Une opération sur le disque a échoué et a été retentée.',
+          disco_157: 'Le disque a été déconnecté de manière inattendue.',
+        },
+        tope: '{n} événements au maximum sont affichés.',
+        cabeceraCopia: 'Événements du disque ({dias} derniers jours)',
+      },
       equipo: {
         titulo: 'Mon ordinateur',
         copiarResumen: 'Copier le résumé',
@@ -5085,6 +5196,14 @@ export const fr: Textos = {
       antivirus_sin_exclusion:
         'L’antivirus est actif et le dossier de données de WolfCore Dev n’est pas exclu.',
       enlazador_ausente: 'Les outils C++ de Visual Studio Build Tools sont introuvables.',
+      disco_modelo: '{modelo} (disque {numero})',
+      disco_estado: 'Windows signale l’état {estado}.',
+      disco_operacional: 'État opérationnel : {estado}.',
+      disco_errores: 'Erreurs non corrigées : {lectura} en lecture et {escritura} en écriture.',
+      disco_prediccion: 'Le disque prédit une panne (SMART).',
+      disco_desgaste: 'Usure de {desgaste} % (seuil : {umbral} %).',
+      disco_temperatura: 'Température de {temperatura} °C (limite : {limite} °C).',
+      disco_corregidos: 'Les erreurs de lecture corrigées ont augmenté ({cantidad} au total).',
       vcredist_ausente: 'Microsoft Visual C++ 2015-2022 (x64) n’est pas installé.',
       firewall_no_comprobado:
         'Les règles du pare-feu n’ont pas pu être lues (les droits d’administrateur peuvent être requis).',
@@ -5128,6 +5247,7 @@ export const fr: Textos = {
       hosts: 'Fichier hosts',
       path: 'PATH de l’utilisateur',
       vcredist: 'Visual C++',
+      discos: 'Santé des disques',
       'enlazador-msvc': 'Éditeur de liens C++',
       antivirus: 'Antivirus',
       firewall: 'Pare-feu',
@@ -5730,6 +5850,7 @@ export const fr: Textos = {
     utilidades: 'Utilitaires',
   },
   avisos: {
+    hacerRespaldo: 'Sauvegarder maintenant',
     campana: 'Avis',
     campanaConNuevos: (n: number) => `Avis : ${n} non lus`,
     titulo: 'Centre d’avis',

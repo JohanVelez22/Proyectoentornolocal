@@ -21,6 +21,12 @@ export const trExtra: TextosParciales = {
   acciones: { copiarCompleto: 'Metnin tamamını kopyala' },
   errores: {
     codigos: {
+      'discos.sin_lectura': 'Disk sağlığı okunamadı. Lütfen yeniden deneyin.',
+      'discos.sin_eventos': 'Disk olayları okunamadı.',
+      'discos.admin_cancelado': 'Yönetici izni iptal edildi: hiçbir şey okunmadı.',
+      'discos.admin_fallo': 'Disk sağlığı yönetici izinleriyle okunamadı.',
+      'doctor.disco_atencion': '{modelo} diski dikkat gerektiriyor.',
+      'doctor.disco_critico': '{modelo} diski kritik durumda: lütfen en kısa sürede yedek alın.',
       'servicios.no_encendio':
         '{nombre} başlatılamadı. Hizmetler bölümünü ve günlüklerini kontrol edin.',
       'tuneles.sitio_no_confiable':
@@ -471,8 +477,120 @@ export const trExtra: TextosParciales = {
       formatoGuardado: 'Biçim kaydedildi.',
     },
   },
+  ajustes: {
+    avisos: {
+      tipos: {
+        'salud-disco': 'Disk sağlığı uyarıları',
+      },
+    },
+  },
+  avisos: {
+    hacerRespaldo: 'Şimdi yedek al',
+  },
   herramientas: {
     entorno: {
+      discos: {
+        titulo: 'Disk sağlığı',
+        intro:
+          'Windows’a göre her diskin durumu; hiçbir şey kurmadan. Salt okunur: disklerde hiçbir şey değiştirilmez.',
+        actualizar: 'Yenile',
+        leerAdmin: 'Yönetici izinleriyle oku',
+        leerAdminAyuda:
+          'Windows, izninizi (UAC) yalnızca bu düğmeye bastığınızda ister. Yalnızca veri okur ve hiçbir zaman kendiliğinden çalışmaz.',
+        sinDiscos: 'Windows herhangi bir fiziksel disk bildirmedi.',
+        numeroDisco: 'Disk {n}',
+        unidades: 'Sürücüler: {u}',
+        sinUnidades: 'Sürücü harfi yok',
+        datosWolf: 'WolfCore Dev verileri',
+        proyectos: 'Projeler',
+        tipoDesconocido: 'Tür belirtilmedi',
+        veredictos: {
+          bien: 'İyi',
+          atencion: 'Dikkat',
+          critico: 'Kritik',
+          no_disponible: 'Kullanılamıyor',
+        },
+        motivos: {
+          estado_warning: 'Windows “Warning” (uyarı) durumunu bildiriyor.',
+          estado_unhealthy: 'Windows “Unhealthy” (sağlıksız) durumunu bildiriyor.',
+          estado_operacional: 'Çalışma durumu bir arızaya işaret ediyor ({estado}).',
+          errores_sin_corregir: 'Düzeltilmemiş hatalar var (okuma: {lectura}, yazma: {escritura}).',
+          prediccion_fallo: 'Disk bir arıza öngörüyor (SMART).',
+          desgaste: '%{desgaste} aşınma (eşik: %{umbral}).',
+          temperatura: 'Sıcaklık {temperatura} °C (sınır: {limite} °C).',
+          errores_corregidos_suben:
+            'Düzeltilen okuma hataları önceki okumaya göre arttı (toplam {cantidad}).',
+        },
+        contadores: {
+          temperatura: 'Sıcaklık',
+          desgaste: 'Aşınma',
+          lecturaCorregidos: 'Düzeltilen okuma hataları',
+          lecturaNoCorregidos: 'Düzeltilmemiş okuma hataları',
+          escrituraCorregidos: 'Düzeltilen yazma hataları',
+          escrituraNoCorregidos: 'Düzeltilmemiş yazma hataları',
+          horas: 'Açık kalma saati',
+          prediccion: 'Arıza öngörüsü',
+        },
+        noDisponible: 'Kullanılamıyor',
+        noDisponibleMotivo: 'Kullanılamıyor ({motivo})',
+        motivoSin: {
+          admin: 'yönetici izinleri gerekiyor',
+          bus: 'bu bağlantı türü (USB veya RAID) sayaçları sunmuyor',
+          no_soportado: 'disk veya denetleyicisi bunları desteklemiyor',
+          no_leidos: 'Windows değer döndürmedi',
+        },
+        prediccionSin: {
+          sin_acceso: 'yönetici izinleri gerekiyor',
+          no_disponible: 'bu bilgisayar bunu sunmuyor',
+        },
+        prediccionSinFallo: 'Arıza beklenmiyor',
+        prediccionFallo: 'Arıza bekleniyor',
+        horasValor: '{n} sa',
+        criterios: {
+          titulo: 'Değerlendirme nasıl belirlenir?',
+          critico:
+            'Kritik: Windows Warning veya Unhealthy durumunu ya da bir çalışma arızasını bildiriyor, düzeltilmemiş hatalar var veya disk bir arıza öngörüyor.',
+          atencion:
+            'Dikkat: %{desgaste} veya daha fazla aşınma, üreticinin en yüksek değerinin üzerinde sıcaklık (o yoksa SSD ve NVMe için {ssd} °C ve üzeri, HDD için {hdd} °C ve üzeri) ya da önceki okumaya göre artan düzeltilmiş okuma hataları.',
+          bien: 'İyi: Healthy durumu ve yukarıdakilerin hiçbiri yok.',
+          noDisponible: 'Kullanılamıyor: Windows o disk için yeterli veri vermedi.',
+        },
+        leidoAdmin: 'Veriler yönetici izinleriyle okundu.',
+        requiereAdminAviso:
+          'Bazı veriler yönetici izinleri gerektirir. Bunları yukarıdaki düğmeyle okuyabilirsiniz: Windows izninizi yalnızca o zaman ister.',
+        nota: 'Bu okuma yol göstericidir, garanti vermez: iyi bir işaret arızayı önlemez. Önemli olanların yedeğini bulundurun.',
+        privacidad: 'Seri numaraları ve benzersiz tanımlayıcılar ne okunur ne de gösterilir.',
+      },
+      eventosDisco: {
+        titulo: 'Disk olayları',
+        intro:
+          'Windows System günlüğündeki, son {dias} güne ait disklerle ilgili kayıtlar. Salt okunur.',
+        actualizar: 'Olayları yenile',
+        copiar: 'Olayları kopyala',
+        copiado: 'Olaylar kopyalandı',
+        vacio: 'Son {dias} günde disk olayı yok.',
+        sinDisco: 'Disk belirtilmedi',
+        disco: 'Disk {n}',
+        unidad: 'Sürücü {u}',
+        gravedad: {
+          info: 'Bilgi',
+          aviso: 'Uyarı',
+          critico: 'Kritik',
+        },
+        explicaciones: {
+          disco_7: 'Diskte bozuk bir blok var.',
+          disco_11: 'Denetleyici diskte bir hata algıladı.',
+          disco_51: 'Bir disk belleği işlemi sırasında diskte hata oluştu.',
+          disco_52: 'Disk, arızalanacağını öngörüyor.',
+          disco_55: 'Bir sürücünün dosya sisteminde bozulma algılandı.',
+          disco_129:
+            'Disk denetleyicisi yanıt vermediği için Windows onu sıfırlamak zorunda kaldı.',
+          disco_153: 'Bir disk işlemi başarısız oldu ve yeniden denendi.',
+          disco_157: 'Disk beklenmedik şekilde bağlantıyı kaybetti.',
+        },
+        tope: 'En fazla {n} olay gösterilir.',
+        cabeceraCopia: 'Disk olayları (son {dias} gün)',
+      },
       equipo: {
         titulo: 'Bilgisayarım',
         copiarResumen: 'Özeti kopyala',
@@ -1179,7 +1297,18 @@ export const trExtra: TextosParciales = {
     imagenes: { nombreCaptura: 'ekran-goruntusu' },
   },
   doctor: {
+    revisiones: {
+      discos: 'Disk sağlığı',
+    },
     evidencias: {
+      disco_modelo: '{modelo} (disk {numero})',
+      disco_estado: 'Windows {estado} durumunu bildiriyor.',
+      disco_operacional: 'Çalışma durumu: {estado}.',
+      disco_errores: 'Düzeltilmemiş hatalar: {lectura} okuma ve {escritura} yazma.',
+      disco_prediccion: 'Disk bir arıza öngörüyor (SMART).',
+      disco_desgaste: '%{desgaste} aşınma (eşik: %{umbral}).',
+      disco_temperatura: 'Sıcaklık {temperatura} °C (sınır: {limite} °C).',
+      disco_corregidos: 'Düzeltilen okuma hataları arttı (toplam {cantidad}).',
       texto: '{texto}',
       puerto_dueno: 'Bağlantı noktası {puerto}: {proceso} (PID {pid})',
       puerto_dueno_exe: 'Bağlantı noktası {puerto}: {proceso} (PID {pid}) — {ejecutable}',

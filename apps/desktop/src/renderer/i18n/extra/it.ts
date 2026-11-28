@@ -24,6 +24,15 @@ export const itExtra: TextosParciales = {
   },
   errores: {
     codigos: {
+      'discos.sin_lectura': 'Non è stato possibile leggere lo stato di salute dei dischi. Riprovi.',
+      'discos.sin_eventos': 'Non è stato possibile leggere gli eventi del disco.',
+      'discos.admin_cancelado':
+        'Il permesso di amministratore è stato annullato: non è stato letto nulla.',
+      'discos.admin_fallo':
+        'Non è stato possibile leggere lo stato di salute dei dischi con permessi di amministratore.',
+      'doctor.disco_atencion': 'Il disco {modelo} richiede attenzione.',
+      'doctor.disco_critico':
+        'Il disco {modelo} è in stato critico: faccia una copia di sicurezza il prima possibile.',
       'servicios.no_encendio':
         '{nombre} non è riuscito ad avviarsi. Controlli Servizi e i relativi log.',
       'tuneles.sitio_no_confiable':
@@ -513,8 +522,120 @@ export const itExtra: TextosParciales = {
       formatoGuardado: 'Formato salvato.',
     },
   },
+  ajustes: {
+    avisos: {
+      tipos: {
+        'salud-disco': 'Avvisi sulla salute del disco',
+      },
+    },
+  },
+  avisos: {
+    hacerRespaldo: 'Eseguire il backup ora',
+  },
   herramientas: {
     entorno: {
+      discos: {
+        titulo: 'Stato di salute dei dischi',
+        intro:
+          'Lo stato di ogni disco secondo Windows, senza installare nulla. Sola lettura: sui dischi non viene modificato nulla.',
+        actualizar: 'Aggiorna',
+        leerAdmin: 'Leggi con permessi di amministratore',
+        leerAdminAyuda:
+          'Windows chiederà il suo permesso (UAC) solo quando preme questo pulsante. Legge soltanto dati e non avviene mai in automatico.',
+        sinDiscos: 'Windows non ha segnalato alcun disco fisico.',
+        numeroDisco: 'Disco {n}',
+        unidades: 'Unità: {u}',
+        sinUnidades: 'Senza lettera di unità',
+        datosWolf: 'Dati di WolfCore Dev',
+        proyectos: 'Progetti',
+        tipoDesconocido: 'Tipo non indicato',
+        veredictos: {
+          bien: 'Buono',
+          atencion: 'Attenzione',
+          critico: 'Critico',
+          no_disponible: 'Non disponibile',
+        },
+        motivos: {
+          estado_warning: 'Windows segnala lo stato «Warning» (avviso).',
+          estado_unhealthy: 'Windows segnala lo stato «Unhealthy» (con guasti).',
+          estado_operacional: 'Lo stato operativo indica un guasto ({estado}).',
+          errores_sin_corregir:
+            'Ci sono errori non corretti (lettura: {lectura}, scrittura: {escritura}).',
+          prediccion_fallo: 'Il disco prevede un guasto (SMART).',
+          desgaste: 'Usura del {desgaste}% (soglia: {umbral}%).',
+          temperatura: 'Temperatura di {temperatura} °C (limite: {limite} °C).',
+          errores_corregidos_suben:
+            'Gli errori di lettura corretti sono aumentati rispetto alla lettura precedente ({cantidad} in totale).',
+        },
+        contadores: {
+          temperatura: 'Temperatura',
+          desgaste: 'Usura',
+          lecturaCorregidos: 'Errori di lettura corretti',
+          lecturaNoCorregidos: 'Errori di lettura non corretti',
+          escrituraCorregidos: 'Errori di scrittura corretti',
+          escrituraNoCorregidos: 'Errori di scrittura non corretti',
+          horas: 'Ore di accensione',
+          prediccion: 'Previsione di guasto',
+        },
+        noDisponible: 'Non disponibile',
+        noDisponibleMotivo: 'Non disponibile ({motivo})',
+        motivoSin: {
+          admin: 'richiede permessi di amministratore',
+          bus: 'questo tipo di connessione (USB o RAID) non espone contatori',
+          no_soportado: 'il disco o il suo controller non li supporta',
+          no_leidos: 'Windows non ha restituito valori',
+        },
+        prediccionSin: {
+          sin_acceso: 'richiede permessi di amministratore',
+          no_disponible: 'questo computer non la offre',
+        },
+        prediccionSinFallo: 'Nessun guasto previsto',
+        prediccionFallo: 'Guasto previsto',
+        horasValor: '{n} h',
+        criterios: {
+          titulo: 'Come viene deciso il verdetto?',
+          critico:
+            'Critico: Windows segnala lo stato Warning o Unhealthy oppure un guasto operativo, ci sono errori non corretti o il disco prevede un guasto.',
+          atencion:
+            'Attenzione: usura del {desgaste}% o superiore, temperatura oltre il massimo del produttore (in sua assenza, {ssd} °C o più su SSD e NVMe, {hdd} °C o più su HDD) oppure errori di lettura corretti in aumento rispetto alla lettura precedente.',
+          bien: 'Buono: stato Healthy e nessuna delle condizioni precedenti.',
+          noDisponible: 'Non disponibile: Windows non ha fornito dati sufficienti su quel disco.',
+        },
+        leidoAdmin: 'Dati letti con permessi di amministratore.',
+        requiereAdminAviso:
+          'Alcuni dati richiedono permessi di amministratore. Può leggerli con il pulsante qui sopra: Windows chiederà il suo permesso solo allora.',
+        nota: 'Questa lettura è indicativa e non garantisce nulla: un buon segnale non impedisce un guasto. Conservi copie di sicurezza di ciò che è importante.',
+        privacidad: 'I numeri di serie e gli identificatori univoci non vengono letti né mostrati.',
+      },
+      eventosDisco: {
+        titulo: 'Eventi del disco',
+        intro:
+          'Voci del registro System di Windows relative ai dischi negli ultimi {dias} giorni. Sola lettura.',
+        actualizar: 'Aggiorna gli eventi',
+        copiar: 'Copia gli eventi',
+        copiado: 'Eventi copiati',
+        vacio: 'Non ci sono eventi del disco negli ultimi {dias} giorni.',
+        sinDisco: 'Disco non indicato',
+        disco: 'Disco {n}',
+        unidad: 'Unità {u}',
+        gravedad: {
+          info: 'Informativo',
+          aviso: 'Avviso',
+          critico: 'Critico',
+        },
+        explicaciones: {
+          disco_7: 'Il disco ha un blocco difettoso.',
+          disco_11: 'Il controller ha rilevato un errore sul disco.',
+          disco_51: 'Si è verificato un errore sul disco durante un’operazione di paging.',
+          disco_52: 'Il disco prevede che si guasterà.',
+          disco_55: 'È stata rilevata una corruzione nel file system di un’unità.',
+          disco_129: 'Windows ha dovuto reimpostare il controller del disco perché non rispondeva.',
+          disco_153: 'Un’operazione del disco è fallita ed è stata ritentata.',
+          disco_157: 'Il disco è stato scollegato in modo imprevisto.',
+        },
+        tope: 'Vengono mostrati al massimo {n} eventi.',
+        cabeceraCopia: 'Eventi del disco (ultimi {dias} giorni)',
+      },
       equipo: {
         titulo: 'Il mio computer',
         copiarResumen: 'Copia riepilogo',
@@ -1247,7 +1368,18 @@ export const itExtra: TextosParciales = {
     },
   },
   doctor: {
+    revisiones: {
+      discos: 'Stato di salute dei dischi',
+    },
     evidencias: {
+      disco_modelo: '{modelo} (disco {numero})',
+      disco_estado: 'Windows segnala lo stato {estado}.',
+      disco_operacional: 'Stato operativo: {estado}.',
+      disco_errores: 'Errori non corretti: {lectura} in lettura e {escritura} in scrittura.',
+      disco_prediccion: 'Il disco prevede un guasto (SMART).',
+      disco_desgaste: 'Usura del {desgaste}% (soglia: {umbral}%).',
+      disco_temperatura: 'Temperatura di {temperatura} °C (limite: {limite} °C).',
+      disco_corregidos: 'Gli errori di lettura corretti sono aumentati ({cantidad} in totale).',
       texto: '{texto}',
       puerto_dueno: 'Porta {puerto}: {proceso} (PID {pid})',
       puerto_dueno_exe: 'Porta {puerto}: {proceso} (PID {pid}) — {ejecutable}',

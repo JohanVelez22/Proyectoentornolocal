@@ -18,6 +18,12 @@ export const zhExtra: TextosParciales = {
   acciones: { copiarCompleto: '复制全文' },
   errores: {
     codigos: {
+      'discos.sin_lectura': '无法读取磁盘健康状况。请重试。',
+      'discos.sin_eventos': '无法读取磁盘事件。',
+      'discos.admin_cancelado': '管理员权限已取消：未读取任何内容。',
+      'discos.admin_fallo': '无法以管理员权限读取磁盘健康状况。',
+      'doctor.disco_atencion': '磁盘 {modelo} 需要注意。',
+      'doctor.disco_critico': '磁盘 {modelo} 处于严重状态：请尽快进行备份。',
       'servicios.no_encendio': '{nombre} 未能启动。请查看“服务”及其日志。',
       'tuneles.sitio_no_confiable':
         '{dominio} 尚未受信任：发布前，请先在项目中勾选“我信任此仓库”。',
@@ -406,8 +412,117 @@ export const zhExtra: TextosParciales = {
       formatoGuardado: '格式已保存。',
     },
   },
+  ajustes: {
+    avisos: {
+      tipos: {
+        'salud-disco': '磁盘健康状况提醒',
+      },
+    },
+  },
+  avisos: {
+    hacerRespaldo: '立即备份',
+  },
   herramientas: {
     entorno: {
+      discos: {
+        titulo: '磁盘健康状况',
+        intro:
+          '按 Windows 报告显示每个磁盘的状态，无需安装任何内容。只读：不会更改磁盘上的任何内容。',
+        actualizar: '刷新',
+        leerAdmin: '以管理员权限读取',
+        leerAdminAyuda:
+          '仅在您点击此按钮时，Windows 才会请求您的许可（UAC）。它只读取数据，绝不会自行执行。',
+        sinDiscos: 'Windows 未报告任何物理磁盘。',
+        numeroDisco: '磁盘 {n}',
+        unidades: '驱动器：{u}',
+        sinUnidades: '无驱动器号',
+        datosWolf: 'WolfCore Dev 数据',
+        proyectos: '项目',
+        tipoDesconocido: '未注明类型',
+        veredictos: {
+          bien: '良好',
+          atencion: '注意',
+          critico: '严重',
+          no_disponible: '不可用',
+        },
+        motivos: {
+          estado_warning: 'Windows 报告状态为“Warning”（警告）。',
+          estado_unhealthy: 'Windows 报告状态为“Unhealthy”（有故障）。',
+          estado_operacional: '运行状态表明存在故障（{estado}）。',
+          errores_sin_corregir: '存在未纠正的错误（读取：{lectura}，写入：{escritura}）。',
+          prediccion_fallo: '磁盘预测将发生故障（SMART）。',
+          desgaste: '磨损达 {desgaste}%（阈值：{umbral}%）。',
+          temperatura: '温度为 {temperatura} °C（上限：{limite} °C）。',
+          errores_corregidos_suben: '已纠正的读取错误比上一次读取有所增加（共 {cantidad} 个）。',
+        },
+        contadores: {
+          temperatura: '温度',
+          desgaste: '磨损',
+          lecturaCorregidos: '已纠正的读取错误',
+          lecturaNoCorregidos: '未纠正的读取错误',
+          escrituraCorregidos: '已纠正的写入错误',
+          escrituraNoCorregidos: '未纠正的写入错误',
+          horas: '通电时间',
+          prediccion: '故障预测',
+        },
+        noDisponible: '不可用',
+        noDisponibleMotivo: '不可用（{motivo}）',
+        motivoSin: {
+          admin: '需要管理员权限',
+          bus: '这种连接方式（USB 或 RAID）不提供计数器',
+          no_soportado: '磁盘或其控制器不支持',
+          no_leidos: 'Windows 未返回任何值',
+        },
+        prediccionSin: {
+          sin_acceso: '需要管理员权限',
+          no_disponible: '此计算机不提供该功能',
+        },
+        prediccionSinFallo: '预计无故障',
+        prediccionFallo: '预计将发生故障',
+        horasValor: '{n} 小时',
+        criterios: {
+          titulo: '评定结果是如何确定的？',
+          critico:
+            '严重：Windows 报告 Warning 或 Unhealthy 状态或运行故障、存在未纠正的错误，或磁盘预测将发生故障。',
+          atencion:
+            '注意：磨损达 {desgaste}% 或更高；温度高于制造商给出的最高值（若未给出，则 SSD 和 NVMe 为 {ssd} °C 及以上，机械硬盘为 {hdd} °C 及以上）；或已纠正的读取错误比上一次读取有所增加。',
+          bien: '良好：状态为 Healthy，且不存在上述任何情况。',
+          noDisponible: '不可用：Windows 未提供该磁盘的足够数据。',
+        },
+        leidoAdmin: '数据已以管理员权限读取。',
+        requiereAdminAviso:
+          '部分数据需要管理员权限。您可以使用上方的按钮读取：届时 Windows 才会请求您的许可。',
+        nota: '此读数仅供参考，并不保证什么：良好的迹象并不能避免故障。请为重要内容保留备份。',
+        privacidad: '不会读取或显示序列号和唯一标识符。',
+      },
+      eventosDisco: {
+        titulo: '磁盘事件',
+        intro: 'Windows System 日志中最近 {dias} 天与磁盘有关的记录。只读。',
+        actualizar: '刷新事件',
+        copiar: '复制事件',
+        copiado: '事件已复制',
+        vacio: '最近 {dias} 天没有磁盘事件。',
+        sinDisco: '未注明磁盘',
+        disco: '磁盘 {n}',
+        unidad: '驱动器 {u}',
+        gravedad: {
+          info: '信息',
+          aviso: '警告',
+          critico: '严重',
+        },
+        explicaciones: {
+          disco_7: '磁盘有坏块。',
+          disco_11: '控制器检测到磁盘错误。',
+          disco_51: '磁盘在分页操作期间出错。',
+          disco_52: '磁盘预测即将发生故障。',
+          disco_55: '在某个驱动器的文件系统中检测到损坏。',
+          disco_129: '磁盘控制器没有响应，Windows 不得不将其重置。',
+          disco_153: '磁盘操作失败并已重试。',
+          disco_157: '磁盘被意外断开。',
+        },
+        tope: '最多显示 {n} 个事件。',
+        cabeceraCopia: '磁盘事件（最近 {dias} 天）',
+      },
       equipo: {
         titulo: '我的电脑',
         copiarResumen: '复制摘要',
@@ -1052,7 +1167,18 @@ export const zhExtra: TextosParciales = {
     imagenes: { nombreCaptura: '屏幕截图' },
   },
   doctor: {
+    revisiones: {
+      discos: '磁盘健康状况',
+    },
     evidencias: {
+      disco_modelo: '{modelo}（磁盘 {numero}）',
+      disco_estado: 'Windows 报告状态为 {estado}。',
+      disco_operacional: '运行状态：{estado}。',
+      disco_errores: '未纠正的错误：读取 {lectura} 个，写入 {escritura} 个。',
+      disco_prediccion: '磁盘预测将发生故障（SMART）。',
+      disco_desgaste: '磨损达 {desgaste}%（阈值：{umbral}%）。',
+      disco_temperatura: '温度为 {temperatura} °C（上限：{limite} °C）。',
+      disco_corregidos: '已纠正的读取错误有所增加（共 {cantidad} 个）。',
       texto: '{texto}',
       puerto_dueno: '端口 {puerto}：{proceso}（PID {pid}）',
       puerto_dueno_exe: '端口 {puerto}：{proceso}（PID {pid}）— {ejecutable}',

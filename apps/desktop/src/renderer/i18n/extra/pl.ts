@@ -29,6 +29,14 @@ export const plExtra: TextosParciales = {
   },
   errores: {
     codigos: {
+      'discos.sin_lectura': 'Nie udało się odczytać kondycji dysków. Proszę spróbować ponownie.',
+      'discos.sin_eventos': 'Nie udało się odczytać zdarzeń dysku.',
+      'discos.admin_cancelado': 'Anulowano zgodę administratora: nic nie odczytano.',
+      'discos.admin_fallo':
+        'Nie udało się odczytać kondycji dysków z uprawnieniami administratora.',
+      'doctor.disco_atencion': 'Dysk {modelo} wymaga uwagi.',
+      'doctor.disco_critico':
+        'Dysk {modelo} jest w stanie krytycznym: proszę jak najszybciej wykonać kopię zapasową.',
       'servicios.no_encendio':
         'Nie udało się uruchomić: {nombre}. Należy sprawdzić Usługi i ich dzienniki.',
       'tuneles.sitio_no_confiable':
@@ -508,8 +516,120 @@ export const plExtra: TextosParciales = {
       formatoGuardado: 'Format zapisany.',
     },
   },
+  ajustes: {
+    avisos: {
+      tipos: {
+        'salud-disco': 'Powiadomienia o kondycji dysku',
+      },
+    },
+  },
+  avisos: {
+    hacerRespaldo: 'Wykonaj kopię zapasową teraz',
+  },
   herramientas: {
     entorno: {
+      discos: {
+        titulo: 'Kondycja dysków',
+        intro:
+          'Stan każdego dysku według systemu Windows, bez instalowania czegokolwiek. Tylko odczyt: na dyskach nic nie jest zmieniane.',
+        actualizar: 'Odśwież',
+        leerAdmin: 'Odczytaj z uprawnieniami administratora',
+        leerAdminAyuda:
+          'System Windows poprosi o Pana/Pani zgodę (UAC) tylko po naciśnięciu tego przycisku. Odczytuje wyłącznie dane i nigdy nie uruchamia się samoczynnie.',
+        sinDiscos: 'System Windows nie zgłosił żadnego dysku fizycznego.',
+        numeroDisco: 'Dysk {n}',
+        unidades: 'Dyski logiczne: {u}',
+        sinUnidades: 'Bez litery dysku',
+        datosWolf: 'Dane WolfCore Dev',
+        proyectos: 'Projekty',
+        tipoDesconocido: 'Typ nieznany',
+        veredictos: {
+          bien: 'Dobry',
+          atencion: 'Uwaga',
+          critico: 'Krytyczny',
+          no_disponible: 'Niedostępne',
+        },
+        motivos: {
+          estado_warning: 'System Windows zgłasza stan „Warning” (ostrzeżenie).',
+          estado_unhealthy: 'System Windows zgłasza stan „Unhealthy” (uszkodzony).',
+          estado_operacional: 'Stan operacyjny wskazuje na awarię ({estado}).',
+          errores_sin_corregir: 'Są nieskorygowane błędy (odczyt: {lectura}, zapis: {escritura}).',
+          prediccion_fallo: 'Dysk przewiduje awarię (SMART).',
+          desgaste: 'Zużycie {desgaste}% (próg: {umbral}%).',
+          temperatura: 'Temperatura {temperatura} °C (limit: {limite} °C).',
+          errores_corregidos_suben:
+            'Skorygowane błędy odczytu wzrosły względem poprzedniego odczytu (łącznie {cantidad}).',
+        },
+        contadores: {
+          temperatura: 'Temperatura',
+          desgaste: 'Zużycie',
+          lecturaCorregidos: 'Skorygowane błędy odczytu',
+          lecturaNoCorregidos: 'Nieskorygowane błędy odczytu',
+          escrituraCorregidos: 'Skorygowane błędy zapisu',
+          escrituraNoCorregidos: 'Nieskorygowane błędy zapisu',
+          horas: 'Godziny pracy',
+          prediccion: 'Przewidywanie awarii',
+        },
+        noDisponible: 'Niedostępne',
+        noDisponibleMotivo: 'Niedostępne ({motivo})',
+        motivoSin: {
+          admin: 'wymaga uprawnień administratora',
+          bus: 'ten rodzaj połączenia (USB lub RAID) nie udostępnia liczników',
+          no_soportado: 'dysk lub jego kontroler ich nie obsługuje',
+          no_leidos: 'system Windows nie zwrócił wartości',
+        },
+        prediccionSin: {
+          sin_acceso: 'wymaga uprawnień administratora',
+          no_disponible: 'ten komputer jej nie oferuje',
+        },
+        prediccionSinFallo: 'Awaria nie jest przewidywana',
+        prediccionFallo: 'Przewidywana awaria',
+        horasValor: '{n} godz.',
+        criterios: {
+          titulo: 'Jak ustalana jest ocena?',
+          critico:
+            'Krytyczny: system Windows zgłasza stan Warning lub Unhealthy albo awarię operacyjną, są nieskorygowane błędy lub dysk przewiduje awarię.',
+          atencion:
+            'Uwaga: zużycie od {desgaste}%, temperatura powyżej maksimum podanego przez producenta (bez niego od {ssd} °C w dyskach SSD i NVMe lub od {hdd} °C w dyskach HDD) albo skorygowane błędy odczytu rosnące względem poprzedniego odczytu.',
+          bien: 'Dobry: stan Healthy i żadna z powyższych sytuacji.',
+          noDisponible: 'Niedostępne: system Windows nie podał wystarczających danych o tym dysku.',
+        },
+        leidoAdmin: 'Dane odczytano z uprawnieniami administratora.',
+        requiereAdminAviso:
+          'Niektóre dane wymagają uprawnień administratora. Może Pan/Pani je odczytać przyciskiem powyżej: system Windows poprosi o zgodę dopiero wtedy.',
+        nota: 'Ten odczyt ma charakter orientacyjny i niczego nie gwarantuje: dobry wynik nie zapobiega awarii. Proszę przechowywać kopie zapasowe ważnych danych.',
+        privacidad:
+          'Numery seryjne ani unikalne identyfikatory nie są odczytywane ani wyświetlane.',
+      },
+      eventosDisco: {
+        titulo: 'Zdarzenia dysku',
+        intro:
+          'Wpisy dziennika System systemu Windows dotyczące dysków z ostatnich {dias} dni. Tylko odczyt.',
+        actualizar: 'Odśwież zdarzenia',
+        copiar: 'Kopiuj zdarzenia',
+        copiado: 'Skopiowano zdarzenia',
+        vacio: 'W ciągu ostatnich {dias} dni nie było zdarzeń dysku.',
+        sinDisco: 'Dysk nie został wskazany',
+        disco: 'Dysk {n}',
+        unidad: 'Dysk logiczny {u}',
+        gravedad: {
+          info: 'Informacja',
+          aviso: 'Ostrzeżenie',
+          critico: 'Krytyczny',
+        },
+        explicaciones: {
+          disco_7: 'Dysk ma uszkodzony blok.',
+          disco_11: 'Kontroler wykrył błąd dysku.',
+          disco_51: 'Wystąpił błąd dysku podczas operacji stronicowania.',
+          disco_52: 'Dysk przewiduje, że ulegnie awarii.',
+          disco_55: 'Wykryto uszkodzenie systemu plików dysku logicznego.',
+          disco_129: 'System Windows musiał zresetować kontroler dysku, ponieważ nie odpowiadał.',
+          disco_153: 'Operacja na dysku nie powiodła się i została ponowiona.',
+          disco_157: 'Dysk został nieoczekiwanie odłączony.',
+        },
+        tope: 'Wyświetlanych jest najwyżej {n} zdarzeń.',
+        cabeceraCopia: 'Zdarzenia dysku (ostatnie {dias} dni)',
+      },
       equipo: {
         titulo: 'Ten komputer',
         copiarResumen: 'Kopiuj podsumowanie',
@@ -1245,7 +1365,18 @@ export const plExtra: TextosParciales = {
     },
   },
   doctor: {
+    revisiones: {
+      discos: 'Kondycja dysków',
+    },
     evidencias: {
+      disco_modelo: '{modelo} (dysk {numero})',
+      disco_estado: 'System Windows zgłasza stan {estado}.',
+      disco_operacional: 'Stan operacyjny: {estado}.',
+      disco_errores: 'Nieskorygowane błędy: {lectura} odczytu i {escritura} zapisu.',
+      disco_prediccion: 'Dysk przewiduje awarię (SMART).',
+      disco_desgaste: 'Zużycie {desgaste}% (próg: {umbral}%).',
+      disco_temperatura: 'Temperatura {temperatura} °C (limit: {limite} °C).',
+      disco_corregidos: 'Skorygowane błędy odczytu wzrosły (łącznie {cantidad}).',
       texto: '{texto}',
       puerto_dueno: 'Port {puerto}: {proceso} (PID {pid})',
       puerto_dueno_exe: 'Port {puerto}: {proceso} (PID {pid}) — {ejecutable}',

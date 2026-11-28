@@ -25,6 +25,15 @@ export const nlExtra: TextosParciales = {
   },
   errores: {
     codigos: {
+      'discos.sin_lectura':
+        'De gezondheid van de schijven kon niet worden gelezen. Probeer het opnieuw.',
+      'discos.sin_eventos': 'De schijfgebeurtenissen konden niet worden gelezen.',
+      'discos.admin_cancelado': 'De beheerderstoestemming is geannuleerd: er is niets gelezen.',
+      'discos.admin_fallo':
+        'De gezondheid van de schijven kon niet met beheerdersrechten worden gelezen.',
+      'doctor.disco_atencion': 'De schijf {modelo} heeft aandacht nodig.',
+      'doctor.disco_critico':
+        'De schijf {modelo} verkeert in een kritieke staat: maak zo snel mogelijk een back-up.',
       'servicios.no_encendio':
         '{nombre} kon niet worden gestart. Controleer Diensten en de bijbehorende logboeken.',
       'tuneles.sitio_no_confiable':
@@ -518,8 +527,120 @@ export const nlExtra: TextosParciales = {
       formatoGuardado: 'Indeling opgeslagen.',
     },
   },
+  ajustes: {
+    avisos: {
+      tipos: {
+        'salud-disco': 'Meldingen over de schijfgezondheid',
+      },
+    },
+  },
+  avisos: {
+    hacerRespaldo: 'Nu een back-up maken',
+  },
   herramientas: {
     entorno: {
+      discos: {
+        titulo: 'Gezondheid van de schijven',
+        intro:
+          'De status van elke schijf volgens Windows, zonder iets te installeren. Alleen lezen: er wordt niets op de schijven gewijzigd.',
+        actualizar: 'Vernieuwen',
+        leerAdmin: 'Lezen met beheerdersrechten',
+        leerAdminAyuda:
+          'Windows vraagt uw toestemming (UAC) alleen wanneer u op deze knop drukt. Er worden alleen gegevens gelezen en het gebeurt nooit uit zichzelf.',
+        sinDiscos: 'Windows heeft geen enkele fysieke schijf gemeld.',
+        numeroDisco: 'Schijf {n}',
+        unidades: 'Stations: {u}',
+        sinUnidades: 'Zonder stationsletter',
+        datosWolf: 'Gegevens van WolfCore Dev',
+        proyectos: 'Projecten',
+        tipoDesconocido: 'Type niet opgegeven',
+        veredictos: {
+          bien: 'Goed',
+          atencion: 'Aandacht',
+          critico: 'Kritiek',
+          no_disponible: 'Niet beschikbaar',
+        },
+        motivos: {
+          estado_warning: 'Windows meldt de status “Warning” (waarschuwing).',
+          estado_unhealthy: 'Windows meldt de status “Unhealthy” (defect).',
+          estado_operacional: 'De operationele status wijst op een storing ({estado}).',
+          errores_sin_corregir:
+            'Er zijn niet-gecorrigeerde fouten (lezen: {lectura}, schrijven: {escritura}).',
+          prediccion_fallo: 'De schijf voorspelt een storing (SMART).',
+          desgaste: 'Slijtage van {desgaste}% (drempel: {umbral}%).',
+          temperatura: 'Temperatuur van {temperatura} °C (limiet: {limite} °C).',
+          errores_corregidos_suben:
+            'Gecorrigeerde leesfouten zijn toegenomen ten opzichte van de vorige meting (in totaal {cantidad}).',
+        },
+        contadores: {
+          temperatura: 'Temperatuur',
+          desgaste: 'Slijtage',
+          lecturaCorregidos: 'Gecorrigeerde leesfouten',
+          lecturaNoCorregidos: 'Niet-gecorrigeerde leesfouten',
+          escrituraCorregidos: 'Gecorrigeerde schrijffouten',
+          escrituraNoCorregidos: 'Niet-gecorrigeerde schrijffouten',
+          horas: 'Draaiuren',
+          prediccion: 'Storingsvoorspelling',
+        },
+        noDisponible: 'Niet beschikbaar',
+        noDisponibleMotivo: 'Niet beschikbaar ({motivo})',
+        motivoSin: {
+          admin: 'vereist beheerdersrechten',
+          bus: 'dit type verbinding (USB of RAID) biedt geen tellers',
+          no_soportado: 'de schijf of de controller ondersteunt ze niet',
+          no_leidos: 'Windows gaf geen waarden terug',
+        },
+        prediccionSin: {
+          sin_acceso: 'vereist beheerdersrechten',
+          no_disponible: 'deze computer biedt het niet aan',
+        },
+        prediccionSinFallo: 'Geen storing verwacht',
+        prediccionFallo: 'Storing verwacht',
+        horasValor: '{n} u',
+        criterios: {
+          titulo: 'Hoe wordt het oordeel bepaald?',
+          critico:
+            'Kritiek: Windows meldt de status Warning of Unhealthy of een operationele storing, er zijn niet-gecorrigeerde fouten of de schijf voorspelt een storing.',
+          atencion:
+            'Aandacht: slijtage van {desgaste}% of meer, een temperatuur boven het maximum van de fabrikant (zonder dat maximum {ssd} °C of meer bij SSD en NVMe, {hdd} °C of meer bij HDD) of gecorrigeerde leesfouten die toenemen ten opzichte van de vorige meting.',
+          bien: 'Goed: status Healthy en niets van het bovenstaande.',
+          noDisponible: 'Niet beschikbaar: Windows gaf onvoldoende gegevens over die schijf.',
+        },
+        leidoAdmin: 'Gegevens gelezen met beheerdersrechten.',
+        requiereAdminAviso:
+          'Sommige gegevens vereisen beheerdersrechten. U kunt ze lezen met de knop hierboven: Windows vraagt pas dan om uw toestemming.',
+        nota: 'Deze meting is een richtlijn en geen garantie: een goed teken voorkomt geen storing. Bewaar back-ups van wat belangrijk is.',
+        privacidad: 'Serienummers en unieke id’s worden niet gelezen en niet getoond.',
+      },
+      eventosDisco: {
+        titulo: 'Schijfgebeurtenissen',
+        intro:
+          'Vermeldingen uit het Windows-systeemlogboek over de schijven in de afgelopen {dias} dagen. Alleen lezen.',
+        actualizar: 'Gebeurtenissen vernieuwen',
+        copiar: 'Gebeurtenissen kopiëren',
+        copiado: 'Gebeurtenissen gekopieerd',
+        vacio: 'Er zijn geen schijfgebeurtenissen in de afgelopen {dias} dagen.',
+        sinDisco: 'Schijf niet opgegeven',
+        disco: 'Schijf {n}',
+        unidad: 'Station {u}',
+        gravedad: {
+          info: 'Informatie',
+          aviso: 'Waarschuwing',
+          critico: 'Kritiek',
+        },
+        explicaciones: {
+          disco_7: 'De schijf heeft een slecht blok.',
+          disco_11: 'De controller heeft een fout op de schijf gedetecteerd.',
+          disco_51: 'Er is een fout op de schijf opgetreden tijdens een pagineringsbewerking.',
+          disco_52: 'De schijf voorspelt dat hij zal uitvallen.',
+          disco_55: 'In het bestandssysteem van een station is beschadiging gedetecteerd.',
+          disco_129: 'Windows moest de schijfcontroller resetten omdat hij niet reageerde.',
+          disco_153: 'Een schijfbewerking is mislukt en opnieuw geprobeerd.',
+          disco_157: 'De schijf is onverwacht losgekoppeld.',
+        },
+        tope: 'Er worden maximaal {n} gebeurtenissen getoond.',
+        cabeceraCopia: 'Schijfgebeurtenissen (laatste {dias} dagen)',
+      },
       equipo: {
         titulo: 'Mijn computer',
         copiarResumen: 'Samenvatting kopiëren',
@@ -1255,7 +1376,18 @@ export const nlExtra: TextosParciales = {
     },
   },
   doctor: {
+    revisiones: {
+      discos: 'Gezondheid van de schijven',
+    },
     evidencias: {
+      disco_modelo: '{modelo} (schijf {numero})',
+      disco_estado: 'Windows meldt de status {estado}.',
+      disco_operacional: 'Operationele status: {estado}.',
+      disco_errores: 'Niet-gecorrigeerde fouten: {lectura} bij lezen en {escritura} bij schrijven.',
+      disco_prediccion: 'De schijf voorspelt een storing (SMART).',
+      disco_desgaste: 'Slijtage van {desgaste}% (drempel: {umbral}%).',
+      disco_temperatura: 'Temperatuur van {temperatura} °C (limiet: {limite} °C).',
+      disco_corregidos: 'Gecorrigeerde leesfouten zijn toegenomen (in totaal {cantidad}).',
       texto: '{texto}',
       puerto_dueno: 'Poort {puerto}: {proceso} (PID {pid})',
       puerto_dueno_exe: 'Poort {puerto}: {proceso} (PID {pid}) — {ejecutable}',

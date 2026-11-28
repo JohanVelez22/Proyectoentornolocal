@@ -29,6 +29,13 @@ export const ruExtra: TextosParciales = {
   },
   errores: {
     codigos: {
+      'discos.sin_lectura': 'Не удалось прочитать состояние дисков. Повторите попытку.',
+      'discos.sin_eventos': 'Не удалось прочитать события диска.',
+      'discos.admin_cancelado': 'Разрешение администратора отменено: ничего не прочитано.',
+      'discos.admin_fallo': 'Не удалось прочитать состояние дисков с правами администратора.',
+      'doctor.disco_atencion': 'Диск {modelo} требует внимания.',
+      'doctor.disco_critico':
+        'Диск {modelo} в критическом состоянии: как можно скорее сделайте резервную копию.',
       'servicios.no_encendio':
         '{nombre} не удалось запустить. Проверьте раздел «Службы» и журналы службы.',
       'tuneles.sitio_no_confiable':
@@ -500,8 +507,119 @@ export const ruExtra: TextosParciales = {
       formatoGuardado: 'Формат сохранён.',
     },
   },
+  ajustes: {
+    avisos: {
+      tipos: {
+        'salud-disco': 'Уведомления о состоянии диска',
+      },
+    },
+  },
+  avisos: {
+    hacerRespaldo: 'Сделать резервную копию',
+  },
   herramientas: {
     entorno: {
+      discos: {
+        titulo: 'Состояние дисков',
+        intro:
+          'Состояние каждого диска по данным Windows, без установки чего-либо. Только чтение: на дисках ничего не изменяется.',
+        actualizar: 'Обновить',
+        leerAdmin: 'Прочитать с правами администратора',
+        leerAdminAyuda:
+          'Windows запросит ваше разрешение (UAC) только при нажатии этой кнопки. Читаются только данные, и это никогда не происходит само.',
+        sinDiscos: 'Windows не сообщила ни об одном физическом диске.',
+        numeroDisco: 'Диск {n}',
+        unidades: 'Тома: {u}',
+        sinUnidades: 'Без буквы тома',
+        datosWolf: 'Данные WolfCore Dev',
+        proyectos: 'Проекты',
+        tipoDesconocido: 'Тип не указан',
+        veredictos: {
+          bien: 'Хорошо',
+          atencion: 'Внимание',
+          critico: 'Критично',
+          no_disponible: 'Недоступно',
+        },
+        motivos: {
+          estado_warning: 'Windows сообщает состояние «Warning» (предупреждение).',
+          estado_unhealthy: 'Windows сообщает состояние «Unhealthy» (неисправен).',
+          estado_operacional: 'Рабочее состояние указывает на сбой ({estado}).',
+          errores_sin_corregir:
+            'Есть неисправленные ошибки (чтение: {lectura}, запись: {escritura}).',
+          prediccion_fallo: 'Диск предсказывает сбой (SMART).',
+          desgaste: 'Износ {desgaste} % (порог: {umbral} %).',
+          temperatura: 'Температура {temperatura} °C (предел: {limite} °C).',
+          errores_corregidos_suben:
+            'Число исправленных ошибок чтения выросло с предыдущего считывания (всего {cantidad}).',
+        },
+        contadores: {
+          temperatura: 'Температура',
+          desgaste: 'Износ',
+          lecturaCorregidos: 'Исправленные ошибки чтения',
+          lecturaNoCorregidos: 'Неисправленные ошибки чтения',
+          escrituraCorregidos: 'Исправленные ошибки записи',
+          escrituraNoCorregidos: 'Неисправленные ошибки записи',
+          horas: 'Часы работы',
+          prediccion: 'Прогноз сбоя',
+        },
+        noDisponible: 'Недоступно',
+        noDisponibleMotivo: 'Недоступно ({motivo})',
+        motivoSin: {
+          admin: 'требуются права администратора',
+          bus: 'этот тип подключения (USB или RAID) не предоставляет счётчики',
+          no_soportado: 'диск или его контроллер их не поддерживает',
+          no_leidos: 'Windows не вернула значений',
+        },
+        prediccionSin: {
+          sin_acceso: 'требуются права администратора',
+          no_disponible: 'этот компьютер её не предоставляет',
+        },
+        prediccionSinFallo: 'Сбой не ожидается',
+        prediccionFallo: 'Ожидается сбой',
+        horasValor: '{n} ч',
+        criterios: {
+          titulo: 'Как определяется оценка?',
+          critico:
+            'Критично: Windows сообщает состояние Warning или Unhealthy либо рабочий сбой, есть неисправленные ошибки или диск предсказывает сбой.',
+          atencion:
+            'Внимание: износ {desgaste} % и выше, температура выше максимума производителя (если он не указан, {ssd} °C и выше у SSD и NVMe, {hdd} °C и выше у жёстких дисков) или рост исправленных ошибок чтения по сравнению с предыдущим считыванием.',
+          bien: 'Хорошо: состояние Healthy и ничего из перечисленного выше.',
+          noDisponible: 'Недоступно: Windows не предоставила достаточно данных об этом диске.',
+        },
+        leidoAdmin: 'Данные прочитаны с правами администратора.',
+        requiereAdminAviso:
+          'Для некоторых данных требуются права администратора. Вы можете прочитать их кнопкой выше: Windows запросит разрешение только тогда.',
+        nota: 'Это считывание — ориентир, а не гарантия: хороший признак не исключает сбоя. Храните резервные копии важного.',
+        privacidad: 'Серийные номера и уникальные идентификаторы не считываются и не показываются.',
+      },
+      eventosDisco: {
+        titulo: 'События диска',
+        intro: 'Записи журнала System Windows о дисках за последние {dias} дн. Только чтение.',
+        actualizar: 'Обновить события',
+        copiar: 'Копировать события',
+        copiado: 'События скопированы',
+        vacio: 'За последние {dias} дн. событий диска нет.',
+        sinDisco: 'Диск не указан',
+        disco: 'Диск {n}',
+        unidad: 'Том {u}',
+        gravedad: {
+          info: 'Сведения',
+          aviso: 'Предупреждение',
+          critico: 'Критично',
+        },
+        explicaciones: {
+          disco_7: 'На диске есть повреждённый блок.',
+          disco_11: 'Контроллер обнаружил ошибку на диске.',
+          disco_51: 'На диске произошла ошибка во время операции подкачки.',
+          disco_52: 'Диск предсказывает, что скоро выйдет из строя.',
+          disco_55: 'Обнаружено повреждение файловой системы тома.',
+          disco_129: 'Windows пришлось сбросить контроллер диска, так как он не отвечал.',
+          disco_153: 'Операция с диском завершилась неудачей и была повторена.',
+          disco_157: 'Диск был неожиданно отключён.',
+        },
+        tope: 'Показывается не более {n} событий.',
+        cabeceraCopia: 'События диска (последние {dias} дн.)',
+      },
       equipo: {
         titulo: 'Мой компьютер',
         copiarResumen: 'Скопировать сводку',
@@ -1236,7 +1354,18 @@ export const ruExtra: TextosParciales = {
     },
   },
   doctor: {
+    revisiones: {
+      discos: 'Состояние дисков',
+    },
     evidencias: {
+      disco_modelo: '{modelo} (диск {numero})',
+      disco_estado: 'Windows сообщает состояние {estado}.',
+      disco_operacional: 'Рабочее состояние: {estado}.',
+      disco_errores: 'Неисправленные ошибки: {lectura} при чтении и {escritura} при записи.',
+      disco_prediccion: 'Диск предсказывает сбой (SMART).',
+      disco_desgaste: 'Износ {desgaste} % (порог: {umbral} %).',
+      disco_temperatura: 'Температура {temperatura} °C (предел: {limite} °C).',
+      disco_corregidos: 'Число исправленных ошибок чтения выросло (всего {cantidad}).',
       texto: '{texto}',
       puerto_dueno: 'Порт {puerto}: {proceso} (PID {pid})',
       puerto_dueno_exe: 'Порт {puerto}: {proceso} (PID {pid}) — {ejecutable}',

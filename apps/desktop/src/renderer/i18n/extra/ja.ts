@@ -18,6 +18,13 @@ export const jaExtra: TextosParciales = {
   acciones: { copiarCompleto: '全文をコピー' },
   errores: {
     codigos: {
+      'discos.sin_lectura': 'ディスクの健全性を読み取れませんでした。もう一度お試しください。',
+      'discos.sin_eventos': 'ディスクのイベントを読み取れませんでした。',
+      'discos.admin_cancelado': '管理者の許可が取り消されました。何も読み取っていません。',
+      'discos.admin_fallo': '管理者権限でディスクの健全性を読み取れませんでした。',
+      'doctor.disco_atencion': 'ディスク {modelo} に注意が必要です。',
+      'doctor.disco_critico':
+        'ディスク {modelo} は危険な状態です。できるだけ早くバックアップを取ってください。',
       'servicios.no_encendio':
         '{nombre} を起動できませんでした。サービスとそのログを確認してください。',
       'tuneles.sitio_no_confiable':
@@ -479,8 +486,120 @@ export const jaExtra: TextosParciales = {
       formatoGuardado: '形式を保存しました。',
     },
   },
+  ajustes: {
+    avisos: {
+      tipos: {
+        'salud-disco': 'ディスクの健全性の通知',
+      },
+    },
+  },
+  avisos: {
+    hacerRespaldo: '今すぐバックアップ',
+  },
   herramientas: {
     entorno: {
+      discos: {
+        titulo: 'ディスクの健全性',
+        intro:
+          'Windows が報告する各ディスクの状態を、何もインストールせずに表示します。読み取り専用で、ディスクの内容は一切変更されません。',
+        actualizar: '更新',
+        leerAdmin: '管理者権限で読み取る',
+        leerAdminAyuda:
+          'このボタンを押したときにのみ、Windows が許可（UAC）を求めます。データを読み取るだけで、自動で実行されることはありません。',
+        sinDiscos: 'Windows は物理ディスクを報告しませんでした。',
+        numeroDisco: 'ディスク {n}',
+        unidades: 'ドライブ: {u}',
+        sinUnidades: 'ドライブ文字なし',
+        datosWolf: 'WolfCore Dev のデータ',
+        proyectos: 'プロジェクト',
+        tipoDesconocido: '種類は不明',
+        veredictos: {
+          bien: '良好',
+          atencion: '注意',
+          critico: '危険',
+          no_disponible: '取得不可',
+        },
+        motivos: {
+          estado_warning: 'Windows が「Warning」（警告）の状態を報告しています。',
+          estado_unhealthy: 'Windows が「Unhealthy」（異常）の状態を報告しています。',
+          estado_operacional: '動作状態が障害を示しています（{estado}）。',
+          errores_sin_corregir:
+            '訂正されていないエラーがあります（読み取り: {lectura}、書き込み: {escritura}）。',
+          prediccion_fallo: 'ディスクが故障を予測しています（SMART）。',
+          desgaste: '消耗度は {desgaste}% です（しきい値: {umbral}%）。',
+          temperatura: '温度は {temperatura} °C です（上限: {limite} °C）。',
+          errores_corregidos_suben:
+            '訂正済みの読み取りエラーが前回の読み取りより増えています（合計 {cantidad} 件）。',
+        },
+        contadores: {
+          temperatura: '温度',
+          desgaste: '消耗度',
+          lecturaCorregidos: '訂正済みの読み取りエラー',
+          lecturaNoCorregidos: '未訂正の読み取りエラー',
+          escrituraCorregidos: '訂正済みの書き込みエラー',
+          escrituraNoCorregidos: '未訂正の書き込みエラー',
+          horas: '通電時間',
+          prediccion: '故障の予測',
+        },
+        noDisponible: '取得不可',
+        noDisponibleMotivo: '取得不可（{motivo}）',
+        motivoSin: {
+          admin: '管理者権限が必要です',
+          bus: 'この接続方式（USB または RAID）ではカウンターを取得できません',
+          no_soportado: 'ディスクまたはそのコントローラーが対応していません',
+          no_leidos: 'Windows が値を返しませんでした',
+        },
+        prediccionSin: {
+          sin_acceso: '管理者権限が必要です',
+          no_disponible: 'このコンピューターでは提供されていません',
+        },
+        prediccionSinFallo: '故障の予測なし',
+        prediccionFallo: '故障が予測されています',
+        horasValor: '{n} 時間',
+        criterios: {
+          titulo: '判定はどのように決まりますか？',
+          critico:
+            '危険: Windows が Warning または Unhealthy の状態か動作上の障害を報告している、訂正されていないエラーがある、またはディスクが故障を予測している。',
+          atencion:
+            '注意: 消耗度が {desgaste}% 以上、温度がメーカーの最大値を超えている（最大値がない場合は SSD と NVMe で {ssd} °C 以上、HDD で {hdd} °C 以上）、または訂正済みの読み取りエラーが前回の読み取りより増えている。',
+          bien: '良好: 状態が Healthy で、上記のいずれにも当てはまらない。',
+          noDisponible: '取得不可: Windows がそのディスクの十分なデータを提供しなかった。',
+        },
+        leidoAdmin: '管理者権限でデータを読み取りました。',
+        requiereAdminAviso:
+          '一部のデータには管理者権限が必要です。上のボタンで読み取れます。そのときにのみ Windows が許可を求めます。',
+        nota: 'この結果は目安であり、保証ではありません。良好でも故障を防げるわけではありません。大切なデータはバックアップしてください。',
+        privacidad: 'シリアル番号や固有の識別子は読み取らず、表示もしません。',
+      },
+      eventosDisco: {
+        titulo: 'ディスクのイベント',
+        intro:
+          '過去 {dias} 日間の Windows の System ログにあるディスク関連の記録です。読み取り専用。',
+        actualizar: 'イベントを更新',
+        copiar: 'イベントをコピー',
+        copiado: 'イベントをコピーしました',
+        vacio: '過去 {dias} 日間にディスクのイベントはありません。',
+        sinDisco: 'ディスクは不明',
+        disco: 'ディスク {n}',
+        unidad: 'ドライブ {u}',
+        gravedad: {
+          info: '情報',
+          aviso: '警告',
+          critico: '危険',
+        },
+        explicaciones: {
+          disco_7: 'ディスクに不良ブロックがあります。',
+          disco_11: 'コントローラーがディスクのエラーを検出しました。',
+          disco_51: 'ページング処理中にディスクでエラーが発生しました。',
+          disco_52: 'ディスクが故障すると予測しています。',
+          disco_55: 'ドライブのファイルシステムで破損が検出されました。',
+          disco_129: 'ディスクのコントローラーが応答しなかったため、Windows がリセットしました。',
+          disco_153: 'ディスクの操作が失敗し、再試行されました。',
+          disco_157: 'ディスクが予期せず切断されました。',
+        },
+        tope: '表示するイベントは最大 {n} 件です。',
+        cabeceraCopia: 'ディスクのイベント（過去 {dias} 日間）',
+      },
       equipo: {
         titulo: 'お使いのコンピューター',
         copiarResumen: '概要をコピー',
@@ -1190,7 +1309,18 @@ export const jaExtra: TextosParciales = {
     imagenes: { nombreCaptura: 'スクリーンショット' },
   },
   doctor: {
+    revisiones: {
+      discos: 'ディスクの健全性',
+    },
     evidencias: {
+      disco_modelo: '{modelo}（ディスク {numero}）',
+      disco_estado: 'Windows が {estado} の状態を報告しています。',
+      disco_operacional: '動作状態: {estado}。',
+      disco_errores: '未訂正のエラー: 読み取り {lectura} 件、書き込み {escritura} 件。',
+      disco_prediccion: 'ディスクが故障を予測しています（SMART）。',
+      disco_desgaste: '消耗度は {desgaste}% です（しきい値: {umbral}%）。',
+      disco_temperatura: '温度は {temperatura} °C です（上限: {limite} °C）。',
+      disco_corregidos: '訂正済みの読み取りエラーが増えています（合計 {cantidad} 件）。',
       texto: '{texto}',
       puerto_dueno: 'ポート {puerto}: {proceso}（PID {pid}）',
       puerto_dueno_exe: 'ポート {puerto}: {proceso}（PID {pid}）— {ejecutable}',

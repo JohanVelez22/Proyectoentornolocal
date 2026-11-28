@@ -29,6 +29,13 @@ export const ukExtra: TextosParciales = {
   },
   errores: {
     codigos: {
+      'discos.sin_lectura': 'Не вдалося прочитати стан дисків. Спробуйте ще раз.',
+      'discos.sin_eventos': 'Не вдалося прочитати події диска.',
+      'discos.admin_cancelado': 'Дозвіл адміністратора скасовано: нічого не прочитано.',
+      'discos.admin_fallo': 'Не вдалося прочитати стан дисків із правами адміністратора.',
+      'doctor.disco_atencion': 'Диск {modelo} потребує уваги.',
+      'doctor.disco_critico':
+        'Диск {modelo} у критичному стані: якнайшвидше зробіть резервну копію.',
       'servicios.no_encendio':
         '{nombre} не вдалося запустити. Перевірте розділ «Служби» та журнали служби.',
       'tuneles.sitio_no_confiable':
@@ -502,8 +509,118 @@ export const ukExtra: TextosParciales = {
       formatoGuardado: 'Формат збережено.',
     },
   },
+  ajustes: {
+    avisos: {
+      tipos: {
+        'salud-disco': 'Сповіщення про стан диска',
+      },
+    },
+  },
+  avisos: {
+    hacerRespaldo: 'Зробити резервну копію',
+  },
   herramientas: {
     entorno: {
+      discos: {
+        titulo: 'Стан дисків',
+        intro:
+          'Стан кожного диска за даними Windows, без встановлення будь-чого. Лише читання: на дисках нічого не змінюється.',
+        actualizar: 'Оновити',
+        leerAdmin: 'Прочитати з правами адміністратора',
+        leerAdminAyuda:
+          'Windows запитає ваш дозвіл (UAC) лише після натискання цієї кнопки. Вона тільки читає дані й ніколи не виконується сама.',
+        sinDiscos: 'Windows не повідомила про жодний фізичний диск.',
+        numeroDisco: 'Диск {n}',
+        unidades: 'Томи: {u}',
+        sinUnidades: 'Без літери тому',
+        datosWolf: 'Дані WolfCore Dev',
+        proyectos: 'Проєкти',
+        tipoDesconocido: 'Тип не вказано',
+        veredictos: {
+          bien: 'Добре',
+          atencion: 'Увага',
+          critico: 'Критично',
+          no_disponible: 'Недоступно',
+        },
+        motivos: {
+          estado_warning: 'Windows повідомляє стан «Warning» (попередження).',
+          estado_unhealthy: 'Windows повідомляє стан «Unhealthy» (несправний).',
+          estado_operacional: 'Робочий стан указує на збій ({estado}).',
+          errores_sin_corregir: 'Є невиправлені помилки (читання: {lectura}, запису: {escritura}).',
+          prediccion_fallo: 'Диск прогнозує збій (SMART).',
+          desgaste: 'Знос {desgaste} % (поріг: {umbral} %).',
+          temperatura: 'Температура {temperatura} °C (межа: {limite} °C).',
+          errores_corregidos_suben:
+            'Кількість виправлених помилок читання зросла порівняно з попереднім зчитуванням (усього {cantidad}).',
+        },
+        contadores: {
+          temperatura: 'Температура',
+          desgaste: 'Знос',
+          lecturaCorregidos: 'Виправлені помилки читання',
+          lecturaNoCorregidos: 'Невиправлені помилки читання',
+          escrituraCorregidos: 'Виправлені помилки запису',
+          escrituraNoCorregidos: 'Невиправлені помилки запису',
+          horas: 'Години роботи',
+          prediccion: 'Прогноз збою',
+        },
+        noDisponible: 'Недоступно',
+        noDisponibleMotivo: 'Недоступно ({motivo})',
+        motivoSin: {
+          admin: 'потрібні права адміністратора',
+          bus: 'цей тип підключення (USB або RAID) не надає лічильників',
+          no_soportado: 'диск або його контролер їх не підтримує',
+          no_leidos: 'Windows не повернула значень',
+        },
+        prediccionSin: {
+          sin_acceso: 'потрібні права адміністратора',
+          no_disponible: 'цей комп’ютер її не надає',
+        },
+        prediccionSinFallo: 'Збій не очікується',
+        prediccionFallo: 'Очікується збій',
+        horasValor: '{n} год',
+        criterios: {
+          titulo: 'Як визначається оцінка?',
+          critico:
+            'Критично: Windows повідомляє стан Warning або Unhealthy чи робочий збій, є невиправлені помилки або диск прогнозує збій.',
+          atencion:
+            'Увага: знос {desgaste} % і вище, температура вище за максимум виробника (якщо його немає, {ssd} °C і вище для SSD та NVMe, {hdd} °C і вище для жорстких дисків) або зростання виправлених помилок читання порівняно з попереднім зчитуванням.',
+          bien: 'Добре: стан Healthy і нічого з наведеного вище.',
+          noDisponible: 'Недоступно: Windows не надала достатньо даних про цей диск.',
+        },
+        leidoAdmin: 'Дані прочитано з правами адміністратора.',
+        requiereAdminAviso:
+          'Для деяких даних потрібні права адміністратора. Ви можете прочитати їх кнопкою вище: Windows запитає дозвіл лише тоді.',
+        nota: 'Це зчитування — орієнтир, а не гарантія: добра ознака не виключає збою. Зберігайте резервні копії важливого.',
+        privacidad: 'Серійні номери та унікальні ідентифікатори не зчитуються і не показуються.',
+      },
+      eventosDisco: {
+        titulo: 'Події диска',
+        intro: 'Записи журналу System Windows про диски за останні {dias} дн. Лише читання.',
+        actualizar: 'Оновити події',
+        copiar: 'Копіювати події',
+        copiado: 'Події скопійовано',
+        vacio: 'За останні {dias} дн. подій диска немає.',
+        sinDisco: 'Диск не вказано',
+        disco: 'Диск {n}',
+        unidad: 'Том {u}',
+        gravedad: {
+          info: 'Відомості',
+          aviso: 'Попередження',
+          critico: 'Критично',
+        },
+        explicaciones: {
+          disco_7: 'На диску є пошкоджений блок.',
+          disco_11: 'Контролер виявив помилку на диску.',
+          disco_51: 'На диску сталася помилка під час операції підкачування.',
+          disco_52: 'Диск прогнозує, що вийде з ладу.',
+          disco_55: 'Виявлено пошкодження файлової системи тому.',
+          disco_129: 'Windows довелося скинути контролер диска, бо він не відповідав.',
+          disco_153: 'Операція з диском завершилася невдачею й була повторена.',
+          disco_157: 'Диск було несподівано відключено.',
+        },
+        tope: 'Показується щонайбільше {n} подій.',
+        cabeceraCopia: 'Події диска (останні {dias} дн.)',
+      },
       equipo: {
         titulo: 'Мій комп’ютер',
         copiarResumen: 'Копіювати зведення',
@@ -1235,7 +1352,18 @@ export const ukExtra: TextosParciales = {
     },
   },
   doctor: {
+    revisiones: {
+      discos: 'Стан дисків',
+    },
     evidencias: {
+      disco_modelo: '{modelo} (диск {numero})',
+      disco_estado: 'Windows повідомляє стан {estado}.',
+      disco_operacional: 'Робочий стан: {estado}.',
+      disco_errores: 'Невиправлені помилки: {lectura} читання та {escritura} запису.',
+      disco_prediccion: 'Диск прогнозує збій (SMART).',
+      disco_desgaste: 'Знос {desgaste} % (поріг: {umbral} %).',
+      disco_temperatura: 'Температура {temperatura} °C (межа: {limite} °C).',
+      disco_corregidos: 'Кількість виправлених помилок читання зросла (усього {cantidad}).',
       texto: '{texto}',
       puerto_dueno: 'Порт {puerto}: {proceso} (PID {pid})',
       puerto_dueno_exe: 'Порт {puerto}: {proceso} (PID {pid}) — {ejecutable}',

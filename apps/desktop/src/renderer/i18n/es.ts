@@ -750,6 +750,13 @@ export const es = {
         'El PATH del usuario tiene {cantidad} entradas repetidas de WolfCore Dev.',
       'doctor.path_ajeno_delante':
         'Otra carpeta con {programa} ({origen}) está antes que WolfCore Dev en el PATH: en las terminales se usará esa.',
+      'discos.sin_lectura': 'No se pudo leer la salud de los discos. Vuelva a intentarlo.',
+      'discos.sin_eventos': 'No se pudieron leer los eventos del disco.',
+      'discos.admin_cancelado': 'Se canceló el permiso de administrador: no se leyó nada.',
+      'discos.admin_fallo': 'No se pudo leer la salud de los discos con permisos de administrador.',
+      'doctor.disco_atencion': 'El disco {modelo} necesita atención.',
+      'doctor.disco_critico':
+        'El disco {modelo} está en estado crítico: haga un respaldo cuanto antes.',
       'doctor.vcredist_ausente':
         'Falta Microsoft Visual C++ 2015-2022 (x64): PHP y otros servicios no arrancan sin él.',
       'doctor.enlazador_msvc_ausente':
@@ -2141,6 +2148,7 @@ export const es = {
         'receta-terminada': 'Una receta de proyecto terminó',
         doctor: 'Diagnóstico (Doctor)',
         'contenedor-detenido': 'Un contenedor se detuvo',
+        'salud-disco': 'Avisos de salud del disco',
         'version-nueva': 'Hay una versión nueva de un servicio instalado',
       } as Record<string, string>,
       errorGuardar: 'No se pudieron guardar los avisos',
@@ -4057,6 +4065,108 @@ export const es = {
       imagenOmitida: (alt: string) => `[imagen${alt ? `: ${alt}` : ''}]`,
     },
     entorno: {
+      discos: {
+        titulo: 'Salud de los discos',
+        intro:
+          'Estado de cada disco según Windows, sin instalar nada. Solo lectura: no se cambia nada en los discos.',
+        actualizar: 'Actualizar',
+        leerAdmin: 'Leer con permisos de administrador',
+        leerAdminAyuda:
+          'Windows pedirá su permiso (UAC) solo al pulsar este botón. Solo lee datos y nunca se hace por su cuenta.',
+        sinDiscos: 'Windows no informó de ningún disco físico.',
+        numeroDisco: 'Disco {n}',
+        unidades: 'Unidades: {u}',
+        sinUnidades: 'Sin letra de unidad',
+        datosWolf: 'Datos de WolfCore Dev',
+        proyectos: 'Proyectos',
+        tipoDesconocido: 'Tipo no indicado',
+        veredictos: {
+          bien: 'Bien',
+          atencion: 'Atención',
+          critico: 'Crítico',
+          no_disponible: 'No disponible',
+        },
+        motivos: {
+          estado_warning: 'Windows informa el estado «Warning» (advertencia).',
+          estado_unhealthy: 'Windows informa el estado «Unhealthy» (con fallos).',
+          estado_operacional: 'El estado operativo indica un fallo ({estado}).',
+          errores_sin_corregir:
+            'Hay errores sin corregir (lectura: {lectura}, escritura: {escritura}).',
+          prediccion_fallo: 'El disco predice un fallo (SMART).',
+          desgaste: 'Desgaste del {desgaste} % (umbral: {umbral} %).',
+          temperatura: 'Temperatura de {temperatura} °C (límite: {limite} °C).',
+          errores_corregidos_suben:
+            'Los errores de lectura corregidos subieron respecto de la lectura anterior ({cantidad} en total).',
+        },
+        contadores: {
+          temperatura: 'Temperatura',
+          desgaste: 'Desgaste',
+          lecturaCorregidos: 'Errores de lectura corregidos',
+          lecturaNoCorregidos: 'Errores de lectura sin corregir',
+          escrituraCorregidos: 'Errores de escritura corregidos',
+          escrituraNoCorregidos: 'Errores de escritura sin corregir',
+          horas: 'Horas encendido',
+          prediccion: 'Predicción de fallo',
+        },
+        noDisponible: 'No disponible',
+        noDisponibleMotivo: 'No disponible ({motivo})',
+        motivoSin: {
+          admin: 'requiere permisos de administrador',
+          bus: 'este tipo de conexión (USB o RAID) no expone contadores',
+          no_soportado: 'el disco o su controlador no los admite',
+          no_leidos: 'Windows no devolvió valores',
+        },
+        prediccionSin: {
+          sin_acceso: 'requiere permisos de administrador',
+          no_disponible: 'este equipo no la ofrece',
+        },
+        prediccionSinFallo: 'Sin fallo previsto',
+        prediccionFallo: 'Fallo previsto',
+        horasValor: '{n} h',
+        criterios: {
+          titulo: '¿Cómo se decide el veredicto?',
+          critico:
+            'Crítico: Windows informa el estado Warning o Unhealthy o un fallo operativo, hay errores sin corregir o el disco predice un fallo.',
+          atencion:
+            'Atención: desgaste de {desgaste} % o más, temperatura por encima del máximo del fabricante (sin él, {ssd} °C o más en SSD y NVMe, {hdd} °C o más en HDD) o errores de lectura corregidos que suben respecto de la lectura anterior.',
+          bien: 'Bien: estado Healthy y nada de lo anterior.',
+          noDisponible: 'No disponible: Windows no dio datos suficientes de ese disco.',
+        },
+        leidoAdmin: 'Datos leídos con permisos de administrador.',
+        requiereAdminAviso:
+          'Algunos datos requieren permisos de administrador. Puede leerlos con el botón de arriba: Windows pedirá su permiso solo entonces.',
+        nota: 'Esta lectura orienta, no garantiza nada: una buena señal no evita un fallo. Mantenga respaldos de lo importante.',
+        privacidad: 'No se leen ni se muestran números de serie ni identificadores únicos.',
+      },
+      eventosDisco: {
+        titulo: 'Eventos del disco',
+        intro:
+          'Avisos del registro System de Windows sobre los discos en los últimos {dias} días. Solo lectura.',
+        actualizar: 'Actualizar eventos',
+        copiar: 'Copiar eventos',
+        copiado: 'Eventos copiados',
+        vacio: 'No hay eventos de disco en los últimos {dias} días.',
+        sinDisco: 'Disco no indicado',
+        disco: 'Disco {n}',
+        unidad: 'Unidad {u}',
+        gravedad: {
+          info: 'Informativo',
+          aviso: 'Aviso',
+          critico: 'Crítico',
+        },
+        explicaciones: {
+          disco_7: 'El disco tiene un bloque defectuoso.',
+          disco_11: 'El controlador detectó un error en el disco.',
+          disco_51: 'Hubo un error en el disco durante una operación de paginación.',
+          disco_52: 'El disco predice que va a fallar.',
+          disco_55: 'Se detectó corrupción en el sistema de archivos de una unidad.',
+          disco_129: 'Windows tuvo que reiniciar el controlador del disco porque no respondía.',
+          disco_153: 'Una operación del disco falló y se reintentó.',
+          disco_157: 'El disco se desconectó de forma inesperada.',
+        },
+        tope: 'Se muestran como máximo {n} eventos.',
+        cabeceraCopia: 'Eventos del disco (últimos {dias} días)',
+      },
       equipo: {
         titulo: 'Mi equipo',
         copiarResumen: 'Copiar resumen',
@@ -4952,6 +5062,14 @@ export const es = {
       antivirus_sin_exclusion:
         'El antivirus está activo y la carpeta de datos de WolfCore Dev no está excluida.',
       enlazador_ausente: 'No se encontraron las herramientas de C++ de Visual Studio Build Tools.',
+      disco_modelo: '{modelo} (disco {numero})',
+      disco_estado: 'Windows informa el estado {estado}.',
+      disco_operacional: 'Estado operativo: {estado}.',
+      disco_errores: 'Errores sin corregir: {lectura} de lectura y {escritura} de escritura.',
+      disco_prediccion: 'El disco predice un fallo (SMART).',
+      disco_desgaste: 'Desgaste del {desgaste} % (umbral: {umbral} %).',
+      disco_temperatura: 'Temperatura de {temperatura} °C (límite: {limite} °C).',
+      disco_corregidos: 'Los errores de lectura corregidos subieron ({cantidad} en total).',
       vcredist_ausente: 'No está instalado Microsoft Visual C++ 2015-2022 (x64).',
       firewall_no_comprobado:
         'No se pudieron leer las reglas del cortafuegos (puede hacer falta administrador).',
@@ -4995,6 +5113,7 @@ export const es = {
       hosts: 'Archivo hosts',
       path: 'PATH del usuario',
       vcredist: 'Visual C++',
+      discos: 'Salud de los discos',
       'enlazador-msvc': 'Enlazador de C++',
       antivirus: 'Antivirus',
       firewall: 'Cortafuegos',
@@ -5586,6 +5705,7 @@ export const es = {
     utilidades: 'Utilidades',
   },
   avisos: {
+    hacerRespaldo: 'Hacer respaldo ahora',
     campana: 'Avisos',
     campanaConNuevos: (n: number) => `Avisos: ${n} sin leer`,
     titulo: 'Centro de avisos',

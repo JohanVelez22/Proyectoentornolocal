@@ -20,6 +20,12 @@ export const hiExtra: TextosParciales = {
   acciones: { copiarCompleto: 'पूरा पाठ कॉपी करें' },
   errores: {
     codigos: {
+      'discos.sin_lectura': 'डिस्क की सेहत नहीं पढ़ी जा सकी। कृपया दोबारा प्रयास करें।',
+      'discos.sin_eventos': 'डिस्क की घटनाएँ नहीं पढ़ी जा सकीं।',
+      'discos.admin_cancelado': 'व्यवस्थापक अनुमति रद्द कर दी गई: कुछ भी नहीं पढ़ा गया।',
+      'discos.admin_fallo': 'व्यवस्थापक अनुमतियों के साथ डिस्क की सेहत नहीं पढ़ी जा सकी।',
+      'doctor.disco_atencion': 'डिस्क {modelo} पर ध्यान देने की ज़रूरत है।',
+      'doctor.disco_critico': 'डिस्क {modelo} गंभीर स्थिति में है: जल्द से जल्द बैकअप लें।',
       'servicios.no_encendio': '{nombre} शुरू नहीं हो सका। सेवाएँ और उसके लॉग देखें।',
       'tuneles.sitio_no_confiable':
         '{dominio} पर अभी तक भरोसा नहीं किया गया है: प्रकाशित करने से पहले प्रोजेक्ट में «मैं इस रिपॉज़िटरी पर भरोसा करता हूँ» चुनें।',
@@ -446,8 +452,117 @@ export const hiExtra: TextosParciales = {
       formatoGuardado: 'फ़ॉर्मेट सहेजा गया।',
     },
   },
+  ajustes: {
+    avisos: {
+      tipos: {
+        'salud-disco': 'डिस्क की सेहत की सूचनाएँ',
+      },
+    },
+  },
+  avisos: {
+    hacerRespaldo: 'अभी बैकअप लें',
+  },
   herramientas: {
     entorno: {
+      discos: {
+        titulo: 'डिस्क की सेहत',
+        intro:
+          'Windows के अनुसार हर डिस्क की स्थिति, बिना कुछ इंस्टॉल किए। केवल पढ़ने के लिए: डिस्क पर कुछ भी नहीं बदला जाता।',
+        actualizar: 'ताज़ा करें',
+        leerAdmin: 'व्यवस्थापक अनुमतियों के साथ पढ़ें',
+        leerAdminAyuda:
+          'Windows आपकी अनुमति (UAC) केवल तब माँगेगा जब आप यह बटन दबाएँगे। यह सिर्फ़ डेटा पढ़ता है और अपने आप कभी नहीं चलता।',
+        sinDiscos: 'Windows ने कोई भौतिक डिस्क नहीं बताई।',
+        numeroDisco: 'डिस्क {n}',
+        unidades: 'ड्राइव: {u}',
+        sinUnidades: 'ड्राइव अक्षर नहीं',
+        datosWolf: 'WolfCore Dev का डेटा',
+        proyectos: 'प्रोजेक्ट',
+        tipoDesconocido: 'प्रकार नहीं बताया गया',
+        veredictos: {
+          bien: 'अच्छी',
+          atencion: 'ध्यान दें',
+          critico: 'गंभीर',
+          no_disponible: 'उपलब्ध नहीं',
+        },
+        motivos: {
+          estado_warning: 'Windows “Warning” (चेतावनी) स्थिति बता रहा है।',
+          estado_unhealthy: 'Windows “Unhealthy” (खराब) स्थिति बता रहा है।',
+          estado_operacional: 'संचालन स्थिति किसी खराबी का संकेत देती है ({estado})।',
+          errores_sin_corregir: 'अनसुधारी त्रुटियाँ हैं (पढ़ना: {lectura}, लिखना: {escritura})।',
+          prediccion_fallo: 'डिस्क विफलता का पूर्वानुमान दे रही है (SMART)।',
+          desgaste: '{desgaste}% घिसावट (सीमा: {umbral}%)।',
+          temperatura: 'तापमान {temperatura} °C (सीमा: {limite} °C)।',
+          errores_corregidos_suben: 'सुधारी गई पढ़ने की त्रुटियाँ पिछली रीडिंग से बढ़ी हैं (कुल {cantidad})।',
+        },
+        contadores: {
+          temperatura: 'तापमान',
+          desgaste: 'घिसावट',
+          lecturaCorregidos: 'सुधारी गई पढ़ने की त्रुटियाँ',
+          lecturaNoCorregidos: 'अनसुधारी पढ़ने की त्रुटियाँ',
+          escrituraCorregidos: 'सुधारी गई लिखने की त्रुटियाँ',
+          escrituraNoCorregidos: 'अनसुधारी लिखने की त्रुटियाँ',
+          horas: 'चालू रहने के घंटे',
+          prediccion: 'विफलता का पूर्वानुमान',
+        },
+        noDisponible: 'उपलब्ध नहीं',
+        noDisponibleMotivo: 'उपलब्ध नहीं ({motivo})',
+        motivoSin: {
+          admin: 'व्यवस्थापक अनुमतियाँ ज़रूरी हैं',
+          bus: 'इस तरह का कनेक्शन (USB या RAID) काउंटर उपलब्ध नहीं कराता',
+          no_soportado: 'डिस्क या उसका कंट्रोलर इन्हें समर्थन नहीं देता',
+          no_leidos: 'Windows ने कोई मान नहीं लौटाया',
+        },
+        prediccionSin: {
+          sin_acceso: 'व्यवस्थापक अनुमतियाँ ज़रूरी हैं',
+          no_disponible: 'यह कंप्यूटर इसे उपलब्ध नहीं कराता',
+        },
+        prediccionSinFallo: 'कोई विफलता अपेक्षित नहीं',
+        prediccionFallo: 'विफलता अपेक्षित',
+        horasValor: '{n} घंटे',
+        criterios: {
+          titulo: 'निर्णय कैसे तय होता है?',
+          critico:
+            'गंभीर: Windows Warning या Unhealthy स्थिति या संचालन में खराबी बताता है, अनसुधारी त्रुटियाँ हैं, या डिस्क विफलता का पूर्वानुमान देती है।',
+          atencion:
+            'ध्यान दें: {desgaste}% या अधिक घिसावट, निर्माता की अधिकतम सीमा से ऊपर तापमान (यह न हो तो SSD और NVMe पर {ssd} °C या अधिक, HDD पर {hdd} °C या अधिक), या सुधारी गई पढ़ने की त्रुटियों का पिछली रीडिंग से बढ़ना।',
+          bien: 'अच्छी: स्थिति Healthy और ऊपर की कोई बात नहीं।',
+          noDisponible: 'उपलब्ध नहीं: Windows ने उस डिस्क का पर्याप्त डेटा नहीं दिया।',
+        },
+        leidoAdmin: 'डेटा व्यवस्थापक अनुमतियों के साथ पढ़ा गया।',
+        requiereAdminAviso:
+          'कुछ डेटा के लिए व्यवस्थापक अनुमतियाँ ज़रूरी हैं। आप इसे ऊपर के बटन से पढ़ सकते हैं: Windows तभी आपकी अनुमति माँगेगा।',
+        nota: 'यह रीडिंग केवल मार्गदर्शन है, गारंटी नहीं: अच्छा संकेत विफलता को नहीं रोकता। ज़रूरी चीज़ों का बैकअप रखें।',
+        privacidad: 'सीरियल नंबर और विशिष्ट पहचान न तो पढ़ी जाती हैं और न दिखाई जाती हैं।',
+      },
+      eventosDisco: {
+        titulo: 'डिस्क की घटनाएँ',
+        intro: 'पिछले {dias} दिनों में डिस्क से जुड़ी Windows System लॉग की प्रविष्टियाँ। केवल पढ़ने के लिए।',
+        actualizar: 'घटनाएँ ताज़ा करें',
+        copiar: 'घटनाएँ कॉपी करें',
+        copiado: 'घटनाएँ कॉपी हो गईं',
+        vacio: 'पिछले {dias} दिनों में डिस्क की कोई घटना नहीं है।',
+        sinDisco: 'डिस्क नहीं बताई गई',
+        disco: 'डिस्क {n}',
+        unidad: 'ड्राइव {u}',
+        gravedad: {
+          info: 'सूचना',
+          aviso: 'चेतावनी',
+          critico: 'गंभीर',
+        },
+        explicaciones: {
+          disco_7: 'डिस्क में एक खराब ब्लॉक है।',
+          disco_11: 'कंट्रोलर ने डिस्क पर त्रुटि पकड़ी।',
+          disco_51: 'पेजिंग संचालन के दौरान डिस्क पर त्रुटि हुई।',
+          disco_52: 'डिस्क का पूर्वानुमान है कि वह विफल होने वाली है।',
+          disco_55: 'किसी ड्राइव के फ़ाइल सिस्टम में गड़बड़ी पाई गई।',
+          disco_129: 'डिस्क कंट्रोलर जवाब नहीं दे रहा था, इसलिए Windows को उसे रीसेट करना पड़ा।',
+          disco_153: 'डिस्क का एक संचालन विफल हुआ और उसे दोबारा आज़माया गया।',
+          disco_157: 'डिस्क अप्रत्याशित रूप से अलग हो गई।',
+        },
+        tope: 'अधिकतम {n} घटनाएँ दिखाई जाती हैं।',
+        cabeceraCopia: 'डिस्क की घटनाएँ (पिछले {dias} दिन)',
+      },
       equipo: {
         titulo: 'मेरा कंप्यूटर',
         copiarResumen: 'सारांश कॉपी करें',
@@ -1125,7 +1240,18 @@ export const hiExtra: TextosParciales = {
     imagenes: { nombreCaptura: 'screenshot' },
   },
   doctor: {
+    revisiones: {
+      discos: 'डिस्क की सेहत',
+    },
     evidencias: {
+      disco_modelo: '{modelo} (डिस्क {numero})',
+      disco_estado: 'Windows {estado} स्थिति बता रहा है।',
+      disco_operacional: 'संचालन स्थिति: {estado}।',
+      disco_errores: 'अनसुधारी त्रुटियाँ: पढ़ने में {lectura} और लिखने में {escritura}।',
+      disco_prediccion: 'डिस्क विफलता का पूर्वानुमान दे रही है (SMART)।',
+      disco_desgaste: '{desgaste}% घिसावट (सीमा: {umbral}%)।',
+      disco_temperatura: 'तापमान {temperatura} °C (सीमा: {limite} °C)।',
+      disco_corregidos: 'सुधारी गई पढ़ने की त्रुटियाँ बढ़ी हैं (कुल {cantidad})।',
       texto: '{texto}',
       puerto_dueno: 'पोर्ट {puerto}: {proceso} (PID {pid})',
       puerto_dueno_exe: 'पोर्ट {puerto}: {proceso} (PID {pid}) — {ejecutable}',

@@ -20,6 +20,12 @@ export const idExtra: TextosParciales = {
   acciones: { copiarCompleto: 'Salin seluruh teks' },
   errores: {
     codigos: {
+      'discos.sin_lectura': 'Kesehatan disk tidak dapat dibaca. Silakan coba lagi.',
+      'discos.sin_eventos': 'Peristiwa disk tidak dapat dibaca.',
+      'discos.admin_cancelado': 'Izin administrator dibatalkan: tidak ada yang dibaca.',
+      'discos.admin_fallo': 'Kesehatan disk tidak dapat dibaca dengan izin administrator.',
+      'doctor.disco_atencion': 'Disk {modelo} perlu perhatian.',
+      'doctor.disco_critico': 'Disk {modelo} dalam kondisi kritis: segera buat cadangan.',
       'servicios.no_encendio': '{nombre} gagal dijalankan. Periksa Layanan dan lognya.',
       'tuneles.sitio_no_confiable':
         '{dominio} belum dipercaya: centang «Saya percaya repositori ini» di proyek sebelum memublikasikannya.',
@@ -463,8 +469,120 @@ export const idExtra: TextosParciales = {
       formatoGuardado: 'Format disimpan.',
     },
   },
+  ajustes: {
+    avisos: {
+      tipos: {
+        'salud-disco': 'Peringatan kesehatan disk',
+      },
+    },
+  },
+  avisos: {
+    hacerRespaldo: 'Buat cadangan sekarang',
+  },
   herramientas: {
     entorno: {
+      discos: {
+        titulo: 'Kesehatan disk',
+        intro:
+          'Kondisi setiap disk menurut Windows, tanpa memasang apa pun. Hanya baca: tidak ada yang diubah pada disk.',
+        actualizar: 'Muat ulang',
+        leerAdmin: 'Baca dengan izin administrator',
+        leerAdminAyuda:
+          'Windows akan meminta izin Anda (UAC) hanya saat Anda menekan tombol ini. Tombol ini hanya membaca data dan tidak pernah berjalan sendiri.',
+        sinDiscos: 'Windows tidak melaporkan disk fisik apa pun.',
+        numeroDisco: 'Disk {n}',
+        unidades: 'Drive: {u}',
+        sinUnidades: 'Tanpa huruf drive',
+        datosWolf: 'Data WolfCore Dev',
+        proyectos: 'Proyek',
+        tipoDesconocido: 'Jenis tidak dilaporkan',
+        veredictos: {
+          bien: 'Baik',
+          atencion: 'Perlu perhatian',
+          critico: 'Kritis',
+          no_disponible: 'Tidak tersedia',
+        },
+        motivos: {
+          estado_warning: 'Windows melaporkan status “Warning” (peringatan).',
+          estado_unhealthy: 'Windows melaporkan status “Unhealthy” (bermasalah).',
+          estado_operacional: 'Status operasional menunjukkan adanya kegagalan ({estado}).',
+          errores_sin_corregir:
+            'Ada galat yang belum dikoreksi (baca: {lectura}, tulis: {escritura}).',
+          prediccion_fallo: 'Disk memprediksi akan gagal (SMART).',
+          desgaste: 'Keausan {desgaste}% (ambang: {umbral}%).',
+          temperatura: 'Suhu {temperatura} °C (batas: {limite} °C).',
+          errores_corregidos_suben:
+            'Galat baca yang dikoreksi meningkat dibandingkan pembacaan sebelumnya (total {cantidad}).',
+        },
+        contadores: {
+          temperatura: 'Suhu',
+          desgaste: 'Keausan',
+          lecturaCorregidos: 'Galat baca yang dikoreksi',
+          lecturaNoCorregidos: 'Galat baca yang belum dikoreksi',
+          escrituraCorregidos: 'Galat tulis yang dikoreksi',
+          escrituraNoCorregidos: 'Galat tulis yang belum dikoreksi',
+          horas: 'Jam menyala',
+          prediccion: 'Prediksi kegagalan',
+        },
+        noDisponible: 'Tidak tersedia',
+        noDisponibleMotivo: 'Tidak tersedia ({motivo})',
+        motivoSin: {
+          admin: 'memerlukan izin administrator',
+          bus: 'jenis koneksi ini (USB atau RAID) tidak menyediakan penghitung',
+          no_soportado: 'disk atau pengendalinya tidak mendukungnya',
+          no_leidos: 'Windows tidak mengembalikan nilai',
+        },
+        prediccionSin: {
+          sin_acceso: 'memerlukan izin administrator',
+          no_disponible: 'komputer ini tidak menyediakannya',
+        },
+        prediccionSinFallo: 'Tidak ada kegagalan yang diperkirakan',
+        prediccionFallo: 'Kegagalan diperkirakan',
+        horasValor: '{n} jam',
+        criterios: {
+          titulo: 'Bagaimana penilaian ditentukan?',
+          critico:
+            'Kritis: Windows melaporkan status Warning atau Unhealthy atau kegagalan operasional, ada galat yang belum dikoreksi, atau disk memprediksi kegagalan.',
+          atencion:
+            'Perlu perhatian: keausan {desgaste}% atau lebih, suhu di atas batas maksimum pabrikan (jika tidak ada, {ssd} °C atau lebih pada SSD dan NVMe, {hdd} °C atau lebih pada HDD), atau galat baca yang dikoreksi meningkat dibandingkan pembacaan sebelumnya.',
+          bien: 'Baik: status Healthy dan tidak ada hal di atas.',
+          noDisponible:
+            'Tidak tersedia: Windows tidak memberikan data yang cukup tentang disk tersebut.',
+        },
+        leidoAdmin: 'Data dibaca dengan izin administrator.',
+        requiereAdminAviso:
+          'Sebagian data memerlukan izin administrator. Anda dapat membacanya dengan tombol di atas: Windows baru akan meminta izin Anda saat itu.',
+        nota: 'Pembacaan ini hanya panduan, bukan jaminan: tanda yang baik tidak mencegah kegagalan. Simpan cadangan untuk data yang penting.',
+        privacidad: 'Nomor seri dan pengenal unik tidak dibaca maupun ditampilkan.',
+      },
+      eventosDisco: {
+        titulo: 'Peristiwa disk',
+        intro: 'Catatan log System Windows tentang disk dalam {dias} hari terakhir. Hanya baca.',
+        actualizar: 'Muat ulang peristiwa',
+        copiar: 'Salin peristiwa',
+        copiado: 'Peristiwa disalin',
+        vacio: 'Tidak ada peristiwa disk dalam {dias} hari terakhir.',
+        sinDisco: 'Disk tidak disebutkan',
+        disco: 'Disk {n}',
+        unidad: 'Drive {u}',
+        gravedad: {
+          info: 'Informasi',
+          aviso: 'Peringatan',
+          critico: 'Kritis',
+        },
+        explicaciones: {
+          disco_7: 'Disk memiliki blok yang rusak.',
+          disco_11: 'Pengendali mendeteksi galat pada disk.',
+          disco_51: 'Terjadi galat pada disk saat operasi paging.',
+          disco_52: 'Disk memprediksi bahwa ia akan gagal.',
+          disco_55: 'Kerusakan terdeteksi pada sistem berkas sebuah drive.',
+          disco_129: 'Windows harus mengatur ulang pengendali disk karena tidak merespons.',
+          disco_153: 'Sebuah operasi disk gagal dan dicoba ulang.',
+          disco_157: 'Disk terlepas secara tak terduga.',
+        },
+        tope: 'Paling banyak {n} peristiwa ditampilkan.',
+        cabeceraCopia: 'Peristiwa disk ({dias} hari terakhir)',
+      },
       equipo: {
         titulo: 'Komputer saya',
         copiarResumen: 'Salin ringkasan',
@@ -1176,7 +1294,18 @@ export const idExtra: TextosParciales = {
     imagenes: { nombreCaptura: 'tangkapan-layar' },
   },
   doctor: {
+    revisiones: {
+      discos: 'Kesehatan disk',
+    },
     evidencias: {
+      disco_modelo: '{modelo} (disk {numero})',
+      disco_estado: 'Windows melaporkan status {estado}.',
+      disco_operacional: 'Status operasional: {estado}.',
+      disco_errores: 'Galat yang belum dikoreksi: {lectura} baca dan {escritura} tulis.',
+      disco_prediccion: 'Disk memprediksi akan gagal (SMART).',
+      disco_desgaste: 'Keausan {desgaste}% (ambang: {umbral}%).',
+      disco_temperatura: 'Suhu {temperatura} °C (batas: {limite} °C).',
+      disco_corregidos: 'Galat baca yang dikoreksi meningkat (total {cantidad}).',
       texto: '{texto}',
       puerto_dueno: 'Port {puerto}: {proceso} (PID {pid})',
       puerto_dueno_exe: 'Port {puerto}: {proceso} (PID {pid}) — {ejecutable}',

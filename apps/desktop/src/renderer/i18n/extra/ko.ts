@@ -18,6 +18,13 @@ export const koExtra: TextosParciales = {
   acciones: { copiarCompleto: '전체 텍스트 복사' },
   errores: {
     codigos: {
+      'discos.sin_lectura': '디스크 상태를 읽을 수 없습니다. 다시 시도해 주십시오.',
+      'discos.sin_eventos': '디스크 이벤트를 읽을 수 없습니다.',
+      'discos.admin_cancelado': '관리자 권한 요청이 취소되었습니다. 아무것도 읽지 않았습니다.',
+      'discos.admin_fallo': '관리자 권한으로 디스크 상태를 읽을 수 없습니다.',
+      'doctor.disco_atencion': '디스크 {modelo}에 주의가 필요합니다.',
+      'doctor.disco_critico':
+        '디스크 {modelo}이(가) 위험한 상태입니다. 가능한 한 빨리 백업하십시오.',
       'servicios.no_encendio':
         '{nombre}을(를) 시작하지 못했습니다. 서비스와 해당 로그를 확인하십시오.',
       'tuneles.sitio_no_confiable':
@@ -456,8 +463,118 @@ export const koExtra: TextosParciales = {
       formatoGuardado: '형식을 저장했습니다.',
     },
   },
+  ajustes: {
+    avisos: {
+      tipos: {
+        'salud-disco': '디스크 상태 알림',
+      },
+    },
+  },
+  avisos: {
+    hacerRespaldo: '지금 백업',
+  },
   herramientas: {
     entorno: {
+      discos: {
+        titulo: '디스크 상태',
+        intro:
+          'Windows가 보고하는 각 디스크의 상태를 아무것도 설치하지 않고 보여 드립니다. 읽기 전용이며 디스크의 내용은 전혀 변경되지 않습니다.',
+        actualizar: '새로 고침',
+        leerAdmin: '관리자 권한으로 읽기',
+        leerAdminAyuda:
+          '이 버튼을 누를 때에만 Windows가 허락(UAC)을 요청합니다. 데이터를 읽기만 하며 저절로 실행되는 일은 없습니다.',
+        sinDiscos: 'Windows가 물리 디스크를 보고하지 않았습니다.',
+        numeroDisco: '디스크 {n}',
+        unidades: '드라이브: {u}',
+        sinUnidades: '드라이브 문자 없음',
+        datosWolf: 'WolfCore Dev 데이터',
+        proyectos: '프로젝트',
+        tipoDesconocido: '유형 미확인',
+        veredictos: {
+          bien: '양호',
+          atencion: '주의',
+          critico: '위험',
+          no_disponible: '사용 불가',
+        },
+        motivos: {
+          estado_warning: 'Windows가 「Warning」(경고) 상태를 보고했습니다.',
+          estado_unhealthy: 'Windows가 「Unhealthy」(결함) 상태를 보고했습니다.',
+          estado_operacional: '작동 상태가 오류를 나타냅니다({estado}).',
+          errores_sin_corregir:
+            '수정되지 않은 오류가 있습니다(읽기: {lectura}, 쓰기: {escritura}).',
+          prediccion_fallo: '디스크가 고장을 예측하고 있습니다(SMART).',
+          desgaste: '마모도 {desgaste}%(기준: {umbral}%).',
+          temperatura: '온도 {temperatura} °C(한계: {limite} °C).',
+          errores_corregidos_suben: '수정된 읽기 오류가 이전 측정보다 늘었습니다(총 {cantidad}건).',
+        },
+        contadores: {
+          temperatura: '온도',
+          desgaste: '마모도',
+          lecturaCorregidos: '수정된 읽기 오류',
+          lecturaNoCorregidos: '수정되지 않은 읽기 오류',
+          escrituraCorregidos: '수정된 쓰기 오류',
+          escrituraNoCorregidos: '수정되지 않은 쓰기 오류',
+          horas: '전원 켜진 시간',
+          prediccion: '고장 예측',
+        },
+        noDisponible: '사용 불가',
+        noDisponibleMotivo: '사용 불가({motivo})',
+        motivoSin: {
+          admin: '관리자 권한이 필요합니다',
+          bus: '이러한 연결 방식(USB 또는 RAID)은 카운터를 제공하지 않습니다',
+          no_soportado: '디스크나 컨트롤러가 지원하지 않습니다',
+          no_leidos: 'Windows가 값을 반환하지 않았습니다',
+        },
+        prediccionSin: {
+          sin_acceso: '관리자 권한이 필요합니다',
+          no_disponible: '이 컴퓨터에서는 제공되지 않습니다',
+        },
+        prediccionSinFallo: '예상되는 고장 없음',
+        prediccionFallo: '고장이 예상됨',
+        horasValor: '{n}시간',
+        criterios: {
+          titulo: '판정은 어떻게 결정되나요?',
+          critico:
+            '위험: Windows가 Warning 또는 Unhealthy 상태나 작동 오류를 보고했거나, 수정되지 않은 오류가 있거나, 디스크가 고장을 예측하는 경우.',
+          atencion:
+            '주의: 마모도가 {desgaste}% 이상이거나, 온도가 제조업체 최대값을 넘거나(최대값이 없으면 SSD와 NVMe는 {ssd} °C 이상, HDD는 {hdd} °C 이상), 수정된 읽기 오류가 이전 측정보다 늘어난 경우.',
+          bien: '양호: Healthy 상태이며 위 항목에 해당하지 않는 경우.',
+          noDisponible: '사용 불가: Windows가 해당 디스크의 데이터를 충분히 제공하지 않은 경우.',
+        },
+        leidoAdmin: '관리자 권한으로 데이터를 읽었습니다.',
+        requiereAdminAviso:
+          '일부 데이터는 관리자 권한이 필요합니다. 위 버튼으로 읽을 수 있으며, 그때에만 Windows가 허락을 요청합니다.',
+        nota: '이 결과는 참고용이며 보장이 아닙니다. 좋은 신호라고 해서 고장을 막을 수는 없습니다. 중요한 자료는 백업해 두십시오.',
+        privacidad: '일련번호와 고유 식별자는 읽지도 표시하지도 않습니다.',
+      },
+      eventosDisco: {
+        titulo: '디스크 이벤트',
+        intro: '최근 {dias}일 동안 Windows System 로그에 기록된 디스크 관련 항목입니다. 읽기 전용.',
+        actualizar: '이벤트 새로 고침',
+        copiar: '이벤트 복사',
+        copiado: '이벤트를 복사했습니다',
+        vacio: '최근 {dias}일 동안 디스크 이벤트가 없습니다.',
+        sinDisco: '디스크 미확인',
+        disco: '디스크 {n}',
+        unidad: '드라이브 {u}',
+        gravedad: {
+          info: '정보',
+          aviso: '경고',
+          critico: '위험',
+        },
+        explicaciones: {
+          disco_7: '디스크에 불량 블록이 있습니다.',
+          disco_11: '컨트롤러가 디스크 오류를 감지했습니다.',
+          disco_51: '페이징 작업 중 디스크에서 오류가 발생했습니다.',
+          disco_52: '디스크가 곧 고장 날 것으로 예측하고 있습니다.',
+          disco_55: '드라이브의 파일 시스템에서 손상이 감지되었습니다.',
+          disco_129: '디스크 컨트롤러가 응답하지 않아 Windows가 재설정했습니다.',
+          disco_153: '디스크 작업이 실패하여 다시 시도되었습니다.',
+          disco_157: '디스크가 예기치 않게 분리되었습니다.',
+        },
+        tope: '이벤트는 최대 {n}건까지 표시됩니다.',
+        cabeceraCopia: '디스크 이벤트(최근 {dias}일)',
+      },
       equipo: {
         titulo: '내 컴퓨터',
         copiarResumen: '요약 복사',
@@ -1149,7 +1266,18 @@ export const koExtra: TextosParciales = {
     imagenes: { nombreCaptura: '스크린샷' },
   },
   doctor: {
+    revisiones: {
+      discos: '디스크 상태',
+    },
     evidencias: {
+      disco_modelo: '{modelo}(디스크 {numero})',
+      disco_estado: 'Windows가 {estado} 상태를 보고했습니다.',
+      disco_operacional: '작동 상태: {estado}.',
+      disco_errores: '수정되지 않은 오류: 읽기 {lectura}건, 쓰기 {escritura}건.',
+      disco_prediccion: '디스크가 고장을 예측하고 있습니다(SMART).',
+      disco_desgaste: '마모도 {desgaste}%(기준: {umbral}%).',
+      disco_temperatura: '온도 {temperatura} °C(한계: {limite} °C).',
+      disco_corregidos: '수정된 읽기 오류가 늘었습니다(총 {cantidad}건).',
       texto: '{texto}',
       puerto_dueno: '포트 {puerto}: {proceso}(PID {pid})',
       puerto_dueno_exe: '포트 {puerto}: {proceso}(PID {pid}) — {ejecutable}',

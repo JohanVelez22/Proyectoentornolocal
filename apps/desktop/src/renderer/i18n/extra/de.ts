@@ -25,6 +25,16 @@ export const deExtra: TextosParciales = {
   },
   errores: {
     codigos: {
+      'discos.sin_lectura':
+        'Der Zustand der Laufwerke konnte nicht gelesen werden. Bitte versuchen Sie es erneut.',
+      'discos.sin_eventos': 'Die Laufwerkereignisse konnten nicht gelesen werden.',
+      'discos.admin_cancelado':
+        'Die Administratorberechtigung wurde abgebrochen: Es wurde nichts gelesen.',
+      'discos.admin_fallo':
+        'Der Zustand der Laufwerke konnte mit Administratorrechten nicht gelesen werden.',
+      'doctor.disco_atencion': 'Das Laufwerk {modelo} benötigt Aufmerksamkeit.',
+      'doctor.disco_critico':
+        'Das Laufwerk {modelo} befindet sich in einem kritischen Zustand: Erstellen Sie so bald wie möglich eine Sicherung.',
       'servicios.no_encendio':
         '{nombre} konnte nicht gestartet werden. Prüfen Sie Dienste und die zugehörigen Protokolle.',
       'tuneles.sitio_no_confiable':
@@ -528,8 +538,122 @@ export const deExtra: TextosParciales = {
       formatoGuardado: 'Format gespeichert.',
     },
   },
+  ajustes: {
+    avisos: {
+      tipos: {
+        'salud-disco': 'Hinweise zum Laufwerkzustand',
+      },
+    },
+  },
+  avisos: {
+    hacerRespaldo: 'Jetzt Sicherung erstellen',
+  },
   herramientas: {
     entorno: {
+      discos: {
+        titulo: 'Zustand der Laufwerke',
+        intro:
+          'Der Zustand jedes Laufwerks laut Windows, ohne etwas zu installieren. Nur Lesezugriff: Auf den Laufwerken wird nichts geändert.',
+        actualizar: 'Aktualisieren',
+        leerAdmin: 'Mit Administratorrechten lesen',
+        leerAdminAyuda:
+          'Windows fragt nur nach, wenn Sie diese Schaltfläche drücken (UAC). Es werden ausschließlich Daten gelesen, und es geschieht nie von selbst.',
+        sinDiscos: 'Windows hat kein physisches Laufwerk gemeldet.',
+        numeroDisco: 'Laufwerk {n}',
+        unidades: 'Laufwerke: {u}',
+        sinUnidades: 'Ohne Laufwerkbuchstaben',
+        datosWolf: 'Daten von WolfCore Dev',
+        proyectos: 'Projekte',
+        tipoDesconocido: 'Typ nicht angegeben',
+        veredictos: {
+          bien: 'Gut',
+          atencion: 'Achtung',
+          critico: 'Kritisch',
+          no_disponible: 'Nicht verfügbar',
+        },
+        motivos: {
+          estado_warning: 'Windows meldet den Zustand „Warning“ (Warnung).',
+          estado_unhealthy: 'Windows meldet den Zustand „Unhealthy“ (fehlerhaft).',
+          estado_operacional: 'Der Betriebsstatus weist auf einen Fehler hin ({estado}).',
+          errores_sin_corregir:
+            'Es gibt unkorrigierte Fehler (Lesen: {lectura}, Schreiben: {escritura}).',
+          prediccion_fallo: 'Das Laufwerk sagt einen Ausfall voraus (SMART).',
+          desgaste: 'Verschleiß von {desgaste} % (Schwelle: {umbral} %).',
+          temperatura: 'Temperatur von {temperatura} °C (Grenzwert: {limite} °C).',
+          errores_corregidos_suben:
+            'Die korrigierten Lesefehler sind seit der vorigen Messung gestiegen (insgesamt {cantidad}).',
+        },
+        contadores: {
+          temperatura: 'Temperatur',
+          desgaste: 'Verschleiß',
+          lecturaCorregidos: 'Korrigierte Lesefehler',
+          lecturaNoCorregidos: 'Unkorrigierte Lesefehler',
+          escrituraCorregidos: 'Korrigierte Schreibfehler',
+          escrituraNoCorregidos: 'Unkorrigierte Schreibfehler',
+          horas: 'Betriebsstunden',
+          prediccion: 'Ausfallvorhersage',
+        },
+        noDisponible: 'Nicht verfügbar',
+        noDisponibleMotivo: 'Nicht verfügbar ({motivo})',
+        motivoSin: {
+          admin: 'erfordert Administratorrechte',
+          bus: 'Diese Anschlussart (USB oder RAID) stellt keine Zähler bereit',
+          no_soportado: 'das Laufwerk oder sein Controller unterstützt sie nicht',
+          no_leidos: 'Windows hat keine Werte geliefert',
+        },
+        prediccionSin: {
+          sin_acceso: 'erfordert Administratorrechte',
+          no_disponible: 'dieser Computer bietet sie nicht an',
+        },
+        prediccionSinFallo: 'Kein Ausfall zu erwarten',
+        prediccionFallo: 'Ausfall zu erwarten',
+        horasValor: '{n} Std.',
+        criterios: {
+          titulo: 'Wie wird die Bewertung festgelegt?',
+          critico:
+            'Kritisch: Windows meldet den Zustand Warning oder Unhealthy bzw. einen Betriebsfehler, es gibt unkorrigierte Fehler oder das Laufwerk sagt einen Ausfall voraus.',
+          atencion:
+            'Achtung: Verschleiß ab {desgaste} %, Temperatur über dem Höchstwert des Herstellers (ohne diesen ab {ssd} °C bei SSD und NVMe bzw. ab {hdd} °C bei Festplatten) oder korrigierte Lesefehler, die gegenüber der vorigen Messung zunehmen.',
+          bien: 'Gut: Zustand Healthy und nichts von dem Obigen.',
+          noDisponible:
+            'Nicht verfügbar: Windows hat zu diesem Laufwerk nicht genügend Daten geliefert.',
+        },
+        leidoAdmin: 'Daten mit Administratorrechten gelesen.',
+        requiereAdminAviso:
+          'Einige Daten erfordern Administratorrechte. Sie können sie mit der Schaltfläche oben lesen: Windows fragt erst dann nach Ihrer Erlaubnis.',
+        nota: 'Diese Auslesung dient der Orientierung und garantiert nichts: Ein gutes Zeichen verhindert keinen Ausfall. Bewahren Sie Sicherungen des Wichtigen auf.',
+        privacidad: 'Seriennummern und eindeutige Kennungen werden weder gelesen noch angezeigt.',
+      },
+      eventosDisco: {
+        titulo: 'Laufwerkereignisse',
+        intro:
+          'Einträge des Windows-Systemprotokolls zu den Laufwerken aus den letzten {dias} Tagen. Nur Lesezugriff.',
+        actualizar: 'Ereignisse aktualisieren',
+        copiar: 'Ereignisse kopieren',
+        copiado: 'Ereignisse kopiert',
+        vacio: 'In den letzten {dias} Tagen gab es keine Laufwerkereignisse.',
+        sinDisco: 'Laufwerk nicht angegeben',
+        disco: 'Laufwerk {n}',
+        unidad: 'Laufwerk {u}',
+        gravedad: {
+          info: 'Information',
+          aviso: 'Warnung',
+          critico: 'Kritisch',
+        },
+        explicaciones: {
+          disco_7: 'Das Laufwerk hat einen fehlerhaften Block.',
+          disco_11: 'Der Controller hat einen Fehler am Laufwerk erkannt.',
+          disco_51: 'Bei einem Auslagerungsvorgang ist am Laufwerk ein Fehler aufgetreten.',
+          disco_52: 'Das Laufwerk sagt voraus, dass es ausfallen wird.',
+          disco_55: 'Im Dateisystem eines Laufwerks wurde eine Beschädigung erkannt.',
+          disco_129:
+            'Windows musste den Laufwerkcontroller zurücksetzen, weil er nicht antwortete.',
+          disco_153: 'Ein Laufwerkvorgang ist fehlgeschlagen und wurde wiederholt.',
+          disco_157: 'Das Laufwerk wurde unerwartet getrennt.',
+        },
+        tope: 'Es werden höchstens {n} Ereignisse angezeigt.',
+        cabeceraCopia: 'Laufwerkereignisse (letzte {dias} Tage)',
+      },
       equipo: {
         titulo: 'Mein Computer',
         copiarResumen: 'Zusammenfassung kopieren',
@@ -1270,7 +1394,18 @@ export const deExtra: TextosParciales = {
     },
   },
   doctor: {
+    revisiones: {
+      discos: 'Zustand der Laufwerke',
+    },
     evidencias: {
+      disco_modelo: '{modelo} (Laufwerk {numero})',
+      disco_estado: 'Windows meldet den Zustand {estado}.',
+      disco_operacional: 'Betriebsstatus: {estado}.',
+      disco_errores: 'Unkorrigierte Fehler: {lectura} beim Lesen und {escritura} beim Schreiben.',
+      disco_prediccion: 'Das Laufwerk sagt einen Ausfall voraus (SMART).',
+      disco_desgaste: 'Verschleiß von {desgaste} % (Schwelle: {umbral} %).',
+      disco_temperatura: 'Temperatur von {temperatura} °C (Grenzwert: {limite} °C).',
+      disco_corregidos: 'Die korrigierten Lesefehler sind gestiegen (insgesamt {cantidad}).',
       texto: '{texto}',
       puerto_dueno: 'Port {puerto}: {proceso} (PID {pid})',
       puerto_dueno_exe: 'Port {puerto}: {proceso} (PID {pid}) — {ejecutable}',

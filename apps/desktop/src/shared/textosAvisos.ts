@@ -29,6 +29,13 @@ interface Diccionario {
 
 const ES: Diccionario = {
   porCodigo: {
+    'avisos.disco_salud': (d) => ({
+      titulo:
+        d['estado'] === 'critico'
+          ? 'Un disco está en estado crítico'
+          : 'Un disco necesita atención',
+      cuerpo: `${limpio(d['modelo'], 'Un disco')}: Abra WolfCore Dev, revise la salud de los discos y haga un respaldo.`,
+    }),
     'avisos.servicio_caido': (d) => ({
       titulo: 'Un servicio se detuvo con un error',
       cuerpo: `${limpio(d['nombre'], 'Un servicio')} dejó de funcionar. Abra WolfCore Dev para ver el detalle.`,
@@ -209,6 +216,10 @@ const ES: Diccionario = {
       titulo: 'Un contenedor se detuvo',
       cuerpo: 'Abra WolfCore Dev para ver el detalle.',
     },
+    'salud-disco': {
+      titulo: 'La salud de un disco empeoró',
+      cuerpo: 'Abra WolfCore Dev para revisarla.',
+    },
     'version-nueva': {
       titulo: 'Hay una versión nueva',
       cuerpo: 'Abra WolfCore Dev para actualizar.',
@@ -218,6 +229,11 @@ const ES: Diccionario = {
 
 const EN: Diccionario = {
   porCodigo: {
+    'avisos.disco_salud': (d) => ({
+      titulo:
+        d['estado'] === 'critico' ? 'A disk is in a critical state' : 'A disk needs attention',
+      cuerpo: `${limpio(d['modelo'], 'A disk')}: Open WolfCore Dev, review the disk health and make a backup.`,
+    }),
     'avisos.servicio_caido': (d) => ({
       titulo: 'A service stopped with an error',
       cuerpo: `${limpio(d['nombre'], 'A service')} stopped working. Open WolfCore Dev for details.`,
@@ -387,6 +403,10 @@ const EN: Diccionario = {
       titulo: 'A container stopped',
       cuerpo: 'Open WolfCore Dev for details.',
     },
+    'salud-disco': {
+      titulo: 'The health of a disk got worse',
+      cuerpo: 'Open WolfCore Dev to review it.',
+    },
     'version-nueva': {
       titulo: 'A new version is available',
       cuerpo: 'Open WolfCore Dev to update.',
@@ -396,6 +416,13 @@ const EN: Diccionario = {
 
 const PT: Diccionario = {
   porCodigo: {
+    'avisos.disco_salud': (d) => ({
+      titulo:
+        d['estado'] === 'critico'
+          ? 'Um disco está em estado crítico'
+          : 'Um disco precisa de atenção',
+      cuerpo: `${limpio(d['modelo'], 'Um disco')}: Abra o WolfCore Dev, confira a saúde dos discos e faça um backup.`,
+    }),
     'avisos.servicio_caido': (d) => ({
       titulo: 'Um serviço parou com um erro',
       cuerpo: `${limpio(d['nombre'], 'Um serviço')} parou de funcionar. Abra o WolfCore Dev para ver os detalhes.`,
@@ -579,6 +606,10 @@ const PT: Diccionario = {
       titulo: 'Um contêiner parou',
       cuerpo: 'Abra o WolfCore Dev para ver os detalhes.',
     },
+    'salud-disco': {
+      titulo: 'A saúde de um disco piorou',
+      cuerpo: 'Abra o WolfCore Dev para conferir.',
+    },
     'version-nueva': {
       titulo: 'Há uma nova versão',
       cuerpo: 'Abra o WolfCore Dev para atualizar.',
@@ -588,6 +619,13 @@ const PT: Diccionario = {
 
 const FR: Diccionario = {
   porCodigo: {
+    'avisos.disco_salud': (d) => ({
+      titulo:
+        d['estado'] === 'critico'
+          ? 'Un disque est dans un état critique'
+          : 'Un disque demande de l’attention',
+      cuerpo: `${limpio(d['modelo'], 'Un disque')}: Ouvrez WolfCore Dev, consultez la santé des disques et faites une sauvegarde.`,
+    }),
     'avisos.servicio_caido': (d) => ({
       titulo: 'Un service s’est arrêté sur une erreur',
       cuerpo: `${limpio(d['nombre'], 'Un service')} a cessé de fonctionner. Ouvrez WolfCore Dev pour voir le détail.`,
@@ -772,6 +810,10 @@ const FR: Diccionario = {
       titulo: 'Un conteneur s’est arrêté',
       cuerpo: 'Ouvrez WolfCore Dev pour voir le détail.',
     },
+    'salud-disco': {
+      titulo: 'La santé d’un disque s’est dégradée',
+      cuerpo: 'Ouvrez WolfCore Dev pour la consulter.',
+    },
     'version-nueva': {
       titulo: 'Une nouvelle version est disponible',
       cuerpo: 'Ouvrez WolfCore Dev pour mettre à jour.',
@@ -781,6 +823,13 @@ const FR: Diccionario = {
 
 const DE: Diccionario = {
   porCodigo: {
+    'avisos.disco_salud': (d) => ({
+      titulo:
+        d['estado'] === 'critico'
+          ? 'Ein Laufwerk ist in einem kritischen Zustand'
+          : 'Ein Laufwerk benötigt Aufmerksamkeit',
+      cuerpo: `${limpio(d['modelo'], 'Ein Laufwerk')}: Öffnen Sie WolfCore Dev, prüfen Sie den Zustand der Laufwerke und erstellen Sie eine Sicherung.`,
+    }),
     'avisos.servicio_caido': (d) => ({
       titulo: 'Ein Dienst wurde mit einem Fehler beendet',
       cuerpo: `${limpio(d['nombre'], 'Ein Dienst')} funktioniert nicht mehr. Öffnen Sie WolfCore Dev für Details.`,
@@ -964,6 +1013,10 @@ const DE: Diccionario = {
       titulo: 'Ein Container wurde gestoppt',
       cuerpo: 'Öffnen Sie WolfCore Dev für Details.',
     },
+    'salud-disco': {
+      titulo: 'Der Zustand eines Laufwerks hat sich verschlechtert',
+      cuerpo: 'Öffnen Sie WolfCore Dev, um ihn zu prüfen.',
+    },
     'version-nueva': {
       titulo: 'Eine neue Version ist verfügbar',
       cuerpo: 'Öffnen Sie WolfCore Dev zum Aktualisieren.',
@@ -973,6 +1026,11 @@ const DE: Diccionario = {
 
 const IT: Diccionario = {
   porCodigo: {
+    'avisos.disco_salud': (d) => ({
+      titulo:
+        d['estado'] === 'critico' ? 'Un disco è in stato critico' : 'Un disco richiede attenzione',
+      cuerpo: `${limpio(d['modelo'], 'Un disco')}: Apra WolfCore Dev, controlli lo stato dei dischi e faccia una copia di sicurezza.`,
+    }),
     'avisos.servicio_caido': (d) => ({
       titulo: 'Un servizio si è fermato con un errore',
       cuerpo: `${limpio(d['nombre'], 'Un servizio')} ha smesso di funzionare. Apra WolfCore Dev per i dettagli.`,
@@ -1156,6 +1214,10 @@ const IT: Diccionario = {
       titulo: 'Un container si è fermato',
       cuerpo: 'Apra WolfCore Dev per i dettagli.',
     },
+    'salud-disco': {
+      titulo: 'La salute di un disco è peggiorata',
+      cuerpo: 'Apra WolfCore Dev per controllarla.',
+    },
     'version-nueva': {
       titulo: 'Nuova versione disponibile',
       cuerpo: 'Apra WolfCore Dev per aggiornare.',
@@ -1165,6 +1227,10 @@ const IT: Diccionario = {
 
 const RU: Diccionario = {
   porCodigo: {
+    'avisos.disco_salud': (d) => ({
+      titulo: d['estado'] === 'critico' ? 'Диск в критическом состоянии' : 'Диск требует внимания',
+      cuerpo: `${limpio(d['modelo'], 'Диск')}: Откройте WolfCore Dev, проверьте состояние дисков и сделайте резервную копию.`,
+    }),
     'avisos.servicio_caido': (d) => ({
       titulo: 'Служба остановилась с ошибкой',
       cuerpo: `${limpio(d['nombre'], 'Служба')} перестала работать. Откройте WolfCore Dev для подробностей.`,
@@ -1348,6 +1414,10 @@ const RU: Diccionario = {
       titulo: 'Контейнер остановлен',
       cuerpo: 'Откройте WolfCore Dev для подробностей.',
     },
+    'salud-disco': {
+      titulo: 'Состояние диска ухудшилось',
+      cuerpo: 'Откройте WolfCore Dev, чтобы проверить.',
+    },
     'version-nueva': {
       titulo: 'Доступна новая версия',
       cuerpo: 'Откройте WolfCore Dev для обновления.',
@@ -1357,6 +1427,10 @@ const RU: Diccionario = {
 
 const ZH: Diccionario = {
   porCodigo: {
+    'avisos.disco_salud': (d) => ({
+      titulo: d['estado'] === 'critico' ? '有磁盘处于严重状态' : '有磁盘需要注意',
+      cuerpo: `${limpio(d['modelo'], '一个磁盘')}: 请打开 WolfCore Dev，查看磁盘健康状况并进行备份。`,
+    }),
     'avisos.servicio_caido': (d) => ({
       titulo: '某项服务因错误停止',
       cuerpo: `${limpio(d['nombre'], '某项服务')} 已停止运行。请打开 WolfCore Dev 查看详情。`,
@@ -1537,6 +1611,10 @@ const ZH: Diccionario = {
       titulo: '容器已停止',
       cuerpo: '请打开 WolfCore Dev 查看详情。',
     },
+    'salud-disco': {
+      titulo: '有磁盘的健康状况变差',
+      cuerpo: '请打开 WolfCore Dev 查看。',
+    },
     'version-nueva': {
       titulo: '有新版本可用',
       cuerpo: '请打开 WolfCore Dev 进行更新。',
@@ -1546,6 +1624,10 @@ const ZH: Diccionario = {
 
 const JA: Diccionario = {
   porCodigo: {
+    'avisos.disco_salud': (d) => ({
+      titulo: d['estado'] === 'critico' ? 'ディスクが危険な状態です' : 'ディスクに注意が必要です',
+      cuerpo: `${limpio(d['modelo'], 'ディスク')}: WolfCore Dev を開き、ディスクの健全性を確認してバックアップを取ってください。`,
+    }),
     'avisos.servicio_caido': (d) => ({
       titulo: 'サービスがエラーで停止しました',
       cuerpo: `${limpio(d['nombre'], 'サービス')} が停止しました。詳細は WolfCore Dev を開いて確認してください。`,
@@ -1729,6 +1811,10 @@ const JA: Diccionario = {
       titulo: 'コンテナが停止しました',
       cuerpo: '詳細は WolfCore Dev を開いて確認してください。',
     },
+    'salud-disco': {
+      titulo: 'ディスクの健全性が悪化しました',
+      cuerpo: 'WolfCore Dev を開いて確認してください。',
+    },
     'version-nueva': {
       titulo: '新しいバージョンがあります',
       cuerpo: 'WolfCore Dev を開いて更新してください。',
@@ -1738,6 +1824,11 @@ const JA: Diccionario = {
 
 const KO: Diccionario = {
   porCodigo: {
+    'avisos.disco_salud': (d) => ({
+      titulo:
+        d['estado'] === 'critico' ? '디스크가 위험한 상태입니다' : '디스크에 주의가 필요합니다',
+      cuerpo: `${limpio(d['modelo'], '디스크')}: WolfCore Dev를 열어 디스크 상태를 확인하고 백업하십시오.`,
+    }),
     'avisos.servicio_caido': (d) => ({
       titulo: '서비스가 오류로 중지되었습니다',
       cuerpo: `${limpio(d['nombre'], '서비스')}의 작동이 중지되었습니다. 자세한 내용을 보려면 WolfCore Dev를 여십시오.`,
@@ -1921,6 +2012,10 @@ const KO: Diccionario = {
       titulo: '컨테이너가 중지되었습니다',
       cuerpo: '자세한 내용을 보려면 WolfCore Dev를 여십시오.',
     },
+    'salud-disco': {
+      titulo: '디스크 상태가 나빠졌습니다',
+      cuerpo: 'WolfCore Dev를 열어 확인하십시오.',
+    },
     'version-nueva': {
       titulo: '새 버전이 있습니다',
       cuerpo: '업데이트하려면 WolfCore Dev를 여십시오.',
@@ -1930,6 +2025,10 @@ const KO: Diccionario = {
 
 const HI: Diccionario = {
   porCodigo: {
+    'avisos.disco_salud': (d) => ({
+      titulo: d['estado'] === 'critico' ? 'एक डिस्क गंभीर स्थिति में है' : 'एक डिस्क पर ध्यान देने की ज़रूरत है',
+      cuerpo: `${limpio(d['modelo'], 'एक डिस्क')}: WolfCore Dev खोलें, डिस्क की सेहत देखें और बैकअप लें।`,
+    }),
     'avisos.servicio_caido': (d) => ({
       titulo: 'एक सेवा त्रुटि के साथ बंद हो गई',
       cuerpo: `${limpio(d['nombre'], 'एक सेवा')} ने काम करना बंद कर दिया है। विवरण देखने के लिए WolfCore Dev खोलें।`,
@@ -2113,6 +2212,10 @@ const HI: Diccionario = {
       titulo: 'एक कंटेनर बंद हो गया',
       cuerpo: 'विवरण देखने के लिए WolfCore Dev खोलें।',
     },
+    'salud-disco': {
+      titulo: 'एक डिस्क की सेहत बिगड़ गई',
+      cuerpo: 'जाँचने के लिए WolfCore Dev खोलें।',
+    },
     'version-nueva': {
       titulo: 'एक नया संस्करण उपलब्ध है',
       cuerpo: 'अपडेट करने के लिए WolfCore Dev खोलें।',
@@ -2122,6 +2225,11 @@ const HI: Diccionario = {
 
 const TR: Diccionario = {
   porCodigo: {
+    'avisos.disco_salud': (d) => ({
+      titulo:
+        d['estado'] === 'critico' ? 'Bir disk kritik durumda' : 'Bir disk dikkat gerektiriyor',
+      cuerpo: `${limpio(d['modelo'], 'Bir disk')}: WolfCore Dev’i açın, disk sağlığını inceleyin ve yedek alın.`,
+    }),
     'avisos.servicio_caido': (d) => ({
       titulo: 'Bir hizmet hatayla durdu',
       cuerpo: `${limpio(d['nombre'], 'Bir hizmet')} çalışmayı durdurdu. Ayrıntılar için WolfCore Dev uygulamasını açın.`,
@@ -2305,6 +2413,10 @@ const TR: Diccionario = {
       titulo: 'Bir konteyner durdu',
       cuerpo: 'Ayrıntılar için WolfCore Dev uygulamasını açın.',
     },
+    'salud-disco': {
+      titulo: 'Bir diskin sağlığı kötüleşti',
+      cuerpo: 'İncelemek için WolfCore Dev’i açın.',
+    },
     'version-nueva': {
       titulo: 'Yeni bir sürüm mevcut',
       cuerpo: 'Güncellemek için WolfCore Dev uygulamasını açın.',
@@ -2314,6 +2426,13 @@ const TR: Diccionario = {
 
 const ID: Diccionario = {
   porCodigo: {
+    'avisos.disco_salud': (d) => ({
+      titulo:
+        d['estado'] === 'critico'
+          ? 'Sebuah disk dalam kondisi kritis'
+          : 'Sebuah disk perlu perhatian',
+      cuerpo: `${limpio(d['modelo'], 'Sebuah disk')}: Buka WolfCore Dev, periksa kesehatan disk, lalu buat cadangan.`,
+    }),
     'avisos.servicio_caido': (d) => ({
       titulo: 'Layanan berhenti karena kesalahan',
       cuerpo: `${limpio(d['nombre'], 'Sebuah layanan')} berhenti bekerja. Buka WolfCore Dev untuk melihat detailnya.`,
@@ -2497,6 +2616,10 @@ const ID: Diccionario = {
       titulo: 'Kontainer berhenti',
       cuerpo: 'Buka WolfCore Dev untuk melihat detailnya.',
     },
+    'salud-disco': {
+      titulo: 'Kesehatan sebuah disk memburuk',
+      cuerpo: 'Buka WolfCore Dev untuk memeriksanya.',
+    },
     'version-nueva': {
       titulo: 'Tersedia versi baru',
       cuerpo: 'Buka WolfCore Dev untuk memperbarui.',
@@ -2506,6 +2629,10 @@ const ID: Diccionario = {
 
 const PL: Diccionario = {
   porCodigo: {
+    'avisos.disco_salud': (d) => ({
+      titulo: d['estado'] === 'critico' ? 'Dysk jest w stanie krytycznym' : 'Dysk wymaga uwagi',
+      cuerpo: `${limpio(d['modelo'], 'Dysk')}: Proszę otworzyć WolfCore Dev, sprawdzić kondycję dysków i wykonać kopię zapasową.`,
+    }),
     'avisos.servicio_caido': (d) => ({
       titulo: 'Usługa zatrzymała się z błędem',
       cuerpo: `${limpio(d['nombre'], 'Usługa')} przestała działać. Szczegóły w WolfCore Dev.`,
@@ -2689,6 +2816,10 @@ const PL: Diccionario = {
       titulo: 'Kontener zatrzymał się',
       cuerpo: 'Szczegóły w WolfCore Dev.',
     },
+    'salud-disco': {
+      titulo: 'Kondycja dysku się pogorszyła',
+      cuerpo: 'Proszę otworzyć WolfCore Dev, aby ją sprawdzić.',
+    },
     'version-nueva': {
       titulo: 'Dostępna jest nowa wersja',
       cuerpo: 'Aktualizacja w WolfCore Dev.',
@@ -2698,6 +2829,13 @@ const PL: Diccionario = {
 
 const NL: Diccionario = {
   porCodigo: {
+    'avisos.disco_salud': (d) => ({
+      titulo:
+        d['estado'] === 'critico'
+          ? 'Een schijf verkeert in een kritieke staat'
+          : 'Een schijf heeft aandacht nodig',
+      cuerpo: `${limpio(d['modelo'], 'Een schijf')}: Open WolfCore Dev, controleer de gezondheid van de schijven en maak een back-up.`,
+    }),
     'avisos.servicio_caido': (d) => ({
       titulo: 'Een dienst is gestopt met een fout',
       cuerpo: `${limpio(d['nombre'], 'Een dienst')} werkt niet meer. Open WolfCore Dev voor meer details.`,
@@ -2881,6 +3019,10 @@ const NL: Diccionario = {
       titulo: 'Een container is gestopt',
       cuerpo: 'Open WolfCore Dev voor meer details.',
     },
+    'salud-disco': {
+      titulo: 'De gezondheid van een schijf is verslechterd',
+      cuerpo: 'Open WolfCore Dev om dit te controleren.',
+    },
     'version-nueva': {
       titulo: 'Er is een nieuwe versie',
       cuerpo: 'Open WolfCore Dev om bij te werken.',
@@ -2890,6 +3032,10 @@ const NL: Diccionario = {
 
 const UK: Diccionario = {
   porCodigo: {
+    'avisos.disco_salud': (d) => ({
+      titulo: d['estado'] === 'critico' ? 'Диск у критичному стані' : 'Диск потребує уваги',
+      cuerpo: `${limpio(d['modelo'], 'Диск')}: Відкрийте WolfCore Dev, перевірте стан дисків і зробіть резервну копію.`,
+    }),
     'avisos.servicio_caido': (d) => ({
       titulo: 'Служба зупинилася з помилкою',
       cuerpo: `${limpio(d['nombre'], 'Служба')}: роботу припинено. Відкрийте WolfCore Dev, щоб переглянути подробиці.`,
@@ -3072,6 +3218,10 @@ const UK: Diccionario = {
     'contenedor-detenido': {
       titulo: 'Контейнер зупинився',
       cuerpo: 'Відкрийте WolfCore Dev, щоб переглянути подробиці.',
+    },
+    'salud-disco': {
+      titulo: 'Стан диска погіршився',
+      cuerpo: 'Відкрийте WolfCore Dev, щоб перевірити.',
     },
     'version-nueva': {
       titulo: 'Доступна нова версія',
