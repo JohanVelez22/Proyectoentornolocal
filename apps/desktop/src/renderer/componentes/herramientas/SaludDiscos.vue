@@ -3,13 +3,14 @@ import { Refresh, ShieldCheckmark } from '@vicons/ionicons5';
 import { NButton, NCollapse, NCollapseItem, NIcon, NSpin, NTag } from 'naive-ui';
 import { computed, onMounted, ref } from 'vue';
 import { UMBRALES_DISCO } from '@pel/core';
-import type { ResultadoSalud } from '../../../shared/api';
+import type { DiscoSalud, ResultadoSalud } from '../../../shared/api';
 import { api } from '../../api';
 import { useAccion } from '../../composables/useAccion';
 import { formatearFecha, textos } from '../../i18n';
 import { rellenar } from '../../utilidades/equipo';
 import {
   TONO_VEREDICTO,
+  type FilaContador,
   etiquetasDisco,
   filasContadores,
   hayDatosDeAdministrador,
@@ -48,9 +49,19 @@ const discos = computed(() =>
     etiquetas: etiquetasDisco(d, t),
     unidades: textoUnidades(d, t),
     motivos: d.motivos.map((m) => textoMotivo(d, m, t)),
-    filas: filasContadores(d, resultado.value?.prediccion ?? 'no_disponible', t),
+    ...resumirFilas(d),
   })),
 );
+
+/**
+ * Sin ningún contador (USB, RAID o falta de permisos) no se repite ocho veces el mismo «No
+ * disponible»: va una sola línea con el motivo y, aparte, la predicción de fallo.
+ */
+function resumirFilas(d: DiscoSalud): { sinContadores: string | null; filas: FilaContador[] } {
+  const todas = filasContadores(d, resultado.value?.prediccion ?? 'no_disponible', t);
+  if (d.contadores !== null) return { sinContadores: null, filas: todas };
+  return { sinContadores: todas[0]?.valor ?? t.noDisponible, filas: todas.slice(-1) };
+}
 
 const pideAdmin = computed(
   () =>
@@ -75,7 +86,7 @@ onMounted(() => void cargar());
 
 <template>
   <div data-testid="salud-discos">
-    <div class="herr-etiqueta">{{ t.titulo }}</div>
+    <h3 class="titulo">{{ t.titulo }}</h3>
     <p class="herr-tenue intro">{{ t.intro }}</p>
     <div class="herr-fila acciones">
       <NButton
@@ -130,6 +141,9 @@ onMounted(() => void cargar());
         <ul v-if="x.motivos.length" class="motivos">
           <li v-for="(m, i) in x.motivos" :key="i">{{ m }}</li>
         </ul>
+        <p v-if="x.sinContadores" class="herr-tenue sin-contadores" data-testid="sin-contadores">
+          {{ x.sinContadores }}
+        </p>
         <dl class="herr-datos contadores">
           <template v-for="f in x.filas" :key="f.clave">
             <dt>{{ f.etiqueta }}</dt>
@@ -160,6 +174,11 @@ onMounted(() => void cargar());
 </template>
 
 <style scoped>
+.titulo {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
 .intro {
   margin-bottom: 8px;
 }
@@ -213,9 +232,14 @@ onMounted(() => void cargar());
 }
 .contadores dd {
   font-family: inherit;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 .contadores dd.sin {
   opacity: 0.7;
+  font-style: italic;
+}
+.sin-contadores {
   font-style: italic;
 }
 .criterios {

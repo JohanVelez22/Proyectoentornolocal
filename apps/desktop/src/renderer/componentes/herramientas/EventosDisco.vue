@@ -50,7 +50,7 @@ onMounted(() => void cargar());
 
 <template>
   <div data-testid="eventos-disco">
-    <div class="herr-etiqueta">{{ t.titulo }}</div>
+    <h3 class="titulo">{{ t.titulo }}</h3>
     <p class="herr-tenue intro">{{ rellenar(t.intro, { dias: DIAS_EVENTOS }) }}</p>
     <div class="herr-fila acciones">
       <NButton secondary size="small" :loading="ocupado('eventos')" @click="cargar">
@@ -96,6 +96,11 @@ onMounted(() => void cargar());
 </template>
 
 <style scoped>
+.titulo {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
 .intro {
   margin-bottom: 8px;
 }
