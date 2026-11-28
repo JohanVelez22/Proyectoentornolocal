@@ -61,6 +61,7 @@ describe('lecturas de red en Windows (D53)', () => {
     expect(scriptDe(llamadas[0]!.args)).toContain('Get-SmbShare');
     expect(scriptDe(llamadas[1]!.args)).toContain('Get-NetIPAddress');
     expect(scriptDe(llamadas[1]!.args)).toContain('Get-NetConnectionProfile');
+    expect(scriptDe(llamadas[1]!.args)).toContain('Get-NetAdapter');
     expect(scriptDe(llamadas[2]!.args)).toContain('Get-NetNeighbor');
   });
 

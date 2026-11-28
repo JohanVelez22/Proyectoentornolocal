@@ -101,6 +101,73 @@ describe('carpetas compartidas de este equipo (D53)', () => {
 });
 
 describe('adaptadores y vecinos (D53)', () => {
+  it('marca los túneles, PPP y VPN por tipo de interfaz o por nombre, y no a los demás', () => {
+    const r = interpretarAdaptadores(
+      b64([
+        {
+          i: 1,
+          n: 'Wi-Fi',
+          a: '192.168.1.20',
+          p: 24,
+          d: true,
+          c: 'Private',
+          t: 71,
+          x: 'Intel(R) Wi-Fi 6 AX201',
+        },
+        {
+          i: 2,
+          n: 'Conexión',
+          a: '10.8.0.2',
+          p: 24,
+          d: false,
+          c: 'Private',
+          t: 131,
+          x: 'Adaptador',
+        },
+        { i: 3, n: 'Datos', a: '10.9.0.2', p: 24, d: false, c: 'Private', t: 23, x: 'RAS' },
+        {
+          i: 4,
+          n: 'Ethernet 3',
+          a: '10.7.0.2',
+          p: 24,
+          d: false,
+          c: 'Private',
+          t: 6,
+          x: 'TAP-Windows Adapter V9',
+        },
+        { i: 5, n: 'WireGuard', a: '10.6.0.2', p: 24, d: false, c: 'Private', t: 6, x: 'x' },
+        {
+          i: 6,
+          n: 'Laptop',
+          a: '10.5.0.2',
+          p: 24,
+          d: false,
+          c: 'Private',
+          t: 6,
+          x: 'Desktop Adapter',
+        },
+        {
+          i: 7,
+          n: 'Ethernet',
+          a: '10.4.0.2',
+          p: 24,
+          d: false,
+          c: 'Private',
+          x: 'Mi VPN corporativa',
+        },
+      ]),
+    );
+    expect(r?.map((a) => [a.nombre, a.tunel === true])).toEqual([
+      ['Wi-Fi', false],
+      ['Conexión', true],
+      ['Datos', true],
+      ['Ethernet 3', true],
+      ['WireGuard', true],
+      ['Laptop', false],
+      ['Ethernet', true],
+    ]);
+  });
+
   it('interpreta los adaptadores con su perfil de red y cuál es el predeterminado', () => {
     const r = interpretarAdaptadores(
       b64([

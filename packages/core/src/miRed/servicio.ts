@@ -26,7 +26,7 @@ import {
  */
 
 export type MotivoEscaneoNoPermitido =
-  'sin_adaptador' | 'no_privada' | 'publica' | 'perfil_desconocido';
+  'sin_adaptador' | 'no_privada' | 'tunel' | 'publica' | 'perfil_desconocido';
 
 /** Cuántos paquetes lleva el ping a un equipo, y el tope. */
 export const INTENTOS_PING = 4;
@@ -160,6 +160,8 @@ function limpiarNombre(n: string | null, ip: string): string | null {
 /** ¿Se puede explorar este adaptador? (la regla, en un solo sitio). */
 function evaluarAdaptador(a: AdaptadorRed): MotivoEscaneoNoPermitido | null {
   if (!esPrivadaRfc1918(a.ip)) return 'no_privada';
+  // Una VPN, un túnel o un PPP llevan a otra red (la de la empresa, por ejemplo): no se explora.
+  if (a.tunel === true) return 'tunel';
   const perfil: PerfilRed | null = a.perfil;
   // En una red pública de Windows no se exploran otros equipos; sin perfil legible, tampoco.
   if (perfil === 'publico') return 'publica';
@@ -281,6 +283,32 @@ export class MiRed {
     );
   }
 
+  /**
+   * El adaptador activo si se puede explorar su red; si no, el error del catálogo que lo explica
+   * (sin red, pública, perfil desconocido, VPN o túnel, o IP que no es privada).
+   */
+  private activoExplorable(adaptadores: AdaptadorRed[]): AdaptadorRed {
+    const a = this.activo(adaptadores);
+    if (!a) throw new ErrorWolf('red.sin_adaptador', 'No hay una red activa que explorar.');
+    const motivo = evaluarAdaptador(a);
+    if (motivo === 'publica') {
+      throw new ErrorWolf('red.red_publica', 'En redes públicas no se exploran otros equipos.');
+    }
+    if (motivo === 'perfil_desconocido') {
+      throw new ErrorWolf(
+        'red.perfil_desconocido',
+        'No se pudo saber si la red es privada o pública.',
+      );
+    }
+    if (motivo === 'tunel') {
+      throw new ErrorWolf(
+        'red.rango_no_permitido',
+        'La red activa es una VPN o un túnel: no se exploran otros equipos.',
+      );
+    }
+    return a;
+  }
+
   private estadoEscaneo(adaptadores: AdaptadorRed[]): EstadoEscaneo {
     const a = this.activo(adaptadores);
     if (!a) return { permitido: false, motivo: 'sin_adaptador', red: null, equipos: 0 };
@@ -340,18 +368,7 @@ export class MiRed {
     if (adaptadores === null) {
       throw new ErrorWolf('red.lectura_fallo', 'No se pudo leer la red de este equipo.');
     }
-    const a = this.activo(adaptadores);
-    if (!a) throw new ErrorWolf('red.sin_adaptador', 'No hay una red activa que explorar.');
-    const motivo = evaluarAdaptador(a);
-    if (motivo === 'publica') {
-      throw new ErrorWolf('red.red_publica', 'En redes públicas no se exploran otros equipos.');
-    }
-    if (motivo === 'perfil_desconocido') {
-      throw new ErrorWolf(
-        'red.perfil_desconocido',
-        'No se pudo saber si la red es privada o pública.',
-      );
-    }
+    const a = this.activoExplorable(adaptadores);
     // Lanza `red.rango_no_permitido` con una IP pública o un prefijo imposible.
     const rango = rangoDeEscaneo(a.ip, a.prefijo);
     if (this.escaneo) throw ocupado();
@@ -426,18 +443,7 @@ export class MiRed {
     if (adaptadores === null) {
       throw new ErrorWolf('red.lectura_fallo', 'No se pudo leer la red de este equipo.');
     }
-    const a = this.activo(adaptadores);
-    if (!a) throw new ErrorWolf('red.sin_adaptador', 'No hay una red activa que explorar.');
-    const motivo = evaluarAdaptador(a);
-    if (motivo === 'publica') {
-      throw new ErrorWolf('red.red_publica', 'En redes públicas no se exploran otros equipos.');
-    }
-    if (motivo === 'perfil_desconocido') {
-      throw new ErrorWolf(
-        'red.perfil_desconocido',
-        'No se pudo saber si la red es privada o pública.',
-      );
-    }
+    const a = this.activoExplorable(adaptadores);
     // Lanza `red.rango_no_permitido` si el adaptador no es de una red privada explorable.
     if (!enRango(rangoDeEscaneo(a.ip, a.prefijo), v)) {
       throw new ErrorWolf(

@@ -36,6 +36,8 @@ export interface AdaptadorRed {
   predeterminado: boolean;
   /** `null` si Windows no dio el perfil. */
   perfil: PerfilRed | null;
+  /** Es un túnel, un PPP o una VPN (por tipo de interfaz o por nombre): no se explora su red. */
+  tunel?: boolean;
 }
 
 /** Fila de la tabla ARP (Get-NetNeighbor). La MAC va en minúsculas con `:`. */
@@ -184,12 +186,19 @@ export const SCRIPT_ADAPTADORES = [
   "$rutas = @(Get-NetRoute -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue)",
   '$perfiles = @(Get-NetConnectionProfile -ErrorAction SilentlyContinue)',
   '$ifs = @(Get-NetIPInterface -AddressFamily IPv4 -ErrorAction SilentlyContinue)',
+  '$ads = @(Get-NetAdapter -IncludeHidden -ErrorAction SilentlyContinue)',
   '$mejor = $null',
   'foreach ($r in $rutas) { $im = ($ifs | Where-Object { $_.InterfaceIndex -eq $r.InterfaceIndex } | Select-Object -First 1).InterfaceMetric; $t = [int]$r.RouteMetric + [int]$im; if ($null -eq $mejor -or $t -lt $mejor.t) { $mejor = @{ i = [int]$r.InterfaceIndex; t = $t } } }',
-  "$l = @(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '169.254.*' -and $_.IPAddress -ne '127.0.0.1' -and [string]$_.AddressState -eq 'Preferred' } | ForEach-Object { $i = [int]$_.InterfaceIndex; $p = $perfiles | Where-Object { [int]$_.InterfaceIndex -eq $i } | Select-Object -First 1; [pscustomobject]@{ i = $i; n = [string]$_.InterfaceAlias; a = [string]$_.IPAddress; p = [int]$_.PrefixLength; d = [bool]($null -ne $mejor -and $mejor.i -eq $i); c = $(if ($p) { [string]$p.NetworkCategory } else { '' }) } })",
+  "$l = @(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '169.254.*' -and $_.IPAddress -ne '127.0.0.1' -and [string]$_.AddressState -eq 'Preferred' } | ForEach-Object { $i = [int]$_.InterfaceIndex; $p = $perfiles | Where-Object { [int]$_.InterfaceIndex -eq $i } | Select-Object -First 1; $ad = $ads | Where-Object { [int]$_.ifIndex -eq $i } | Select-Object -First 1; [pscustomobject]@{ i = $i; n = [string]$_.InterfaceAlias; a = [string]$_.IPAddress; p = [int]$_.PrefixLength; d = [bool]($null -ne $mejor -and $mejor.i -eq $i); c = $(if ($p) { [string]$p.NetworkCategory } else { '' }); t = $(if ($ad) { [int]$ad.ifType } else { 0 }); x = $(if ($ad) { [string]$ad.InterfaceDescription } else { '' }) } })",
   '$j = ConvertTo-Json -InputObject $l -Compress',
   SALIDA_BASE64,
 ].join('\n');
+
+/** Tipos de interfaz de IANA que son túneles: PPP (23) y túnel (131). */
+const TIPOS_TUNEL = new Set([23, 131]);
+/** Nombres o descripciones de VPN y túneles (los clientes de VPN suelen declararse como Ethernet). */
+const NOMBRE_TUNEL =
+  /vpn|t[uú]nel|tunnel|\btun\d*\b|\btap\b|wintun|wireguard|openvpn|nordlynx|tailscale|zerotier|\bppp\b|\bwan miniport\b/i;
 
 export function interpretarAdaptadores(salida: string): AdaptadorRed[] | null {
   const lista = decodificarLista(salida);
@@ -208,6 +217,10 @@ export function interpretarAdaptadores(salida: string): AdaptadorRed[] | null {
       prefijo,
       predeterminado: x['d'] === true,
       perfil: interpretarPerfilRed(texto(x['c'])),
+      ...(TIPOS_TUNEL.has(entero(x['t']) ?? 0) ||
+      NOMBRE_TUNEL.test(`${texto(x['n'])} ${texto(x['x'])}`)
+        ? { tunel: true }
+        : {}),
     });
   }
   return res;

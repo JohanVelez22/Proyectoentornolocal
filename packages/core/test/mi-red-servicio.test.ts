@@ -79,6 +79,15 @@ describe('Mi red: lectura pasiva (D53)', () => {
     ).toBe('no_privada');
   });
 
+  it('si la red activa es una VPN o un túnel, no se explora ni se actúa sobre equipos', async () => {
+    const t = crear({ adaptadores: [{ ...WIFI, tunel: true }] });
+    const l = await t.servicio.lectura();
+    expect(l.escaneo).toMatchObject({ permitido: false, motivo: 'tunel', red: null });
+    await rechaza(t.servicio.escanear(true), 'red.rango_no_permitido');
+    await rechaza(t.servicio.ping('192.168.1.1'), 'red.rango_no_permitido');
+    expect(t.falsa.pingsPedidos).toEqual([]);
+  });
+
   it('si ni los adaptadores ni la tabla se pueden leer, es un error del catálogo', async () => {
     const { falsa, servicio } = crear();
     falsa.adaptadoresFalsos = null;
