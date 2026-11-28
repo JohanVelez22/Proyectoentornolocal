@@ -124,6 +124,7 @@ export * from './ia/envIa';
 export * from './ia/gestorIa';
 export * from './agentes/agentes';
 export * from './agentes/configArchivo';
+export * from './asistentes/asistentes';
 export { CLAUDE_CODE } from './agentes/claudeCode';
 export { CODEX } from './agentes/codex';
 export { HERMES } from './agentes/hermes';

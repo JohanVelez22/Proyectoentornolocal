@@ -56,6 +56,8 @@ import type {
 export interface OpcionesPlataformaFalsa {
   carpetaDatos?: string;
   carpetaInicio?: string;
+  /** Carpeta de configuración de las aplicaciones (`%APPDATA%`). */
+  carpetaConfigApps?: string;
   /** Archivo hosts (por defecto, uno que nadie usa: escribir en él falla). */
   rutaHosts?: string;
   idCatalogo?: IdCatalogo;
@@ -243,6 +245,10 @@ export class PlataformaFalsa implements PlataformaCompleta {
 
   carpetasPerfil(): string[] {
     return [...this.carpetasDePerfil];
+  }
+
+  carpetaConfigApps(): string {
+    return this.o.carpetaConfigApps ?? '/appdata-falso';
   }
 
   carpetasDelSistema(): string[] {

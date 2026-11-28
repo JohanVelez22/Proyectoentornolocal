@@ -168,6 +168,11 @@ export interface CapacidadesPlataforma {
   /** Carpeta personal del usuario (`~/.claude`, `~/.codex`, perfiles de Firefox…). */
   carpetaInicio(): string;
   /**
+   * Carpeta donde los programas de escritorio guardan su configuración por usuario (en Windows,
+   * `%APPDATA%`): `Claude\claude_desktop_config.json` de Claude Desktop. Solo consulta.
+   */
+  carpetaConfigApps(): string;
+  /**
    * Carpetas del propio sistema operativo (en Windows: Windows, Program Files y ProgramData):
    * «Compartir» (D52) no las publica nunca. Solo consulta; sin las variables, las rutas habituales.
    */

@@ -495,6 +495,10 @@ export class PlataformaWindows implements PlataformaCompleta {
     return this.entorno.USERPROFILE || homedir();
   }
 
+  carpetaConfigApps(): string {
+    return this.entorno.APPDATA || path.win32.join(this.carpetaInicio(), 'AppData', 'Roaming');
+  }
+
   carpetasDelSistema(): string[] {
     const e = this.entorno;
     const lista = [

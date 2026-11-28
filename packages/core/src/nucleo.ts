@@ -163,6 +163,7 @@ import { usosDeCarpeta, type UsoSitio } from './servicios/usoBases';
 import { compararVersiones } from './servicios/nginx';
 import { parsearInstancia } from './servicios/instancias';
 import { Agentes } from './agentes/agentes';
+import { Asistentes } from './asistentes/asistentes';
 import { ErrorWolf } from './errores';
 import { Contenedores } from './contenedores/contenedores';
 import { ServidorMcp, type EstadoMcp, type OperacionesMcp } from './mcp/servidor';
@@ -554,6 +555,7 @@ interface ModulosNucleo {
   extensionesPhp: ExtensionesPhp;
   /** Agentes de programación (Claude Code, Codex CLI, Hermes, Opencode, Gemini CLI, Qwen Code, Copilot CLI, Antigravity). */
   agentes: Agentes;
+  asistentes: Asistentes;
   /** Proveedores de IA en la nube (config, pruebas y bloque .env por proyecto). */
   ia: GestorIa;
   smtp: GestorSmtp;
@@ -822,6 +824,7 @@ export class Nucleo {
   readonly smtp: GestorSmtp;
   /** Agentes: detección, instalación, MCP y apertura en un proyecto (nunca se lanzan solos). */
   readonly agentes: Agentes;
+  readonly asistentes: Asistentes;
   /** Editor del vhost de Nginx por sitio: reglas propias, modo avanzado, historial. */
   readonly editorVhost: EditorVhost;
   /** php.ini de cada rama: leer, diff, guardar con prueba y vuelta atrás, copias. */
@@ -964,6 +967,7 @@ export class Nucleo {
     this.ia = m.ia;
     this.smtp = m.smtp;
     this.agentes = m.agentes;
+    this.asistentes = m.asistentes;
     this.iniPhp = m.iniPhp;
     this.editorVhost = m.editorVhost;
     this.extensionesPhp = m.extensionesPhp;
@@ -1714,6 +1718,11 @@ export class Nucleo {
         diffPreparado: (carpeta) => git.diffPreparado(carpeta),
         commitPreparado: (carpeta, mensaje) => git.commitPreparado(carpeta, mensaje),
         ...(o.fetch ? { fetch: (u, i) => o.fetch!(u, i) } : {}),
+      }),
+      asistentes: new Asistentes({
+        plataforma: plat,
+        agentes: { estado: () => nucleoRef.agentes.estado() },
+        mcp: { url: () => nucleoRef.mcp.url(), token: () => nucleoRef.tokenMcp() },
       }),
       ia: gestorIa,
       smtp: gestorSmtp,
