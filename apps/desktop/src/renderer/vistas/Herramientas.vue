@@ -27,6 +27,7 @@ import {
   Text,
   TrashBin,
   Videocam,
+  Wifi,
 } from '@vicons/ionicons5';
 import { NDrawer, NDrawerContent, NEmpty, NIcon, NInput, NTab, NTabs, useDialog } from 'naive-ui';
 import { computed, defineAsyncComponent, ref, watch, type Component } from 'vue';
@@ -74,6 +75,7 @@ const componentes: Record<Clave, Component> = {
   ),
   usoDisco: defineAsyncComponent(() => import('../componentes/herramientas/UsoDisco.vue')),
   compartir: defineAsyncComponent(() => import('../componentes/herramientas/Compartir.vue')),
+  miRed: defineAsyncComponent(() => import('../componentes/herramientas/MiRed.vue')),
   limpiezaDisco: defineAsyncComponent(
     () => import('../componentes/herramientas/LimpiezaDisco.vue'),
   ),
@@ -110,6 +112,7 @@ const iconos: Record<string, Component> = {
   grabarPantalla: Videocam,
   usoDisco: PieChart,
   compartir: ShareSocial,
+  miRed: Wifi,
   limpiezaDisco: TrashBin,
   guias: Book,
   editor: Create,
