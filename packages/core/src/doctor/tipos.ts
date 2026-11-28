@@ -2,6 +2,7 @@ import type { EntradaAviso } from '../avisos/avisos';
 import type { CodigoError } from '../errores';
 import type { GestorHosts } from '../hosts/hosts';
 import type { PlataformaCompleta } from '../plataforma/tipos';
+import type { ResultadoSalud } from '../discos/tipos';
 import type { EstadoServicio } from '../tipos';
 
 export const IDS_REVISION = [
@@ -17,6 +18,7 @@ export const IDS_REVISION = [
   'antivirus',
   'firewall',
   'servicios',
+  'discos',
 ] as const;
 export type IdRevision = (typeof IDS_REVISION)[number];
 
@@ -60,6 +62,14 @@ export const CODIGOS_EVIDENCIA = [
   'firewall_acotadas',
   'firewall_ajenas',
   'firewall_quitadas',
+  'disco_modelo',
+  'disco_estado',
+  'disco_operacional',
+  'disco_errores',
+  'disco_prediccion',
+  'disco_desgaste',
+  'disco_temperatura',
+  'disco_corregidos',
 ] as const;
 export type CodigoEvidencia = (typeof CODIGOS_EVIDENCIA)[number];
 
@@ -178,6 +188,8 @@ export interface DepsDoctor {
     >;
   };
   avisos?: { publicar(a: EntradaAviso): unknown };
+  /** Salud de los discos (D57): lectura sin administrador. Sin ella no se revisa. */
+  discos?: { leer(): Promise<ResultadoSalud> };
   /** Archivo con el PATH original (por defecto, `etc/path-usuario.respaldo.txt`). */
   respaldoPath?: string;
   /** Variables para expandir `%VAR%` en el PATH (por defecto, las del proceso). */

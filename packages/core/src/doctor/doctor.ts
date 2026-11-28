@@ -1,6 +1,7 @@
 import { revisarAntivirus } from './revisiones/antivirus';
 import { revisarFirewall } from './revisiones/firewall';
 import { revisarCa, revisarCertificados, revisarConfianza } from './revisiones/ca';
+import { revisarDiscos } from './revisiones/discos';
 import { revisarEnlazadorMsvc } from './revisiones/enlazador';
 import { revisarHosts } from './revisiones/hosts';
 import { revisarPath } from './revisiones/path';
@@ -33,6 +34,7 @@ const REVISIONES: Record<IdRevision, Revision> = {
   antivirus: revisarAntivirus,
   firewall: revisarFirewall,
   servicios: revisarServicios,
+  discos: revisarDiscos,
 };
 
 /** Copia pública del hallazgo: sin la función de reparación (viaja por IPC tal cual). */

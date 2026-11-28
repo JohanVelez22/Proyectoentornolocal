@@ -552,6 +552,8 @@ export const PARAMETROS_ERROR = {
   'doctor.path_duplicados': ['cantidad'],
   'doctor.path_ajeno_delante': ['programa', 'origen'],
   'doctor.vcredist_ausente': [],
+  'doctor.disco_atencion': ['modelo'],
+  'doctor.disco_critico': ['modelo'],
   'doctor.enlazador_msvc_ausente': [],
   'doctor.antivirus_sin_exclusion': [],
   'doctor.firewall_reglas': ['cantidad', 'perfiles', 'programa'],

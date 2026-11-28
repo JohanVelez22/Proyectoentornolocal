@@ -1804,6 +1804,7 @@ export class Nucleo {
         plataforma: plat,
         carpetaDatos: rutas.base,
         carpetaRespaldos: carpetaRespaldosDoctor(rutas),
+        discos: { leer: () => nucleoRef.saludDiscos.leer() },
         servicios: () => servicios.estados(),
         rustInstalado: async () => (await runtimes.instalados('rust')).length > 0,
         puertoHttps: async () => (await leerConfig()).https.puerto,
