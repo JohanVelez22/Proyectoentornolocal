@@ -22,11 +22,12 @@ describe('constantes', () => {
     expect([...PROVEEDORES_EVENTO_DISCO]).toEqual([
       'disk',
       'Ntfs',
+      'Microsoft-Windows-Ntfs',
       'stornvme',
       'storahci',
       'volmgr',
     ]);
-    expect([...IDS_EVENTO_DISCO]).toEqual([7, 11, 51, 52, 55, 129, 153, 157]);
+    expect([...IDS_EVENTO_DISCO]).toEqual([7, 11, 51, 52, 55, 98, 129, 140, 153, 157]);
     expect(MAX_EVENTOS_DISCO).toBe(200);
   });
 });

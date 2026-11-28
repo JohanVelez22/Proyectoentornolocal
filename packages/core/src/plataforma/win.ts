@@ -1188,7 +1188,12 @@ export class PlataformaWindows implements PlataformaCompleta {
         codificarPowerShell(SCRIPT_EVENTOS_DISCO),
         { timeoutMs: 40_000 },
       );
-      return r.codigo === 0 ? interpretarEventosDisco(r.stdout) : null;
+      return r.codigo === 0
+        ? interpretarEventosDisco(r.stdout, undefined, {
+            equipo: this.entorno.COMPUTERNAME,
+            usuario: this.entorno.USERNAME,
+          })
+        : null;
     } catch {
       return null;
     }

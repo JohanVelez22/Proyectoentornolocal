@@ -265,7 +265,8 @@ export const SCRIPT_EVENTOS_DISCO = [
   `$filtro = @{ LogName = 'System'; ProviderName = @(${PROVEEDORES_EVENTO_DISCO.map(literalPowerShell).join(', ')}); Id = @(${IDS_EVENTO_DISCO.join(', ')}); StartTime = $desde }`,
   `$ev = @(Get-WinEvent -FilterHashtable $filtro -MaxEvents ${MAX_EVENTOS_DISCO} -ErrorAction SilentlyContinue | ForEach-Object {`,
   '  $m = [string]$_.Message',
-  '  if ($m.Length -gt 400) { $m = $m.Substring(0, 400) }',
+  // Solo un tope de seguridad: el recorte útil se hace DESPUÉS de enmascarar (en la app).
+  '  if ($m.Length -gt 4000) { $m = $m.Substring(0, 4000) }',
   "  [pscustomobject]@{ f = $_.TimeCreated.ToUniversalTime().ToString('o', [Globalization.CultureInfo]::InvariantCulture); id = [int]$_.Id; p = [string]$_.ProviderName; m = $m }",
   '})',
   '[Console]::Out.Write((ConvertTo-Json -InputObject $ev -Depth 3 -Compress))',
