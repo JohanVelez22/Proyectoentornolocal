@@ -158,7 +158,8 @@ onMounted(() => {
     <div class="barra">
       <p class="descripcion">{{ tp.descripcion }}</p>
       <div class="acciones-barra">
-        <NButton size="small" secondary @click="creandoProyecto = true">
+        <!-- Sin proyectos, «Nuevo proyecto» ya está en el estado vacío: no se repite arriba (D54c). -->
+        <NButton v-if="sitios.lista.length" size="small" secondary @click="creandoProyecto = true">
           <template #icon
             ><NIcon><Sparkles /></NIcon
           ></template>

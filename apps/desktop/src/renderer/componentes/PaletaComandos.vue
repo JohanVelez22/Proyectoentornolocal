@@ -62,7 +62,7 @@ const comandos = computed<Comando[]>(() => {
     r.push({
       id: `ir-${k}`,
       grupo: 'navegacion',
-      titulo: t.irA(textos.nav[k]),
+      titulo: textos.nav[k],
       claves: k,
       ejecutar: () => ir(k),
     });
@@ -72,7 +72,7 @@ const comandos = computed<Comando[]>(() => {
     r.push({
       id: `ir-${a.id}`,
       grupo: 'navegacion',
-      titulo: t.irA(textos.nav[a.id]),
+      titulo: textos.nav[a.id],
       claves: a.id,
       ejecutar: () => irA(a.destino),
     });
