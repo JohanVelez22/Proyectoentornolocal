@@ -15,7 +15,8 @@ import type { Ejecutor } from '../src/plataforma/tipos';
 import { PlataformaWindows } from '../src/plataforma/win';
 
 const scriptDe = (args: string[]): string => {
-  const b64 = /-EncodedCommand ([A-Za-z0-9+/=]+)/.exec(args.join(' '))?.[1] ?? '';
+  const b64 =
+    /(?:-EncodedCommand |FromBase64String\(')([A-Za-z0-9+/=]+)/.exec(args.join(' '))?.[1] ?? '';
   return Buffer.from(b64, 'base64').toString('utf16le');
 };
 

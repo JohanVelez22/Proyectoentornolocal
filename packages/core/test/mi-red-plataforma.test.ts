@@ -13,7 +13,8 @@ const RUTA = 'D:/Datos/Fotos';
 const POWERSHELL = 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe';
 
 const scriptDe = (args: string[]): string => {
-  const b64 = /-EncodedCommand ([A-Za-z0-9+/=]+)/.exec(args.join(' '))?.[1] ?? '';
+  const b64 =
+    /(?:-EncodedCommand |FromBase64String\(')([A-Za-z0-9+/=]+)/.exec(args.join(' '))?.[1] ?? '';
   return Buffer.from(b64, 'base64').toString('utf16le');
 };
 const b64 = (v: unknown): string => Buffer.from(JSON.stringify(v), 'utf8').toString('base64');
@@ -193,7 +194,7 @@ describe('dejar de compartir con elevación (D53)', () => {
     const exterior = args.join(' ');
     expect(exterior).toContain('runas');
     const interno = Buffer.from(
-      /-EncodedCommand ([A-Za-z0-9+/=]+)/.exec(exterior)![1]!,
+      /(?:-EncodedCommand |FromBase64String\(')([A-Za-z0-9+/=]+)/.exec(exterior)![1]!,
       'base64',
     ).toString('utf16le');
     expect(interno).toContain("Remove-SmbShare -Name 'Fotos' -Force");

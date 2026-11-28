@@ -23,6 +23,11 @@ export const SALIDA_COPIA = {
   denegado: 15,
   /** Otro programa tiene hosts abierto en exclusiva. */
   enUso: 16,
+  /**
+   * El lanzador sin elevar (la PowerShell de la app) ya no existe: la app dejó de esperar (plazo
+   * vencido, cancelada o cerrada) y este permiso se aceptó tarde. Sale sin hacer nada (F7).
+   */
+  huerfano: 17,
 } as const;
 
 /** Salidas propias del script que detiene un servicio del sistema (fuera del rango de hosts). */
@@ -60,6 +65,7 @@ export const MOTIVO_SALIDA_SERVICIO: Record<number, ResultadoEscritura> = {
 export const MOTIVO_SALIDA_COPIA: Record<number, ResultadoEscritura> = {
   [SALIDA_COPIA.cancelado]: { ok: false, motivo: 'cancelado' },
   [SALIDA_COPIA.vencido]: { ok: false, motivo: 'tiempo' },
+  [SALIDA_COPIA.huerfano]: { ok: false, motivo: 'tiempo' },
   [SALIDA_COPIA.sinTemporal]: {
     ok: false,
     motivo: 'error',
@@ -156,15 +162,30 @@ export const codificarComando = (script: string): string =>
   Buffer.from(script, 'utf16le').toString('base64');
 
 /**
+ * Guarda que va al principio del comando elevado (F7). Windows no deja cerrar desde un proceso sin
+ * elevar la ventana del UAC (consent.exe): si la app deja de esperar (plazo vencido, cancelada o
+ * cerrada), esa ventana puede seguir en pantalla y alguien aceptarla más tarde. Para que entonces
+ * no haga nada, el comando elevado comprueba, antes de cualquier otra cosa, que el lanzador sin
+ * elevar que lo pidió sigue vivo (mismo PID y misma hora de inicio): la app lo corta cuando deja de
+ * esperar, y entonces el comando sale con `huerfano` sin tocar nada. No depende del reloj ni del
+ * plazo incrustado en cada script. Los marcadores los rellena el lanzador al ejecutarse.
+ */
+export const GUARDA_LANZADOR = `try { if ([Diagnostics.Process]::GetProcessById(@@PID@@).StartTime.ToUniversalTime().Ticks -ne @@INICIO@@) { exit ${SALIDA_COPIA.huerfano} } } catch { exit ${SALIDA_COPIA.huerfano} }; `;
+
+/**
  * PowerShell exterior (sin elevar) que pide el UAC y espera al script elevado. Solo .NET:
  * `Process.Start` con `runas` (sin `Start-Process`, que vive en un módulo). Se toma `Handle`
- * antes de esperar para que `ExitCode` no quede nulo, y se sale con `[int]`.
+ * antes de esperar para que `ExitCode` no quede nulo, y se sale con `[int]`. Antepone al comando
+ * elevado la guarda del lanzador (`GUARDA_LANZADOR`) con su propio PID y hora de inicio.
  */
 export function scriptElevar(comandoCodificado: string): string {
   return [
     "$ErrorActionPreference = 'Stop'",
     "$i = [Diagnostics.ProcessStartInfo]::new([IO.Path]::Combine([Environment]::SystemDirectory, 'WindowsPowerShell', 'v1.0', 'powershell.exe'))",
-    `$i.Arguments = '-NoProfile -NonInteractive -EncodedCommand ${comandoCodificado}'`,
+    '$y = [Diagnostics.Process]::GetCurrentProcess()',
+    `$g = ${literal(GUARDA_LANZADOR)}.Replace('@@PID@@', [string]$y.Id).Replace('@@INICIO@@', [string]$y.StartTime.ToUniversalTime().Ticks)`,
+    `$c = [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${comandoCodificado}'))`,
+    "$i.Arguments = '-NoProfile -NonInteractive -EncodedCommand ' + [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($g + $c))",
     "$i.Verb = 'runas'",
     '$i.UseShellExecute = $true',
     '$i.WindowStyle = [Diagnostics.ProcessWindowStyle]::Hidden',

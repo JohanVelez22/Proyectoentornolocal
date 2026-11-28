@@ -10,7 +10,8 @@ import { PlataformaWindows } from '../src/plataforma/win';
 
 /** Script elevado (base64 de -EncodedCommand dentro de la PowerShell exterior). */
 const elevado = (args: string[]): string => {
-  const b64 = /-EncodedCommand ([A-Za-z0-9+/=]+)/.exec(args.join(' '))?.[1] ?? '';
+  const b64 =
+    /(?:-EncodedCommand |FromBase64String\(')([A-Za-z0-9+/=]+)/.exec(args.join(' '))?.[1] ?? '';
   return Buffer.from(b64, 'base64').toString('utf16le');
 };
 /** Script de una PowerShell no elevada (`-EncodedCommand` como argumento propio). */

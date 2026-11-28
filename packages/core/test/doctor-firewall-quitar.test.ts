@@ -766,7 +766,7 @@ describe('D46: scripts del cortafuegos real (solo se comprueba su texto: nunca s
       const externo = args.join(' ');
       comandos.push(externo);
       const interno = Buffer.from(
-        /-EncodedCommand ([A-Za-z0-9+/=]+)/.exec(externo)![1]!,
+        /(?:-EncodedCommand |FromBase64String\(')([A-Za-z0-9+/=]+)/.exec(externo)![1]!,
         'base64',
       ).toString('utf16le');
       const huella = /-ne '([0-9a-f]{64})'/.exec(interno)![1]!;
