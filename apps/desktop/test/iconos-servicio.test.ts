@@ -27,3 +27,16 @@ describe('Iconos de servicio (D54b C2)', () => {
     );
   });
 });
+
+describe('Iconos del menú (D54c)', () => {
+  it('Bases de datos usa Server, en las tarjetas y en el menú; Servicios usa Toggle', async () => {
+    const { Server } = await import('@vicons/ionicons5');
+    expect(ICONOS_CATEGORIA.bd).toBe(Server);
+    const { readFileSync } = await import('node:fs');
+    const marco = readFileSync('src/renderer/componentes/Marco.vue', 'utf8');
+    expect(marco).toContain('Server as IconoBases');
+    expect(marco).toContain('Toggle as IconoServicios');
+    for (const viejo of ['Pulse', 'Apps', 'Grid', 'Layers'])
+      expect(marco).not.toMatch(new RegExp(`\b${viejo}\b`));
+  });
+});

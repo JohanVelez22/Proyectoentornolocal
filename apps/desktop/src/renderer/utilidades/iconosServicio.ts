@@ -1,4 +1,4 @@
-import { CodeSlash, Construct, Globe, Layers, Mail, Sparkles } from '@vicons/ionicons5';
+import { CodeSlash, Construct, Globe, Mail, Server, Sparkles } from '@vicons/ionicons5';
 import type { Component } from 'vue';
 import { categoriaDe, type CategoriaUi } from '../stores/servicios';
 
@@ -10,7 +10,7 @@ import { categoriaDe, type CategoriaUi } from '../stores/servicios';
 export const ICONOS_CATEGORIA: Record<CategoriaUi, Component> = {
   web: Globe,
   php: CodeSlash,
-  bd: Layers,
+  bd: Server,
   correo: Mail,
   ia: Sparkles,
   herramientas: Construct,
