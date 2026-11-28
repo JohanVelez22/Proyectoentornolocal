@@ -1,3 +1,4 @@
+import { literalPowerShell } from './literalPowerShell';
 import path from 'node:path';
 import type { PerfilFirefoxSistema, RangoPuertos, ServicioSistema } from './tipos';
 
@@ -66,7 +67,7 @@ export const SCRIPT_VCREDIST = [
 /** Nombre de variable de entorno del usuario que se puede fijar (nunca Path: tiene su propio acceso). */
 export const NOMBRE_VARIABLE = /^[A-Za-z_][A-Za-z0-9_]{0,99}$/;
 
-const comillas = (t: string): string => `'${t.replace(/'/g, "''")}'`;
+const comillas = literalPowerShell;
 
 /**
  * Lee el valor de la variable en HKCU\Environment tal como está guardado (sin expandir `%VAR%`),

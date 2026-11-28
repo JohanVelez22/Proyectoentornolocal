@@ -1,3 +1,4 @@
+import { literalPowerShell } from './literalPowerShell';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { AccesoPathUsuario, Ejecutor } from './tipos';
@@ -6,7 +7,7 @@ import type { AccesoPathUsuario, Ejecutor } from './tipos';
 export const aBase64 = (t: string): string => Buffer.from(t, 'utf16le').toString('base64');
 const deBase64 = (b: string): string => Buffer.from(b, 'base64').toString('utf16le');
 
-const comillas = (t: string): string => `'${t.replace(/'/g, "''")}'`;
+const comillas = literalPowerShell;
 
 /** Script de PowerShell como -EncodedCommand (UTF-16LE en Base64). */
 export const codificarPowerShell = (script: string): string[] => [

@@ -1,3 +1,4 @@
+import { literalPowerShell } from './literalPowerShell';
 /**
  * D46: scripts que cambian el cortafuegos de Windows (quitar y recrear reglas de entrada Allow
  * peligrosas de WolfCore Dev) y la lectura que las exporta. Solo los corre la plataforma,
@@ -99,7 +100,7 @@ export const idRegistro = (nombre: string): string =>
 export const sha256Hex = (b: Buffer | string): string =>
   createHash('sha256').update(b).digest('hex');
 
-const lit = (t: string): string => `'${t.replace(/['‘’‚‛]/g, '$&$&')}'`;
+const lit = literalPowerShell;
 const lista = (xs: string[]): string => `@(${xs.map(lit).join(', ')})`;
 
 const PREAMBULO = [

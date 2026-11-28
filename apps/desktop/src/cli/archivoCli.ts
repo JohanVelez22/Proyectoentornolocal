@@ -137,7 +137,12 @@ export async function appAbierta(ruta: string, d: DepsLectura): Promise<boolean>
 
 /* ───────── Windows: ACL por SID con PowerShell ───────── */
 
-const comillas = (t: string): string => `'${t.replace(/'/g, "''")}'`;
+/**
+ * Literal de PowerShell entre comillas simples. Este cliente es un solo archivo sin dependencias
+ * (no importa `@pel/core`), así que lleva su copia de `literalPowerShell` del núcleo: duplica el
+ * apóstrofo Y las comillas tipográficas ‘ ’ ‚ ‛, que PowerShell también trata como comilla simple.
+ */
+const comillas = (t: string): string => `'${t.replace(/['‘’‚‛]/g, '$&$&')}'`;
 
 /**
  * Script (ASCII, con la ruta ya entre comillas): `SI` solo si el dueño es el SID del usuario actual,

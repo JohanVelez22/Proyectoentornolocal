@@ -1,3 +1,4 @@
+import { literalPowerShell } from './literalPowerShell';
 import { ErrorWolf } from '../errores';
 import { esPrivadaRfc1918 } from '../miRed/rfc1918';
 import { interpretarPerfilRed, type PerfilRed } from './firewallWin';
@@ -88,7 +89,7 @@ const SALIDA_BASE64 =
   '[Console]::Out.WriteLine([Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($j)))';
 
 /** Texto entre comillas simples de PowerShell (también duplica las comillas tipográficas). */
-const literal = (t: string): string => `'${t.replace(/['‘’‚‛]/g, '$&$&')}'`;
+const literal = literalPowerShell;
 
 /** Decodifica la salida (JSON en Base64) y siempre devuelve una lista; null si no se pudo leer. */
 function decodificarLista(salida: string): Record<string, unknown>[] | null {

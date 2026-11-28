@@ -1104,6 +1104,13 @@ describe('ACL por SID con PowerShell -EncodedCommand (I1)', () => {
     expect(sc).toContain("Get-Acl -LiteralPath 'C:\\datos\\run\\cli.json'");
   });
 
+  it('una ruta con comillas tipográficas o apóstrofos queda dentro del literal (sin inyección)', () => {
+    const sc = scriptAclUsuario("C:\O’x’; Write-Output INYECTADO; ‘y\a‚b‛c'd\cli.json");
+    expect(sc).toContain(
+      "Get-Acl -LiteralPath 'C:\O’’x’’; Write-Output INYECTADO; ‘‘y\a‚‚b‛‛c''d\cli.json'",
+    );
+  });
+
   it('un usuario con caracteres no ASCII: la ruta viaja intacta en Base64 y la salida es ASCII', async () => {
     const ruta = "C:\\Usuarios\\José Peña\\O'Brien\\run\\cli.json";
     const vistos: { cmd: string; args: string[] }[] = [];

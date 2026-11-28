@@ -1,3 +1,4 @@
+import { literalPowerShell } from './literalPowerShell';
 import {
   DIAS_EVENTOS_DISCO,
   IDS_EVENTO_DISCO,
@@ -85,7 +86,7 @@ export const SCRIPT_SALUD_DISCOS = [
   '[Console]::Out.Write($json)',
 ].join('\n');
 
-const lit = (t: string): string => `'${t.replace(/'/g, "''")}'`;
+const lit = literalPowerShell;
 
 /** Salidas propias del cuerpo elevado (aparte de las del cargador). */
 export const SALIDA_SALUD_ADMIN = { sinSalida: 52, salidaInsegura: 53 } as const;

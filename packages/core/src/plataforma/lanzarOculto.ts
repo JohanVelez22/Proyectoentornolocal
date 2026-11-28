@@ -1,3 +1,4 @@
+import { literalPowerShell } from './literalPowerShell';
 import * as childProcess from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rm } from 'node:fs/promises';
@@ -53,12 +54,7 @@ export function citarArgumento(a: string): string {
   return r + '\\'.repeat(barras * 2) + '"';
 }
 
-/**
- * Literal de PowerShell entre comillas simples. PowerShell también trata como comilla simple las
- * tipográficas ‘ ’ ‚ ‛ (p. ej. un perfil "Johan’s"): se duplican todas, si no cortarían el
- * literal y el resto se ejecutaría como código.
- */
-export const literalPowerShell = (t: string): string => `'${t.replace(/['‘’‚‛]/g, '$&$&')}'`;
+export { literalPowerShell };
 const literal = literalPowerShell;
 
 /** Aviso cuando el lanzador oculto no está disponible y se vuelve al spawn clásico. */

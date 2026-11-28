@@ -1,3 +1,4 @@
+import { literalPowerShell } from './literalPowerShell';
 import { createHash } from 'node:crypto';
 import type { ResultadoEscritura } from './tipos';
 
@@ -90,7 +91,7 @@ const DESTINO_SISTEMA =
   "[IO.Path]::Combine([Environment]::SystemDirectory, 'drivers', 'etc', 'hosts')";
 
 /** Texto entre comillas simples de PowerShell (también duplica las comillas tipográficas). */
-export const literal = (t: string): string => `'${t.replace(/['‘’‚‛]/g, '$&$&')}'`;
+export const literal = literalPowerShell;
 
 /**
  * Script que corre ELEVADO: antes de escribir comprueba que no venció el plazo (hora UTC

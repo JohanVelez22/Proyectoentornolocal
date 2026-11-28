@@ -1,3 +1,4 @@
+import { literalPowerShell } from './literalPowerShell';
 import path from 'node:path';
 import {
   equipoDesconocido,
@@ -73,7 +74,7 @@ export function rutasNvidiaSmi(env: NodeJS.ProcessEnv): string[] {
   ];
 }
 
-const literal = (ruta: string): string => `'${ruta.replace(/'/g, "''")}'`;
+const literal = literalPowerShell;
 
 /** `nombre, MiB` por tarjeta con la primera de `rutas` que exista; si no hay ninguna, no imprime nada. */
 export function scriptNvidiaSmi(rutas: readonly string[]): string {

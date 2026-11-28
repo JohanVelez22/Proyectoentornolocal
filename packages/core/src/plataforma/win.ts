@@ -5,6 +5,7 @@ import { existsSync } from 'node:fs';
 import { open, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { arch, homedir, tmpdir, userInfo } from 'node:os';
 import path from 'node:path';
+import { literalPowerShell } from './literalPowerShell';
 import { rutaBasePorDefecto } from './carpetas';
 import { editoresWindows } from './editoresWin';
 import {
@@ -424,6 +425,16 @@ export interface OpcionesPlataformaWindows {
   anclasLimpieza?: () => Promise<AnclasLimpieza | null>;
   /** Tipo de unidad (`Win32_LogicalDisk.DriveType`) de una letra; por defecto, con PowerShell. */
   tipoUnidad?: (letra: string) => Promise<number | null>;
+}
+
+/** Script que compara el dueño de la ruta (SID) con el del usuario actual. La ruta va como literal. */
+export function scriptDuenoDeRuta(ruta: string): string {
+  return [
+    "$ErrorActionPreference = 'Stop'",
+    `$o = (Get-Acl -LiteralPath ${literalPowerShell(ruta)}).GetOwner([System.Security.Principal.SecurityIdentifier]).Value`,
+    '$yo = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value',
+    "if ($o -eq $yo) { [Console]::Out.Write('SI') } else { [Console]::Out.Write('NO') }",
+  ].join('\n');
 }
 
 export class PlataformaWindows implements PlataformaCompleta {
@@ -919,12 +930,7 @@ export class PlataformaWindows implements PlataformaCompleta {
 
   /** Dueño de la ruta (SID) contra el SID del usuario actual, en un solo PowerShell. */
   async duenoEsUsuario(ruta: string): Promise<boolean> {
-    const script = [
-      "$ErrorActionPreference = 'Stop'",
-      `$o = (Get-Acl -LiteralPath '${ruta.replace(/'/g, "''")}').GetOwner([System.Security.Principal.SecurityIdentifier]).Value`,
-      '$yo = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value',
-      "if ($o -eq $yo) { [Console]::Out.Write('SI') } else { [Console]::Out.Write('NO') }",
-    ].join('\n');
+    const script = scriptDuenoDeRuta(ruta);
     try {
       const r = await this.ejecutar('powershell', codificarPowerShell(script), {
         timeoutMs: 20_000,
