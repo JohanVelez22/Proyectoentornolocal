@@ -1,14 +1,8 @@
 <script setup lang="ts">
 import {
-  ChatbubbleEllipses,
-  CodeSlash,
-  CloudUpload,
   EllipsisHorizontal,
   KeyOutline,
-  Layers,
-  Mail,
   Power,
-  Server,
   SwapHorizontal,
   TrashOutline,
   Warning,
@@ -37,7 +31,8 @@ import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
 import { nombreServicio } from '../utilidades/nombreServicio';
-import { categoriaDe, esServicioDatos, puertoAlternativo, useServicios } from '../stores/servicios';
+import { esServicioDatos, puertoAlternativo, useServicios } from '../stores/servicios';
+import { iconoDeServicio } from '../utilidades/iconosServicio';
 import EstadoPunto from './EstadoPunto.vue';
 import { formatearTamano } from '../utilidades/bd';
 import { destinoVersion } from '../utilidades/foco';
@@ -74,15 +69,7 @@ const resumenInstancias = computed(() => {
   return t.instancias(l.length, l.filter((i) => i.estado === 'encendido').length);
 });
 
-const ICONOS: Record<ReturnType<typeof categoriaDe>, Component> = {
-  web: Server,
-  php: CodeSlash,
-  bd: Layers,
-  correo: Mail,
-  ia: ChatbubbleEllipses,
-  herramientas: CloudUpload,
-};
-const icono = computed(() => ICONOS[categoriaDe(props.servicio)]);
+const icono = computed(() => iconoDeServicio(props.servicio));
 
 const externo = computed(() => props.servicio.estado === 'externo');
 const encendido = computed(() => props.servicio.estado === 'encendido');
