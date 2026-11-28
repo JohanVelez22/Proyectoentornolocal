@@ -111,6 +111,7 @@ import type {
   EstadoHttps,
   EstadoCaptador,
   EstadoServicio,
+  PendienteArranque,
   EstadoTunel,
   EventosNucleo,
   FormatoRespaldo,
@@ -399,6 +400,7 @@ export type {
   EstadoHttps,
   EstadoCaptador,
   EstadoServicio,
+  PendienteArranque,
   EstadoTunel,
   EventosNucleo,
   FormatoRespaldo,
@@ -803,6 +805,8 @@ export interface ApiEntorno {
     iniciar(id: string): Promise<void>;
     detener(id: string): Promise<void>;
     iniciarTodo(): Promise<void>;
+    /** Lo que «Iniciar todo» encendería ahora (el criterio es el del núcleo). */
+    porArrancar(): Promise<PendienteArranque[]>;
     /** Cierra primero los túneles (devolviendo los .env) y luego detiene los servicios. */
     detenerTodo(): Promise<void>;
     /** Host y puerto de Meilisearch (o de una de sus instancias), para «Datos de conexión»: sin la master key. */
@@ -2080,6 +2084,7 @@ export const RUTAS_IPC = [
   'servicios.iniciar',
   'servicios.detener',
   'servicios.iniciarTodo',
+  'servicios.porArrancar',
   'servicios.detenerTodo',
   'servicios.cambiarPuerto',
   'servicios.borrarDatos',

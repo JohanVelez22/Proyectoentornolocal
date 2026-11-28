@@ -765,6 +765,7 @@ describe('registrarIpc', () => {
         'servicios.iniciar',
         'servicios.detener',
         'servicios.iniciarTodo',
+        'servicios.porArrancar',
         'servicios.detenerTodo',
         'servicios.cambiarPuerto',
         'servicios.borrarDatos',

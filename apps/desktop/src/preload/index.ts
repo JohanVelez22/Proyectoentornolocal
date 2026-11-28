@@ -81,6 +81,7 @@ const api: ApiEntorno = {
     iniciar: (id) => invocar('servicios.iniciar', id),
     detener: (id) => invocar('servicios.detener', id),
     iniciarTodo: () => invocar('servicios.iniciarTodo'),
+    porArrancar: () => invocar('servicios.porArrancar'),
     detenerTodo: () => invocar('servicios.detenerTodo'),
     conexion: (ref) => invocar('servicios.conexion', ref),
     revelarSecreto: (ref) => invocar('servicios.revelarSecreto', ref),

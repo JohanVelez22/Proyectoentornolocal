@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia';
-import { computed, ref } from 'vue';
+import { computed, ref, shallowRef } from 'vue';
 import type {
   EstadoServicio,
   IdServicioDatos,
+  PendienteArranque,
   ProgresoInstalacion,
   VersionDisponible,
 } from '../../shared/api';
@@ -33,6 +34,9 @@ export const INSTALABLES_CATALOGO = [
 export type InstalableCatalogo = (typeof INSTALABLES_CATALOGO)[number];
 
 /** Progreso que no es de esta pantalla (las Build Tools de pgvector van en Bases de datos). */
+/** Espera tras un cambio de estado antes de volver a pedir lo que falta por arrancar. */
+export const RETARDO_PENDIENTES_MS = 300;
+
 const PROGRESO_AJENO = new Set(['buildtools']);
 
 /** Servicios propios con puerto configurable, datos y arranque automático. */
@@ -147,17 +151,36 @@ export const useServicios = defineStore('servicios', () => {
   /** Motores que corren fuera de WolfCore Dev (se detectan solos; van en su propia franja). */
   const externos = computed(() => visibles.value.filter((s) => s.estado === 'externo'));
   /**
-   * Los que "Iniciar todo" puede encender: propios, instalados y parados. No cuentan los externos,
-   * el FTP integrado (arranca con sus proyectos) ni las herramientas.
+   * Lo que «Iniciar todo» encendería ahora. El criterio es el del núcleo (PHP de las ramas en uso,
+   * Nginx, bases con autoIniciar, predeterminadas o usadas por proyectos y procesos de proyecto),
+   * pedido por IPC (D54d): así el contador es lo que de verdad arranca. Se refresca, con un breve
+   * retardo, cuando cambia el estado de algún servicio.
    */
-  const porArrancar = computed(() =>
-    visibles.value.filter(
-      (s) =>
-        (s.estado === 'apagado' || s.estado === 'error') &&
-        s.id !== 'ftp' &&
-        s.categoria !== 'herramienta',
-    ),
-  );
+  const porArrancar = shallowRef<PendienteArranque[]>([]);
+  let consultaPendientes: Promise<void> | null = null;
+  let temporizadorPendientes: ReturnType<typeof setTimeout> | null = null;
+
+  function cargarPendientes(): Promise<void> {
+    if (consultaPendientes) return consultaPendientes;
+    consultaPendientes = (async () => {
+      try {
+        porArrancar.value = await api().servicios.porArrancar();
+      } catch {
+        // Sin respuesta se conserva la última lista; el siguiente cambio de estado reintenta.
+      } finally {
+        consultaPendientes = null;
+      }
+    })();
+    return consultaPendientes;
+  }
+
+  function programarPendientes(): void {
+    if (temporizadorPendientes) clearTimeout(temporizadorPendientes);
+    temporizadorPendientes = setTimeout(() => {
+      temporizadorPendientes = null;
+      void cargarPendientes();
+    }, RETARDO_PENDIENTES_MS);
+  }
   /**
    * Fuente única de "qué hay y cómo está" para Servicios, Inicio y la pastilla de la cabecera:
    * todos cuentan sobre `visibles`, nunca sobre `lista` (que trae Nginx sin instalar y los procesos
@@ -201,12 +224,14 @@ export const useServicios = defineStore('servicios', () => {
 
   function aplicar(estado: EstadoServicio): void {
     porId.value[estado.id] = estado;
+    programarPendientes();
   }
 
   /** Carga inicial: lo que ya llegó por evento es más nuevo y no se pisa. */
   function hidratar(estados: EstadoServicio[]): void {
     for (const s of estados) if (!porId.value[s.id]) porId.value[s.id] = s;
     cargado.value = true;
+    void cargarPendientes();
   }
 
   function marcarCargado(): void {
@@ -277,6 +302,8 @@ export const useServicios = defineStore('servicios', () => {
   }
 
   function detener(): void {
+    if (temporizadorPendientes) clearTimeout(temporizadorPendientes);
+    temporizadorPendientes = null;
     bajas.forEach((b) => b());
     bajas = [];
   }
@@ -294,6 +321,7 @@ export const useServicios = defineStore('servicios', () => {
     externos,
     instaladosListos,
     porArrancar,
+    cargarPendientes,
     resumen,
     nadaInstalado,
     grupos,

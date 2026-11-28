@@ -48,6 +48,7 @@ function apiFalsa(general: Partial<EstadoGeneral> = {}) {
       iniciar: vi.fn(),
       detener: vi.fn(),
       iniciarTodo: vi.fn(),
+      porArrancar: vi.fn(async () => []),
       detenerTodo: vi.fn(),
       autoIniciar: vi.fn(async () => undefined),
     },
@@ -401,8 +402,9 @@ describe('stores de la interfaz', () => {
     // Los externos van en su franja y no en los grupos de tarjetas.
     expect(servicios.externos.map((s) => s.id)).toEqual(['mysql']);
     expect(servicios.grupos.flatMap((g) => g.servicios.map((s) => s.id))).toEqual(['ftp']);
-    // Nada propio que arrancar: "Iniciar todo" queda desactivado.
+    // Nada que arrancar según el núcleo: "Iniciar todo" queda desactivado.
     expect(servicios.porArrancar).toEqual([]);
+    expect(servicios.resumen.porArrancar).toBe(0);
 
     // Un servicio con error y otro encendido se cuentan igual en todas partes.
     servicios.aplicar({ ...nginx, estado: 'encendido' });
@@ -417,7 +419,9 @@ describe('stores de la interfaz', () => {
       estado: 'encendido',
     });
     expect(servicios.resumen).toMatchObject({ propios: 3, encendidos: 2 });
-    expect(servicios.porArrancar.map((s) => s.id)).toEqual(['redis']);
+    // El contador sale de lo que el núcleo dice que arrancaría (D54d), no de un filtro local.
+    servicios.porArrancar = [{ id: 'redis', nombre: 'Redis', tipo: 'datos' }];
+    expect(servicios.resumen.porArrancar).toBe(1);
   });
 
   it('la pastilla y las alertas ven los procesos de proyecto, pero no el Nginx sin instalar (D54a)', () => {
