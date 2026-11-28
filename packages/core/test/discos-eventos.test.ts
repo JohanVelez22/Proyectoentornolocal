@@ -110,6 +110,30 @@ describe('interpretarEventosDisco', () => {
   });
 });
 
+describe('evento real de un Windows en español', () => {
+  it('NTFS 55 con el texto del sistema en español: unidad y fecha de 7 decimales', () => {
+    const r = interpretarEventosDisco(
+      JSON.stringify([
+        {
+          f: '2026-11-15T00:50:21.4723204Z',
+          id: 55,
+          p: 'Ntfs',
+          m: 'Se detectó un daño en la estructura del sistema de archivos del volumen D:.
+
+A file on the volume is no longer reachable from its parent directory.  The parent file reference number is 0x50000000000',
+        },
+      ]),
+    );
+    expect(r[0]).toMatchObject({
+      fecha: '2026-11-15T00:50:21.472Z',
+      gravedad: 'critico',
+      disco: { tipo: 'unidad', valor: 'D:' },
+    });
+    expect(r[0]?.detalle).not.toMatch(/[
+]/);
+  });
+});
+
 describe('fechas de un Windows en otro idioma', () => {
   it('acepta ISO, /Date()/ y d.m.a; descarta la fecha con barras, ambigua', () => {
     expect(fechaDeEvento('2026-11-20T08:30:00Z')).toBe('2026-11-20T08:30:00.000Z');

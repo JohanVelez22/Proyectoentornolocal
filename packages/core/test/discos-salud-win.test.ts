@@ -171,6 +171,26 @@ describe('interpretarSaludDiscos', () => {
   });
 });
 
+describe('salida real de un Windows en español (modelo sustituido)', () => {
+  const REAL =
+    '{"p":"no_disponible","discos":[{"n":"0","modelo":"Disco NVMe de ejemplo","medio":"SSD","bus":"NVMe","tam":1000204886016,"salud":"Healthy","oper":["OK"],"cs":"admin","c":null,"pf":null,"letras":["C"]}]}';
+
+  it('sin administrador: salud y tipo sí; contadores y predicción, «no disponible»', () => {
+    const r = interpretarSaludDiscos(REAL);
+    expect(r?.prediccion).toBe('no_disponible');
+    expect(r?.discos[0]).toMatchObject({
+      numero: 0,
+      medio: 'ssd',
+      bus: 'nvme',
+      salud: 'healthy',
+      contadores: null,
+      motivoSinContadores: 'admin',
+      prediccionFallo: null,
+      unidades: ['C:'],
+    });
+  });
+});
+
 describe('privacidad: sin números de serie ni identificadores únicos', () => {
   it('los scripts no piden serie, identificador único ni objeto', () => {
     for (const s of [
