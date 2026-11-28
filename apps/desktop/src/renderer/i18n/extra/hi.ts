@@ -21,6 +21,9 @@ export const hiExtra: TextosParciales = {
   errores: {
     uacHuerfano: 'यदि Windows की अनुमति विंडो दिखे, तो आप उसे रद्द कर सकते हैं: अब वह कुछ नहीं करेगी।',
     codigos: {
+      'bd.vector_sin_bases': 'कम से कम एक डेटाबेस चुनें।',
+      'bd.vector_demasiadas': 'एक ही ऑपरेशन में बहुत अधिक डेटाबेस हैं।',
+      'bd.vector_ocupado': 'pgvector का एक और ऑपरेशन पहले से चल रहा है। उसके पूरा होने तक प्रतीक्षा करें।',
       'bd.vector_confirmacion': 'जारी रखने के लिए ऑपरेशन की पुष्टि करें।',
       'bd.vector_no_instalado': 'pgvector इंस्टॉल नहीं है: डेटाबेस में "pgvector इंस्टॉल करें" का उपयोग करें।',
       'asistentes.no_existe': 'यह असिस्टेंट समर्थित नहीं है।',
@@ -264,6 +267,7 @@ export const hiExtra: TextosParciales = {
       variasBoton: 'कई डेटाबेस में सक्रिय करें',
       variasTitulo: 'कई डेटाबेस में pgvector सक्रिय करें',
       variasTexto: 'इस इंस्टेंस के वे डेटाबेस चुनें जिनमें एक्सटेंशन बनाना है। जिनमें यह पहले से है, वे नहीं बदलेंगे।',
+      truncado: 'केवल पहले 200 डेटाबेस दिखाए गए हैं: एक ऑपरेशन में जितने समा सकते हैं, उससे अधिक हैं।',
       variasVacio: 'इस इंस्टेंस में अभी कोई डेटाबेस नहीं है।',
       seleccionarTodas: 'सभी चुनें',
       quitarSeleccion: 'चयन हटाएँ',
@@ -282,6 +286,9 @@ export const hiExtra: TextosParciales = {
         requiereAviso: 'छुआ नहीं गया: वास्तविक डेटा',
       },
       motivos: {
+        dependencias: 'कुछ ऑब्जेक्ट एक्सटेंशन का उपयोग कर रहे हैं',
+        sistema: 'यह सिस्टम डेटाबेस है',
+        nombreNoValido: 'यह नाम WolfCore Dev के लिए मान्य नहीं है (केवल छोटे अक्षर, संख्याएँ और अंडरस्कोर)',
         sinPgvector: 'pgvector इंस्टॉल नहीं है',
         noExiste: 'डेटाबेस अब मौजूद नहीं है',
         permiso: 'अनुमति नहीं मिली',
@@ -298,6 +305,7 @@ export const hiExtra: TextosParciales = {
         explicacion:
           'PostgreSQL के टेम्पलेट template1 में एक्सटेंशन बनाता है: बाद में बनने वाले डेटाबेस में यह होगा; मौजूदा डेटाबेस नहीं बदलेंगे।',
         estadoSi: 'सक्रिय: नए डेटाबेस में pgvector होगा',
+        noSePudo: 'जाँच नहीं हो सकी',
         estadoNo: 'सक्रिय नहीं: नए डेटाबेस में pgvector नहीं होगा',
         activar: 'नए डेटाबेस में भी सक्रिय करें',
         quitar: 'नए डेटाबेस से हटाएँ',

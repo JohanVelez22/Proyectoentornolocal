@@ -28,6 +28,9 @@ import {
   NTab,
   NTabs,
   NTooltip,
+  useDialog,
+  useMessage,
+  useNotification,
 } from 'naive-ui';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -50,6 +53,7 @@ import SelectorInstancia from '../componentes/SelectorInstancia.vue';
 import { useAccion } from '../composables/useAccion';
 import { useFoco } from '../composables/useFoco';
 import { textos } from '../i18n';
+import { claveMotivo } from '../utilidades/vectorBases';
 import { LIMITE_LINEAS, useBd } from '../stores/bd';
 import { useServicios } from '../stores/servicios';
 import { destinoServicio, focoBase, motorDeFocoBase } from '../utilidades/foco';
@@ -67,6 +71,9 @@ const route = useRoute();
 const servicios = useServicios();
 const bd = useBd();
 const { ejecutar, ocupado } = useAccion();
+const dialog = useDialog();
+const message = useMessage();
+const notification = useNotification();
 
 // ---- Motores y pestañas ----
 const instaladosListos = ref(false);
@@ -244,10 +251,40 @@ function abrirAdminer(base: string): void {
 }
 
 const vectorListo = computed(() => bd.pgvector?.instalado === true);
-function activarVector(base: string): void {
-  void ejecutar(`vector:${base}`, () => api().pgvector.activar(base), {
-    exito: t.vectorActivado(base),
+/** «Activar vector» de una fila: mismo camino que varias bases; una de datos reales pide su aviso. */
+async function activarVector(base: string): Promise<void> {
+  const r = await ejecutar(`vector:${base}`, () => api().pgvector.activar(base), {
+    tituloError: textos.bd.pgvector.variasTitulo,
   });
+  if (!r) return;
+  if (r.estado === 'activada') message.success(t.vectorActivado(base));
+  else if (r.estado === 'ya-estaba') message.info(textos.bd.pgvector.estados.yaEstaba);
+  else if (r.estado === 'error') {
+    notification.error({
+      title: textos.bd.pgvector.variasTitulo,
+      content: textos.bd.pgvector.motivos[claveMotivo(r.motivo)],
+      duration: 8000,
+    });
+  } else if (r.estado === 'requiere-aviso') {
+    dialog.warning({
+      title: textos.bd.pgvector.datosReales,
+      content: `${textos.bd.pgvector.realesTexto(1)} (${base})`,
+      positiveText: textos.bd.pgvector.realesBoton,
+      negativeText: textos.acciones.cancelar,
+      onPositiveClick: () => {
+        void ejecutar(
+          `vector:${base}`,
+          () =>
+            api().pgvector.activarEnBases(bd.objetivo('postgresql'), {
+              bases: [base],
+              confirmado: true,
+              datosRealesConfirmadas: [base],
+            }),
+          { exito: t.vectorActivado(base) },
+        );
+      },
+    });
+  }
 }
 
 // ---- Borrar ----

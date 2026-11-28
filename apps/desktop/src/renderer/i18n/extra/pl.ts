@@ -31,6 +31,9 @@ export const plExtra: TextosParciales = {
     uacHuerfano:
       'Jeśli pojawi się okno zgody systemu Windows, można je anulować: nic już nie robi.',
     codigos: {
+      'bd.vector_sin_bases': 'Wybierz co najmniej jedną bazę.',
+      'bd.vector_demasiadas': 'Zbyt wiele baz w jednej operacji.',
+      'bd.vector_ocupado': 'Trwa już inna operacja pgvector. Proszę poczekać na jej zakończenie.',
       'bd.vector_confirmacion': 'Potwierdź operację, aby kontynuować.',
       'bd.vector_no_instalado':
         'pgvector nie jest zainstalowany: proszę użyć opcji „Zainstaluj pgvector” w sekcji Bazy danych.',
@@ -313,6 +316,7 @@ export const plExtra: TextosParciales = {
       variasTitulo: 'Włącz pgvector w kilku bazach',
       variasTexto:
         'Wybierz bazy tej instancji, w których ma powstać rozszerzenie. Bazy, które już je mają, nie zmieniają się.',
+      truncado: 'Wyświetlono tylko pierwsze 200 baz: jest ich więcej, niż mieści jedna operacja.',
       variasVacio: 'Ta instancja nie ma jeszcze baz.',
       seleccionarTodas: 'Zaznacz wszystkie',
       quitarSeleccion: 'Wyczyść zaznaczenie',
@@ -331,6 +335,10 @@ export const plExtra: TextosParciales = {
         requiereAviso: 'Nie zmieniono: prawdziwe dane',
       },
       motivos: {
+        dependencias: 'Obiekty używają rozszerzenia',
+        sistema: 'To baza systemowa',
+        nombreNoValido:
+          'Nazwa jest nieprawidłowa dla WolfCore Dev (tylko małe litery, cyfry i podkreślenie)',
         sinPgvector: 'pgvector nie jest zainstalowany',
         noExiste: 'Baza już nie istnieje',
         permiso: 'Odmowa dostępu',
@@ -347,6 +355,7 @@ export const plExtra: TextosParciales = {
         explicacion:
           'Tworzy rozszerzenie w template1, czyli w szablonie PostgreSQL: bazy tworzone później będą je miały; istniejące się nie zmienią.',
         estadoSi: 'Włączone: nowe bazy będą miały pgvector',
+        noSePudo: 'Nie udało się sprawdzić',
         estadoNo: 'Niewłączone: nowe bazy nie będą miały pgvector',
         activar: 'Włącz także w nowych bazach',
         quitar: 'Usuń z nowych baz',

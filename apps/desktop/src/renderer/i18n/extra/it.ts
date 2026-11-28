@@ -26,6 +26,9 @@ export const itExtra: TextosParciales = {
     uacHuerfano:
       'Se compare una finestra di autorizzazione di Windows, può annullarla: non fa più nulla.',
     codigos: {
+      'bd.vector_sin_bases': 'Scelga almeno un database.',
+      'bd.vector_demasiadas': 'Troppi database in una sola operazione.',
+      'bd.vector_ocupado': 'È già in corso un’altra operazione di pgvector. Attenda che termini.',
       'bd.vector_confirmacion': "Confermi l'operazione per continuare.",
       'bd.vector_no_instalado': 'pgvector non è installato: usi «Installa pgvector» in Database.',
       'asistentes.no_existe': 'Questo assistente non è supportato.',
@@ -309,6 +312,8 @@ export const itExtra: TextosParciales = {
       variasTitulo: 'Attivare pgvector su più database',
       variasTexto:
         "Scelga i database di questa istanza in cui creare l'estensione. Quelli che ce l'hanno già non cambiano.",
+      truncado:
+        'Sono mostrati solo i primi 200 database: ce ne sono più di quanti ne stiano in un’operazione.',
       variasVacio: 'Questa istanza non ha ancora database.',
       seleccionarTodas: 'Seleziona tutti',
       quitarSeleccion: 'Cancella la selezione',
@@ -327,6 +332,10 @@ export const itExtra: TextosParciales = {
         requiereAviso: 'Non modificato: dati reali',
       },
       motivos: {
+        dependencias: 'Alcuni oggetti usano l’estensione',
+        sistema: 'È un database di sistema',
+        nombreNoValido:
+          'Il nome non è valido per WolfCore Dev (solo minuscole, numeri e trattino basso)',
         sinPgvector: 'pgvector non è installato',
         noExiste: 'Il database non esiste più',
         permiso: 'Permesso negato',
@@ -343,6 +352,7 @@ export const itExtra: TextosParciales = {
         explicacion:
           "Crea l'estensione in template1, il modello di PostgreSQL: i database creati in seguito la avranno; quelli esistenti non cambiano.",
         estadoSi: 'Attiva: i nuovi database avranno pgvector',
+        noSePudo: 'Impossibile verificare',
         estadoNo: 'Non attiva: i nuovi database non hanno pgvector',
         activar: 'Attiva anche nei nuovi database',
         quitar: 'Rimuovi dai nuovi database',

@@ -10,7 +10,7 @@ import type {
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
-import { basesConAviso, contarListas, elegibles } from '../utilidades/vectorBases';
+import { basesConAviso, claveMotivo, contarListas, elegibles } from '../utilidades/vectorBases';
 
 /**
  * «Activar en varias bases»: se eligen las bases de la instancia, se confirma y se muestra un
@@ -124,16 +124,7 @@ const textoEstado = (e: ResultadoBaseVector['estado']): string =>
     'requiere-aviso': t.estados.requiereAviso,
   })[e];
 const textoMotivo = (m: ResultadoBaseVector['motivo']): string =>
-  m === undefined
-    ? ''
-    : {
-        'sin-pgvector': t.motivos.sinPgvector,
-        'no-existe': t.motivos.noExiste,
-        permiso: t.motivos.permiso,
-        conexion: t.motivos.conexion,
-        'en-uso': t.motivos.enUso,
-        otro: t.motivos.otro,
-      }[m];
+  m === undefined ? '' : t.motivos[claveMotivo(m)];
 const todasMarcadas = computed(
   () => posibles.value.length > 0 && elegidas.value.length === posibles.value.length,
 );
@@ -166,7 +157,7 @@ const todasMarcadas = computed(
         <li v-for="b in estado.bases" :key="b.base" class="base">
           <NCheckbox
             :checked="elegidas.includes(b.base)"
-            :disabled="b.activo || trabajando"
+            :disabled="b.activo || !b.valida || trabajando"
             @update:checked="(v: boolean) => alternar(b.base, v)"
           >
             <span class="nombre">{{ b.base }}</span>
@@ -175,12 +166,14 @@ const todasMarcadas = computed(
             <NTag v-if="b.activo" size="small" :bordered="false" type="success">{{
               t.yaLaTiene
             }}</NTag>
+            <small v-if="!b.valida" class="motivo">{{ t.motivos.nombreNoValido }}</small>
             <NTag v-if="b.datosReales" size="small" :bordered="false" type="warning">{{
               t.datosReales
             }}</NTag>
           </span>
         </li>
       </ul>
+      <p v-if="estado.truncado" class="texto tenue" role="note">{{ t.truncado }}</p>
     </template>
 
     <section v-if="informe" class="informe" aria-live="polite">

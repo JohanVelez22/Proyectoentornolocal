@@ -31,6 +31,9 @@ export const ukExtra: TextosParciales = {
     uacHuerfano:
       'Якщо з’явиться вікно дозволу Windows, ви можете його скасувати: воно вже нічого не робить.',
     codigos: {
+      'bd.vector_sin_bases': 'Виберіть принаймні одну базу.',
+      'bd.vector_demasiadas': 'Забагато баз в одній операції.',
+      'bd.vector_ocupado': 'Уже виконується інша операція pgvector. Дочекайтеся її завершення.',
       'bd.vector_confirmacion': 'Підтвердьте операцію, щоб продовжити.',
       'bd.vector_no_instalado':
         'pgvector не встановлено: скористайтеся пунктом «Установити pgvector» у розділі «Бази даних».',
@@ -305,6 +308,7 @@ export const ukExtra: TextosParciales = {
       variasTitulo: 'Увімкнути pgvector у кількох базах',
       variasTexto:
         'Виберіть бази цього екземпляра, в яких потрібно створити розширення. Бази, що вже мають його, не зміняться.',
+      truncado: 'Показано лише перші 200 баз: їх більше, ніж вміщує одна операція.',
       variasVacio: 'У цьому екземплярі ще немає баз.',
       seleccionarTodas: 'Вибрати всі',
       quitarSeleccion: 'Зняти вибір',
@@ -323,6 +327,9 @@ export const ukExtra: TextosParciales = {
         requiereAviso: 'Не чіпали: реальні дані',
       },
       motivos: {
+        dependencias: 'Розширення використовують об’єкти',
+        sistema: 'Це системна база',
+        nombreNoValido: 'Назва недійсна для WolfCore Dev (лише малі літери, цифри та підкреслення)',
         sinPgvector: 'pgvector не встановлено',
         noExiste: 'Бази більше не існує',
         permiso: 'У доступі відмовлено',
@@ -339,6 +346,7 @@ export const ukExtra: TextosParciales = {
         explicacion:
           'Створює розширення в template1 — шаблоні PostgreSQL: бази, створені пізніше, матимуть його; наявні не зміняться.',
         estadoSi: 'Увімкнено: нові бази матимуть pgvector',
+        noSePudo: 'Не вдалося перевірити',
         estadoNo: 'Не ввімкнено: нові бази не матимуть pgvector',
         activar: 'Увімкнути й у нових базах',
         quitar: 'Прибрати з нових баз',

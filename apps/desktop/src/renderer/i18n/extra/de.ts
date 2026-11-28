@@ -27,6 +27,10 @@ export const deExtra: TextosParciales = {
     uacHuerfano:
       'Falls ein Windows-Berechtigungsfenster erscheint, können Sie es abbrechen: Es bewirkt nichts mehr.',
     codigos: {
+      'bd.vector_sin_bases': 'Wählen Sie mindestens eine Datenbank.',
+      'bd.vector_demasiadas': 'Zu viele Datenbanken in einem einzigen Vorgang.',
+      'bd.vector_ocupado':
+        'Es läuft bereits ein anderer pgvector-Vorgang. Warten Sie, bis er beendet ist.',
       'bd.vector_confirmacion': 'Bestätigen Sie den Vorgang, um fortzufahren.',
       'bd.vector_no_instalado':
         'pgvector ist nicht installiert: Verwenden Sie „pgvector installieren“ unter Datenbanken.',
@@ -326,6 +330,8 @@ export const deExtra: TextosParciales = {
       variasTitulo: 'pgvector in mehreren Datenbanken aktivieren',
       variasTexto:
         'Wählen Sie die Datenbanken dieser Instanz, in denen die Erweiterung angelegt werden soll. Datenbanken, die sie schon haben, bleiben unverändert.',
+      truncado:
+        'Es werden nur die ersten 200 Datenbanken angezeigt: Es gibt mehr, als in einem Vorgang Platz haben.',
       variasVacio: 'Diese Instanz hat noch keine Datenbanken.',
       seleccionarTodas: 'Alle auswählen',
       quitarSeleccion: 'Auswahl aufheben',
@@ -344,6 +350,10 @@ export const deExtra: TextosParciales = {
         requiereAviso: 'Nicht angerührt: echte Daten',
       },
       motivos: {
+        dependencias: 'Objekte verwenden die Erweiterung',
+        sistema: 'Es ist eine Systemdatenbank',
+        nombreNoValido:
+          'Der Name ist für WolfCore Dev nicht gültig (nur Kleinbuchstaben, Ziffern und Unterstrich)',
         sinPgvector: 'pgvector ist nicht installiert',
         noExiste: 'Die Datenbank existiert nicht mehr',
         permiso: 'Zugriff verweigert',
@@ -360,6 +370,7 @@ export const deExtra: TextosParciales = {
         explicacion:
           'Legt die Erweiterung in template1 an, der PostgreSQL-Vorlage: Später erstellte Datenbanken haben sie; bestehende ändern sich nicht.',
         estadoSi: 'Aktiviert: neue Datenbanken enthalten pgvector',
+        noSePudo: 'Konnte nicht geprüft werden',
         estadoNo: 'Nicht aktiviert: neue Datenbanken enthalten pgvector nicht',
         activar: 'Auch in neuen Datenbanken aktivieren',
         quitar: 'Aus neuen Datenbanken entfernen',

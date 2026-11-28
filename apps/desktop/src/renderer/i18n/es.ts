@@ -187,6 +187,9 @@ export const es = {
       'bd.encender_servicio': 'Encienda {nombre} para administrar sus bases.',
       'bd.sin_credenciales': 'No hay credenciales guardadas de {nombre}.',
       'bd.confirmacion_borrado': 'Para borrar la base {nombre} escriba su nombre exacto.',
+      'bd.vector_sin_bases': 'Elija al menos una base.',
+      'bd.vector_demasiadas': 'Son demasiadas bases en una sola operación.',
+      'bd.vector_ocupado': 'Ya hay otra operación de pgvector en curso. Espere a que termine.',
       'bd.vector_confirmacion': 'Confirme la operación para continuar.',
       'bd.vector_no_instalado':
         'pgvector no está instalado: use «Instalar pgvector» en Bases de datos.',
@@ -1786,6 +1789,8 @@ export const es = {
       variasTitulo: 'Activar pgvector en varias bases',
       variasTexto:
         'Elija las bases de esta instancia en las que crear la extensión. Las que ya la tienen no cambian.',
+      truncado:
+        'Solo se muestran las primeras 200 bases: hay más de las que caben en una operación.',
       variasVacio: 'Esta instancia aún no tiene bases.',
       seleccionarTodas: 'Seleccionar todas',
       quitarSeleccion: 'Quitar la selección',
@@ -1804,6 +1809,10 @@ export const es = {
         requiereAviso: 'Sin tocar: datos reales',
       },
       motivos: {
+        dependencias: 'Hay objetos que usan la extensión',
+        sistema: 'Es una base del sistema',
+        nombreNoValido:
+          'Su nombre no es válido para WolfCore Dev (solo minúsculas, números y guion bajo)',
         sinPgvector: 'pgvector no está instalado',
         noExiste: 'La base ya no existe',
         permiso: 'Permiso denegado',
@@ -1820,6 +1829,7 @@ export const es = {
         explicacion:
           'Crea la extensión en template1, la plantilla de PostgreSQL: las bases que se creen después la tendrán; las existentes no cambian.',
         estadoSi: 'Activada: las bases nuevas llevarán pgvector',
+        noSePudo: 'No se pudo comprobar',
         estadoNo: 'No activada: las bases nuevas no llevan pgvector',
         activar: 'Activar también en las bases nuevas',
         quitar: 'Quitar de las bases nuevas',

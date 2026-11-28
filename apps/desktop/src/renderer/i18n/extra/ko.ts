@@ -19,6 +19,9 @@ export const koExtra: TextosParciales = {
   errores: {
     uacHuerfano: 'Windows 권한 창이 나타나면 취소하셔도 됩니다. 더 이상 아무 작업도 하지 않습니다.',
     codigos: {
+      'bd.vector_sin_bases': '데이터베이스를 하나 이상 선택하십시오.',
+      'bd.vector_demasiadas': '한 번의 작업에 데이터베이스가 너무 많습니다.',
+      'bd.vector_ocupado': '다른 pgvector 작업이 이미 진행 중입니다. 끝날 때까지 기다리십시오.',
       'bd.vector_confirmacion': '계속하려면 작업을 확인하십시오.',
       'bd.vector_no_instalado':
         'pgvector가 설치되어 있지 않습니다. 데이터베이스에서 "pgvector 설치"를 사용하십시오.',
@@ -280,6 +283,8 @@ export const koExtra: TextosParciales = {
       variasTitulo: '여러 데이터베이스에서 pgvector 활성화',
       variasTexto:
         '이 인스턴스에서 확장을 만들 데이터베이스를 선택하십시오. 이미 활성화된 데이터베이스는 변경되지 않습니다.',
+      truncado:
+        '처음 200개의 데이터베이스만 표시됩니다. 한 번의 작업으로 처리할 수 있는 수를 넘었습니다.',
       variasVacio: '이 인스턴스에는 아직 데이터베이스가 없습니다.',
       seleccionarTodas: '모두 선택',
       quitarSeleccion: '선택 해제',
@@ -298,6 +303,10 @@ export const koExtra: TextosParciales = {
         requiereAviso: '변경 안 됨: 실제 데이터',
       },
       motivos: {
+        dependencias: '확장을 사용하는 개체가 있습니다',
+        sistema: '시스템 데이터베이스입니다',
+        nombreNoValido:
+          '이름이 WolfCore Dev에서 사용할 수 없는 형식입니다(소문자, 숫자, 밑줄만 가능)',
         sinPgvector: 'pgvector가 설치되어 있지 않습니다',
         noExiste: '데이터베이스가 더 이상 없습니다',
         permiso: '권한이 거부되었습니다',
@@ -314,6 +323,7 @@ export const koExtra: TextosParciales = {
         explicacion:
           'PostgreSQL 템플릿인 template1에 확장을 만듭니다. 이후에 만드는 데이터베이스에는 포함되며 기존 데이터베이스는 변경되지 않습니다.',
         estadoSi: '활성화됨: 새 데이터베이스에 pgvector가 포함됩니다',
+        noSePudo: '확인할 수 없습니다',
         estadoNo: '활성화 안 됨: 새 데이터베이스에 pgvector가 포함되지 않습니다',
         activar: '새 데이터베이스에서도 활성화',
         quitar: '새 데이터베이스에서 제거',

@@ -193,6 +193,9 @@ export const pt: Textos = {
       'bd.encender_servicio': 'Ligue {nombre} para administrar os bancos dele.',
       'bd.sin_credenciales': 'Não há credenciais salvas de {nombre}.',
       'bd.confirmacion_borrado': 'Para apagar o banco {nombre}, digite o nome exato dele.',
+      'bd.vector_sin_bases': 'Escolha pelo menos um banco.',
+      'bd.vector_demasiadas': 'Há bancos demais em uma única operação.',
+      'bd.vector_ocupado': 'Já há outra operação do pgvector em andamento. Aguarde o término.',
       'bd.vector_confirmacion': 'Confirme a operação para continuar.',
       'bd.vector_no_instalado':
         'O pgvector não está instalado: use "Instalar pgvector" em Bancos de dados.',
@@ -1792,6 +1795,8 @@ export const pt: Textos = {
       variasTitulo: 'Ativar o pgvector em vários bancos',
       variasTexto:
         'Escolha os bancos desta instância nos quais criar a extensão. Os que já a têm não mudam.',
+      truncado:
+        'Somente os 200 primeiros bancos são exibidos: há mais do que cabem em uma operação.',
       variasVacio: 'Esta instância ainda não tem bancos.',
       seleccionarTodas: 'Selecionar todos',
       quitarSeleccion: 'Limpar a seleção',
@@ -1810,6 +1815,10 @@ export const pt: Textos = {
         requiereAviso: 'Não alterado: dados reais',
       },
       motivos: {
+        dependencias: 'Há objetos que usam a extensão',
+        sistema: 'É um banco do sistema',
+        nombreNoValido:
+          'O nome não é válido para o WolfCore Dev (somente minúsculas, números e sublinhado)',
         sinPgvector: 'O pgvector não está instalado',
         noExiste: 'O banco não existe mais',
         permiso: 'Permissão negada',
@@ -1826,6 +1835,7 @@ export const pt: Textos = {
         explicacion:
           'Cria a extensão no template1, o modelo do PostgreSQL: os bancos criados depois terão a extensão; os existentes não mudam.',
         estadoSi: 'Ativada: os bancos novos terão o pgvector',
+        noSePudo: 'Não foi possível verificar',
         estadoNo: 'Não ativada: os bancos novos não terão o pgvector',
         activar: 'Ativar também nos bancos novos',
         quitar: 'Remover dos bancos novos',

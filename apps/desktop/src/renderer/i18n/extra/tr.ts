@@ -23,6 +23,9 @@ export const trExtra: TextosParciales = {
     uacHuerfano:
       'Bir Windows izin penceresi görünürse iptal edebilirsiniz: artık hiçbir şey yapmaz.',
     codigos: {
+      'bd.vector_sin_bases': 'En az bir veritabanı seçin.',
+      'bd.vector_demasiadas': 'Tek işlemde çok fazla veritabanı var.',
+      'bd.vector_ocupado': 'Başka bir pgvector işlemi zaten sürüyor. Bitmesini bekleyin.',
       'bd.vector_confirmacion': 'Devam etmek için işlemi onaylayın.',
       'bd.vector_no_instalado':
         'pgvector yüklü değil: Veritabanları bölümündeki "pgvector\'ü yükle" seçeneğini kullanın.',
@@ -284,6 +287,7 @@ export const trExtra: TextosParciales = {
       variasTitulo: "pgvector'ü birkaç veritabanında etkinleştir",
       variasTexto:
         'Bu örnekteki veritabanlarından eklentinin oluşturulacağı olanları seçin. Eklentiye zaten sahip olanlar değişmez.',
+      truncado: 'Yalnızca ilk 200 veritabanı gösteriliyor: Tek işleme sığandan fazlası var.',
       variasVacio: 'Bu örnekte henüz veritabanı yok.',
       seleccionarTodas: 'Tümünü seç',
       quitarSeleccion: 'Seçimi kaldır',
@@ -302,6 +306,10 @@ export const trExtra: TextosParciales = {
         requiereAviso: 'Dokunulmadı: gerçek veri',
       },
       motivos: {
+        dependencias: 'Eklentiyi kullanan nesneler var',
+        sistema: 'Bir sistem veritabanıdır',
+        nombreNoValido:
+          'Adı WolfCore Dev için geçerli değil (yalnızca küçük harf, rakam ve alt çizgi)',
         sinPgvector: 'pgvector yüklü değil',
         noExiste: 'Veritabanı artık yok',
         permiso: 'İzin reddedildi',
@@ -318,6 +326,7 @@ export const trExtra: TextosParciales = {
         explicacion:
           "Eklentiyi PostgreSQL şablonu olan template1'de oluşturur: sonradan oluşturulan veritabanlarında bulunur; mevcutlar değişmez.",
         estadoSi: 'Etkin: yeni veritabanlarında pgvector olacak',
+        noSePudo: 'Denetlenemedi',
         estadoNo: 'Etkin değil: yeni veritabanlarında pgvector olmayacak',
         activar: 'Yeni veritabanlarında da etkinleştir',
         quitar: 'Yeni veritabanlarından kaldır',

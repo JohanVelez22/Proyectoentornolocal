@@ -22,6 +22,9 @@ export const idExtra: TextosParciales = {
     uacHuerfano:
       'Jika muncul jendela izin Windows, Anda dapat membatalkannya: jendela itu tidak lagi melakukan apa pun.',
     codigos: {
+      'bd.vector_sin_bases': 'Pilih setidaknya satu basis data.',
+      'bd.vector_demasiadas': 'Terlalu banyak basis data dalam satu operasi.',
+      'bd.vector_ocupado': 'Operasi pgvector lain sedang berjalan. Tunggu hingga selesai.',
       'bd.vector_confirmacion': 'Konfirmasikan operasi untuk melanjutkan.',
       'bd.vector_no_instalado':
         'pgvector belum terpasang: gunakan "Pasang pgvector" di Basis data.',
@@ -282,6 +285,8 @@ export const idExtra: TextosParciales = {
       variasTitulo: 'Aktifkan pgvector di beberapa basis data',
       variasTexto:
         'Pilih basis data pada instans ini yang akan diberi ekstensi. Basis data yang sudah memilikinya tidak berubah.',
+      truncado:
+        'Hanya 200 basis data pertama yang ditampilkan: jumlahnya melebihi yang muat dalam satu operasi.',
       variasVacio: 'Instans ini belum memiliki basis data.',
       seleccionarTodas: 'Pilih semua',
       quitarSeleccion: 'Hapus pilihan',
@@ -300,6 +305,10 @@ export const idExtra: TextosParciales = {
         requiereAviso: 'Tidak diubah: data nyata',
       },
       motivos: {
+        dependencias: 'Ada objek yang menggunakan ekstensi',
+        sistema: 'Ini basis data sistem',
+        nombreNoValido:
+          'Namanya tidak valid untuk WolfCore Dev (hanya huruf kecil, angka, dan garis bawah)',
         sinPgvector: 'pgvector belum terpasang',
         noExiste: 'Basis data sudah tidak ada',
         permiso: 'Izin ditolak',
@@ -316,6 +325,7 @@ export const idExtra: TextosParciales = {
         explicacion:
           'Membuat ekstensi di template1, templat PostgreSQL: basis data yang dibuat setelahnya akan memilikinya; yang sudah ada tidak berubah.',
         estadoSi: 'Aktif: basis data baru akan memiliki pgvector',
+        noSePudo: 'Tidak dapat diperiksa',
         estadoNo: 'Tidak aktif: basis data baru tidak memiliki pgvector',
         activar: 'Aktifkan juga di basis data baru',
         quitar: 'Hapus dari basis data baru',

@@ -997,7 +997,10 @@ export interface ApiEntorno {
     estado(): Promise<EstadoPgvector>;
     instalarBuildTools(): Promise<ResultadoBuildTools>;
     compilarEInstalar(): Promise<{ version: string }>;
-    activar(base: string): Promise<void>;
+    /** «Activar vector» de una base: mismo camino que varias bases (aviso de datos reales incluido). */
+    activar(base: string): Promise<ResultadoBaseVector>;
+    /** Solo template1: ¿lleva pgvector? null si no se pudo leer. */
+    plantillaEstado(motor: MotorBd | IdInstancia): Promise<boolean | null>;
     /** Por base de una instancia: si ya la tiene, si es de datos reales y si template1 la lleva. */
     estadoBases(motor: MotorBd | IdInstancia): Promise<EstadoVectorBases>;
     /** «Activar en varias bases»: el núcleo exige confirmado === true. Informe por base. */
@@ -2120,6 +2123,7 @@ export const RUTAS_IPC = [
   'pgvector.compilarEInstalar',
   'pgvector.activar',
   'pgvector.estadoBases',
+  'pgvector.plantillaEstado',
   'pgvector.activarEnBases',
   'pgvector.plantilla',
   'https.estado',

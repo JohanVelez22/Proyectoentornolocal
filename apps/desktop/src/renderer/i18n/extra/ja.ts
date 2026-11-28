@@ -20,6 +20,9 @@ export const jaExtra: TextosParciales = {
     uacHuerfano:
       'Windows の許可ウィンドウが表示された場合は、キャンセルしてください。もう何も実行されません。',
     codigos: {
+      'bd.vector_sin_bases': 'データベースを 1 つ以上選択してください。',
+      'bd.vector_demasiadas': '1 回の操作に含まれるデータベースが多すぎます。',
+      'bd.vector_ocupado': '別の pgvector 操作が実行中です。終了するまでお待ちください。',
       'bd.vector_confirmacion': '操作を確認して続行してください。',
       'bd.vector_no_instalado':
         'pgvector がインストールされていません。「データベース」の「pgvector をインストール」を使用してください。',
@@ -293,6 +296,8 @@ export const jaExtra: TextosParciales = {
       variasTitulo: '複数のデータベースで pgvector を有効化',
       variasTexto:
         'このインスタンスのデータベースから、拡張機能を作成するものを選んでください。すでに有効なものは変更されません。',
+      truncado:
+        '最初の 200 件のデータベースのみ表示しています。1 回の操作で扱える数を超えています。',
       variasVacio: 'このインスタンスにはまだデータベースがありません。',
       seleccionarTodas: 'すべて選択',
       quitarSeleccion: '選択を解除',
@@ -311,6 +316,10 @@ export const jaExtra: TextosParciales = {
         requiereAviso: '未変更：実データ',
       },
       motivos: {
+        dependencias: '拡張機能を使用しているオブジェクトがあります',
+        sistema: 'システムデータベースです',
+        nombreNoValido:
+          '名前が WolfCore Dev では使用できません（小文字、数字、アンダースコアのみ）',
         sinPgvector: 'pgvector がインストールされていません',
         noExiste: 'データベースが存在しません',
         permiso: '権限がありません',
@@ -327,6 +336,7 @@ export const jaExtra: TextosParciales = {
         explicacion:
           'PostgreSQL のテンプレートである template1 に拡張機能を作成します。以後に作成するデータベースには含まれ、既存のデータベースは変わりません。',
         estadoSi: '有効：新しいデータベースに pgvector が含まれます',
+        noSePudo: '確認できませんでした',
         estadoNo: '無効：新しいデータベースに pgvector は含まれません',
         activar: '新しいデータベースでも有効化',
         quitar: '新しいデータベースから削除',

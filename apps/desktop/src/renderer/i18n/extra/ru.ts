@@ -31,6 +31,9 @@ export const ruExtra: TextosParciales = {
     uacHuerfano:
       'Если появится окно разрешения Windows, вы можете его отменить: оно больше ничего не делает.',
     codigos: {
+      'bd.vector_sin_bases': 'Выберите хотя бы одну базу.',
+      'bd.vector_demasiadas': 'Слишком много баз в одной операции.',
+      'bd.vector_ocupado': 'Уже выполняется другая операция pgvector. Дождитесь её завершения.',
       'bd.vector_confirmacion': 'Подтвердите операцию, чтобы продолжить.',
       'bd.vector_no_instalado':
         'pgvector не установлен: воспользуйтесь пунктом «Установить pgvector» в разделе «Базы данных».',
@@ -308,6 +311,7 @@ export const ruExtra: TextosParciales = {
       variasTitulo: 'Включить pgvector в нескольких базах',
       variasTexto:
         'Выберите базы этой службы, в которых нужно создать расширение. В базах, где оно уже есть, ничего не изменится.',
+      truncado: 'Показаны только первые 200 баз: их больше, чем помещается в одну операцию.',
       variasVacio: 'В этой службе пока нет баз.',
       seleccionarTodas: 'Выбрать все',
       quitarSeleccion: 'Снять выбор',
@@ -326,6 +330,10 @@ export const ruExtra: TextosParciales = {
         requiereAviso: 'Не затронуто: реальные данные',
       },
       motivos: {
+        dependencias: 'Расширение используется объектами',
+        sistema: 'Это системная база',
+        nombreNoValido:
+          'Её имя недопустимо для WolfCore Dev (только строчные буквы, цифры и подчёркивание)',
         sinPgvector: 'pgvector не установлен',
         noExiste: 'Базы больше не существует',
         permiso: 'Доступ запрещён',
@@ -342,6 +350,7 @@ export const ruExtra: TextosParciales = {
         explicacion:
           'Создаёт расширение в template1 — шаблоне PostgreSQL: базы, созданные позже, получат его; существующие не изменятся.',
         estadoSi: 'Включено: новые базы будут с pgvector',
+        noSePudo: 'Не удалось проверить',
         estadoNo: 'Не включено: новые базы будут без pgvector',
         activar: 'Включить и в новых базах',
         quitar: 'Убрать из новых баз',

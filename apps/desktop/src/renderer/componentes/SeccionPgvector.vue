@@ -6,6 +6,7 @@ import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
 import { LIMITE_LINEAS, useBd } from '../stores/bd';
+import { claveMotivo } from '../utilidades/vectorBases';
 import DialogoVectorBases from './DialogoVectorBases.vue';
 import PanelProgreso from './PanelProgreso.vue';
 
@@ -27,12 +28,17 @@ const variasAbierto = ref(false);
 /** ¿template1 lleva pgvector? null mientras no se sabe (p. ej. PostgreSQL apagado). */
 const plantilla = ref<boolean | null>(null);
 
+/** Cada lectura lleva su número: una respuesta vieja (otra instancia, otro momento) se descarta. */
+let lecturaPlantilla = 0;
 async function leerPlantilla(): Promise<void> {
+  const mia = ++lecturaPlantilla;
+  let valor: boolean | null;
   try {
-    plantilla.value = (await api().pgvector.estadoBases(objetivo.value)).plantilla;
+    valor = await api().pgvector.plantillaEstado(objetivo.value);
   } catch {
-    plantilla.value = null; // sin PostgreSQL encendido no se sabe; la acción avisará si se pide
+    valor = null; // sin PostgreSQL encendido no se sabe
   }
+  if (mia === lecturaPlantilla) plantilla.value = valor;
 }
 
 onMounted(() => {
@@ -48,7 +54,7 @@ watch(
 
 /** «Activar también en las bases nuevas» (o quitarlo): explicación y confirmación; nunca por defecto. */
 function pedirPlantilla(activar: boolean): void {
-  if (bloqueado.value) return;
+  if (bloqueado.value || ocupado('plantilla')) return;
   const p = t.plantilla;
   dialog.warning({
     title: activar ? p.confirmarActivarTitulo : p.confirmarQuitarTitulo,
@@ -71,7 +77,7 @@ async function cambiarPlantilla(activar: boolean): Promise<void> {
   if (r.estado === 'error') {
     notification.error({
       title: t.plantilla.titulo,
-      content: t.motivos[motivoClave(r.motivo)],
+      content: t.motivos[claveMotivo(r.motivo)],
       duration: 8000,
     });
   } else if (r.estado === 'ya-estaba') {
@@ -83,18 +89,6 @@ async function cambiarPlantilla(activar: boolean): Promise<void> {
     });
   }
   await leerPlantilla();
-}
-
-const MOTIVOS = {
-  'sin-pgvector': 'sinPgvector',
-  'no-existe': 'noExiste',
-  permiso: 'permiso',
-  conexion: 'conexion',
-  'en-uso': 'enUso',
-  otro: 'otro',
-} as const;
-function motivoClave(m: keyof typeof MOTIVOS | undefined): (typeof MOTIVOS)[keyof typeof MOTIVOS] {
-  return MOTIVOS[m ?? 'otro'];
 }
 
 function pedirHerramientas(luego?: () => void): void {
@@ -238,15 +232,21 @@ function instalar(): void {
         <div class="plantilla">
           <strong>{{ t.plantilla.titulo }}</strong>
           <small class="tenue">{{ t.plantilla.explicacion }}</small>
-          <small v-if="plantilla !== null" class="estado-plantilla">
-            {{ plantilla ? t.plantilla.estadoSi : t.plantilla.estadoNo }}
+          <small class="estado-plantilla">
+            {{
+              plantilla === null
+                ? t.plantilla.noSePudo
+                : plantilla
+                  ? t.plantilla.estadoSi
+                  : t.plantilla.estadoNo
+            }}
           </small>
           <div class="botones">
             <NButton
               v-if="!plantilla"
               size="small"
               secondary
-              :disabled="bloqueado"
+              :disabled="bloqueado || ocupado('plantilla')"
               :loading="ocupado('plantilla')"
               @click="pedirPlantilla(true)"
             >
@@ -256,7 +256,7 @@ function instalar(): void {
               v-else
               size="small"
               secondary
-              :disabled="bloqueado"
+              :disabled="bloqueado || ocupado('plantilla')"
               :loading="ocupado('plantilla')"
               @click="pedirPlantilla(false)"
             >

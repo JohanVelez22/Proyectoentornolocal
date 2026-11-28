@@ -27,6 +27,9 @@ export const nlExtra: TextosParciales = {
     uacHuerfano:
       'Als er een Windows-toestemmingsvenster verschijnt, kunt u het annuleren: het doet niets meer.',
     codigos: {
+      'bd.vector_sin_bases': 'Kies minstens één database.',
+      'bd.vector_demasiadas': 'Te veel databases in één bewerking.',
+      'bd.vector_ocupado': 'Er loopt al een andere pgvector-bewerking. Wacht tot die klaar is.',
       'bd.vector_confirmacion': 'Bevestig de bewerking om door te gaan.',
       'bd.vector_no_instalado':
         'pgvector is niet geïnstalleerd: gebruik "pgvector installeren" bij Databases.',
@@ -314,6 +317,8 @@ export const nlExtra: TextosParciales = {
       variasTitulo: 'pgvector in meerdere databases inschakelen',
       variasTexto:
         'Kies de databases van deze instantie waarin de extensie moet worden aangemaakt. Databases die de extensie al hebben, blijven ongewijzigd.',
+      truncado:
+        'Alleen de eerste 200 databases worden getoond: er zijn er meer dan in één bewerking passen.',
       variasVacio: 'Deze instantie heeft nog geen databases.',
       seleccionarTodas: 'Alles selecteren',
       quitarSeleccion: 'Selectie wissen',
@@ -332,6 +337,10 @@ export const nlExtra: TextosParciales = {
         requiereAviso: 'Niet aangeraakt: echte gegevens',
       },
       motivos: {
+        dependencias: 'Er zijn objecten die de extensie gebruiken',
+        sistema: 'Het is een systeemdatabase',
+        nombreNoValido:
+          'De naam is niet geldig voor WolfCore Dev (alleen kleine letters, cijfers en underscore)',
         sinPgvector: 'pgvector is niet geïnstalleerd',
         noExiste: 'De database bestaat niet meer',
         permiso: 'Toegang geweigerd',
@@ -348,6 +357,7 @@ export const nlExtra: TextosParciales = {
         explicacion:
           'Maakt de extensie aan in template1, de PostgreSQL-sjabloon: databases die u daarna aanmaakt, hebben de extensie; bestaande databases veranderen niet.',
         estadoSi: 'Ingeschakeld: nieuwe databases bevatten pgvector',
+        noSePudo: 'Kon niet worden gecontroleerd',
         estadoNo: 'Niet ingeschakeld: nieuwe databases bevatten pgvector niet',
         activar: 'Ook inschakelen in nieuwe databases',
         quitar: 'Verwijderen uit nieuwe databases',

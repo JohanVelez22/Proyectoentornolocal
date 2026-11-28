@@ -19,6 +19,9 @@ export const zhExtra: TextosParciales = {
   errores: {
     uacHuerfano: '如果出现 Windows 权限窗口，您可以将其取消：它已不会再执行任何操作。',
     codigos: {
+      'bd.vector_sin_bases': '请至少选择一个数据库。',
+      'bd.vector_demasiadas': '单次操作中的数据库过多。',
+      'bd.vector_ocupado': '已有另一个 pgvector 操作正在进行。请等待其完成。',
       'bd.vector_confirmacion': '请确认操作以继续。',
       'bd.vector_no_instalado': 'pgvector 未安装：请在“数据库”中使用“安装 pgvector”。',
       'asistentes.no_existe': '不支持该助手。',
@@ -240,6 +243,7 @@ export const zhExtra: TextosParciales = {
       variasBoton: '在多个数据库中启用',
       variasTitulo: '在多个数据库中启用 pgvector',
       variasTexto: '请选择此实例中要创建扩展的数据库。已启用的数据库不会改变。',
+      truncado: '仅显示前 200 个数据库：数量超出了单次操作的容量。',
       variasVacio: '此实例还没有数据库。',
       seleccionarTodas: '全选',
       quitarSeleccion: '清除选择',
@@ -258,6 +262,9 @@ export const zhExtra: TextosParciales = {
         requiereAviso: '未改动：真实数据',
       },
       motivos: {
+        dependencias: '有对象正在使用该扩展',
+        sistema: '这是系统数据库',
+        nombreNoValido: '该名称不适用于 WolfCore Dev（仅限小写字母、数字和下划线）',
         sinPgvector: '未安装 pgvector',
         noExiste: '该数据库已不存在',
         permiso: '权限被拒绝',
@@ -274,6 +281,7 @@ export const zhExtra: TextosParciales = {
         explicacion:
           '在 PostgreSQL 的模板 template1 中创建扩展：之后新建的数据库会带有该扩展；现有数据库不变。',
         estadoSi: '已启用：新数据库将带有 pgvector',
+        noSePudo: '无法检查',
         estadoNo: '未启用：新数据库不带 pgvector',
         activar: '同时在新数据库中启用',
         quitar: '从新数据库中移除',

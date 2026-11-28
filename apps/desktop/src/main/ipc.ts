@@ -1224,6 +1224,7 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'pgvector.instalarBuildTools': (n) => n.instalarBuildTools(),
   'pgvector.compilarEInstalar': (n) => n.compilarPgvector(),
   'pgvector.activar': (n, _s, base) => n.activarVector(nombreBase('postgresql', base)),
+  'pgvector.plantillaEstado': (n, _s, motor) => n.plantillaVector(objetivoPostgres(motor)),
   'pgvector.estadoBases': (n, _s, motor) => n.estadoVectorBases(objetivoPostgres(motor)),
   'pgvector.activarEnBases': (n, _s, motor, pedido) =>
     n.activarVectorEnBases(objetivoPostgres(motor), pedidoVectorBases(pedido)),

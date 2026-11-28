@@ -189,6 +189,9 @@ export const en: Textos = {
       'bd.encender_servicio': 'Start {nombre} to manage its databases.',
       'bd.sin_credenciales': 'There are no saved credentials for {nombre}.',
       'bd.confirmacion_borrado': 'To delete the database {nombre}, type its exact name.',
+      'bd.vector_sin_bases': 'Choose at least one database.',
+      'bd.vector_demasiadas': 'Too many databases in a single operation.',
+      'bd.vector_ocupado': 'Another pgvector operation is already running. Wait for it to finish.',
       'bd.vector_confirmacion': 'Confirm the operation to continue.',
       'bd.vector_no_instalado': 'pgvector is not installed: use "Install pgvector" in Databases.',
       'bd.usuario_privilegiado':
@@ -1774,6 +1777,7 @@ export const en: Textos = {
       variasTitulo: 'Enable pgvector on several databases',
       variasTexto:
         'Choose the databases of this instance where the extension should be created. Databases that already have it stay as they are.',
+      truncado: 'Only the first 200 databases are shown: there are more than fit in one operation.',
       variasVacio: 'This instance has no databases yet.',
       seleccionarTodas: 'Select all',
       quitarSeleccion: 'Clear selection',
@@ -1792,6 +1796,10 @@ export const en: Textos = {
         requiereAviso: 'Not touched: real data',
       },
       motivos: {
+        dependencias: 'Objects are using the extension',
+        sistema: 'It is a system database',
+        nombreNoValido:
+          'Its name is not valid for WolfCore Dev (lowercase letters, numbers and underscore only)',
         sinPgvector: 'pgvector is not installed',
         noExiste: 'The database no longer exists',
         permiso: 'Permission denied',
@@ -1808,6 +1816,7 @@ export const en: Textos = {
         explicacion:
           'Creates the extension in template1, the PostgreSQL template: databases created afterwards will have it; existing ones do not change.',
         estadoSi: 'Enabled: new databases will include pgvector',
+        noSePudo: 'Could not be checked',
         estadoNo: 'Not enabled: new databases do not include pgvector',
         activar: 'Also enable on new databases',
         quitar: 'Remove from new databases',

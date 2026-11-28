@@ -41,12 +41,45 @@ describe('pgvector en varias bases y en las bases nuevas: textos y estructura (D
     expect(dialogo).toMatch(/dialog\.warning\(\{[\s\S]*t\.variasConfirmarTitulo/);
     expect(dialogo).toContain('confirmado: true');
     // Las bases con la extensión ya puesta no se ofrecen y las de datos reales piden aviso aparte.
-    expect(dialogo).toContain(':disabled="b.activo || trabajando"');
+    expect(dialogo).toContain(':disabled="b.activo || !b.valida || trabajando"');
     expect(dialogo).toContain('datosRealesConfirmadas');
   });
 
   it('el botón de varias bases y su ayuda están junto a la instalación de pgvector', () => {
     expect(seccion).toContain('data-testid="ayuda-vector"');
     expect(seccion).toContain('t.variasBoton');
+  });
+
+  it('la plantilla usa la ruta ligera, descarta lecturas viejas y no admite un segundo clic mientras corre', () => {
+    expect(seccion).toContain('pgvector.plantillaEstado(');
+    expect(seccion).not.toContain('estadoBases(');
+    expect(seccion).toContain('const mia = ++lecturaPlantilla');
+    expect(seccion).toContain('if (mia === lecturaPlantilla)');
+    expect(seccion).toContain("if (bloqueado.value || ocupado('plantilla')) return;");
+    expect(seccion.match(/:disabled="bloqueado \|\| ocupado\('plantilla'\)"/g)?.length).toBe(2);
+    // Sin lectura posible se dice (null), no se finge «no activada».
+    expect(seccion).toContain('t.plantilla.noSePudo');
+  });
+
+  it('el diálogo deshabilita las bases de nombre no válido con su motivo y avisa si la lista está truncada', () => {
+    expect(dialogo).toContain(':disabled="b.activo || !b.valida || trabajando"');
+    expect(dialogo).toContain('t.motivos.nombreNoValido');
+    expect(dialogo).toContain('estado.truncado');
+  });
+
+  it('la ruta de una sola base pasa por el mismo camino y muestra el aviso de datos reales', () => {
+    const vista = readFileSync(
+      path.join(__dirname, '..', 'src', 'renderer', 'vistas', 'BasesDeDatos.vue'),
+      'utf8',
+    );
+    expect(vista).toContain("r.estado === 'requiere-aviso'");
+    expect(vista).toContain('datosRealesConfirmadas: [base]');
+    const nucleo = readFileSync(
+      path.join(__dirname, '..', '..', '..', 'packages', 'core', 'src', 'nucleo.ts'),
+      'utf8',
+    );
+    expect(nucleo).toMatch(
+      /async activarVector\(base: string\)[\s\S]{0,200}activarVectorEnBases\('postgresql'/,
+    );
   });
 });

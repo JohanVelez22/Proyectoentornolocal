@@ -196,6 +196,10 @@ export const fr: Textos = {
       'bd.encender_servicio': 'Allumez {nombre} pour gérer ses bases.',
       'bd.sin_credenciales': 'Aucun identifiant enregistré pour {nombre}.',
       'bd.confirmacion_borrado': 'Pour supprimer la base {nombre}, tapez son nom exact.',
+      'bd.vector_sin_bases': 'Choisissez au moins une base.',
+      'bd.vector_demasiadas': 'Trop de bases dans une seule opération.',
+      'bd.vector_ocupado':
+        'Une autre opération pgvector est déjà en cours. Attendez qu’elle se termine.',
       'bd.vector_confirmacion': 'Confirmez l’opération pour continuer.',
       'bd.vector_no_instalado':
         'pgvector n’est pas installé : utilisez « Installer pgvector » dans Bases de données.',
@@ -1852,6 +1856,8 @@ export const fr: Textos = {
       variasTitulo: 'Activer pgvector sur plusieurs bases',
       variasTexto:
         'Choisissez les bases de cette instance où créer l’extension. Celles qui l’ont déjà ne changent pas.',
+      truncado:
+        'Seules les 200 premières bases sont affichées : il y en a plus que n’en accepte une opération.',
       variasVacio: 'Cette instance n’a pas encore de bases.',
       seleccionarTodas: 'Tout sélectionner',
       quitarSeleccion: 'Effacer la sélection',
@@ -1870,6 +1876,10 @@ export const fr: Textos = {
         requiereAviso: 'Non modifiée : données réelles',
       },
       motivos: {
+        dependencias: 'Des objets utilisent l’extension',
+        sistema: 'C’est une base du système',
+        nombreNoValido:
+          'Son nom n’est pas valide pour WolfCore Dev (minuscules, chiffres et tiret bas uniquement)',
         sinPgvector: 'pgvector n’est pas installé',
         noExiste: 'La base n’existe plus',
         permiso: 'Autorisation refusée',
@@ -1886,6 +1896,7 @@ export const fr: Textos = {
         explicacion:
           'Crée l’extension dans template1, le modèle de PostgreSQL : les bases créées ensuite l’auront ; les bases existantes ne changent pas.',
         estadoSi: 'Activée : les nouvelles bases auront pgvector',
+        noSePudo: 'Vérification impossible',
         estadoNo: 'Non activée : les nouvelles bases n’ont pas pgvector',
         activar: 'Activer aussi sur les nouvelles bases',
         quitar: 'Retirer des nouvelles bases',
