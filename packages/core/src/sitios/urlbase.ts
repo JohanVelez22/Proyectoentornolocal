@@ -148,14 +148,12 @@ export async function escribirAtomico(
   const tmp = `${destino}.pel-tmp-${randomBytes(4).toString('hex')}`;
   try {
     // El archivo nuevo conserva los permisos del que reemplaza (p. ej. 0600 en una configuración
-    // con claves). En Windows el modo solo marca «solo lectura»: no se copia.
-    const modo =
-      process.platform === 'win32'
-        ? undefined
-        : await stat(destino).then(
-            (i) => i.mode & 0o777,
-            () => undefined,
-          );
+    // con claves). Solo si el dueño puede escribirlo: un original de solo lectura (en Windows, el
+    // único bit que existe) no se copia, así el temporal sigue siendo escribible y renombrable.
+    const modo = await stat(destino).then(
+      (i) => ((i.mode & 0o200) !== 0 ? i.mode & 0o777 : undefined),
+      () => undefined,
+    );
     await writeFile(tmp, datos, modo === undefined ? undefined : { mode: modo });
     if (modo !== undefined) await chmod(tmp, modo);
     for (let i = 0; ; i++) {
