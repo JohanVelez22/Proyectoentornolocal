@@ -1827,8 +1827,6 @@ export const id: TextosParciales = {
     borrarToken: 'Hapus token',
     usarProveedor: 'Gunakan penyedia ini',
     guardadoProveedor: 'Penyedia tersimpan. Konfirmasi akan diminta saat membuka terowongan.',
-    ngrokAyudaInstalacion:
-      'ngrok harus sudah terpasang di perangkat ini (WolfCore Dev tidak mengunduhnya karena ngrok tidak menerbitkan unduhan yang dapat diverifikasi). Konfigurasi global Anda tidak diubah.',
     exposeAyudaInstalacion:
       'Expose harus sudah terpasang atau memiliki file expose.phar di folder bin/expose pada data WolfCore Dev (di Windows hanya berfungsi dengan phar; tidak ada unduhan dengan sidik jari). Inspektor permintaannya terlihat di seluruh jaringan lokal, oleh karena itu tidak digunakan untuk situs dengan data asli. Konfigurasi global Anda tidak diubah.',
     tailscaleAlcance: 'Jangkauan akses',

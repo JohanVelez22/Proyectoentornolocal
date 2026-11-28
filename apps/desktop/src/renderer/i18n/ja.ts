@@ -1851,8 +1851,6 @@ export const ja: TextosParciales = {
     borrarToken: 'トークンを削除',
     usarProveedor: 'このプロバイダーを使用',
     guardadoProveedor: 'プロバイダーを保存しました。トンネルを開く際に確認を求めます。',
-    ngrokAyudaInstalacion:
-      'このPCに ngrok がインストールされている必要があります（検証可能なチェックサムが公開されていないため WolfCore Dev はダウンロードしません）。グローバル設定は変更されません。',
     exposeAyudaInstalacion:
       'Expose をインストールするか、WolfCore Dev データフォルダの bin/expose に expose.phar を配置してください（Windows では phar のみ対応）。リクエストインスペクターがローカルネットワーク全体に公開されるため、実データサイトでは使用不可です。グローバル設定は変更されません。',
     tailscaleAlcance: '公開範囲',

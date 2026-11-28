@@ -1804,8 +1804,6 @@ export const tr: TextosParciales = {
     borrarToken: 'Belirteci sil',
     usarProveedor: 'Bu sağlayıcıyı kullan',
     guardadoProveedor: 'Sağlayıcı kaydedildi. Tünel açılırken onay istenecektir.',
-    ngrokAyudaInstalacion:
-      'ngrok bu bilgisayarda zaten yüklü olmalıdır (ngrok doğrulanabilir indirme yayınlamadığı için WolfCore Dev indirmez). Genel yapılandırmanıza dokunulmaz.',
     exposeAyudaInstalacion:
       'Expose yüklü olmalı veya expose.phar dosyası WolfCore Dev veri klasöründeki bin/expose içine konmalıdır (Windows’ta yalnızca phar çalışır). İstek denetçisi tüm yerel ağda görünür, bu yüzden gerçek verili sitelerde kullanılmaz. Genel yapılandırmanıza dokunulmaz.',
     tailscaleAlcance: 'Erişim kapsamı',

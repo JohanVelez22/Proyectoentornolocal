@@ -383,6 +383,6 @@ describe('D5: pestañas de Java, .NET, Go y Rust', () => {
       expect(SERVICIOS_CON_VERSIONES).toContain(s);
       expect(esServicioConVersiones(s)).toBe(true);
     }
-    expect(SERVICIOS_CON_VERSIONES).toHaveLength(29);
+    expect(SERVICIOS_CON_VERSIONES).toHaveLength(30);
   });
 });

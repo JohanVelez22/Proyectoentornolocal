@@ -1897,8 +1897,6 @@ export const de: TextosParciales = {
     usarProveedor: 'Diesen Anbieter verwenden',
     guardadoProveedor:
       'Anbieter gespeichert. Beim Öffnen des Tunnels wird eine Bestätigung verlangt.',
-    ngrokAyudaInstalacion:
-      'ngrok muss bereits auf diesem Computer installiert sein (WolfCore Dev lädt es nicht herunter, da keine verifizierbare Prüfsumme vorliegt). Ihre globale Konfiguration bleibt unberührt.',
     exposeAyudaInstalacion:
       'Expose muss installiert sein oder seine expose.phar muss im Ordner bin/expose der WolfCore Dev-Daten liegen (unter Windows funktioniert nur die phar-Datei; kein Download mit Prüfsumme). Sein Anfrage-Inspektor ist im gesamten lokalen Netzwerk sichtbar, daher nicht bei echten Daten zulässig. Ihre globale Konfiguration bleibt unberührt.',
     tailscaleAlcance: 'Reichweite',

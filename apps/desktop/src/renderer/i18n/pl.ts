@@ -1880,8 +1880,6 @@ export const pl: TextosParciales = {
     borrarToken: 'Usuń token',
     usarProveedor: 'Użyj tego dostawcy',
     guardadoProveedor: 'Dostawca zapisany. Przy otwieraniu tunelu wymagane będzie potwierdzenie.',
-    ngrokAyudaInstalacion:
-      'Program ngrok musi być już zainstalowany na tym komputerze (WolfCore Dev go nie pobiera, ponieważ ngrok nie udostępnia weryfikowalnego pliku instalacyjnego). Globalna konfiguracja nie jest modyfikowana.',
     exposeAyudaInstalacion:
       'Program Expose musi być już zainstalowany lub plik expose.phar musi znajdować się w folderze bin/expose danych WolfCore Dev (w systemie Windows działa wyłącznie z plikiem phar; brak pliku do pobrania z sumą kontrolną). Jego inspektor żądań jest widoczny w całej sieci lokalnej, dlatego nie należy go używać ze stronami zawierającymi prawdziwe dane. Globalna konfiguracja nie jest modyfikowana.',
     tailscaleAlcance: 'Zasięg udostępniania',

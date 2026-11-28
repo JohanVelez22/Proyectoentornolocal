@@ -1625,8 +1625,6 @@ export const zh: TextosParciales = {
     borrarToken: '删除令牌',
     usarProveedor: '使用此提供商',
     guardadoProveedor: '提供商已保存。打开隧道时会请求确认。',
-    ngrokAyudaInstalacion:
-      '本机必须已安装 ngrok（由于 ngrok 未发布可校验的下载包，WolfCore Dev 不会代为下载）。不会更改您的全局配置。',
     exposeAyudaInstalacion:
       '本机必须已安装 Expose，或将 expose.phar 放入 WolfCore Dev 数据目录的 bin/expose 文件夹（Windows 仅支持 phar，无校验下载）。其请求检查器对整个局域网可见，故禁止用于含真实数据的站点。不会更改您的全局配置。',
     tailscaleAlcance: '访问范围',

@@ -275,7 +275,23 @@ export const koExtra: TextosParciales = {
     },
   },
   instalar: {
+    ngrokCuenta: {
+      titulo: 'ngrok 계정 연결',
+      intro: '터널을 열려면 ngrok에 계정의 authtoken이 필요합니다.',
+      paso1: 'ngrok 대시보드에 로그인한 뒤 authtoken을 복사하십시오.',
+      abrirPanel: 'ngrok 대시보드 열기',
+      paso2: '이 입력란에 붙여 넣으십시오.',
+      etiqueta: 'ngrok authtoken',
+      marcador: '여기에 authtoken을 붙여 넣으십시오',
+      paso3: '저장하십시오. 이 컴퓨터에 암호화되어 보관됩니다.',
+      guardar: 'authtoken 저장',
+      borrar: 'authtoken 삭제',
+      guardado: (f) => `authtoken이 저장되었습니다(끝자리 ${f}).`,
+      sinGuardar: '저장된 authtoken이 아직 없습니다.',
+      nota: 'WolfCore Dev는 터널 프로세스의 NGROK_AUTHTOKEN 환경 변수로만 ngrok에 전달하며, 데이터 폴더 안의 전용 설정을 함께 사용합니다. 사용자의 ngrok.yml에는 절대 쓰지 않고 명령줄도 사용하지 않습니다.',
+    },
     servicios: {
+      ngrok: { nombre: 'ngrok', detalle: '사용자 계정으로 여는 공개 터널(ngrok)' },
       meilisearch: {
         nombre: 'Meilisearch',
         detalle: 'Laravel Scout용 검색(github.com/meilisearch)',
@@ -291,6 +307,8 @@ export const koExtra: TextosParciales = {
     tiposCortos: { rails: 'Rails', springboot: 'Spring Boot', aspnet: 'ASP.NET' },
   },
   tunel: {
+    ngrokAyuda:
+      'ngrok은 서비스에서 설치하거나(공식 다운로드, SHA-256 체크섬 검증 완료) 이 컴퓨터에 이미 있는 것을 사용하십시오. authtoken도 같은 곳의 「ngrok 계정 연결」에서 저장합니다. ngrok의 전역 설정은 변경하지 않습니다.',
     sinConfianza:
       '이 프로젝트는 신뢰되지 않았습니다. 게시하려면 "이 저장소를 신뢰합니다"를 선택하십시오.',
   },
@@ -1355,7 +1373,13 @@ export const koExtra: TextosParciales = {
       'Maven과 Gradle은 WolfCore Dev JDK로 실행되며 아직 설치되어 있지 않습니다. 서비스 목록에서 Java(Temurin)를 설치하십시오.',
     avisoMeilisearch:
       'Meilisearch는 마이너 버전마다 고유한 데이터를 가집니다. 다른 마이너 버전으로 전환하면(예: 1.58에서 1.59) 인덱스와 MEILISEARCH_KEY가 새로 만들어집니다. 다시 인덱싱하고 프로젝트의 .env를 업데이트해야 합니다.',
-    servicios: { meilisearch: 'Meilisearch', ruby: 'Ruby', maven: 'Maven', gradle: 'Gradle' },
+    servicios: {
+      ngrok: 'ngrok',
+      meilisearch: 'Meilisearch',
+      ruby: 'Ruby',
+      maven: 'Maven',
+      gradle: 'Gradle',
+    },
     anteriores: (n) => `이전 패치(${n})`,
   },
   memoria: {

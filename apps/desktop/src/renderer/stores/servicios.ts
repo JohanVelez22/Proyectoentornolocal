@@ -16,6 +16,7 @@ export const INSTALABLES_CATALOGO = [
   'nginx',
   'php',
   'cloudflared',
+  'ngrok',
   'mysql',
   'mariadb',
   'postgresql',

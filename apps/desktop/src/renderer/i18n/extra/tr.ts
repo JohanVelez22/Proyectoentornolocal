@@ -279,7 +279,23 @@ export const trExtra: TextosParciales = {
     },
   },
   instalar: {
+    ngrokCuenta: {
+      titulo: 'ngrok hesabınızı bağlayın',
+      intro: 'ngrok, tünel açabilmek için hesabınızın authtoken değerine ihtiyaç duyar.',
+      paso1: 'ngrok panosunda oturum açın ve authtoken değerinizi kopyalayın.',
+      abrirPanel: 'ngrok panosunu aç',
+      paso2: 'Bu alana yapıştırın.',
+      etiqueta: 'ngrok authtoken',
+      marcador: 'Authtoken değerini buraya yapıştırın',
+      paso3: 'Kaydedin: bu bilgisayarda şifrelenmiş olarak saklanır.',
+      guardar: 'Authtoken değerini kaydet',
+      borrar: 'Authtoken değerini sil',
+      guardado: (f) => `Authtoken kaydedildi (${f} ile biter).`,
+      sinGuardar: 'Henüz kaydedilmiş bir authtoken yok.',
+      nota: 'WolfCore Dev bunu ngrok’a yalnızca tünel işleminin NGROK_AUTHTOKEN ortam değişkeni üzerinden ve veri klasörünüzün içindeki kendi yapılandırmasıyla birlikte iletir. Kullanıcınızın ngrok.yml dosyasına hiçbir zaman yazmaz ve komut satırını kullanmaz.',
+    },
     servicios: {
+      ngrok: { nombre: 'ngrok', detalle: 'Hesabınızla herkese açık tüneller (ngrok)' },
       meilisearch: {
         nombre: 'Meilisearch',
         detalle: 'Laravel Scout için arama (github.com/meilisearch)',
@@ -295,6 +311,8 @@ export const trExtra: TextosParciales = {
     tiposCortos: { rails: 'Rails', springboot: 'Spring Boot', aspnet: 'ASP.NET' },
   },
   tunel: {
+    ngrokAyuda:
+      'ngrok’u Hizmetler bölümünden kurun (doğrulanmış SHA-256 sağlama toplamıyla resmî indirme) ya da bu bilgisayarda zaten bulunanı kullanın. Authtoken da orada, «ngrok hesabınızı bağlayın» bölümünde kaydedilir. ngrok’un genel yapılandırmasına dokunulmaz.',
     sinConfianza:
       'Bu projeye güvenilmiyor: yayınlayabilmek için «Bu depoya güveniyorum» seçeneğini işaretleyin.',
   },
@@ -1383,7 +1401,13 @@ export const trExtra: TextosParciales = {
       "Maven ve Gradle bir WolfCore Dev JDK'sı ile çalışır ve henüz hiçbiri yüklü değil. Hizmet listesinden Java'yı (Temurin) yükleyin.",
     avisoMeilisearch:
       "Her Meilisearch ikincil sürümünün kendi verisi vardır. Başka bir ikincil sürüme geçerseniz (örneğin 1.58'den 1.59'a), dizinleri ve MEILISEARCH_KEY yeni olur: yeniden dizinlemeniz ve projelerinizin .env dosyasını güncellemeniz gerekir.",
-    servicios: { meilisearch: 'Meilisearch', ruby: 'Ruby', maven: 'Maven', gradle: 'Gradle' },
+    servicios: {
+      ngrok: 'ngrok',
+      meilisearch: 'Meilisearch',
+      ruby: 'Ruby',
+      maven: 'Maven',
+      gradle: 'Gradle',
+    },
     anteriores: (n) => `Önceki yamalar (${n})`,
   },
   memoria: {

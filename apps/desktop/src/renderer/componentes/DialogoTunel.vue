@@ -343,7 +343,7 @@ async function usarRapido(): Promise<void> {
 
     <template v-else-if="conToken">
       <p class="ayuda">
-        {{ elegido === 'ngrok' ? t.ngrokAyudaInstalacion : t.exposeAyudaInstalacion }}
+        {{ elegido === 'ngrok' ? t.ngrokAyuda : t.exposeAyudaInstalacion }}
       </p>
       <p class="estado" role="status">
         {{ estadoToken.configurada ? t.tokenGuardado(estadoToken.final ?? '') : t.tokenSinGuardar }}

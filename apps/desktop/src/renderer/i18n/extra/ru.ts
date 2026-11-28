@@ -303,7 +303,23 @@ export const ruExtra: TextosParciales = {
     },
   },
   instalar: {
+    ngrokCuenta: {
+      titulo: 'Подключение учётной записи ngrok',
+      intro: 'Чтобы открывать туннели, ngrok нужен authtoken вашей учётной записи.',
+      paso1: 'Войдите в панель ngrok и скопируйте свой authtoken.',
+      abrirPanel: 'Открыть панель ngrok',
+      paso2: 'Вставьте его в это поле.',
+      etiqueta: 'Authtoken ngrok',
+      marcador: 'Вставьте сюда authtoken',
+      paso3: 'Сохраните его: на этом компьютере он хранится в зашифрованном виде.',
+      guardar: 'Сохранить authtoken',
+      borrar: 'Удалить authtoken',
+      guardado: (f) => `Authtoken сохранён (заканчивается на ${f}).`,
+      sinGuardar: 'Authtoken пока не сохранён.',
+      nota: 'WolfCore Dev передаёт его ngrok только через переменную среды NGROK_AUTHTOKEN процесса туннеля вместе с собственной конфигурацией в вашей папке данных. Он никогда не записывает ничего в ngrok.yml вашего пользователя и не использует командную строку.',
+    },
     servicios: {
+      ngrok: { nombre: 'ngrok', detalle: 'Публичные туннели с вашей учётной записью (ngrok)' },
       meilisearch: {
         nombre: 'Meilisearch',
         detalle: 'Поиск для Laravel Scout (github.com/meilisearch)',
@@ -311,6 +327,8 @@ export const ruExtra: TextosParciales = {
     },
   },
   tunel: {
+    ngrokAyuda:
+      'Установите ngrok в разделе «Службы» (официальная загрузка с проверенной контрольной суммой SHA-256) или используйте тот, что уже есть на этом компьютере. Authtoken также сохраняется там, в блоке «Подключение учётной записи ngrok». Глобальная конфигурация ngrok не затрагивается.',
     sinConfianza:
       'Этому проекту не доверяют: отметьте «Я доверяю этому репозиторию», чтобы его можно было опубликовать.',
   },
@@ -1445,6 +1463,7 @@ export const ruExtra: TextosParciales = {
     avisoMeilisearch:
       'У каждой минорной версии Meilisearch свои данные. Если вы перейдёте на другую минорную версию (например, с 1.58 на 1.59), её индексы и MEILISEARCH_KEY будут новыми: потребуется переиндексация и обновление .env ваших проектов.',
     servicios: {
+      ngrok: 'ngrok',
       meilisearch: 'Meilisearch',
       ruby: 'Ruby',
       maven: 'Maven',

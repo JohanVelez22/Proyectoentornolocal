@@ -1808,8 +1808,6 @@ export const ko: TextosParciales = {
     borrarToken: '토큰 삭제',
     usarProveedor: '이 공급자 사용',
     guardadoProveedor: '공급자가 저장되었습니다. 터널을 열 때 확인을 요청합니다.',
-    ngrokAyudaInstalacion:
-      'ngrok이 이 컴퓨터에 미리 설치되어 있어야 합니다(ngrok은 검증 가능한 다운로드를 제공하지 않으므로 WolfCore Dev가 직접 다운로드하지 않습니다). 전역 설정은 변경되지 않습니다.',
     exposeAyudaInstalacion:
       'Expose가 미리 설치되어 있거나 WolfCore Dev 데이터 폴더의 bin/expose에 expose.phar 파일이 있어야 합니다(Windows에서는 phar로만 작동하며, 체크섬이 제공되는 다운로드가 없습니다). 요청 검사기가 로컬 네트워크 전체에 노출되므로 실제 데이터가 포함된 사이트에는 사용할 수 없습니다. 전역 설정은 변경되지 않습니다.',
     tailscaleAlcance: '공개 범위',

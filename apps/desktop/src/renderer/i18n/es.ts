@@ -1813,6 +1813,7 @@ export const es = {
       nginx: { nombre: 'Nginx', detalle: 'Servidor web (nginx.org)' },
       php: { nombre: 'PHP', detalle: 'NTS x64 (windows.php.net)' },
       cloudflared: { nombre: 'cloudflared', detalle: 'Túneles públicos (Cloudflare)' },
+      ngrok: { nombre: 'ngrok', detalle: 'Túneles públicos con su cuenta (ngrok)' },
       mysql: { nombre: 'MySQL', detalle: 'Base de datos, 8.4 LTS (dev.mysql.com)' },
       mariadb: { nombre: 'MariaDB', detalle: 'Base de datos, 11.4 LTS (mariadb.org)' },
       postgresql: { nombre: 'PostgreSQL', detalle: 'Base de datos (enterprisedb.com)' },
@@ -1847,6 +1848,21 @@ export const es = {
     sinVersiones: 'No se encontraron versiones',
     rama: (rama: string) => rama,
     yaInstalada: 'ya instalada',
+    ngrokCuenta: {
+      titulo: 'Conectar su cuenta de ngrok',
+      intro: 'ngrok necesita el authtoken de su cuenta para abrir túneles.',
+      paso1: 'Entre en el panel de ngrok y copie su authtoken.',
+      abrirPanel: 'Abrir el panel de ngrok',
+      paso2: 'Péguelo en este campo.',
+      etiqueta: 'Authtoken de ngrok',
+      marcador: 'Pegue aquí el authtoken',
+      paso3: 'Guárdelo: queda cifrado en este equipo.',
+      guardar: 'Guardar el authtoken',
+      borrar: 'Borrar el authtoken',
+      guardado: (f: string) => `Authtoken guardado (termina en ${f}).`,
+      sinGuardar: 'Todavía no hay un authtoken guardado.',
+      nota: 'WolfCore Dev se lo entrega a ngrok solo mediante la variable de entorno NGROK_AUTHTOKEN del proceso del túnel, junto con una configuración propia dentro de su carpeta de datos. No escribe en el ngrok.yml de su usuario ni usa la línea de órdenes.',
+    },
     fases: {
       descargando: 'Descargando',
       verificando: 'Verificando SHA-256',
@@ -2077,8 +2093,8 @@ export const es = {
     borrarToken: 'Borrar el token',
     usarProveedor: 'Usar este proveedor',
     guardadoProveedor: 'Proveedor guardado. Al abrir el túnel se pedirá confirmación.',
-    ngrokAyudaInstalacion:
-      'ngrok ya debe estar instalado en este equipo (WolfCore Dev no lo descarga porque ngrok no publica una descarga verificable). Su configuración global no se toca.',
+    ngrokAyuda:
+      'Instale ngrok desde Servicios (descarga oficial con su huella SHA-256 verificada) o use el que ya tenga en este equipo. El authtoken también se guarda allí, en «Conectar su cuenta de ngrok». Su configuración global no se toca.',
     exposeAyudaInstalacion:
       'Expose ya debe estar instalado o tener su expose.phar en la carpeta bin/expose de los datos de WolfCore Dev (en Windows solo funciona con el phar; no hay descarga con huella). Su inspector de peticiones queda visible en toda la red local, por eso no se usa con sitios con datos reales. Su configuración global no se toca.',
     tailscaleAlcance: 'Hasta dónde llega',
@@ -5521,6 +5537,7 @@ export const es = {
       ollama: 'Ollama',
       meilisearch: 'Meilisearch',
       cloudflared: 'cloudflared',
+      ngrok: 'ngrok',
       java: 'Java',
       dotnet: '.NET',
       go: 'Go',

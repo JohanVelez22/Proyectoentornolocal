@@ -277,7 +277,23 @@ export const idExtra: TextosParciales = {
     },
   },
   instalar: {
+    ngrokCuenta: {
+      titulo: 'Hubungkan akun ngrok Anda',
+      intro: 'ngrok memerlukan authtoken akun Anda untuk membuka tunnel.',
+      paso1: 'Masuk ke dasbor ngrok dan salin authtoken Anda.',
+      abrirPanel: 'Buka dasbor ngrok',
+      paso2: 'Tempel ke kolom ini.',
+      etiqueta: 'Authtoken ngrok',
+      marcador: 'Tempel authtoken di sini',
+      paso3: 'Simpan: authtoken disimpan terenkripsi di komputer ini.',
+      guardar: 'Simpan authtoken',
+      borrar: 'Hapus authtoken',
+      guardado: (f) => `Authtoken tersimpan (berakhir dengan ${f}).`,
+      sinGuardar: 'Belum ada authtoken yang tersimpan.',
+      nota: 'WolfCore Dev menyerahkannya ke ngrok hanya melalui variabel lingkungan NGROK_AUTHTOKEN pada proses tunnel, bersama konfigurasi tersendiri di dalam folder data Anda. WolfCore Dev tidak pernah menulis ke ngrok.yml milik pengguna Anda dan tidak menggunakan baris perintah.',
+    },
     servicios: {
+      ngrok: { nombre: 'ngrok', detalle: 'Tunnel publik dengan akun Anda (ngrok)' },
       meilisearch: {
         nombre: 'Meilisearch',
         detalle: 'Pencarian untuk Laravel Scout (github.com/meilisearch)',
@@ -293,6 +309,8 @@ export const idExtra: TextosParciales = {
     tiposCortos: { rails: 'Rails', springboot: 'Spring Boot', aspnet: 'ASP.NET' },
   },
   tunel: {
+    ngrokAyuda:
+      'Pasang ngrok dari Layanan (unduhan resmi dengan checksum SHA-256 yang telah diverifikasi) atau gunakan ngrok yang sudah ada di komputer ini. Authtoken juga disimpan di sana, pada «Hubungkan akun ngrok Anda». Konfigurasi globalnya tidak diubah.',
     sinConfianza:
       'Proyek ini tidak dipercaya: centang «Saya percaya repositori ini» agar dapat dipublikasikan.',
   },
@@ -1380,7 +1398,13 @@ export const idExtra: TextosParciales = {
       'Maven dan Gradle berjalan dengan JDK WolfCore Dev, dan belum ada yang terpasang. Pasang Java (Temurin) dari daftar layanan.',
     avisoMeilisearch:
       'Setiap versi minor Meilisearch memiliki datanya sendiri. Jika Anda beralih ke versi minor lain (misalnya, dari 1.58 ke 1.59), indeks dan MEILISEARCH_KEY-nya akan baru: Anda perlu mengindeks ulang dan memperbarui .env proyek Anda.',
-    servicios: { meilisearch: 'Meilisearch', ruby: 'Ruby', maven: 'Maven', gradle: 'Gradle' },
+    servicios: {
+      ngrok: 'ngrok',
+      meilisearch: 'Meilisearch',
+      ruby: 'Ruby',
+      maven: 'Maven',
+      gradle: 'Gradle',
+    },
     anteriores: (n) => `Patch sebelumnya (${n})`,
   },
   memoria: {

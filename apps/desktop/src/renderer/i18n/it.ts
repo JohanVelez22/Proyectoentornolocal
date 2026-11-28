@@ -1857,8 +1857,6 @@ export const it: TextosParciales = {
     borrarToken: 'Elimina token',
     usarProveedor: 'Usa questo fornitore',
     guardadoProveedor: "Fornitore salvato. All'apertura del tunnel verrà richiesta conferma.",
-    ngrokAyudaInstalacion:
-      'ngrok deve essere già installato su questo computer (WolfCore Dev non lo scarica perché ngrok non pubblica un download verificabile). La configurazione globale non viene modificata.',
     exposeAyudaInstalacion:
       "Expose deve essere già installato oppure avere il file expose.phar nella cartella bin/expose dei dati di WolfCore Dev (su Windows funziona solo con il file phar; non esiste un download con impronta verificabile). Il suo inspector delle richieste rimane visibile sull'intera rete locale, per questo non va usato con siti contenenti dati reali. La configurazione globale non viene modificata.",
     tailscaleAlcance: 'Ambito di visibilità',

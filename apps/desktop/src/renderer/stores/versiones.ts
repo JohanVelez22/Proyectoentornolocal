@@ -17,7 +17,7 @@ import { textos } from '../i18n';
 /** Una fila de la tabla (la forma la da el núcleo). */
 export type FilaVersion = TablaVersiones['ramas'][number]['versiones'][number];
 
-/** Los 17 servicios con pestaña "Versiones", en el orden en que se muestran. */
+/** Los servicios con pestaña "Versiones", en el orden en que se muestran. */
 export const SERVICIOS_CON_VERSIONES: readonly ServicioVersiones[] = [
   'php',
   'nginx',
@@ -48,6 +48,7 @@ export const SERVICIOS_CON_VERSIONES: readonly ServicioVersiones[] = [
   'ollama',
   'meilisearch',
   'cloudflared',
+  'ngrok',
 ];
 
 /** Servicios de datos con instancias (varias versiones encendidas, cada una en su puerto). */

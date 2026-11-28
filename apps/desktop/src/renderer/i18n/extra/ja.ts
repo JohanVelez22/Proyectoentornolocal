@@ -288,7 +288,23 @@ export const jaExtra: TextosParciales = {
     },
   },
   instalar: {
+    ngrokCuenta: {
+      titulo: 'ngrok アカウントを接続する',
+      intro: 'トンネルを開くには、ngrok にアカウントの authtoken が必要です。',
+      paso1: 'ngrok のダッシュボードにサインインし、authtoken をコピーしてください。',
+      abrirPanel: 'ngrok のダッシュボードを開く',
+      paso2: 'この欄に貼り付けてください。',
+      etiqueta: 'ngrok の authtoken',
+      marcador: 'ここに authtoken を貼り付けます',
+      paso3: '保存してください。このコンピューター上で暗号化して保管されます。',
+      guardar: 'authtoken を保存',
+      borrar: 'authtoken を削除',
+      guardado: (f) => `authtoken を保存しました（末尾 ${f}）。`,
+      sinGuardar: 'authtoken はまだ保存されていません。',
+      nota: 'WolfCore Dev は、トンネルのプロセスの環境変数 NGROK_AUTHTOKEN だけを通じて ngrok に渡し、データフォルダー内の専用の設定を使用します。ユーザーの ngrok.yml には一切書き込まず、コマンドラインも使用しません。',
+    },
     servicios: {
+      ngrok: { nombre: 'ngrok', detalle: 'お客様のアカウントによる公開トンネル（ngrok）' },
       meilisearch: {
         nombre: 'Meilisearch',
         detalle: 'Laravel Scout 向けの検索（github.com/meilisearch）',
@@ -304,6 +320,8 @@ export const jaExtra: TextosParciales = {
     tiposCortos: { rails: 'Rails', springboot: 'Spring Boot', aspnet: 'ASP.NET' },
   },
   tunel: {
+    ngrokAyuda:
+      'ngrok は「サービス」からインストールするか（公式ダウンロード、SHA-256 を検証済み）、このコンピューターに既にあるものをお使いください。authtoken も同じ場所の「ngrok アカウントを接続する」で保存します。ngrok のグローバル設定には手を加えません。',
     sinConfianza:
       'このプロジェクトは信頼されていません。公開するには「このリポジトリを信頼する」にチェックを入れてください。',
   },
@@ -1398,7 +1416,13 @@ export const jaExtra: TextosParciales = {
       'Maven と Gradle は WolfCore Dev の JDK で動作しますが、まだインストールされていません。サービス一覧から Java（Temurin）をインストールしてください。',
     avisoMeilisearch:
       'Meilisearch はマイナーバージョンごとに独自のデータを持ちます。別のマイナーバージョンに切り替えると（例: 1.58 から 1.59）、インデックスと MEILISEARCH_KEY が新しくなります。再インデックスを行い、プロジェクトの .env を更新する必要があります。',
-    servicios: { meilisearch: 'Meilisearch', ruby: 'Ruby', maven: 'Maven', gradle: 'Gradle' },
+    servicios: {
+      ngrok: 'ngrok',
+      meilisearch: 'Meilisearch',
+      ruby: 'Ruby',
+      maven: 'Maven',
+      gradle: 'Gradle',
+    },
     anteriores: (n) => `以前のパッチ（${n}）`,
   },
   memoria: {

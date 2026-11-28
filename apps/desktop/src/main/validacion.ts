@@ -211,6 +211,7 @@ const INSTALABLES = [
   'nginx',
   'php',
   'cloudflared',
+  'ngrok',
   'mysql',
   'mariadb',
   'postgresql',

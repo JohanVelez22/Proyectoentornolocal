@@ -3,6 +3,7 @@ import { CloudDownload } from '@vicons/ionicons5';
 import { fuenteFirmaDe } from '@pel/core';
 import { NButton, NIcon, NProgress, NTag, type SelectOption } from 'naive-ui';
 import Desplegable from './Desplegable.vue';
+import PasoNgrokCuenta from './PasoNgrokCuenta.vue';
 import { computed, onMounted, ref } from 'vue';
 import type { ProgresoInstalacion, VersionDisponible } from '../../shared/api';
 import { api } from '../api';
@@ -163,6 +164,7 @@ onMounted(() => {
         {{ tx.acciones.instalar }}
       </NButton>
     </div>
+    <PasoNgrokCuenta v-if="servicio === 'ngrok'" />
     <div v-if="progreso" class="progreso">
       <div class="progreso-texto">
         <span>{{ t.fases[progreso.fase] }} · {{ progreso.version }}</span>

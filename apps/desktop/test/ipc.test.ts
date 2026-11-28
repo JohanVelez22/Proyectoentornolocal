@@ -532,6 +532,23 @@ describe('registrarIpc', () => {
     expect(canales.has('entorno:config.guardar')).toBe(false);
   });
 
+  it('instalador.instalar acepta ngrok y sigue rechazando servicios que no se instalan desde el catálogo', async () => {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    const ok = (await canales.get('entorno:instalador.instalar')!(
+      {},
+      { servicio: 'ngrok', version: '1.28.0' },
+    )) as { ok: boolean };
+    expect(ok.ok).toBe(true);
+    expect(crudo.buscarVersion).toHaveBeenCalledWith('ngrok', '1.28.0');
+    const mal = (await canales.get('entorno:instalador.instalar')!(
+      {},
+      { servicio: 'ngrok-falso', version: '1.28.0' },
+    )) as { ok: boolean };
+    expect(mal.ok).toBe(false);
+  });
+
   it('instalador.instalar re-resuelve la versión en el catálogo e ignora url/sha del renderer', async () => {
     const { ipcMain, canales } = ipcFalso();
     const { nucleo, crudo } = nucleoFalso();

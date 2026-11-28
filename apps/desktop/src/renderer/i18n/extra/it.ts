@@ -305,7 +305,23 @@ export const itExtra: TextosParciales = {
     },
   },
   instalar: {
+    ngrokCuenta: {
+      titulo: 'Collegare il suo account ngrok',
+      intro: 'ngrok ha bisogno dell’authtoken del suo account per aprire i tunnel.',
+      paso1: 'Acceda alla dashboard di ngrok e copi il suo authtoken.',
+      abrirPanel: 'Aprire la dashboard di ngrok',
+      paso2: 'Lo incolli in questo campo.',
+      etiqueta: 'Authtoken di ngrok',
+      marcador: 'Incolli qui l’authtoken',
+      paso3: 'Lo salvi: viene conservato cifrato su questo computer.',
+      guardar: 'Salvare l’authtoken',
+      borrar: 'Eliminare l’authtoken',
+      guardado: (f) => `Authtoken salvato (termina con ${f}).`,
+      sinGuardar: 'Nessun authtoken è ancora stato salvato.',
+      nota: 'WolfCore Dev lo consegna a ngrok solo tramite la variabile d’ambiente NGROK_AUTHTOKEN del processo del tunnel, insieme a una configurazione propria all’interno della sua cartella dei dati. Non scrive mai nel file ngrok.yml del suo utente e non usa la riga di comando.',
+    },
     servicios: {
+      ngrok: { nombre: 'ngrok', detalle: 'Tunnel pubblici con il suo account (ngrok)' },
       meilisearch: {
         nombre: 'Meilisearch',
         detalle: 'Ricerca per Laravel Scout (github.com/meilisearch)',
@@ -325,6 +341,8 @@ export const itExtra: TextosParciales = {
     },
   },
   tunel: {
+    ngrokAyuda:
+      'Installi ngrok da Servizi (download ufficiale con impronta SHA-256 verificata) oppure usi quello già presente su questo computer. L’authtoken si salva anche lì, in «Collegare il suo account ngrok». La sua configurazione globale non viene modificata.',
     sinConfianza:
       'Questo progetto non è attendibile: selezioni «Mi fido di questo repository» per poterlo pubblicare.',
   },
@@ -1460,6 +1478,7 @@ export const itExtra: TextosParciales = {
     avisoMeilisearch:
       "Ogni versione secondaria di Meilisearch ha i propri dati. Se passa a un'altra versione secondaria (ad esempio da 1.58 a 1.59), i suoi indici e MEILISEARCH_KEY saranno nuovi: dovrà reindicizzare e aggiornare il .env dei suoi progetti.",
     servicios: {
+      ngrok: 'ngrok',
       meilisearch: 'Meilisearch',
       ruby: 'Ruby',
       maven: 'Maven',

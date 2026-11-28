@@ -1879,6 +1879,7 @@ export const fr: Textos = {
       nginx: { nombre: 'Nginx', detalle: 'Serveur web (nginx.org)' },
       php: { nombre: 'PHP', detalle: 'NTS x64 (windows.php.net)' },
       cloudflared: { nombre: 'cloudflared', detalle: 'Tunnels publics (Cloudflare)' },
+      ngrok: { nombre: 'ngrok', detalle: 'Tunnels publics avec votre compte (ngrok)' },
       mysql: { nombre: 'MySQL', detalle: 'Base de données, 8.4 LTS (dev.mysql.com)' },
       mariadb: { nombre: 'MariaDB', detalle: 'Base de données, 11.4 LTS (mariadb.org)' },
       postgresql: { nombre: 'PostgreSQL', detalle: 'Base de données (enterprisedb.com)' },
@@ -1913,6 +1914,21 @@ export const fr: Textos = {
     sinVersiones: 'Aucune version trouvée',
     rama: (rama: string) => rama,
     yaInstalada: 'déjà installée',
+    ngrokCuenta: {
+      titulo: 'Connecter votre compte ngrok',
+      intro: 'ngrok a besoin de l’authtoken de votre compte pour ouvrir des tunnels.',
+      paso1: 'Connectez-vous au tableau de bord ngrok et copiez votre authtoken.',
+      abrirPanel: 'Ouvrir le tableau de bord ngrok',
+      paso2: 'Collez-le dans ce champ.',
+      etiqueta: 'Authtoken ngrok',
+      marcador: 'Collez ici l’authtoken',
+      paso3: 'Enregistrez-le : il est chiffré sur cet ordinateur.',
+      guardar: 'Enregistrer l’authtoken',
+      borrar: 'Supprimer l’authtoken',
+      guardado: (f: string) => `Authtoken enregistré (se termine par ${f}).`,
+      sinGuardar: 'Aucun authtoken n’est encore enregistré.',
+      nota: 'WolfCore Dev ne le remet à ngrok que par la variable d’environnement NGROK_AUTHTOKEN du processus du tunnel, avec une configuration propre située dans votre dossier de données. Il n’écrit jamais dans le ngrok.yml de votre utilisateur et n’utilise pas la ligne de commande.',
+    },
     fases: {
       descargando: 'Téléchargement',
       verificando: 'Vérification SHA-256',
@@ -2146,8 +2162,8 @@ export const fr: Textos = {
     borrarToken: 'Supprimer le jeton',
     usarProveedor: 'Utiliser ce fournisseur',
     guardadoProveedor: "Fournisseur enregistré. L'ouverture du tunnel demandera une confirmation.",
-    ngrokAyudaInstalacion:
-      "ngrok doit déjà être installé sur cet ordinateur (WolfCore Dev ne le télécharge pas car ngrok ne publie aucun téléchargement vérifiable). Sa configuration globale n'est pas touchée.",
+    ngrokAyuda:
+      'Installez ngrok depuis Services (téléchargement officiel, empreinte SHA-256 vérifiée) ou utilisez celui qui se trouve déjà sur cet ordinateur. L’authtoken s’y enregistre aussi, sous « Connecter votre compte ngrok ». Sa configuration globale n’est pas modifiée.',
     exposeAyudaInstalacion:
       'Expose doit déjà être installé ou avoir son expose.phar dans le dossier bin/expose des données de WolfCore Dev (sous Windows il ne fonctionne qu’avec le phar ; il n’y a pas de téléchargement avec empreinte). Son inspecteur de requêtes est visible sur tout le réseau local, il n’est donc pas utilisé avec des sites contenant de vraies données. Sa configuration globale n’est pas touchée.',
     tailscaleAlcance: "Jusqu'où il va",
@@ -5667,6 +5683,7 @@ export const fr: Textos = {
       ollama: 'Ollama',
       meilisearch: 'Meilisearch',
       cloudflared: 'cloudflared',
+      ngrok: 'ngrok',
       java: 'Java',
       dotnet: '.NET',
       go: 'Go',

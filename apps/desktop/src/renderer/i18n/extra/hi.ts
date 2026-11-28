@@ -261,7 +261,23 @@ export const hiExtra: TextosParciales = {
     },
   },
   instalar: {
+    ngrokCuenta: {
+      titulo: 'अपना ngrok खाता जोड़ें',
+      intro: 'टनल खोलने के लिए ngrok को आपके खाते के authtoken की आवश्यकता होती है।',
+      paso1: 'ngrok डैशबोर्ड में साइन इन करें और अपना authtoken कॉपी करें।',
+      abrirPanel: 'ngrok डैशबोर्ड खोलें',
+      paso2: 'इसे इस फ़ील्ड में पेस्ट करें।',
+      etiqueta: 'ngrok authtoken',
+      marcador: 'authtoken यहाँ पेस्ट करें',
+      paso3: 'इसे सहेजें: यह इस कंप्यूटर पर एन्क्रिप्ट होकर रखा जाता है।',
+      guardar: 'authtoken सहेजें',
+      borrar: 'authtoken हटाएँ',
+      guardado: (f) => `authtoken सहेजा गया (अंत में ${f})।`,
+      sinGuardar: 'अभी कोई authtoken सहेजा नहीं गया है।',
+      nota: 'WolfCore Dev इसे ngrok को केवल टनल प्रक्रिया के NGROK_AUTHTOKEN पर्यावरण चर के माध्यम से देता है, और आपके डेटा फ़ोल्डर के भीतर अपनी अलग कॉन्फ़िगरेशन का उपयोग करता है। यह आपके उपयोगकर्ता की ngrok.yml में कभी नहीं लिखता और कमांड लाइन का उपयोग नहीं करता।',
+    },
     servicios: {
+      ngrok: { nombre: 'ngrok', detalle: 'आपके खाते से सार्वजनिक टनल (ngrok)' },
       meilisearch: {
         nombre: 'Meilisearch',
         detalle: 'Laravel Scout के लिए खोज (github.com/meilisearch)',
@@ -277,6 +293,8 @@ export const hiExtra: TextosParciales = {
     tiposCortos: { rails: 'Rails', springboot: 'Spring Boot', aspnet: 'ASP.NET' },
   },
   tunel: {
+    ngrokAyuda:
+      'ngrok को सेवाएँ से इंस्टॉल करें (आधिकारिक डाउनलोड, सत्यापित SHA-256 चेकसम के साथ) या इस कंप्यूटर पर पहले से मौजूद ngrok का उपयोग करें। authtoken भी वहीं, «अपना ngrok खाता जोड़ें» में सहेजा जाता है। इसकी वैश्विक कॉन्फ़िगरेशन में कोई बदलाव नहीं किया जाता।',
     sinConfianza:
       'इस प्रोजेक्ट पर भरोसा नहीं किया गया है: इसे प्रकाशित करने के लिए «मैं इस रिपॉज़िटरी पर भरोसा करता हूँ» चुनें।',
   },
@@ -1321,7 +1339,13 @@ export const hiExtra: TextosParciales = {
       'Maven और Gradle WolfCore Dev के JDK से चलते हैं, और अभी कोई इंस्टॉल नहीं है। सेवाओं की सूची से Java (Temurin) इंस्टॉल करें।',
     avisoMeilisearch:
       'Meilisearch के प्रत्येक माइनर संस्करण का अपना डेटा होता है। यदि आप किसी दूसरे माइनर संस्करण पर जाते हैं (उदाहरण के लिए 1.58 से 1.59), तो उसके इंडेक्स और MEILISEARCH_KEY नए होंगे: आपको दोबारा इंडेक्स करना होगा और अपने प्रोजेक्ट्स का .env अपडेट करना होगा।',
-    servicios: { meilisearch: 'Meilisearch', ruby: 'Ruby', maven: 'Maven', gradle: 'Gradle' },
+    servicios: {
+      ngrok: 'ngrok',
+      meilisearch: 'Meilisearch',
+      ruby: 'Ruby',
+      maven: 'Maven',
+      gradle: 'Gradle',
+    },
     anteriores: (n) => `पहले के पैच (${n})`,
   },
   memoria: {

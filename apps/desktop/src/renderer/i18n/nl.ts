@@ -1873,8 +1873,6 @@ export const nl: TextosParciales = {
     usarProveedor: 'Deze provider gebruiken',
     guardadoProveedor:
       'Provider opgeslagen. Bij het openen van de tunnel wordt om bevestiging gevraagd.',
-    ngrokAyudaInstalacion:
-      'ngrok moet al op deze computer geïnstalleerd zijn (WolfCore Dev downloadt het niet omdat ngrok geen verifieerbare download publiceert). Uw globale configuratie blijft ongewijzigd.',
     exposeAyudaInstalacion:
       'Expose moet al geïnstalleerd zijn of het bestand expose.phar moet in de map bin/expose van de gegevens van WolfCore Dev staan (op Windows werkt het alleen met de phar; er is geen download met vingerafdruk). De verzoekinspector blijft zichtbaar op het hele lokale netwerk; daarom wordt dit niet gebruikt voor sites met echte gegevens. Uw globale configuratie blijft ongewijzigd.',
     tailscaleAlcance: 'Bereik',

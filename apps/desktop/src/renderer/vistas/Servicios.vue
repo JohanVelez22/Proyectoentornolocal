@@ -71,6 +71,7 @@ const gruposInstalar: { titulo: string; servicios: InstalableCatalogo[] }[] = [
       'ollama',
       'meilisearch',
       'cloudflared',
+      'ngrok',
     ],
   },
 ];

@@ -309,7 +309,23 @@ export const nlExtra: TextosParciales = {
     },
   },
   instalar: {
+    ngrokCuenta: {
+      titulo: 'Uw ngrok-account koppelen',
+      intro: 'ngrok heeft het authtoken van uw account nodig om tunnels te openen.',
+      paso1: 'Meld u aan bij het ngrok-dashboard en kopieer uw authtoken.',
+      abrirPanel: 'ngrok-dashboard openen',
+      paso2: 'Plak het in dit veld.',
+      etiqueta: 'ngrok-authtoken',
+      marcador: 'Plak hier het authtoken',
+      paso3: 'Sla het op: het wordt versleuteld op deze computer bewaard.',
+      guardar: 'Authtoken opslaan',
+      borrar: 'Authtoken verwijderen',
+      guardado: (f) => `Authtoken opgeslagen (eindigt op ${f}).`,
+      sinGuardar: 'Er is nog geen authtoken opgeslagen.',
+      nota: 'WolfCore Dev geeft het alleen aan ngrok door via de omgevingsvariabele NGROK_AUTHTOKEN van het tunnelproces, samen met een eigen configuratie in uw gegevensmap. Het schrijft nooit naar de ngrok.yml van uw gebruiker en gebruikt nooit de opdrachtregel.',
+    },
     servicios: {
+      ngrok: { nombre: 'ngrok', detalle: 'Openbare tunnels met uw account (ngrok)' },
       meilisearch: {
         nombre: 'Meilisearch',
         detalle: 'Zoeken voor Laravel Scout (github.com/meilisearch)',
@@ -329,6 +345,8 @@ export const nlExtra: TextosParciales = {
     },
   },
   tunel: {
+    ngrokAyuda:
+      'Installeer ngrok via Diensten (officiële download met geverifieerde SHA-256-controlesom) of gebruik de versie die al op deze computer staat. Het authtoken wordt daar ook opgeslagen, onder „Uw ngrok-account koppelen”. De globale configuratie van ngrok blijft ongewijzigd.',
     sinConfianza:
       'Dit project wordt niet vertrouwd: vink "Ik vertrouw deze repository" aan om het te kunnen publiceren.',
   },
@@ -1467,6 +1485,7 @@ export const nlExtra: TextosParciales = {
     avisoMeilisearch:
       'Elke Meilisearch-minorversie heeft eigen gegevens. Als u overstapt op een andere minorversie (bijvoorbeeld van 1.58 naar 1.59), zijn de indexen en de MEILISEARCH_KEY nieuw: u moet opnieuw indexeren en de .env van uw projecten bijwerken.',
     servicios: {
+      ngrok: 'ngrok',
       meilisearch: 'Meilisearch',
       ruby: 'Ruby',
       maven: 'Maven',

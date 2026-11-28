@@ -300,7 +300,23 @@ export const ukExtra: TextosParciales = {
     },
   },
   instalar: {
+    ngrokCuenta: {
+      titulo: 'Підключення облікового запису ngrok',
+      intro: 'Щоб відкривати тунелі, ngrok потрібен authtoken вашого облікового запису.',
+      paso1: 'Увійдіть у панель ngrok і скопіюйте свій authtoken.',
+      abrirPanel: 'Відкрити панель ngrok',
+      paso2: 'Вставте його в це поле.',
+      etiqueta: 'Authtoken ngrok',
+      marcador: 'Вставте сюди authtoken',
+      paso3: 'Збережіть його: на цьому комп’ютері він зберігається в зашифрованому вигляді.',
+      guardar: 'Зберегти authtoken',
+      borrar: 'Видалити authtoken',
+      guardado: (f) => `Authtoken збережено (закінчується на ${f}).`,
+      sinGuardar: 'Authtoken ще не збережено.',
+      nota: 'WolfCore Dev передає його ngrok лише через змінну середовища NGROK_AUTHTOKEN процесу тунелю разом із власною конфігурацією у вашій папці даних. Він ніколи не записує нічого в ngrok.yml вашого користувача й не використовує командний рядок.',
+    },
     servicios: {
+      ngrok: { nombre: 'ngrok', detalle: 'Публічні тунелі з вашим обліковим записом (ngrok)' },
       meilisearch: {
         nombre: 'Meilisearch',
         detalle: 'Пошук для Laravel Scout (github.com/meilisearch)',
@@ -308,6 +324,8 @@ export const ukExtra: TextosParciales = {
     },
   },
   tunel: {
+    ngrokAyuda:
+      'Установіть ngrok у розділі «Служби» (офіційне завантаження з перевіреною контрольною сумою SHA-256) або скористайтеся тим, що вже є на цьому комп’ютері. Authtoken також зберігається там, у блоці «Підключення облікового запису ngrok». Глобальна конфігурація ngrok не змінюється.',
     sinConfianza:
       'Цьому проєкту не довіряють: позначте «Я довіряю цьому репозиторію», щоб його можна було опублікувати.',
   },
@@ -1443,6 +1461,7 @@ export const ukExtra: TextosParciales = {
     avisoMeilisearch:
       'Кожна мінорна версія Meilisearch має власні дані. Якщо ви перейдете на іншу мінорну версію (наприклад, з 1.58 на 1.59), її індекси та MEILISEARCH_KEY будуть новими: потрібно буде переіндексувати й оновити .env ваших проєктів.',
     servicios: {
+      ngrok: 'ngrok',
       meilisearch: 'Meilisearch',
       ruby: 'Ruby',
       maven: 'Maven',

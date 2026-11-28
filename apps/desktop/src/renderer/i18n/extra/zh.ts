@@ -237,7 +237,23 @@ export const zhExtra: TextosParciales = {
     },
   },
   instalar: {
+    ngrokCuenta: {
+      titulo: '连接您的 ngrok 账户',
+      intro: 'ngrok 需要您账户的 authtoken 才能打开隧道。',
+      paso1: '请登录 ngrok 控制台并复制您的 authtoken。',
+      abrirPanel: '打开 ngrok 控制台',
+      paso2: '请将其粘贴到此输入框。',
+      etiqueta: 'ngrok authtoken',
+      marcador: '请在此粘贴 authtoken',
+      paso3: '请保存：它会加密存储在这台电脑上。',
+      guardar: '保存 authtoken',
+      borrar: '删除 authtoken',
+      guardado: (f) => `authtoken 已保存（末尾为 ${f}）。`,
+      sinGuardar: '尚未保存 authtoken。',
+      nota: 'WolfCore Dev 仅通过隧道进程的环境变量 NGROK_AUTHTOKEN 将其交给 ngrok，并使用您数据文件夹内的专用配置。它绝不会写入您用户的 ngrok.yml，也不会使用命令行。',
+    },
     servicios: {
+      ngrok: { nombre: 'ngrok', detalle: '使用您的账户创建公共隧道（ngrok）' },
       meilisearch: {
         nombre: 'Meilisearch',
         detalle: '适用于 Laravel Scout 的搜索（github.com/meilisearch）',
@@ -252,7 +268,11 @@ export const zhExtra: TextosParciales = {
     },
     tiposCortos: { rails: 'Rails', springboot: 'Spring Boot', aspnet: 'ASP.NET' },
   },
-  tunel: { sinConfianza: '此项目不受信任：请勾选“我信任此仓库”才能发布。' },
+  tunel: {
+    ngrokAyuda:
+      '请在“服务”中安装 ngrok（官方下载，已验证 SHA-256 校验值），或使用这台电脑上已有的 ngrok。authtoken 也在那里的“连接您的 ngrok 账户”中保存。不会改动 ngrok 的全局配置。',
+    sinConfianza: '此项目不受信任：请勾选“我信任此仓库”才能发布。',
+  },
   tuneles: {
     irAProyectos: '前往项目',
     compartir: {
@@ -1249,7 +1269,13 @@ export const zhExtra: TextosParciales = {
       'Maven 和 Gradle 使用 WolfCore Dev 的 JDK 运行，而目前尚未安装。请从服务列表中安装 Java（Temurin）。',
     avisoMeilisearch:
       '每个 Meilisearch 次版本都有各自的数据。如果切换到另一个次版本（例如从 1.58 到 1.59），其索引和 MEILISEARCH_KEY 将是全新的：您需要重新建立索引，并更新项目的 .env。',
-    servicios: { meilisearch: 'Meilisearch', ruby: 'Ruby', maven: 'Maven', gradle: 'Gradle' },
+    servicios: {
+      ngrok: 'ngrok',
+      meilisearch: 'Meilisearch',
+      ruby: 'Ruby',
+      maven: 'Maven',
+      gradle: 'Gradle',
+    },
     anteriores: (n) => `更早的补丁版本（${n}）`,
   },
   memoria: {

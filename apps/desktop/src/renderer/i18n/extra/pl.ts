@@ -308,7 +308,23 @@ export const plExtra: TextosParciales = {
     },
   },
   instalar: {
+    ngrokCuenta: {
+      titulo: 'Połączenie konta ngrok',
+      intro: 'Aby otwierać tunele, ngrok potrzebuje authtokenu konta.',
+      paso1: 'Należy zalogować się w panelu ngrok i skopiować authtoken.',
+      abrirPanel: 'Otwórz panel ngrok',
+      paso2: 'Należy wkleić go w to pole.',
+      etiqueta: 'Authtoken ngrok',
+      marcador: 'Wklej tutaj authtoken',
+      paso3: 'Należy go zapisać: jest przechowywany w postaci zaszyfrowanej na tym komputerze.',
+      guardar: 'Zapisz authtoken',
+      borrar: 'Usuń authtoken',
+      guardado: (f) => `Authtoken zapisany (kończy się na ${f}).`,
+      sinGuardar: 'Nie zapisano jeszcze authtokenu.',
+      nota: 'WolfCore Dev przekazuje go programowi ngrok wyłącznie przez zmienną środowiskową NGROK_AUTHTOKEN procesu tunelu, razem z własną konfiguracją w folderze danych. Nigdy nie zapisuje niczego w pliku ngrok.yml użytkownika i nie używa wiersza poleceń.',
+    },
     servicios: {
+      ngrok: { nombre: 'ngrok', detalle: 'Publiczne tunele z użyciem konta (ngrok)' },
       meilisearch: {
         nombre: 'Meilisearch',
         detalle: 'Wyszukiwanie dla Laravel Scout (github.com/meilisearch)',
@@ -316,6 +332,8 @@ export const plExtra: TextosParciales = {
     },
   },
   tunel: {
+    ngrokAyuda:
+      'Należy zainstalować ngrok w sekcji Usługi (oficjalne pobranie z zweryfikowaną sumą SHA-256) albo użyć programu już obecnego na tym komputerze. Authtoken zapisuje się tam również, w sekcji „Połączenie konta ngrok”. Globalna konfiguracja ngrok nie jest zmieniana.',
     sinConfianza:
       'Ten projekt nie jest zaufany: należy zaznaczyć „Ufam temu repozytorium”, aby móc go opublikować.',
   },
@@ -1456,6 +1474,7 @@ export const plExtra: TextosParciales = {
     avisoMeilisearch:
       'Każda wersja minor Meilisearch ma własne dane. Po przełączeniu na inną wersję minor (na przykład z 1.58 na 1.59), jej indeksy i MEILISEARCH_KEY będą nowe: trzeba będzie ponownie zaindeksować i zaktualizować .env projektów.',
     servicios: {
+      ngrok: 'ngrok',
       meilisearch: 'Meilisearch',
       ruby: 'Ruby',
       maven: 'Maven',

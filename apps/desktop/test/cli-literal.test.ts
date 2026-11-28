@@ -18,7 +18,7 @@ describe('comillas() del cliente wolf equivale a literalPowerShell() del núcleo
   });
 
   it('también con textos normales, vacíos y con varias comillas seguidas', () => {
-    for (const v of ['', 'C:\Datos\a b', "''", "‘’‚‛'", 'ñandú ’']) {
+    for (const v of ['', String.raw`C:\Datos\a b`, "''", "‘’‚‛'", 'ñandú ’']) {
       expect(comillas(v)).toBe(literalPowerShell(v));
     }
   });

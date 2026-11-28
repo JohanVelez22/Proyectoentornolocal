@@ -321,7 +321,23 @@ export const deExtra: TextosParciales = {
     },
   },
   instalar: {
+    ngrokCuenta: {
+      titulo: 'Ihr ngrok-Konto verbinden',
+      intro: 'ngrok benötigt den Authtoken Ihres Kontos, um Tunnel zu öffnen.',
+      paso1: 'Melden Sie sich im ngrok-Dashboard an und kopieren Sie Ihren Authtoken.',
+      abrirPanel: 'ngrok-Dashboard öffnen',
+      paso2: 'Fügen Sie ihn in dieses Feld ein.',
+      etiqueta: 'ngrok-Authtoken',
+      marcador: 'Authtoken hier einfügen',
+      paso3: 'Speichern Sie ihn: Er wird verschlüsselt auf diesem Computer abgelegt.',
+      guardar: 'Authtoken speichern',
+      borrar: 'Authtoken löschen',
+      guardado: (f) => `Authtoken gespeichert (endet auf ${f}).`,
+      sinGuardar: 'Es ist noch kein Authtoken gespeichert.',
+      nota: 'WolfCore Dev übergibt ihn ngrok ausschließlich über die Umgebungsvariable NGROK_AUTHTOKEN des Tunnelprozesses, zusammen mit einer eigenen Konfiguration in Ihrem Datenordner. Es schreibt nie in die ngrok.yml Ihres Benutzers und verwendet nie die Befehlszeile.',
+    },
     servicios: {
+      ngrok: { nombre: 'ngrok', detalle: 'Öffentliche Tunnel mit Ihrem Konto (ngrok)' },
       meilisearch: {
         nombre: 'Meilisearch',
         detalle: 'Suche für Laravel Scout (github.com/meilisearch)',
@@ -341,6 +357,8 @@ export const deExtra: TextosParciales = {
     },
   },
   tunel: {
+    ngrokAyuda:
+      'Installieren Sie ngrok unter Dienste (offizieller Download mit geprüfter SHA-256-Prüfsumme) oder verwenden Sie das bereits auf diesem Computer vorhandene. Der Authtoken wird dort ebenfalls gespeichert, unter „Ihr ngrok-Konto verbinden“. Die globale Konfiguration von ngrok wird nicht angetastet.',
     sinConfianza:
       'Diesem Projekt wird nicht vertraut: Aktivieren Sie „Ich vertraue diesem Repository“, um es veröffentlichen zu können.',
   },
@@ -1486,6 +1504,7 @@ export const deExtra: TextosParciales = {
     avisoMeilisearch:
       'Jede Meilisearch-Nebenversion hat eigene Daten. Wenn Sie auf eine andere Nebenversion wechseln (zum Beispiel von 1.58 auf 1.59), sind ihre Indizes und der MEILISEARCH_KEY neu: Sie müssen neu indizieren und die .env Ihrer Projekte aktualisieren.',
     servicios: {
+      ngrok: 'ngrok',
       meilisearch: 'Meilisearch',
       ruby: 'Ruby',
       maven: 'Maven',
