@@ -7,6 +7,7 @@ import type { Ejecutor } from '../src/plataforma/tipos';
 const TOKEN = 'ghp_TokenDePruebaMuySecreto1234567890';
 
 const GH = path.win32.join('C:\\Program Files\\GitHub CLI', 'gh.exe');
+const WINGET = 'C:\\L\\Microsoft\\WindowsApps\\winget.exe';
 
 /** Salida de `gh api --paginate --slurp /user/repos…`: un arreglo por página. */
 const salidaGh = JSON.stringify([
@@ -193,23 +194,23 @@ describe('GitHub.instalarGh e iniciarSesionGh', () => {
   it('instalarGh usa winget con el id exacto', async () => {
     const llamadas: Llamada[] = [];
     const gh = new GitHub({
-      entorno: { Path: '' },
-      existe: () => false,
+      entorno: { Path: '', LOCALAPPDATA: 'C:\\L' },
+      existe: (r) => r === WINGET,
       exec: async (cmd, args) => {
         llamadas.push({ cmd, args });
         return { codigo: 0, stdout: '', stderr: '' };
       },
     });
     await gh.instalarGh();
-    expect(llamadas[0]!.cmd).toBe('winget');
+    expect(llamadas[0]!.cmd).toBe(WINGET);
     expect(llamadas[0]!.args.slice(0, 4)).toEqual(['install', '--id', 'GitHub.cli', '-e']);
   });
 
   it('instalarGh sin winget da un mensaje claro', async () => {
     const sinWinget = (codigo: boolean): GitHub =>
       new GitHub({
-        entorno: { Path: '' },
-        existe: () => false,
+        entorno: { Path: '', LOCALAPPDATA: 'C:\\L' },
+        existe: (r) => r === WINGET,
         exec: async () => {
           if (codigo) return { codigo: 1, stdout: '', stderr: 'spawn winget ENOENT' };
           throw Object.assign(new Error('spawn winget ENOENT'), { code: 'ENOENT' });
@@ -217,6 +218,20 @@ describe('GitHub.instalarGh e iniciarSesionGh', () => {
       });
     await expect(sinWinget(true).instalarGh()).rejects.toThrow(/No se encontró winget/);
     await expect(sinWinget(false).instalarGh()).rejects.toThrow(/No se encontró winget/);
+  });
+
+  it('instalarGh sin el alias de winget no lanza nada y avisa', async () => {
+    const llamadas: Llamada[] = [];
+    const gh = new GitHub({
+      entorno: { Path: 'C:\\plantado', LOCALAPPDATA: 'C:\\L' },
+      existe: () => false,
+      exec: async (cmd, args) => {
+        llamadas.push({ cmd, args });
+        return { codigo: 0, stdout: '', stderr: '' };
+      },
+    });
+    await expect(gh.instalarGh()).rejects.toThrow(/No se encontró winget/);
+    expect(llamadas).toEqual([]);
   });
 
   it('iniciarSesionGh abre gh auth login --web en una terminal visible', async () => {

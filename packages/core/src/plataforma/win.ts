@@ -1,4 +1,5 @@
 import { raizSistema } from './raizSistema';
+import { rutaWinget } from './winget';
 import { execFile } from 'node:child_process';
 import { entornoDelHijo } from '../procesos/entorno';
 import { randomUUID } from 'node:crypto';
@@ -888,13 +889,8 @@ export class PlataformaWindows implements PlataformaCompleta {
   }
 
   async instalarVcRedist(): Promise<ResultadoEscritura> {
-    const local = this.entorno.LOCALAPPDATA;
-    // Primero el de WindowsApps (el de App Installer); si no, el del PATH.
-    const deApps = local
-      ? path.win32.join(local, 'Microsoft', 'WindowsApps', nombreEjecutable('winget'))
-      : null;
-    const winget =
-      deApps && this.existeRuta(deApps) ? deApps : await this.buscarEjecutable('winget');
+    // El alias de App Installer en WindowsApps; nunca el PATH ni el nombre a secas.
+    const winget = rutaWinget(this.entorno, this.existeRuta);
     if (!winget) {
       return { ok: false, motivo: 'error', detalle: 'winget no está disponible en este equipo' };
     }

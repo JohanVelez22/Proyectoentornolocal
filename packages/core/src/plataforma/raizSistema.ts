@@ -8,7 +8,7 @@ export const RAIZ_RESPALDO = 'C:\\Windows';
 const VARIABLES = ['SystemRoot', 'SYSTEMROOT', 'windir'] as const;
 
 /** Con unidad (nada de UNC ni relativas), sin caracteres de ruta inválidos y sin tramos `..`. */
-const esRutaDeUnidad = (r: string): boolean =>
+export const esRutaDeUnidad = (r: string): boolean =>
   /^[A-Za-z]:\\[^"<>|?*\0]*$/.test(r) && !/(^|[\\/])\.\.([\\/]|$)/.test(r);
 
 const conocidas = new Map<string, boolean>();

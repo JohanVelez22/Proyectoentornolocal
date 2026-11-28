@@ -11,6 +11,7 @@ import { carpetaTemporal } from './temporales';
 
 const VSWHERE = 'C:\\PF86\\Microsoft Visual Studio\\Installer\\vswhere.exe';
 const VS = 'C:\\Program Files (x86)\\VS 2022 BT';
+const WINGET = 'C:\\L\\Microsoft\\WindowsApps\\winget.exe';
 const VCVARS = `${VS}\\VC\\Auxiliary\\Build\\vcvars64.bat`;
 
 describe('InstaladorPgvector', () => {
@@ -38,11 +39,11 @@ describe('InstaladorPgvector', () => {
     return { codigo: 0, stdout: vswhereSalida, stderr: '' };
   };
   const lanzar: Lanzador = async (cmd, args, opts) => {
-    if (cmd === 'winget' && wingetAusente) {
+    if (cmd === WINGET && wingetAusente) {
       throw Object.assign(new Error('spawn winget ENOENT'), { code: 'ENOENT' });
     }
     const ultimo = args.at(-1) ?? '';
-    if (cmd === 'winget') {
+    if (cmd === WINGET) {
       llamadas.push({ cmd, args });
       for (const l of lineas) opts?.alLinea?.(l, 'stdout');
       return { codigo: codigoWinget };
@@ -69,7 +70,10 @@ describe('InstaladorPgvector', () => {
         },
       },
       versionPostgres: async () => pgVersion,
-      existe: existe ?? ((p) => p === VSWHERE || p === VCVARS || existsSync(p)),
+      entorno: { LOCALAPPDATA: 'C:\\L' },
+      existe:
+        existe ??
+        ((p) => p === VSWHERE || p === VCVARS || (p === WINGET && !wingetAusente) || existsSync(p)),
       programFilesX86: 'C:\\PF86',
       detenerPostgres: async () => {
         orden.push('detener');
@@ -144,13 +148,15 @@ describe('InstaladorPgvector', () => {
   it('winget ausente', async () => {
     wingetAusente = true;
     expect(await crear().instalarBuildTools()).toEqual({ ok: false, motivo: 'winget-ausente' });
+    // Nunca se lanza «winget» por su nombre: sin el alias de WindowsApps solo se avisa.
+    expect(llamadas.some((l) => l.cmd.toLowerCase().startsWith('winget'))).toBe(false);
   });
 
   it('instala las Build Tools con winget y transmite las líneas', async () => {
     lineas = ['Descargando'];
     const r = await crear().instalarBuildTools();
     expect(r).toEqual({ ok: true });
-    const w = llamadas.find((l) => l.cmd === 'winget')!;
+    const w = llamadas.find((l) => l.cmd === WINGET)!;
     expect(w.args).toEqual([
       'install',
       '--id',

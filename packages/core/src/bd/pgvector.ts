@@ -9,6 +9,7 @@ import { lanzadorPorDefecto } from '../plataforma/lanzar';
 import type { Ejecutor, Lanzador } from '../plataforma/tipos';
 import type { Rutas } from '../rutas';
 import type { ProgresoInstalacion } from '../tipos';
+import { rutaWinget } from '../plataforma/winget';
 import { interpreteComandos, rutaVcvars64, rutaVswhere } from '../plataforma/win';
 
 export interface DepsPgvector {
@@ -22,6 +23,8 @@ export interface DepsPgvector {
   versionPostgres: () => Promise<string | null>;
   /** Inyectable para pruebas. */
   existe?: (ruta: string) => boolean;
+  /** Variables de entorno (por defecto, las del proceso): LOCALAPPDATA ubica winget. */
+  entorno?: NodeJS.ProcessEnv;
   /** Por defecto %ProgramFiles(x86)%. */
   programFilesX86?: string;
   /** Detiene PostgreSQL de forma limpia; devuelve si estaba en marcha. */
@@ -155,10 +158,15 @@ export class InstaladorPgvector {
     const ev = (f: ProgresoInstalacion['fase'], p: number, m?: string): void =>
       this.emitir(version, f, p, m, 'buildtools');
     ev('compilando', 0, 'Instalando las herramientas de compilación…');
+    const winget = rutaWinget(this.d.entorno ?? process.env, this.d.existe);
+    if (!winget) {
+      ev('error', 0, 'winget no está disponible en este equipo.');
+      return { ok: false, motivo: 'winget-ausente' };
+    }
     let codigo: number;
     try {
       ({ codigo } = await this.lanzar(
-        'winget',
+        winget,
         [
           'install',
           '--id',

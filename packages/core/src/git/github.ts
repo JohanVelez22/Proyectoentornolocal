@@ -6,6 +6,7 @@ import {
 } from '../plataforma/terminalWin';
 import type { Ejecutor } from '../plataforma/tipos';
 import { ejecutorPorDefecto } from '../plataforma/win';
+import { rutaWinget } from '../plataforma/winget';
 import { Git, MENSAJE_TOKEN_INVALIDO, sinSecretos, validarToken } from './git';
 
 export interface RepoGithub {
@@ -92,6 +93,7 @@ function filtrarYPaginar(repos: RepoGithub[], o: OpcionesRepos): RepoGithub[] {
 export class GitHub {
   private readonly exec: Ejecutor;
   private readonly entorno: NodeJS.ProcessEnv;
+  private readonly existe: ((ruta: string) => boolean) | undefined;
   private readonly fetch: typeof fetch;
   private readonly lanzar: LanzadorSeparado;
   private readonly git: Git;
@@ -99,6 +101,7 @@ export class GitHub {
   constructor(d: DepsGitHub = {}) {
     this.exec = d.exec ?? ejecutorPorDefecto;
     this.entorno = d.entorno ?? process.env;
+    this.existe = d.existe;
     this.fetch = d.fetch ?? globalThis.fetch;
     this.lanzar = d.lanzarSeparado ?? lanzarEnConsolaNueva;
     this.git = new Git({ exec: this.exec, entorno: this.entorno, existe: d.existe });
@@ -168,8 +171,10 @@ export class GitHub {
   /** Instala GitHub CLI con winget (puede tardar; Windows puede pedir permiso). */
   async instalarGh(): Promise<void> {
     const enoent = /ENOENT|no se reconoce|not recognized/i;
+    const winget = rutaWinget(this.entorno, this.existe);
+    if (!winget) throw new Error(MENSAJE_SIN_WINGET);
     const r = await this.exec(
-      'winget',
+      winget,
       [
         'install',
         '--id',

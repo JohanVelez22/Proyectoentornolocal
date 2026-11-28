@@ -17,13 +17,25 @@ const RAICES = [
 ];
 
 const EJECUTABLES =
-  'powershell|pwsh|cmd|net|net1|ping|attrib|tasklist|netstat|taskkill|reg|sc|wmic|icacls|cacls|schtasks|netsh|takeown|fsutil|ipconfig|nslookup|robocopy|xcopy|where|whoami|rundll32|mshta|cscript|wscript|certutil|msiexec|dism|bcdedit|explorer|wevtutil|route|arp';
+  'powershell|pwsh|cmd|net|net1|ping|attrib|tasklist|netstat|taskkill|reg|sc|wmic|icacls|cacls|schtasks|netsh|takeown|fsutil|ipconfig|nslookup|robocopy|xcopy|where|whoami|rundll32|mshta|cscript|wscript|certutil|msiexec|dism|bcdedit|explorer|wevtutil|route|arp|winget|tar|setx|systeminfo|wsl|curl|findstr|powercfg';
 
 /** Una función que lanza un proceso, con el ejecutable como primer argumento literal. */
 const INICIO =
   /\b(?:execFile|execFileSync|spawn|spawnSync|exec|execSync|ejecutar|lanzar|lanzarSinShell|run)\w*\s*\(\s*['"`]/
     .source;
 const LANZAMIENTO = new RegExp(`${INICIO}(?:${EJECUTABLES})(?:\\.exe)?['"\`]`, 'i');
+
+/** El nombre guardado en una constante o campo (`comando: 'winget'`) para lanzarlo después. */
+const GUARDADO = new RegExp(
+  `\\b(?:comando|exe|programa|ejecutable)\\s*[:=]\\s*['"\`](?:${EJECUTABLES})(?:\\.exe)?['"\`]`,
+  'i',
+);
+
+/** Lanzar con el shell del sistema: resuelve el nombre por el PATH y admite inyección. */
+const CON_SHELL = /\bshell\s*:\s*true\b/;
+
+const SOSPECHOSO = (codigo: string): boolean =>
+  LANZAMIENTO.test(codigo) || GUARDADO.test(codigo) || CON_SHELL.test(codigo);
 
 function archivos(dir: string): string[] {
   return readdirSync(dir).flatMap((n) => {
@@ -49,12 +61,26 @@ describe('ningún ejecutable del sistema se lanza por nombre', () => {
     expect(LANZAMIENTO.test("lanzar(ruta('cmd')!, ['/K'])")).toBe(false);
   });
 
+  it('también detecta el nombre guardado en una constante o campo, y shell: true', () => {
+    for (const nombre of ['winget', 'tar', 'setx', 'systeminfo', 'wsl', 'curl', 'findstr']) {
+      expect(LANZAMIENTO.test(`ejecutar('${nombre}.exe', [])`)).toBe(true);
+    }
+    for (const nombre of ['powercfg', 'reg', 'icacls', 'schtasks', 'sc']) {
+      expect(LANZAMIENTO.test(`execFile('${nombre}', [])`)).toBe(true);
+    }
+    expect(GUARDADO.test("const o = { comando: 'winget', args: [] }")).toBe(true);
+    expect(GUARDADO.test("let exe = 'tar.exe';")).toBe(true);
+    expect(GUARDADO.test('programa = "wsl"')).toBe(true);
+    expect(GUARDADO.test("ejecutable: 'nodo'")).toBe(false);
+    expect(GUARDADO.test('comando: rutaSistema32(env)')).toBe(false);
+    expect(CON_SHELL.test('spawn(exe, args, { shell: true })')).toBe(true);
+    expect(CON_SHELL.test('spawn(exe, args, { shell: false })')).toBe(false);
+  });
+
   it('el núcleo y el proceso principal de la aplicación usan rutas absolutas', () => {
     const todos = RAICES.flatMap(archivos);
     expect(todos.length).toBeGreaterThan(50);
-    const culpables = todos.filter((f) =>
-      LANZAMIENTO.test(sinComentarios(readFileSync(f, 'utf8'))),
-    );
+    const culpables = todos.filter((f) => SOSPECHOSO(sinComentarios(readFileSync(f, 'utf8'))));
     expect(culpables.map((f) => path.relative(AQUI, f))).toEqual([]);
   });
 

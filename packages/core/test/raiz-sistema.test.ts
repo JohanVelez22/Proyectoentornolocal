@@ -3,6 +3,7 @@ import { interpreteComandos } from '../src/plataforma/win';
 import { rutaPowerShell, rutaSistema32 } from '../src/plataforma/procesosWin';
 import { powershellDelSistema } from '../src/plataforma/terminalWin';
 import { RAIZ_RESPALDO, raizSistema } from '../src/plataforma/raizSistema';
+import { rutaWinget } from '../src/plataforma/winget';
 
 /** D54b: un único criterio para la carpeta de Windows (ni UNC, ni relativa, ni `..`, ni inexistente). */
 const SOLO_C = (raiz: string): boolean => raiz.toUpperCase().startsWith('C:');
@@ -75,5 +76,16 @@ describe('interpreteComandos', () => {
       if (antes === undefined) delete process.env.ComSpec;
       else process.env.ComSpec = antes;
     }
+  });
+});
+
+describe('rutaWinget: solo el alias de WindowsApps', () => {
+  const WINGET = 'C:\\L\\Microsoft\\WindowsApps\\winget.exe';
+  it('devuelve la ruta absoluta si existe; si no, null (nunca el nombre a secas)', () => {
+    expect(rutaWinget({ LOCALAPPDATA: 'C:\\L' }, (r) => r === WINGET)).toBe(WINGET);
+    expect(rutaWinget({ LOCALAPPDATA: 'C:\\L' }, () => false)).toBeNull();
+    expect(rutaWinget({}, () => true)).toBeNull();
+    expect(rutaWinget({ LOCALAPPDATA: '..\\L' }, () => true)).toBeNull();
+    expect(rutaWinget({ LOCALAPPDATA: '\\\\srv\\L' }, () => true)).toBeNull();
   });
 });
