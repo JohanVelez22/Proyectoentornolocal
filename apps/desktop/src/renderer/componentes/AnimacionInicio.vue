@@ -37,28 +37,30 @@ const saliendo = computed(() => fase.value === 'saliendo');
 
 /** Trazos del logo, en el orden en que se dibujan. Todos con `pathLength="1"`. */
 const TRAZOS: readonly { d?: string; c?: [number, number] }[] = [
+  // Cabeza: orejas separadas e inclinadas hacia fuera, mandíbula ancha y hocico en V.
   {
-    d: 'M100 214 L76 182 L60 152 L40 112 L46 20 L84 62 Q100 56 116 62 L154 20 L160 112 L140 152 L124 182 Z',
+    d: 'M100 214 L66 176 L54 150 L30 116 L34 14 L82 56 Q100 50 118 56 L166 14 L170 116 L146 150 L134 176 Z',
   },
-  { d: 'M100 70 V108' },
-  { d: 'M66 114 L92 122' },
-  { d: 'M134 114 L108 122' },
-  { d: 'M91 192 L100 204 L109 192 Z' },
-  { d: 'M54 142 L84 140' },
-  { d: 'M48 126 L78 128' },
-  { d: 'M104 146 H126 L138 158 V174' },
-  { d: 'M112 100 H132 L144 88' },
-  { d: 'M118 128 H146' },
-  { c: [138, 178] },
-  { c: [148, 84] },
-  { c: [150, 128] },
+  { d: 'M84 84 L100 74 L116 84' },
+  { d: 'M100 74 V186' },
+  { d: 'M64 106 L90 118' },
+  { d: 'M136 106 L110 118' },
+  { d: 'M86 186 L114 186 L100 204 Z' },
+  { d: 'M60 120 L74 148' },
+  { d: 'M72 114 L84 140' },
+  { d: 'M108 132 H128 L142 144 V164' },
+  { d: 'M112 100 H134 L146 88' },
+  { d: 'M112 156 H134' },
+  { c: [142, 168] },
+  { c: [150, 84] },
+  { c: [138, 156] },
 ];
 </script>
 
 <template>
   <div class="capa" :class="[props.modo, { saliendo }]" aria-hidden="true" data-animacion-inicio>
     <div class="halo" />
-    <svg class="logo" viewBox="0 0 200 220" width="220" height="242" focusable="false">
+    <svg class="logo" viewBox="0 0 200 220" width="200" height="220" focusable="false">
       <g fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round">
         <template v-for="(t, i) in TRAZOS" :key="i">
           <path v-if="t.d" class="trazo" :d="t.d" pathLength="1" :style="{ '--i': i }" />
@@ -109,7 +111,7 @@ const TRAZOS: readonly { d?: string; c?: [number, number] }[] = [
 }
 .logo {
   position: relative;
-  width: min(30vmin, 220px);
+  width: min(24vmin, 200px);
   height: auto;
   overflow: visible;
   /* El único filtro: un resplandor suave del color de acento. */
