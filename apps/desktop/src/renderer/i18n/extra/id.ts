@@ -19,6 +19,8 @@ export const idExtra: TextosParciales = {
   },
   acciones: { copiarCompleto: 'Salin seluruh teks' },
   errores: {
+    uacHuerfano:
+      'Jika muncul jendela izin Windows, Anda dapat membatalkannya: jendela itu tidak lagi melakukan apa pun.',
     codigos: {
       'asistentes.no_existe': 'Asisten itu tidak didukung.',
       'asistentes.no_instalado': '{asistente} belum terpasang.',
@@ -33,6 +35,7 @@ export const idExtra: TextosParciales = {
       'discos.sin_lectura': 'Kesehatan disk tidak dapat dibaca. Silakan coba lagi.',
       'discos.sin_eventos': 'Peristiwa disk tidak dapat dibaca.',
       'discos.admin_cancelado': 'Izin administrator dibatalkan: tidak ada yang dibaca.',
+      'discos.admin_tiempo': 'Izin administrator tidak dijawab tepat waktu: tidak ada yang dibaca.',
       'discos.admin_fallo': 'Kesehatan disk tidak dapat dibaca dengan izin administrator.',
       'doctor.disco_atencion': 'Disk {modelo} perlu perhatian.',
       'doctor.disco_critico': 'Disk {modelo} dalam kondisi kritis: segera buat cadangan.',
@@ -207,8 +210,6 @@ export const idExtra: TextosParciales = {
         'Berkas tidak dapat disimpan ({codigo}). Berkas asli tidak disentuh.',
       'memoria.sin_confirmar': 'Konfirmasikan tindakan di dialog sebelum melanjutkan.',
       'memoria.modo_invalido': 'Mode optimasi itu tidak ada.',
-      'memoria.plan_caducado':
-        'Daftar kedaluwarsa atau bukan lagi yang terkini. Tampilkan ulang sebelum menerapkan.',
       'memoria.no_disponible':
         'Pengoptimal memori tidak tersedia di sini atau tidak dapat membaca sistem.',
       'conversor.ocupado':
@@ -1381,70 +1382,54 @@ export const idExtra: TextosParciales = {
     anteriores: (n) => `Patch sebelumnya (${n})`,
   },
   memoria: {
-    boton: 'Memori',
-    tituloBoton: 'Optimalkan memori',
-    titulo: 'Pengoptimal memori',
-    intro:
-      'Pilih mode dan tinjau daftarnya. Tidak ada yang ditutup atau dihentikan sampai Anda mengonfirmasi, dan tidak pernah berjalan sendiri.',
-    modo: 'Mode',
-    modos: { liviano: 'Ringan', moderado: 'Sedang', profundo: 'Mendalam' },
-    descripciones: {
-      liviano:
-        'Membersihkan cache aplikasi. Membebaskan ruang disk; tidak menutup atau menghentikan apa pun.',
+    etiqueta: 'Bebaskan memori',
+    tituloEtiqueta: 'Bebaskan memori RAM',
+    liberando: 'Membebaskan…',
+    niveles: {
+      liviano: 'Ringan',
+      moderado: 'Sedang',
+      profundo: 'Dalam',
+    },
+    queHace: {
+      liviano: 'Membebaskan memori yang saat ini tidak digunakan oleh WolfCore Dev dan layanannya.',
       moderado:
-        'Juga menawarkan untuk menyisakan satu worker PHP dan menghentikan layanan WolfCore Dev tanpa aktivitas atau koneksi. Layanan dimulai tanpa dicentang.',
+        'Yang di atas, ditambah memori yang saat ini tidak digunakan oleh program terbuka yang tidak kritis. Tidak ada yang ditutup.',
       profundo:
-        'Juga mendaftar program Anda sendiri yang boros memori agar Anda dapat meminta mereka menutup jendelanya. Dimulai tanpa dicentang.',
+        'Yang di atas, ditambah mengosongkan daftar siaga dan cache berkas Windows. Meminta izin administrator.',
     },
-    ver: 'Tampilkan daftar',
-    revisando: 'Memeriksa…',
-    vacio: 'Tidak ada yang dapat dibebaskan dalam mode ini.',
-    tipos: {
-      'cache-app': 'Bersihkan cache',
-      'reducir-pool': 'Sisakan satu worker',
-      'detener-inactivo': 'Hentikan (menganggur)',
-      'cerrar-programa': 'Minta menutup jendelanya',
-    },
-    caches: { sesion: 'Cache HTTP sesi aplikasi' },
-    estimado: (cantidad) => `Sekitar ${cantidad} RAM akan dibebaskan`,
-    estimadoDisco: (cantidad) => `Ditambah sekitar ${cantidad} disk (cache bukan RAM)`,
-    marcadas: (n, total) => `${n} dari ${total} dicentang`,
-    sinDatos:
-      'Belum ada cukup data aktivitas untuk menawarkan penghentian layanan atau pengurangan PHP. Biarkan Beranda terbuka beberapa menit lalu lihat lagi.',
-    listadoFallido:
-      'Daftar program yang terbuka tidak dapat dibaca: daftar ini mungkin tidak lengkap. Coba lagi.',
-    avisoDetener:
-      'Layanan yang menganggur dimulai tanpa dicentang: menghentikan satu layanan memutus apa pun yang memakainya. Hanya yang tanpa koneksi saat ini yang didaftar.',
-    avisoCerrar:
-      'Program hanya diminta menutup jendelanya, seperti mengeklik X: mereka mungkin menanyakan apakah akan menyimpan. Program tidak pernah dipaksa atau dihentikan.',
-    protegidos:
-      'Program sistem, layanan Windows, program dengan hak tinggi, pengguna lain, FlyEnv, PhpWebStudy, dan WolfCore Dev (atau apa pun yang mereka jalankan) tidak pernah muncul.',
-    aplicar: 'Terapkan yang dicentang',
-    confirmarTitulo: 'Terapkan tindakan ini?',
-    confirmarTexto: (n) =>
-      n === 1
-        ? '1 tindakan dari daftar akan dijalankan.'
-        : `${n} tindakan dari daftar akan dijalankan.`,
-    confirmarCerrar: (nombres) => `Program ini akan diminta menutup jendelanya: ${nombres}.`,
-    confirmarDetener: (nombres) => `Layanan ini akan dihentikan: ${nombres}.`,
-    confirmar: 'Ya, terapkan',
+    requiereAdmin: 'Meminta izin administrator',
+    calculando: 'Menghitung…',
+    noDisponible: 'Tidak tersedia',
+    sugerencia:
+      'Arahkan kursor ke sebuah tingkat atau fokuskan untuk melihat apa yang dilakukannya dan berapa banyak yang akan dibebaskan.',
+    liberaria: (cantidad: string) => `Akan membebaskan ≈ ${cantidad}`,
+    notaEstimacion:
+      'Ini adalah perkiraan berdasarkan memori saat ini: angka sebenarnya bisa berbeda. Tidak ada program yang ditutup dan tidak ada yang hilang.',
+    notaProfundo:
+      'Program mungkin butuh sedikit lebih lama saat digunakan berikutnya, sementara memuat ulang yang dibutuhkan.',
+    profundoTitulo: 'Bebaskan memori dalam mode Dalam',
+    profundoTexto:
+      'Memori proses, daftar siaga, dan cache berkas Windows akan dikosongkan. Tidak ada program yang ditutup dan tidak ada yang hilang.',
+    confirmarUac:
+      'Windows akan menampilkan jendela izin administrator (UAC) yang harus Anda setujui untuk melanjutkan. Jika Anda membatalkannya, hanya proses yang dikosongkan.',
+    continuar: 'Lanjutkan',
     cancelar: 'Batal',
-    resultadoTitulo: 'Hasil',
-    liberado: (cantidad) => `Perkiraan: sekitar ${cantidad} RAM dibebaskan`,
-    liberadoDisco: (cantidad) => `Ditambah sekitar ${cantidad} disk`,
-    notaPedido:
-      'Menunggu Anda: jendela diminta untuk ditutup dan program masih terbuka (mungkin menanyakan apakah akan menyimpan). Tidak dihitung sebagai dibebaskan.',
-    estados: { hecho: 'Selesai', pedido: 'Menunggu Anda', saltado: 'Dilewati', error: 'Gagal' },
-    motivos: {
-      no_en_plan: 'Tidak ada dalam daftar',
-      protegido: 'Program yang dilindungi',
-      cambio: 'Berubah sejak daftar ditampilkan',
-      sin_ventana: 'Tidak lagi memiliki jendela untuk ditutup',
-      ya_apagado: 'Tidak ada lagi yang dapat dikurangi',
-      ocupado: 'Sedang sibuk (memiliki koneksi)',
-      no_se_pudo: 'Permintaan penutupan tidak dapat dikirim (program berjalan dengan hak tinggi)',
+    liberadaTitulo: 'Memori dibebaskan',
+    nivelAplicado: (nivel: string) => `Tingkat yang diterapkan: ${nivel}.`,
+    antes: 'Memori tersedia sebelum',
+    despues: 'Memori tersedia sesudah',
+    liberadoReal: 'Benar-benar dibebaskan',
+    procesos: (vaciados: number, omitidos: number) =>
+      `Proses dikosongkan: ${vaciados}. Dilewati: ${omitidos}.`,
+    purga: {
+      hecha: 'Daftar siaga dan cache berkas telah dikosongkan.',
+      cancelada: 'Izin administrator dibatalkan: hanya proses yang dikosongkan.',
+      tiempo: 'Izin administrator tidak dijawab tepat waktu: hanya proses yang dikosongkan.',
+      error: 'Daftar siaga tidak dapat dikosongkan: hanya proses yang dikosongkan.',
     },
-    otraVez: 'Mulai dari awal',
+    notaResultado:
+      'Jumlah yang dibebaskan adalah selisih memori tersedia yang terukur. Windows mendistribusikannya kembali dan bisa segera berubah.',
+    cerrar: 'Tutup',
   },
   guias: {
     tuneles: { titulo: 'Panduan terowongan', copiar: 'Salin perintah' },

@@ -24,6 +24,8 @@ export const deExtra: TextosParciales = {
     copiarCompleto: 'Gesamten Text kopieren',
   },
   errores: {
+    uacHuerfano:
+      'Falls ein Windows-Berechtigungsfenster erscheint, können Sie es abbrechen: Es bewirkt nichts mehr.',
     codigos: {
       'asistentes.no_existe': 'Dieser Assistent wird nicht unterstützt.',
       'asistentes.no_instalado': '{asistente} ist nicht installiert.',
@@ -40,6 +42,8 @@ export const deExtra: TextosParciales = {
       'discos.sin_eventos': 'Die Laufwerkereignisse konnten nicht gelesen werden.',
       'discos.admin_cancelado':
         'Die Administratorberechtigung wurde abgebrochen: Es wurde nichts gelesen.',
+      'discos.admin_tiempo':
+        'Die Administratorberechtigung wurde nicht rechtzeitig beantwortet: Es wurde nichts gelesen.',
       'discos.admin_fallo':
         'Der Zustand der Laufwerke konnte mit Administratorrechten nicht gelesen werden.',
       'doctor.disco_atencion': 'Das Laufwerk {modelo} benötigt Aufmerksamkeit.',
@@ -238,8 +242,6 @@ export const deExtra: TextosParciales = {
         'Die Datei konnte nicht gespeichert werden ({codigo}). Das Original wurde nicht angetastet.',
       'memoria.sin_confirmar': 'Bestätigen Sie die Aktion im Dialog, bevor Sie fortfahren.',
       'memoria.modo_invalido': 'Dieser Optimierungsmodus existiert nicht.',
-      'memoria.plan_caducado':
-        'Die Liste ist abgelaufen oder nicht mehr die aktuelle. Zeigen Sie sie vor dem Anwenden erneut an.',
       'memoria.no_disponible':
         'Der Speicheroptimierer ist hier nicht verfügbar oder konnte das System nicht lesen.',
       'conversor.ocupado':
@@ -1490,84 +1492,56 @@ export const deExtra: TextosParciales = {
     anteriores: (n) => `Frühere Patches (${n})`,
   },
   memoria: {
-    boton: 'Speicher',
-    tituloBoton: 'Speicher optimieren',
-    titulo: 'Speicheroptimierer',
-    intro:
-      'Wählen Sie einen Modus und prüfen Sie die Liste. Nichts wird geschlossen oder gestoppt, bevor Sie bestätigen, und er läuft nie von selbst.',
-    modo: 'Modus',
-    modos: {
+    etiqueta: 'Speicher freigeben',
+    tituloEtiqueta: 'Arbeitsspeicher (RAM) freigeben',
+    liberando: 'Wird freigegeben…',
+    niveles: {
       liviano: 'Leicht',
-      moderado: 'Moderat',
+      moderado: 'Mittel',
       profundo: 'Tief',
     },
-    descripciones: {
-      liviano:
-        'Leert den Cache der App. Das schafft Speicherplatz; es schließt oder stoppt nichts.',
+    queHace: {
+      liviano: 'Gibt den Speicher frei, den WolfCore Dev und seine Dienste gerade nicht nutzen.',
       moderado:
-        'Bietet zusätzlich an, nur einen PHP-Worker zu behalten und Dienste von WolfCore Dev ohne Aktivität oder Verbindungen zu stoppen. Dienste sind zunächst nicht angehakt.',
+        'Zusätzlich der Speicher, den geöffnete, nicht kritische Programme gerade nicht nutzen. Es wird keines davon geschlossen.',
       profundo:
-        'Listet zusätzlich Ihre eigenen speicherhungrigen Programme auf, damit Sie sie bitten können, ihr Fenster zu schließen. Sie sind zunächst nicht angehakt.',
+        'Zusätzlich werden die Standbyliste und der Dateicache von Windows geleert. Erfordert Administratorrechte.',
     },
-    ver: 'Liste anzeigen',
-    revisando: 'Wird geprüft…',
-    vacio: 'In diesem Modus gibt es nichts freizugeben.',
-    tipos: {
-      'cache-app': 'Cache leeren',
-      'reducir-pool': 'Nur einen Worker behalten',
-      'detener-inactivo': 'Stoppen (inaktiv)',
-      'cerrar-programa': 'Bitten, das Fenster zu schließen',
-    },
-    caches: {
-      sesion: 'HTTP-Cache der Anwendungssitzung',
-    },
-    estimado: (cantidad) => `Etwa ${cantidad} RAM würden freigegeben`,
-    estimadoDisco: (cantidad) =>
-      `Zusätzlich etwa ${cantidad} Speicherplatz (der Cache ist kein RAM)`,
-    marcadas: (n, total) => `${n} von ${total} angehakt`,
-    sinDatos:
-      'Es gibt noch nicht genug Aktivitätsdaten, um das Stoppen von Diensten oder das Reduzieren von PHP anzubieten. Lassen Sie Start einige Minuten geöffnet und schauen Sie erneut.',
-    listadoFallido:
-      'Die Liste der geöffneten Programme konnte nicht gelesen werden: Diese Liste ist möglicherweise unvollständig. Versuchen Sie es erneut.',
-    avisoDetener:
-      'Inaktive Dienste sind zunächst nicht angehakt: Wer einen stoppt, trennt alles, was ihn nutzt. Es werden nur die ohne aktuelle Verbindungen aufgelistet.',
-    avisoCerrar:
-      'Programme werden nur gebeten, ihr Fenster zu schließen, wie beim Klick auf das X: Sie können fragen, ob gespeichert werden soll. Ein Programm wird nie erzwungen oder beendet.',
-    protegidos:
-      'Systemprogramme, Windows-Dienste, Programme mit erhöhten Rechten, andere Benutzer, FlyEnv, PhpWebStudy und WolfCore Dev (oder alles, was sie starten) erscheinen nie.',
-    aplicar: 'Angehakte anwenden',
-    confirmarTitulo: 'Diese Aktionen anwenden?',
-    confirmarTexto: (n) =>
-      n === 1
-        ? '1 Aktion aus der Liste wird ausgeführt.'
-        : `${n} Aktionen aus der Liste werden ausgeführt.`,
-    confirmarCerrar: (nombres) =>
-      `Diese Programme werden gebeten, ihr Fenster zu schließen: ${nombres}.`,
-    confirmarDetener: (nombres) => `Diese Dienste werden gestoppt: ${nombres}.`,
-    confirmar: 'Ja, anwenden',
+    requiereAdmin: 'Erfordert Administratorrechte',
+    calculando: 'Wird berechnet…',
+    noDisponible: 'Nicht verfügbar',
+    sugerencia:
+      'Fahren Sie mit der Maus über eine Stufe oder fokussieren Sie sie, um zu sehen, was sie bewirkt und wie viel sie freigeben würde.',
+    liberaria: (cantidad: string) => `Würde ≈ ${cantidad} freigeben`,
+    notaEstimacion:
+      'Dies ist eine Schätzung auf Grundlage des aktuellen Speichers: Der tatsächliche Wert kann abweichen. Es wird kein Programm geschlossen und nichts geht verloren.',
+    notaProfundo:
+      'Programme können bei der nächsten Verwendung einen Moment länger brauchen, bis sie das Nötige neu geladen haben.',
+    profundoTitulo: 'Speicher im Modus „Tief“ freigeben',
+    profundoTexto:
+      'Der Speicher der Prozesse, die Standbyliste und der Dateicache von Windows werden geleert. Es wird kein Programm geschlossen und nichts geht verloren.',
+    confirmarUac:
+      'Windows zeigt ein Fenster zur Administratorberechtigung (UAC) an, das Sie bestätigen müssen, um fortzufahren. Wenn Sie es abbrechen, werden nur die Prozesse geleert.',
+    continuar: 'Fortfahren',
     cancelar: 'Abbrechen',
-    resultadoTitulo: 'Ergebnis',
-    liberado: (cantidad) => `Geschätzt: etwa ${cantidad} RAM freigegeben`,
-    liberadoDisco: (cantidad) => `Zusätzlich etwa ${cantidad} Speicherplatz`,
-    notaPedido:
-      'Wartet auf Sie: Das Fenster wurde gebeten, sich zu schließen, und das Programm ist noch geöffnet (möglicherweise fragt es, ob gespeichert werden soll). Es zählt nicht als freigegeben.',
-    estados: {
-      hecho: 'Erledigt',
-      pedido: 'Wartet auf Sie',
-      saltado: 'Übersprungen',
-      error: 'Fehlgeschlagen',
+    liberadaTitulo: 'Speicher freigegeben',
+    nivelAplicado: (nivel: string) => `Angewendete Stufe: ${nivel}.`,
+    antes: 'Verfügbarer Speicher vorher',
+    despues: 'Verfügbarer Speicher nachher',
+    liberadoReal: 'Tatsächlich freigegeben',
+    procesos: (vaciados: number, omitidos: number) =>
+      `Geleerte Prozesse: ${vaciados}. Übersprungen: ${omitidos}.`,
+    purga: {
+      hecha: 'Die Standbyliste und der Dateicache wurden geleert.',
+      cancelada:
+        'Die Administratorberechtigung wurde abgebrochen: Es wurden nur die Prozesse geleert.',
+      tiempo:
+        'Die Administratorberechtigung wurde nicht rechtzeitig beantwortet: Es wurden nur die Prozesse geleert.',
+      error: 'Die Standbyliste konnte nicht geleert werden: Es wurden nur die Prozesse geleert.',
     },
-    motivos: {
-      no_en_plan: 'Es stand nicht in der Liste',
-      protegido: 'Es ist ein geschütztes Programm',
-      cambio: 'Es hat sich seit der Anzeige der Liste geändert',
-      sin_ventana: 'Es hat kein Fenster mehr, das geschlossen werden könnte',
-      ya_apagado: 'Es gab nichts mehr zu reduzieren',
-      ocupado: 'Es war beschäftigt (es hat Verbindungen)',
-      no_se_pudo:
-        'Die Schließanfrage konnte nicht gesendet werden (das Programm läuft mit erhöhten Rechten)',
-    },
-    otraVez: 'Neu beginnen',
+    notaResultado:
+      'Der freigegebene Wert ist die gemessene Differenz des verfügbaren Speichers. Windows verteilt ihn neu, und er kann sich sofort wieder ändern.',
+    cerrar: 'Schließen',
   },
   guias: {
     tuneles: {

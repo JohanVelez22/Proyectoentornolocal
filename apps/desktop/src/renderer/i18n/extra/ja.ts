@@ -17,6 +17,8 @@ export const jaExtra: TextosParciales = {
   },
   acciones: { copiarCompleto: '全文をコピー' },
   errores: {
+    uacHuerfano:
+      'Windows の許可ウィンドウが表示された場合は、キャンセルしてください。もう何も実行されません。',
     codigos: {
       'asistentes.no_existe': 'このアシスタントには対応していません。',
       'asistentes.no_instalado': '{asistente} はインストールされていません。',
@@ -31,6 +33,7 @@ export const jaExtra: TextosParciales = {
       'discos.sin_lectura': 'ディスクの健全性を読み取れませんでした。もう一度お試しください。',
       'discos.sin_eventos': 'ディスクのイベントを読み取れませんでした。',
       'discos.admin_cancelado': '管理者の許可が取り消されました。何も読み取っていません。',
+      'discos.admin_tiempo': '管理者の許可が時間内に応答されませんでした。何も読み取っていません。',
       'discos.admin_fallo': '管理者権限でディスクの健全性を読み取れませんでした。',
       'doctor.disco_atencion': 'ディスク {modelo} に注意が必要です。',
       'doctor.disco_critico':
@@ -214,8 +217,6 @@ export const jaExtra: TextosParciales = {
         'ファイルを保存できませんでした（{codigo}）。元のファイルには手を加えていません。',
       'memoria.sin_confirmar': '続行する前に、ダイアログで操作を確認してください。',
       'memoria.modo_invalido': 'その最適化モードは存在しません。',
-      'memoria.plan_caducado':
-        '一覧の期限が切れたか、最新のものではありません。適用する前にもう一度表示してください。',
       'memoria.no_disponible':
         'ここではメモリ最適化を利用できないか、システムを読み取れませんでした。',
       'conversor.ocupado':
@@ -1399,67 +1400,54 @@ export const jaExtra: TextosParciales = {
     anteriores: (n) => `以前のパッチ（${n}）`,
   },
   memoria: {
-    boton: 'メモリ',
-    tituloBoton: 'メモリを最適化',
-    titulo: 'メモリ最適化',
-    intro:
-      'モードを選んで一覧を確認してください。確認するまでは何も終了も停止もされず、自動で実行されることもありません。',
-    modo: 'モード',
-    modos: { liviano: '軽量', moderado: '標準', profundo: '徹底' },
-    descripciones: {
-      liviano: 'アプリのキャッシュを消去します。ディスク容量が空き、何も終了や停止はしません。',
+    etiqueta: 'メモリを解放',
+    tituloEtiqueta: 'RAM を解放',
+    liberando: '解放しています…',
+    niveles: {
+      liviano: '軽量',
+      moderado: '中程度',
+      profundo: '徹底',
+    },
+    queHace: {
+      liviano: 'WolfCore Dev とそのサービスが現在使っていないメモリを解放します。',
       moderado:
-        'さらに、PHP ワーカーを 1 つにする操作と、アクティビティも接続もない WolfCore Dev のサービスを停止する操作を提案します。サービスは最初はチェックされていません。',
+        '上記に加えて、開いている重要でないプログラムが現在使っていないメモリも解放します。プログラムは閉じません。',
       profundo:
-        'さらに、メモリを多く使うご自身のプログラムを一覧表示し、ウィンドウを閉じるよう要求できます。最初はチェックされていません。',
+        '上記に加えて、Windows のスタンバイリストとファイルキャッシュを空にします。管理者の許可が必要です。',
     },
-    ver: '一覧を表示',
-    revisando: '確認中…',
-    vacio: 'このモードで解放できるものはありません。',
-    tipos: {
-      'cache-app': 'キャッシュを消去',
-      'reducir-pool': 'ワーカーを 1 つにする',
-      'detener-inactivo': '停止（アイドル）',
-      'cerrar-programa': 'ウィンドウを閉じるよう要求',
-    },
-    caches: { sesion: 'アプリセッションの HTTP キャッシュ' },
-    estimado: (cantidad) => `約 ${cantidad} のメモリを解放できます`,
-    estimadoDisco: (cantidad) =>
-      `さらに約 ${cantidad} のディスク容量（キャッシュはメモリではありません）`,
-    marcadas: (n, total) => `${total} 件中 ${n} 件を選択`,
-    sinDatos:
-      'サービスの停止や PHP の削減を提案するには、アクティビティのデータがまだ足りません。ホームを数分間開いたままにして、もう一度確認してください。',
-    listadoFallido:
-      '開いているプログラムの一覧を読み取れなかったため、この一覧は不完全な可能性があります。もう一度お試しください。',
-    avisoDetener:
-      'アイドル状態のサービスは最初はチェックされていません。停止すると、それを使っているものが切断されます。現在接続のないものだけを表示しています。',
-    avisoCerrar:
-      'プログラムには、X をクリックするのと同じようにウィンドウを閉じるよう要求するだけです。保存するかどうかを尋ねられる場合があります。プログラムを強制終了することはありません。',
-    protegidos:
-      'システムプログラム、Windows サービス、昇格されたプログラム、他のユーザーのプログラム、FlyEnv、PhpWebStudy、WolfCore Dev（およびそれらが起動するもの）は表示されません。',
-    aplicar: '選択した項目を適用',
-    confirmarTitulo: 'これらの操作を適用しますか？',
-    confirmarTexto: (n) => `一覧の ${n} 件の操作を実行します。`,
-    confirmarCerrar: (nombres) => `次のプログラムにウィンドウを閉じるよう要求します: ${nombres}。`,
-    confirmarDetener: (nombres) => `次のサービスを停止します: ${nombres}。`,
-    confirmar: 'はい、適用する',
+    requiereAdmin: '管理者の許可が必要です',
+    calculando: '計算しています…',
+    noDisponible: '利用できません',
+    sugerencia:
+      'レベルにマウスを合わせるかフォーカスすると、内容と解放できる量の目安が表示されます。',
+    liberaria: (cantidad: string) => `解放の目安: ≈ ${cantidad}`,
+    notaEstimacion:
+      '現在のメモリに基づく推定値です。実際の値は異なる場合があります。プログラムは閉じられず、何も失われません。',
+    notaProfundo:
+      '次に使うとき、必要なものを読み込み直すため、プログラムの応答が少し遅くなることがあります。',
+    profundoTitulo: '「徹底」モードでメモリを解放',
+    profundoTexto:
+      'プロセスのメモリ、スタンバイリスト、Windows のファイルキャッシュを空にします。プログラムは閉じられず、何も失われません。',
+    confirmarUac:
+      'Windows が管理者の許可ウィンドウ (UAC) を表示します。続行するには許可してください。キャンセルした場合は、プロセスのみ解放されます。',
+    continuar: '続行',
     cancelar: 'キャンセル',
-    resultadoTitulo: '結果',
-    liberado: (cantidad) => `推定: 約 ${cantidad} のメモリを解放`,
-    liberadoDisco: (cantidad) => `さらに約 ${cantidad} のディスク容量`,
-    notaPedido:
-      '操作待ち: ウィンドウを閉じるよう要求しましたが、プログラムはまだ開いています（保存するか尋ねている可能性があります）。解放した分には含まれません。',
-    estados: { hecho: '完了', pedido: '操作待ち', saltado: 'スキップ', error: '失敗' },
-    motivos: {
-      no_en_plan: '一覧にありませんでした',
-      protegido: '保護されたプログラムです',
-      cambio: '一覧の表示後に変更されました',
-      sin_ventana: '閉じるウィンドウがなくなりました',
-      ya_apagado: '削減するものが残っていませんでした',
-      ocupado: '使用中でした（接続があります）',
-      no_se_pudo: '閉じる要求を送信できませんでした（プログラムが昇格した権限で動作しています）',
+    liberadaTitulo: 'メモリを解放しました',
+    nivelAplicado: (nivel: string) => `適用したレベル: ${nivel}。`,
+    antes: '解放前の利用可能メモリ',
+    despues: '解放後の利用可能メモリ',
+    liberadoReal: '実際に解放された量',
+    procesos: (vaciados: number, omitidos: number) =>
+      `解放したプロセス: ${vaciados}。スキップ: ${omitidos}。`,
+    purga: {
+      hecha: 'スタンバイリストとファイルキャッシュを空にしました。',
+      cancelada: '管理者の許可がキャンセルされました。プロセスのみ解放しました。',
+      tiempo: '管理者の許可が時間内に応答されませんでした。プロセスのみ解放しました。',
+      error: 'スタンバイリストを空にできませんでした。プロセスのみ解放しました。',
     },
-    otraVez: 'やり直す',
+    notaResultado:
+      '解放量は、利用可能メモリの測定された差です。Windows が再配分するため、すぐに変わることがあります。',
+    cerrar: '閉じる',
   },
   guias: {
     tuneles: { titulo: 'トンネルガイド', copiar: 'コマンドをコピー' },

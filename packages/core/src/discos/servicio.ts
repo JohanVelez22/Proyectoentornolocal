@@ -194,6 +194,13 @@ export class SaludDiscos {
       if (r.motivo === 'cancelado') {
         throw new ErrorWolf('discos.admin_cancelado', 'Se canceló el permiso de administrador.');
       }
+      // El permiso no se contestó a tiempo: la ventana de Windows puede seguir abierta, y ya no hace nada.
+      if (r.motivo === 'tiempo') {
+        throw new ErrorWolf(
+          'discos.admin_tiempo',
+          'No hubo respuesta al permiso de administrador a tiempo.',
+        );
+      }
       throw new ErrorWolf(
         'discos.admin_fallo',
         'No se pudo leer la salud de los discos como administrador.',

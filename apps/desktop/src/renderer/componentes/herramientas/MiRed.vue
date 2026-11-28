@@ -125,7 +125,7 @@ async function quitar(): Promise<void> {
       ? t.carpetas.resultado.quitada(c.nombre)
       : r.estado === 'cancelado'
         ? t.carpetas.resultado.cancelado
-        : t.carpetas.resultado.tiempo;
+        : `${t.carpetas.resultado.tiempo} ${textos.errores.uacHuerfano}`;
 }
 
 // ---- Escaneo activo (solo con confirmación) ----

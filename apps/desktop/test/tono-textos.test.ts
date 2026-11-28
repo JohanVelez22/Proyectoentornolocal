@@ -209,12 +209,20 @@ describe('Textos del pulido de diseño (D54a, I7)', () => {
     expect(diccionarios.en.app.lema).toBe('Your local stack, ready to work');
   });
 
-  it('Memoria › Liviano no dice «no RAM» y aclara que libera disco sin cerrar nada', () => {
+  it('Liberar memoria: los tres niveles se llaman Liviano, Moderado y Profundo y cada uno tiene su aviso', () => {
+    expect(diccionarios.es.memoria.niveles).toEqual({
+      liviano: 'Liviano',
+      moderado: 'Moderado',
+      profundo: 'Profundo',
+    });
     for (const [id, d] of Object.entries(diccionarios)) {
-      expect(d.memoria.descripciones.liviano, id).not.toMatch(/\bRAM\b/);
+      for (const n of ['liviano', 'moderado', 'profundo'] as const) {
+        expect(d.memoria.niveles[n], `${id}/${n}`).not.toBe('');
+        expect(d.memoria.queHace[n], `${id}/${n}`).not.toBe('');
+      }
+      // La estimación es aproximada y se dice así; lo que no se mide, «No disponible».
+      expect(d.memoria.liberaria('1 GB'), id).toContain('≈');
+      expect(d.memoria.noDisponible, id).not.toBe('');
     }
-    expect(diccionarios.es.memoria.descripciones.liviano).toBe(
-      'Vacía la caché de la aplicación. Libera espacio en disco; no cierra ni detiene nada.',
-    );
   });
 });

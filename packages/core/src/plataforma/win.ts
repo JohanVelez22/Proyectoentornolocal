@@ -71,6 +71,14 @@ import {
   rutaSistema32,
 } from './procesosWin';
 import { ProcesosUsuarioWindows } from './procesosUsuarioWin';
+import {
+  interpretarMemoriaSistema,
+  interpretarVaciado,
+  SALIDA_PURGA,
+  SCRIPT_MEMORIA_SISTEMA,
+  scriptPurgarListaEspera,
+  scriptVaciarWorkingSets,
+} from './memoriaWin';
 import { interpretarAtributos } from './atributosWin';
 import {
   SALIDA_QUITAR_CARPETA,
@@ -150,6 +158,9 @@ import type {
   ConexionActiva,
   EstadoCierre,
   IdentidadUsuario,
+  MemoriaSistema,
+  ObjetivoVaciado,
+  ResultadoVaciadoProceso,
   ProcesoUsuario,
   NavegadorLimpieza,
   RutasCategoriaLimpieza,
@@ -812,6 +823,8 @@ export class PlataformaWindows implements PlataformaCompleta {
         { timeoutMs: tiempoLimiteMs, senal: ctl.signal },
       );
       if (r.codigo === 0) return { ok: true };
+      // El lanzador ya no existía al aceptarse el permiso (F7): la app había dejado de esperar.
+      if (r.codigo === SALIDA_COPIA.huerfano) return { ok: false, motivo: 'tiempo' };
       if (r.codigo === SALIDA_COPIA.cancelado || /cancel/i.test(r.stderr)) {
         return { ok: false, motivo: 'cancelado' };
       }
@@ -1048,6 +1061,59 @@ export class PlataformaWindows implements PlataformaCompleta {
   /** Conexiones TCP en curso (para no detener un servicio que se está usando). */
   conexionesActivas(): Promise<ConexionActiva[]> {
     return this.procesosUsuario().conexiones();
+  }
+
+  /** Memoria física (CIM, sin elevar); null si no se pudo medir. */
+  async memoriaDelSistema(): Promise<MemoriaSistema | null> {
+    try {
+      const r = await this.ejecutar(
+        rutaPowerShell(this.entorno),
+        codificarPowerShell(SCRIPT_MEMORIA_SISTEMA),
+        { timeoutMs: 20_000 },
+      );
+      return r.codigo === 0 ? interpretarMemoriaSistema(r.stdout) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** `EmptyWorkingSet` por PID, sin elevar y sin terminar nada (ver `memoriaWin.ts`). */
+  async vaciarWorkingSets(objetivos: ObjetivoVaciado[]): Promise<ResultadoVaciadoProceso[]> {
+    if (objetivos.length === 0) return [];
+    const r = await this.ejecutar(
+      rutaPowerShell(this.entorno),
+      codificarPowerShell(scriptVaciarWorkingSets(objetivos)),
+      { timeoutMs: 120_000 },
+    );
+    if (r.codigo !== 0) {
+      throw new ErrorWolf('memoria.no_disponible', 'No se pudo vaciar la memoria de los procesos.');
+    }
+    return interpretarVaciado(r.stdout, objetivos);
+  }
+
+  /** Vacía la lista de espera y la caché de archivos con UAC (cola de elevaciones, plazo, sin salida). */
+  async purgarListaEspera(): Promise<ResultadoEscritura> {
+    const r = await this.elevar(scriptPurgarListaEspera(), 150_000);
+    if (r.ok || r.motivo !== 'error') return r;
+    const salida = /^código (\d+)$/.exec(r.detalle ?? '')?.[1];
+    if (salida === String(SALIDA_PURGA.privilegio)) {
+      return {
+        ok: false,
+        motivo: 'denegado',
+        detalle: 'Windows no concedió el privilegio necesario',
+      };
+    }
+    if (salida === String(SALIDA_PURGA.listaEspera)) {
+      return { ok: false, motivo: 'error', detalle: 'Windows no vació la lista de espera' };
+    }
+    if (salida === String(SALIDA_PURGA.cacheArchivos)) {
+      return {
+        ok: false,
+        motivo: 'error',
+        detalle: 'la lista de espera se vació, pero no la caché de archivos',
+      };
+    }
+    return r;
   }
 
   identidadActual(): Promise<IdentidadUsuario> {

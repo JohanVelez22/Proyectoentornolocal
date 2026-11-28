@@ -348,6 +348,24 @@ export interface CapacidadesPlataforma {
    * Falla si no se pueden leer: quien llama debe tratar eso como "no se sabe" y no actuar.
    */
   conexionesActivas(): Promise<ConexionActiva[]>;
+  /**
+   * Memoria física del equipo ahora mismo (solo lee), o null si no se puede medir: quien llama
+   * escribe «No disponible» y no inventa una cifra (D54b).
+   */
+  memoriaDelSistema(): Promise<MemoriaSistema | null>;
+  /**
+   * Vacía el conjunto de trabajo de cada proceso (`EmptyWorkingSet`; nunca termina ni cierra nada),
+   * SIN elevar. Para cada PID comprueba, justo antes de actuar y dentro de la misma operación,
+   * que sigue siendo del usuario y la sesión actuales, con la misma hora de inicio y que no es un
+   * servicio: si no, lo salta (`cambio`). Devuelve un resultado por PID.
+   */
+  vaciarWorkingSets(objetivos: ObjetivoVaciado[]): Promise<ResultadoVaciadoProceso[]>;
+  /**
+   * Vacía la lista de espera de memoria y la caché de archivos del sistema. Pide permiso de
+   * administrador (UAC) con la cola de elevaciones; no devuelve datos (quien llama mide después,
+   * sin elevar). Solo la llama quien ya tiene la confirmación de la persona.
+   */
+  purgarListaEspera(): Promise<ResultadoEscritura>;
   /** Usuario (identificador estable) y sesión del proceso actual. */
   identidadActual(): Promise<IdentidadUsuario>;
   /**
@@ -496,6 +514,32 @@ export interface ProcesoUsuario {
    * no se puede ni inspeccionar ni cerrarle la ventana, así que se protege.
    */
   elevado?: boolean;
+}
+
+/** Memoria física del equipo en bytes (D54b). `null` en un campo = no se pudo medir. */
+export interface MemoriaSistema {
+  total: number;
+  /** Lo que Windows llama «disponible»: libre más la lista de espera. */
+  disponible: number;
+  /** Libre y a cero, sin contar la lista de espera. */
+  libre: number | null;
+  /** Lista de espera (caché reciclable de archivos y de conjuntos de trabajo recortados). */
+  listaEspera: number | null;
+}
+
+/** Un proceso a vaciar: su PID y la hora de inicio que vio quien lo eligió (misma forma que `ProcesoUsuario.inicio`). */
+export interface ObjetivoVaciado {
+  pid: number;
+  inicio: string;
+}
+
+export interface ResultadoVaciadoProceso {
+  pid: number;
+  /** `vaciado`; `cambio`: ya no es el mismo proceso o no es del usuario; `no-se-pudo`: sin derecho. */
+  estado: 'vaciado' | 'cambio' | 'no-se-pudo';
+  /** Conjunto de trabajo (bytes) antes y después. */
+  antes: number;
+  despues: number;
 }
 
 /** Resultado de `cerrarVentanaPrincipal`. */

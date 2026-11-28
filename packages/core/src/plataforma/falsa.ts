@@ -34,6 +34,9 @@ import type {
   EstadoAntivirus,
   EstadoCaptura,
   ConexionActiva,
+  MemoriaSistema,
+  ObjetivoVaciado,
+  ResultadoVaciadoProceso,
   EstadoCierre,
   IdentidadUsuario,
   ProcesoUsuario,
@@ -507,6 +510,62 @@ export class PlataformaFalsa implements PlataformaCompleta {
 
   async identidadActual(): Promise<IdentidadUsuario> {
     return { ...this.identidad };
+  }
+
+  // ---- Liberar memoria (D54b): nada toca el equipo real ----
+
+  /** Lo que ve `memoriaDelSistema`; null = no se puede medir. */
+  memoria: MemoriaSistema | null = {
+    total: 16 * 1024 ** 3,
+    disponible: 8 * 1024 ** 3,
+    libre: 2 * 1024 ** 3,
+    listaEspera: 6 * 1024 ** 3,
+  };
+  /** Qué parte del conjunto de trabajo queda tras vaciarlo (por defecto, el 10 %). */
+  restoTrasVaciar = 0.1;
+  /** Cada llamada a `vaciarWorkingSets`, con lo que recibió. */
+  readonly vaciados: ObjetivoVaciado[][] = [];
+  fallaVaciado = false;
+  /** Lo que contesta `purgarListaEspera` y las veces que se pidió. */
+  resultadoPurga: ResultadoEscritura = { ok: true };
+  purgas = 0;
+  async memoriaDelSistema(): Promise<MemoriaSistema | null> {
+    return this.memoria ? { ...this.memoria } : null;
+  }
+
+  /** Imita al script real: pid, dueño, sesión, inicio y servicio se comprueban antes de vaciar. */
+  async vaciarWorkingSets(objetivos: ObjetivoVaciado[]): Promise<ResultadoVaciadoProceso[]> {
+    this.vaciados.push(objetivos.map((o) => ({ ...o })));
+    if (this.fallaVaciado) throw new ErrorWolf('memoria.no_disponible', 'vaciado fallido');
+    return objetivos.map((o) => {
+      const p = this.procesosUsuario.find((x) => x.pid === o.pid);
+      if (
+        !p ||
+        p.usuario !== this.identidad.usuario ||
+        p.sesion !== this.identidad.sesion ||
+        p.servicio === true ||
+        p.inicio !== o.inicio
+      ) {
+        return { pid: o.pid, estado: 'cambio', antes: 0, despues: 0 };
+      }
+      if (p.elevado === true) {
+        return { pid: o.pid, estado: 'no-se-pudo', antes: p.memoria, despues: p.memoria };
+      }
+      const antes = p.memoria;
+      const despues = Math.floor(antes * this.restoTrasVaciar);
+      p.memoria = despues;
+      if (this.memoria) this.memoria.disponible += antes - despues;
+      return { pid: o.pid, estado: 'vaciado', antes, despues };
+    });
+  }
+
+  async purgarListaEspera(): Promise<ResultadoEscritura> {
+    this.purgas++;
+    if (this.resultadoPurga.ok && this.memoria) {
+      this.memoria.libre = (this.memoria.libre ?? 0) + (this.memoria.listaEspera ?? 0);
+      this.memoria.listaEspera = 0;
+    }
+    return this.resultadoPurga;
   }
 
   rutasProtegidas(): string[] {

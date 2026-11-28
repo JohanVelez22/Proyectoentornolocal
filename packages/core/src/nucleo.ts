@@ -269,21 +269,13 @@ import {
   type RuntimesProyecto,
   type TipoRuntime,
 } from './runtimes/runtimes';
+import { idSupervisor, ProcesosProyecto, type EstadoProcesoProyecto } from './proyectos/procesos';
 import {
-  idSupervisor,
-  ProcesosProyecto,
-  separarIdSupervisor,
-  type EstadoProcesoProyecto,
-} from './proyectos/procesos';
-import {
-  OptimizadorMemoria,
-  type CacheApp,
-  type ModoMemoria,
-  type PlanMemoria,
-  type PoolReducible,
-  type ResultadoMemoria,
-  type ServicioPropio,
-} from './sistema/memoria';
+  LiberadorMemoria,
+  type EstimacionMemoria,
+  type NivelMemoria,
+  type ResultadoLiberacion,
+} from './sistema/liberarMemoria';
 import {
   LimpiezaDisco,
   type ResultadoLimpiezaDisco,
@@ -857,8 +849,7 @@ export class Nucleo {
    */
   private proveedorClaveBd: (sitioId: string) => Promise<string | null> = async () => null;
   /** Cachés propias que el optimizador de RAM sabe vaciar (las que registra la app). */
-  private readonly cachesApp = new Map<string, CacheApp>();
-  private readonly optimizadorMemoria: OptimizadorMemoria;
+  private readonly liberadorMemoria: LiberadorMemoria;
   private readonly limpiezaDisco: LimpiezaDisco;
   private readonly editorCodigo: EditorCodigo;
 
@@ -911,22 +902,11 @@ export class Nucleo {
     this.github = m.github;
     this.vigilante = m.vigilante;
     this.metricas = m.metricas;
-    this.optimizadorMemoria = new OptimizadorMemoria({
+    this.liberadorMemoria = new LiberadorMemoria({
       plataforma: this.plataforma,
       rutasPropias: () => [this.rutas.base, path.dirname(process.execPath)],
       pidApp: process.pid,
       pidsSupervisados: () => this.pidsSupervisados(),
-      caches: () => [...this.cachesApp.values()],
-      pools: () => this.poolsReducibles(),
-      reducirPool: (version) =>
-        this.instalador.cerrojos.con('php', () => this.servicios.php.reducirAUno(version)),
-      servicios: () => this.serviciosPropiosEncendidos(),
-      detenerServicio: (id) => {
-        const p = separarIdSupervisor(id);
-        return p
-          ? this.procesos.detener(p.sitioId, p.procesoId)
-          : this.servicios.detener(id as IdServicio);
-      },
     });
     this.limpiezaDisco = new LimpiezaDisco({
       plataforma: this.plataforma,
@@ -3867,21 +3847,16 @@ export class Nucleo {
     return this.plataforma.capturaDisponible();
   }
 
-  // ---- Optimizador de RAM (D36) ----
+  // ---- Liberar memoria (D54b) ----
 
-  /** La app (proceso principal) registra aquí una caché que sabe vaciar, p. ej. la de Electron. */
-  registrarCacheApp(c: CacheApp): void {
-    this.cachesApp.set(c.id, c);
+  /** Cuánto liberaría cada nivel con lo de ahora (solo lee). Lo que no se calcula es `null`. */
+  estimarMemoria(): Promise<EstimacionMemoria> {
+    return this.liberadorMemoria.estimar();
   }
 
-  /** Lista lo que se podría liberar (solo lee). Nada se hace hasta `aplicarMemoria`. */
-  planMemoria(modo: ModoMemoria): Promise<PlanMemoria> {
-    return this.optimizadorMemoria.planMemoria(modo);
-  }
-
-  /** Aplica las acciones elegidas del plan `planId` (vigente 5 min); exige `confirmado === true`. */
-  aplicarMemoria(planId: string, ids: string[], confirmado: true): Promise<ResultadoMemoria> {
-    return this.optimizadorMemoria.aplicarMemoria(planId, ids, confirmado);
+  /** Libera la memoria del nivel; Profundo exige `confirmado === true` (pide el UAC). */
+  liberarMemoria(nivel: NivelMemoria, confirmado: unknown): Promise<ResultadoLiberacion> {
+    return this.liberadorMemoria.liberar(nivel, confirmado);
   }
 
   // ---- Limpieza de disco (D37) ----
@@ -3963,71 +3938,6 @@ export class Nucleo {
     for (const id of this.supervisor.ids()) {
       const pid = this.supervisor.pid(id);
       if (pid !== null) res.push(pid);
-    }
-    return res;
-  }
-
-  private async poolsReducibles(): Promise<PoolReducible[]> {
-    const ultima = this.metricas.ultimos(1).at(-1);
-    const res: PoolReducible[] = [];
-    for (const version of await this.instalador.instalados('php')) {
-      const encendidos = this.servicios.php.trabajadoresEncendidos(version);
-      if (encendidos.length < 2) continue;
-      const ids = encendidos.map((i) => this.servicios.php.idTrabajador(version, i));
-      const inact = ids.map((id) => this.metricas.inactividadMs(id));
-      const obs = ids.map((id) => this.metricas.observadoMs(id));
-      const sobran = new Set(ids.slice(1));
-      res.push({
-        version,
-        trabajadores: encendidos.length,
-        memoria: (ultima?.procesos ?? [])
-          .filter((p) => sobran.has(p.id))
-          .reduce((t, p) => t + p.ramBytes, 0),
-        // Inactivo solo si todos lo están; sin observar alguno, no se sabe.
-        inactivoMs: inact.some((x) => x === null) ? null : Math.min(...(inact as number[])),
-        observadoMs: obs.some((x) => x === null) ? null : Math.min(...(obs as number[])),
-      });
-    }
-    return res;
-  }
-
-  /**
-   * Servicios de datos, instancias y procesos de proyecto encendidos (no nginx, FTP ni PHP). La
-   * actividad se lee de lo observado de CADA proceso (`inactividadMs`), nunca del búfer de
-   * muestras: la memoria sí sale de la última muestra, pero solo para mostrarla.
-   */
-  private async serviciosPropiosEncendidos(): Promise<ServicioPropio[]> {
-    const ultima = this.metricas.ultimos(1).at(-1);
-    const ramPorId = new Map((ultima?.procesos ?? []).map((p) => [p.id, p.ramBytes]));
-    const res: ServicioPropio[] = [];
-    // Id con el que el supervisor (y, por tanto, Metricas) conoce a cada PID encendido.
-    const idPorPid = new Map<number, string>();
-    for (const sid of this.supervisor.ids()) {
-      const pid = this.supervisor.pid(sid);
-      if (pid !== null) idPorPid.set(pid, sid);
-    }
-    const agregar = (id: string, nombre: string, pid: number | null, puertos: number[]): void => {
-      const sid = (pid === null ? undefined : idPorPid.get(pid)) ?? id;
-      res.push({
-        id,
-        nombre,
-        memoria: ramPorId.get(sid) ?? 0,
-        inactivoMs: this.metricas.inactividadMs(sid),
-        observadoMs: this.metricas.observadoMs(sid),
-        puertos,
-        pid,
-      });
-    };
-    for (const s of await this.servicios.estados()) {
-      if (s.id === 'nginx' || s.id === 'ftp' || s.id.startsWith('php-')) continue;
-      if (s.instancias && s.instancias.length > 0) {
-        for (const i of s.instancias) {
-          if (i.estado === 'encendido')
-            agregar(i.id, `${s.nombre} ${i.version}`, i.pid, [i.puerto]);
-        }
-      } else if (s.estado === 'encendido') {
-        agregar(s.id, s.nombre, s.pid, s.puertos);
-      }
     }
     return res;
   }

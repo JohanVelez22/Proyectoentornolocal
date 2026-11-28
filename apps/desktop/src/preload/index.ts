@@ -545,8 +545,8 @@ const api: ApiEntorno = {
     reiniciar: () => invocar('laboratorioGit.reiniciar'),
   },
   memoria: {
-    plan: (modo) => invocar('memoria.plan', modo),
-    aplicar: (planId, ids, confirmado) => invocar('memoria.aplicar', planId, ids, confirmado),
+    estimar: () => invocar('memoria.estimar'),
+    liberar: (nivel, confirmado) => invocar('memoria.liberar', nivel, confirmado),
   },
   limpiezaDisco: {
     analizar: (categorias) => invocar('limpiezaDisco.analizar', categorias),

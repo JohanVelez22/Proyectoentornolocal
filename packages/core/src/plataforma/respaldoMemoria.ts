@@ -19,6 +19,9 @@ export const RESPALDO_MEMORIA_NEUTRO: Pick<
   | 'identidadActual'
   | 'rutasProtegidas'
   | 'conexionesActivas'
+  | 'memoriaDelSistema'
+  | 'vaciarWorkingSets'
+  | 'purgarListaEspera'
   | 'rutasLimpieza'
   | 'navegadoresAbiertos'
   | 'esAdministrador'
@@ -50,6 +53,14 @@ export const RESPALDO_MEMORIA_NEUTRO: Pick<
   conexionesActivas: async () => {
     throw noDisponible();
   },
+  // Liberar memoria (D54b): fuera de Windows aún no hay lectura ni vaciado (Etapa E).
+  memoriaDelSistema: async () => null,
+  vaciarWorkingSets: async () => [],
+  purgarListaEspera: async () => ({
+    ok: false,
+    motivo: 'error',
+    detalle: 'no disponible en este sistema',
+  }),
   // Limpieza de disco (D37): fuera de Windows aún no hay rutas conocidas, así que no hay nada.
   rutasLimpieza: async () => [],
   navegadoresAbiertos: async () => [],

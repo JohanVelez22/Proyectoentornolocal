@@ -24,6 +24,8 @@ export const nlExtra: TextosParciales = {
     copiarCompleto: 'De volledige tekst kopiëren',
   },
   errores: {
+    uacHuerfano:
+      'Als er een Windows-toestemmingsvenster verschijnt, kunt u het annuleren: het doet niets meer.',
     codigos: {
       'asistentes.no_existe': 'Die assistent wordt niet ondersteund.',
       'asistentes.no_instalado': '{asistente} is niet geïnstalleerd.',
@@ -39,6 +41,8 @@ export const nlExtra: TextosParciales = {
         'De gezondheid van de schijven kon niet worden gelezen. Probeer het opnieuw.',
       'discos.sin_eventos': 'De schijfgebeurtenissen konden niet worden gelezen.',
       'discos.admin_cancelado': 'De beheerderstoestemming is geannuleerd: er is niets gelezen.',
+      'discos.admin_tiempo':
+        'De beheerderstoestemming is niet op tijd beantwoord: er is niets gelezen.',
       'discos.admin_fallo':
         'De gezondheid van de schijven kon niet met beheerdersrechten worden gelezen.',
       'doctor.disco_atencion': 'De schijf {modelo} heeft aandacht nodig.',
@@ -226,8 +230,6 @@ export const nlExtra: TextosParciales = {
         'Het bestand kon niet worden opgeslagen ({codigo}). Het origineel is niet aangeraakt.',
       'memoria.sin_confirmar': 'Bevestig de actie in het dialoogvenster voordat u doorgaat.',
       'memoria.modo_invalido': 'Die optimalisatiemodus bestaat niet.',
-      'memoria.plan_caducado':
-        'De lijst is verlopen of is niet meer de actuele. Toon hem opnieuw voordat u toepast.',
       'memoria.no_disponible':
         'De geheugenoptimalisatie is hier niet beschikbaar of kon het systeem niet lezen.',
       'conversor.ocupado':
@@ -1471,82 +1473,56 @@ export const nlExtra: TextosParciales = {
     anteriores: (n) => `Eerdere patches (${n})`,
   },
   memoria: {
-    boton: 'Geheugen',
-    tituloBoton: 'Geheugen optimaliseren',
-    titulo: 'Geheugenoptimalisatie',
-    intro:
-      'Kies een modus en bekijk de lijst. Er wordt niets gesloten of gestopt voordat u bevestigt, en het draait nooit uit zichzelf.',
-    modo: 'Modus',
-    modos: {
+    etiqueta: 'Geheugen vrijmaken',
+    tituloEtiqueta: 'RAM-geheugen vrijmaken',
+    liberando: 'Vrijmaken…',
+    niveles: {
       liviano: 'Licht',
-      moderado: 'Gematigd',
+      moderado: 'Gemiddeld',
       profundo: 'Diep',
     },
-    descripciones: {
-      liviano: 'Leegt de cache van de app. Maakt schijfruimte vrij; sluit of stopt niets.',
+    queHace: {
+      liviano:
+        'Maakt het geheugen vrij dat WolfCore Dev en de bijbehorende services op dit moment niet gebruiken.',
       moderado:
-        'Biedt daarnaast aan om één PHP-worker over te houden en diensten van WolfCore Dev zonder activiteit of verbindingen te stoppen. Diensten staan standaard uitgevinkt.',
+        'Het bovenstaande, plus het geheugen dat geopende, niet-kritieke programma’s nu niet gebruiken. Er wordt er geen gesloten.',
       profundo:
-        "Toont daarnaast uw eigen geheugenvretende programma's, zodat u ze kunt vragen hun venster te sluiten. Ze staan standaard uitgevinkt.",
+        'Het bovenstaande, plus het legen van de standbylijst en de bestandscache van Windows. Vraagt om beheerderstoestemming.',
     },
-    ver: 'Lijst tonen',
-    revisando: 'Controleren…',
-    vacio: 'In deze modus valt niets vrij te maken.',
-    tipos: {
-      'cache-app': 'Cache leegmaken',
-      'reducir-pool': 'Eén worker overhouden',
-      'detener-inactivo': 'Stoppen (inactief)',
-      'cerrar-programa': 'Vragen het venster te sluiten',
-    },
-    caches: {
-      sesion: 'HTTP-cache van de toepassingssessie',
-    },
-    estimado: (cantidad) => `Ongeveer ${cantidad} RAM zou worden vrijgemaakt`,
-    estimadoDisco: (cantidad) => `Plus ongeveer ${cantidad} schijfruimte (de cache is geen RAM)`,
-    marcadas: (n, total) => `${n} van ${total} aangevinkt`,
-    sinDatos:
-      'Er zijn nog niet genoeg activiteitsgegevens om aan te bieden diensten te stoppen of PHP te verkleinen. Laat Start enkele minuten open en kijk opnieuw.',
-    listadoFallido:
-      "De lijst met geopende programma's kon niet worden gelezen: deze lijst is mogelijk onvolledig. Probeer het opnieuw.",
-    avisoDetener:
-      'Inactieve diensten staan standaard uitgevinkt: wie er een stopt, kapt alles af wat het gebruikt. Alleen die zonder verbindingen op dit moment worden getoond.',
-    avisoCerrar:
-      "Programma's wordt alleen gevraagd hun venster te sluiten, als bij een klik op het kruisje: ze kunnen vragen of u wilt opslaan. Een programma wordt nooit geforceerd of beëindigd.",
-    protegidos:
-      "Systeemprogramma's, Windows-diensten, programma's met verhoogde rechten, andere gebruikers, FlyEnv, PhpWebStudy en WolfCore Dev (of alles wat ze starten) verschijnen nooit.",
-    aplicar: 'Aangevinkte toepassen',
-    confirmarTitulo: 'Deze acties toepassen?',
-    confirmarTexto: (n) =>
-      n === 1
-        ? '1 actie uit de lijst wordt uitgevoerd.'
-        : `${n} acties uit de lijst worden uitgevoerd.`,
-    confirmarCerrar: (nombres) =>
-      `Deze programma's wordt gevraagd hun venster te sluiten: ${nombres}.`,
-    confirmarDetener: (nombres) => `Deze diensten worden gestopt: ${nombres}.`,
-    confirmar: 'Ja, toepassen',
+    requiereAdmin: 'Vraagt om beheerderstoestemming',
+    calculando: 'Berekenen…',
+    noDisponible: 'Niet beschikbaar',
+    sugerencia:
+      'Beweeg de muis over een niveau of selecteer het om te zien wat het doet en hoeveel het zou vrijmaken.',
+    liberaria: (cantidad: string) => `Zou ≈ ${cantidad} vrijmaken`,
+    notaEstimacion:
+      'Dit is een schatting op basis van het geheugen van dit moment: de werkelijke waarde kan afwijken. Er wordt geen programma gesloten en er gaat niets verloren.',
+    notaProfundo:
+      'Programma’s hebben bij het volgende gebruik misschien even langer nodig om te laden wat ze nodig hebben.',
+    profundoTitulo: 'Geheugen vrijmaken in de modus Diep',
+    profundoTexto:
+      'Het geheugen van de processen, de standbylijst en de bestandscache van Windows worden geleegd. Er wordt geen programma gesloten en er gaat niets verloren.',
+    confirmarUac:
+      'Windows toont een venster voor beheerderstoestemming (UAC) dat u moet accepteren om door te gaan. Als u het annuleert, worden alleen de processen geleegd.',
+    continuar: 'Doorgaan',
     cancelar: 'Annuleren',
-    resultadoTitulo: 'Resultaat',
-    liberado: (cantidad) => `Geschat: ongeveer ${cantidad} RAM vrijgemaakt`,
-    liberadoDisco: (cantidad) => `Plus ongeveer ${cantidad} schijfruimte`,
-    notaPedido:
-      'Wacht op u: het venster is gevraagd te sluiten en het programma is nog open (mogelijk vraagt het of u wilt opslaan). Het telt niet als vrijgemaakt.',
-    estados: {
-      hecho: 'Klaar',
-      pedido: 'Wacht op u',
-      saltado: 'Overgeslagen',
-      error: 'Mislukt',
+    liberadaTitulo: 'Geheugen vrijgemaakt',
+    nivelAplicado: (nivel: string) => `Toegepast niveau: ${nivel}.`,
+    antes: 'Beschikbaar geheugen vóór',
+    despues: 'Beschikbaar geheugen erna',
+    liberadoReal: 'Daadwerkelijk vrijgemaakt',
+    procesos: (vaciados: number, omitidos: number) =>
+      `Geleegde processen: ${vaciados}. Overgeslagen: ${omitidos}.`,
+    purga: {
+      hecha: 'De standbylijst en de bestandscache zijn geleegd.',
+      cancelada: 'De beheerderstoestemming is geannuleerd: alleen de processen zijn geleegd.',
+      tiempo:
+        'De beheerderstoestemming is niet op tijd beantwoord: alleen de processen zijn geleegd.',
+      error: 'De standbylijst kon niet worden geleegd: alleen de processen zijn geleegd.',
     },
-    motivos: {
-      no_en_plan: 'Het stond niet in de lijst',
-      protegido: 'Het is een beschermd programma',
-      cambio: 'Het is gewijzigd sinds de lijst werd getoond',
-      sin_ventana: 'Het heeft geen venster meer om te sluiten',
-      ya_apagado: 'Er viel niets meer te verkleinen',
-      ocupado: 'Het was bezig (het heeft verbindingen)',
-      no_se_pudo:
-        'Het sluitverzoek kon niet worden verzonden (het programma draait met verhoogde rechten)',
-    },
-    otraVez: 'Opnieuw beginnen',
+    notaResultado:
+      'Het vrijgemaakte geheugen is het gemeten verschil in beschikbaar geheugen. Windows verdeelt het opnieuw en het kan meteen veranderen.',
+    cerrar: 'Sluiten',
   },
   guias: {
     tuneles: {

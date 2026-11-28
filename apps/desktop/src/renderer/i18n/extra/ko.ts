@@ -17,6 +17,7 @@ export const koExtra: TextosParciales = {
   },
   acciones: { copiarCompleto: '전체 텍스트 복사' },
   errores: {
+    uacHuerfano: 'Windows 권한 창이 나타나면 취소하셔도 됩니다. 더 이상 아무 작업도 하지 않습니다.',
     codigos: {
       'asistentes.no_existe': '이 어시스턴트는 지원되지 않습니다.',
       'asistentes.no_instalado': '{asistente}이(가) 설치되어 있지 않습니다.',
@@ -31,6 +32,8 @@ export const koExtra: TextosParciales = {
       'discos.sin_lectura': '디스크 상태를 읽을 수 없습니다. 다시 시도해 주십시오.',
       'discos.sin_eventos': '디스크 이벤트를 읽을 수 없습니다.',
       'discos.admin_cancelado': '관리자 권한 요청이 취소되었습니다. 아무것도 읽지 않았습니다.',
+      'discos.admin_tiempo':
+        '관리자 권한 승인에 제때 응답하지 않았습니다. 아무것도 읽지 않았습니다.',
       'discos.admin_fallo': '관리자 권한으로 디스크 상태를 읽을 수 없습니다.',
       'doctor.disco_atencion': '디스크 {modelo}에 주의가 필요합니다.',
       'doctor.disco_critico':
@@ -203,8 +206,6 @@ export const koExtra: TextosParciales = {
       'editor.escritura_fallo': '파일을 저장할 수 없습니다({codigo}). 원본은 건드리지 않았습니다.',
       'memoria.sin_confirmar': '계속하기 전에 대화 상자에서 작업을 확인하십시오.',
       'memoria.modo_invalido': '해당 최적화 모드가 없습니다.',
-      'memoria.plan_caducado':
-        '목록이 만료되었거나 더 이상 최신 목록이 아닙니다. 적용하기 전에 다시 표시하십시오.',
       'memoria.no_disponible':
         '여기서는 메모리 최적화 도구를 사용할 수 없거나 시스템을 읽을 수 없습니다.',
       'conversor.ocupado':
@@ -1356,66 +1357,54 @@ export const koExtra: TextosParciales = {
     anteriores: (n) => `이전 패치(${n})`,
   },
   memoria: {
-    boton: '메모리',
-    tituloBoton: '메모리 최적화',
-    titulo: '메모리 최적화 도구',
-    intro:
-      '모드를 선택하고 목록을 검토하십시오. 확인하기 전에는 아무것도 닫거나 중지하지 않으며, 자동으로 실행되지도 않습니다.',
-    modo: '모드',
-    modos: { liviano: '가벼움', moderado: '보통', profundo: '깊음' },
-    descripciones: {
-      liviano: '앱 캐시를 지웁니다. 디스크 공간을 확보하며, 아무것도 닫거나 중지하지 않습니다.',
+    etiqueta: '메모리 확보',
+    tituloEtiqueta: 'RAM 메모리 확보',
+    liberando: '확보하는 중…',
+    niveles: {
+      liviano: '가벼움',
+      moderado: '보통',
+      profundo: '깊음',
+    },
+    queHace: {
+      liviano: 'WolfCore Dev와 그 서비스가 지금 사용하지 않는 메모리를 확보합니다.',
       moderado:
-        '추가로 PHP 워커를 하나만 남기는 작업과, 활동이나 연결이 없는 WolfCore Dev 서비스를 중지하는 작업을 제안합니다. 서비스는 처음에 선택되어 있지 않습니다.',
+        '위 내용에 더해, 열려 있는 비핵심 프로그램이 지금 사용하지 않는 메모리도 확보합니다. 어떤 프로그램도 닫지 않습니다.',
       profundo:
-        '추가로 메모리를 많이 쓰는 내 프로그램을 나열하여 창을 닫도록 요청할 수 있습니다. 처음에는 선택되어 있지 않습니다.',
+        '위 내용에 더해, Windows의 대기 목록과 파일 캐시를 비웁니다. 관리자 권한 승인이 필요합니다.',
     },
-    ver: '목록 표시',
-    revisando: '확인하는 중…',
-    vacio: '이 모드에서 확보할 항목이 없습니다.',
-    tipos: {
-      'cache-app': '캐시 지우기',
-      'reducir-pool': '워커 하나만 남기기',
-      'detener-inactivo': '중지(유휴)',
-      'cerrar-programa': '창을 닫도록 요청',
-    },
-    caches: { sesion: '앱 세션의 HTTP 캐시' },
-    estimado: (cantidad) => `약 ${cantidad}의 RAM이 확보됩니다`,
-    estimadoDisco: (cantidad) => `추가로 약 ${cantidad}의 디스크 공간(캐시는 RAM이 아닙니다)`,
-    marcadas: (n, total) => `${total}개 중 ${n}개 선택됨`,
-    sinDatos:
-      '서비스 중지나 PHP 축소를 제안하기에는 활동 데이터가 아직 충분하지 않습니다. 홈을 몇 분간 열어 둔 후 다시 확인하십시오.',
-    listadoFallido:
-      '열려 있는 프로그램 목록을 읽을 수 없어 이 목록이 불완전할 수 있습니다. 다시 시도하십시오.',
-    avisoDetener:
-      '유휴 서비스는 처음에 선택되어 있지 않습니다. 서비스를 중지하면 그것을 사용하는 대상이 끊어집니다. 현재 연결이 없는 서비스만 나열됩니다.',
-    avisoCerrar:
-      '프로그램에는 X를 클릭하는 것처럼 창을 닫도록 요청만 하므로 저장 여부를 물을 수 있습니다. 프로그램을 강제로 종료하지는 않습니다.',
-    protegidos:
-      '시스템 프로그램, Windows 서비스, 상승된 권한의 프로그램, 다른 사용자의 프로그램, FlyEnv, PhpWebStudy, WolfCore Dev(및 이들이 실행한 모든 것)는 표시되지 않습니다.',
-    aplicar: '선택한 항목 적용',
-    confirmarTitulo: '이 작업을 적용하시겠습니까?',
-    confirmarTexto: (n) => `목록의 작업 ${n}개가 실행됩니다.`,
-    confirmarCerrar: (nombres) => `다음 프로그램에 창을 닫도록 요청합니다: ${nombres}.`,
-    confirmarDetener: (nombres) => `다음 서비스를 중지합니다: ${nombres}.`,
-    confirmar: '예, 적용',
+    requiereAdmin: '관리자 권한 승인 필요',
+    calculando: '계산하는 중…',
+    noDisponible: '사용할 수 없음',
+    sugerencia:
+      '단계 위에 마우스를 올리거나 포커스를 두면 수행 내용과 확보할 수 있는 양을 볼 수 있습니다.',
+    liberaria: (cantidad: string) => `확보 예상량 ≈ ${cantidad}`,
+    notaEstimacion:
+      '현재 메모리를 기준으로 한 추정치이며 실제 값은 다를 수 있습니다. 프로그램은 닫히지 않으며 아무것도 손실되지 않습니다.',
+    notaProfundo:
+      '다음에 사용할 때 프로그램이 필요한 항목을 다시 불러오느라 응답이 잠시 느려질 수 있습니다.',
+    profundoTitulo: '깊음 모드로 메모리 확보',
+    profundoTexto:
+      '프로세스 메모리, 대기 목록, Windows 파일 캐시를 비웁니다. 프로그램은 닫히지 않으며 아무것도 손실되지 않습니다.',
+    confirmarUac:
+      'Windows에서 관리자 권한 창(UAC)이 표시되며, 계속하려면 승인하셔야 합니다. 취소하시면 프로세스만 비워집니다.',
+    continuar: '계속',
     cancelar: '취소',
-    resultadoTitulo: '결과',
-    liberado: (cantidad) => `추정: 약 ${cantidad}의 RAM 확보`,
-    liberadoDisco: (cantidad) => `추가로 약 ${cantidad}의 디스크 공간`,
-    notaPedido:
-      '사용자 응답 대기 중: 창을 닫도록 요청했지만 프로그램이 아직 열려 있습니다(저장 여부를 묻고 있을 수 있음). 확보된 것으로 계산되지 않습니다.',
-    estados: { hecho: '완료', pedido: '사용자 응답 대기 중', saltado: '건너뜀', error: '실패' },
-    motivos: {
-      no_en_plan: '목록에 없었습니다',
-      protegido: '보호된 프로그램입니다',
-      cambio: '목록이 표시된 이후 변경되었습니다',
-      sin_ventana: '닫을 창이 더 이상 없습니다',
-      ya_apagado: '줄일 항목이 남아 있지 않았습니다',
-      ocupado: '사용 중이었습니다(연결이 있음)',
-      no_se_pudo: '닫기 요청을 보낼 수 없었습니다(프로그램이 상승된 권한으로 실행 중)',
+    liberadaTitulo: '메모리를 확보했습니다',
+    nivelAplicado: (nivel: string) => `적용된 단계: ${nivel}.`,
+    antes: '이전 사용 가능 메모리',
+    despues: '이후 사용 가능 메모리',
+    liberadoReal: '실제로 확보된 양',
+    procesos: (vaciados: number, omitidos: number) =>
+      `비운 프로세스: ${vaciados}. 건너뜀: ${omitidos}.`,
+    purga: {
+      hecha: '대기 목록과 파일 캐시를 비웠습니다.',
+      cancelada: '관리자 권한 승인이 취소되었습니다. 프로세스만 비웠습니다.',
+      tiempo: '관리자 권한 승인에 제때 응답하지 않았습니다. 프로세스만 비웠습니다.',
+      error: '대기 목록을 비우지 못했습니다. 프로세스만 비웠습니다.',
     },
-    otraVez: '처음부터 다시',
+    notaResultado:
+      '확보된 양은 사용 가능 메모리의 측정된 차이입니다. Windows가 이를 다시 배분하므로 곧 바뀔 수 있습니다.',
+    cerrar: '닫기',
   },
   guias: {
     tuneles: { titulo: '터널 가이드', copiar: '명령 복사' },

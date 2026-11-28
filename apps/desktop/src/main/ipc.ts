@@ -33,9 +33,7 @@ import {
   PRESETS_SMTP,
   LIMITES_IMAGEN,
   FORMATOS_CONVERSOR,
-  MODOS_MEMORIA,
-  MAX_ACCIONES_MEMORIA,
-  MAX_LARGO_ID_MEMORIA,
+  NIVELES_MEMORIA,
   validarRutaInfo,
 } from '@pel/core';
 import { idiomaDeLocale } from '../shared/idiomas';
@@ -2031,13 +2029,15 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'laboratorioGit.escribirArchivo': (_n, s, id, contenido) =>
     s.laboratorioGit().escribirArchivo(id, contenido),
   'laboratorioGit.reiniciar': (_n, s) => s.laboratorioGit().reiniciar(),
-  'memoria.plan': (n, _s, modo) => n.planMemoria(unoDe(modo, MODOS_MEMORIA, 'modo')),
-  'memoria.aplicar': (n, _s, planId, ids, confirmacion) =>
-    n.aplicarMemoria(
-      textoAcotado(planId, 1, 100, 'plan'),
-      listaTextos(ids, MAX_ACCIONES_MEMORIA, MAX_LARGO_ID_MEMORIA, 'acciones'),
-      confirmado(confirmacion),
-    ),
+  'memoria.estimar': (n) => n.estimarMemoria(),
+  // Profundo exige la confirmación exactamente `true` (pide el UAC); los demás niveles, solo el clic.
+  'memoria.liberar': (n, _s, nivel, confirmacion) => {
+    const elegido = unoDe(nivel, NIVELES_MEMORIA, 'nivel');
+    return n.liberarMemoria(
+      elegido,
+      elegido === 'profundo' ? confirmado(confirmacion) : confirmacion === true,
+    );
+  },
   // ---- Limpieza de disco (D37): análisis visible primero, y solo se limpia con confirmación ----
   'limpiezaDisco.analizar': (n, _s, categorias) =>
     n.analizarLimpieza(

@@ -189,6 +189,8 @@ describe('SaludDiscos', () => {
       codigo: 'discos.admin_cancelado',
     });
     plataforma.discosAdmin = { ok: false, motivo: 'tiempo' };
+    await expect(s.leer({ admin: true })).rejects.toMatchObject({ codigo: 'discos.admin_tiempo' });
+    plataforma.discosAdmin = { ok: false, motivo: 'error' };
     await expect(s.leer({ admin: true })).rejects.toMatchObject({ codigo: 'discos.admin_fallo' });
   });
 

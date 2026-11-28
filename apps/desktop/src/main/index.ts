@@ -11,7 +11,6 @@ import {
   ipcMain,
   nativeTheme,
   safeStorage,
-  session,
   shell,
   type Tray,
 } from 'electron';
@@ -516,21 +515,6 @@ if (errorCarpetaDatos !== null) {
       guardar: (id, v) => secretos.guardar(id as `tunel:${string}`, v),
       borrar: (id) => secretos.borrar(id as `tunel:${string}`),
     }));
-    // Optimizador de RAM (D36): la caché HTTP de la sesión de Electron se puede vaciar sin perder
-    // nada (no toca cookies ni almacenamiento). Solo se vacía cuando el usuario lo confirma.
-    n.registrarCacheApp({
-      id: 'sesion',
-      etiqueta: 'Sesión de Electron',
-      // La caché HTTP vive en disco: libera espacio, no RAM.
-      unidad: 'disco',
-      estimar: () => session.defaultSession.getCacheSize().catch(() => 0),
-      vaciar: async () => {
-        const antes = await session.defaultSession.getCacheSize().catch(() => 0);
-        await session.defaultSession.clearCache();
-        await session.defaultSession.clearCodeCaches({});
-        return antes;
-      },
-    });
     // Limpieza de disco (D37): los registros y las descargas de WolfCore Dev van a la papelera del
     // sistema (son pocos archivos); TEMP y las cachés de navegador se borran definitivamente.
     n.registrarPapelera((ruta) => shell.trashItem(ruta));

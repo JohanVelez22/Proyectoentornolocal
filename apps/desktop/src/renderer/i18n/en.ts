@@ -79,6 +79,8 @@ export const en: Textos = {
     titulo: 'The action could not be completed',
     arranque: 'Could not read the environment status',
     desconocido: 'An unexpected error occurred.',
+    uacHuerfano:
+      'If a Windows permission window appears, you can cancel it: it no longer does anything.',
     /** Details the core sends as a code inside an error. */
     detalles: {
       'sintaxis.comillas_sin_cerrar': 'unclosed quotes',
@@ -620,8 +622,6 @@ export const en: Textos = {
         'The file could not be saved ({codigo}). The original was not touched.',
       'memoria.sin_confirmar': 'Confirm the action in the dialog before continuing.',
       'memoria.modo_invalido': 'That optimization mode does not exist.',
-      'memoria.plan_caducado':
-        'The list expired or is no longer the current one. Show it again before applying.',
       'memoria.no_disponible':
         'The memory optimizer is not available here or could not read the system.',
       'conversor.archivo_invalido': 'The file is damaged or is not the type its extension says.',
@@ -756,6 +756,8 @@ export const en: Textos = {
       'discos.sin_lectura': 'The health of the disks could not be read. Please try again.',
       'discos.sin_eventos': 'The disk events could not be read.',
       'discos.admin_cancelado': 'The administrator permission was cancelled: nothing was read.',
+      'discos.admin_tiempo':
+        'There was no response to the administrator permission in time: nothing was read.',
       'discos.admin_fallo':
         'The health of the disks could not be read with administrator permissions.',
       'doctor.disco_atencion': 'The disk {modelo} needs attention.',
@@ -5744,70 +5746,54 @@ export const en: Textos = {
     sinLeer: 'Unread',
   },
   memoria: {
-    boton: 'Memory',
-    tituloBoton: 'Optimize memory',
-    titulo: 'Memory optimizer',
-    intro:
-      'Pick a mode and review the list. Nothing is closed or stopped until you confirm, and it never runs on its own.',
-    modo: 'Mode',
-    modos: { liviano: 'Light', moderado: 'Moderate', profundo: 'Deep' },
-    descripciones: {
-      liviano: 'Clears the app cache. It frees disk space; it does not close or stop anything.',
+    etiqueta: 'Free up memory',
+    tituloEtiqueta: 'Free up RAM',
+    liberando: 'Freeing up…',
+    niveles: {
+      liviano: 'Light',
+      moderado: 'Moderate',
+      profundo: 'Deep',
+    },
+    queHace: {
+      liviano: 'Frees the memory that WolfCore Dev and its services are not using right now.',
       moderado:
-        'Also offers to leave a single PHP worker and to stop WolfCore Dev services with no activity or connections. Services start unchecked.',
+        'The above, plus the memory that open, non-critical programs are not using right now. It does not close any of them.',
       profundo:
-        'Also lists your own memory-hungry programs so you can ask them to close their window. They start unchecked.',
+        'The above, plus it empties the standby list and the Windows file cache. It asks for administrator permission.',
     },
-    ver: 'Show the list',
-    revisando: 'Checking…',
-    vacio: 'There is nothing to free in this mode.',
-    tipos: {
-      'cache-app': 'Clear cache',
-      'reducir-pool': 'Leave a single worker',
-      'detener-inactivo': 'Stop (idle)',
-      'cerrar-programa': 'Ask it to close its window',
-    },
-    caches: {
-      sesion: 'HTTP cache of the application session',
-    },
-    estimado: (cantidad: string) => `About ${cantidad} of RAM would be freed`,
-    estimadoDisco: (cantidad: string) => `Plus about ${cantidad} of disk (the cache is not RAM)`,
-    marcadas: (n: number, total: number) => `${n} of ${total} checked`,
-    sinDatos:
-      'There is not enough activity data yet to offer stopping services or reducing PHP. Leave Home open for a few minutes and look again.',
-    listadoFallido:
-      'The list of open programs could not be read: this list may be incomplete. Try again.',
-    avisoDetener:
-      'Idle services start unchecked: stopping one cuts off whatever uses it. Only those with no connections right now are listed.',
-    avisoCerrar:
-      'Programs are only asked to close their window, like clicking the X: they may ask whether to save. A program is never forced or terminated.',
-    protegidos:
-      'System programs, Windows services, elevated programs, other users, FlyEnv, PhpWebStudy and WolfCore Dev (or anything they launch) never appear.',
-    aplicar: 'Apply the checked ones',
-    confirmarTitulo: 'Apply these actions?',
-    confirmarTexto: (n: number) =>
-      n === 1 ? '1 action from the list will run.' : `${n} actions from the list will run.`,
-    confirmarCerrar: (nombres: string) =>
-      `These programs will be asked to close their window: ${nombres}.`,
-    confirmarDetener: (nombres: string) => `These services will be stopped: ${nombres}.`,
-    confirmar: 'Yes, apply',
+    requiereAdmin: 'Asks for administrator permission',
+    calculando: 'Calculating…',
+    noDisponible: 'Not available',
+    sugerencia: 'Hover over or focus a level to see what it does and how much it would free up.',
+    liberaria: (cantidad: string) => `Would free up ≈ ${cantidad}`,
+    notaEstimacion:
+      'This is an estimate based on the memory right now: the real figure may differ. No program is closed and nothing is lost.',
+    notaProfundo:
+      'Programs may take a moment longer the next time they are used, while they reload what they need.',
+    profundoTitulo: 'Free up memory in Deep mode',
+    profundoTexto:
+      'The memory of the processes, the standby list and the Windows file cache will be emptied. No program is closed and nothing is lost.',
+    confirmarUac:
+      'Windows will show an administrator permission window (UAC) that you must accept to continue. If you cancel it, only the processes will be emptied.',
+    continuar: 'Continue',
     cancelar: 'Cancel',
-    resultadoTitulo: 'Result',
-    liberado: (cantidad: string) => `Estimated: about ${cantidad} of RAM freed`,
-    liberadoDisco: (cantidad: string) => `Plus about ${cantidad} of disk`,
-    notaPedido:
-      'Waiting for you: the window was asked to close and the program is still open (it may be asking whether to save). It is not counted as freed.',
-    estados: { hecho: 'Done', pedido: 'Waiting for you', saltado: 'Skipped', error: 'Failed' },
-    motivos: {
-      no_en_plan: 'It was not in the list',
-      protegido: 'It is a protected program',
-      cambio: 'It changed since the list was shown',
-      sin_ventana: 'It no longer has a window to close',
-      ya_apagado: 'There was nothing left to reduce',
-      ocupado: 'It was busy (it has connections)',
-      no_se_pudo: 'The close request could not be sent (the program runs with elevated rights)',
+    liberadaTitulo: 'Memory freed up',
+    nivelAplicado: (nivel: string) => `Level applied: ${nivel}.`,
+    antes: 'Available memory before',
+    despues: 'Available memory after',
+    liberadoReal: 'Actually freed up',
+    procesos: (vaciados: number, omitidos: number) =>
+      `Processes emptied: ${vaciados}. Skipped: ${omitidos}.`,
+    purga: {
+      hecha: 'The standby list and the file cache were emptied.',
+      cancelada: 'The administrator permission was cancelled: only the processes were emptied.',
+      tiempo:
+        'There was no response to the administrator permission in time: only the processes were emptied.',
+      error: 'The standby list could not be emptied: only the processes were emptied.',
     },
-    otraVez: 'Start over',
+    notaResultado:
+      'The amount freed is the measured difference in available memory. Windows redistributes it and it may change right away.',
+    cerrar: 'Close',
   },
   guias: {
     tuneles: { titulo: 'Tunnels guide', copiar: 'Copy the command' },

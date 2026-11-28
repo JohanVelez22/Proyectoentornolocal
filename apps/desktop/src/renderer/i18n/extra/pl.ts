@@ -28,6 +28,8 @@ export const plExtra: TextosParciales = {
     copiarCompleto: 'Kopiuj cały tekst',
   },
   errores: {
+    uacHuerfano:
+      'Jeśli pojawi się okno zgody systemu Windows, można je anulować: nic już nie robi.',
     codigos: {
       'asistentes.no_existe': 'Ten asystent nie jest obsługiwany.',
       'asistentes.no_instalado': '{asistente} nie jest zainstalowany.',
@@ -42,6 +44,8 @@ export const plExtra: TextosParciales = {
       'discos.sin_lectura': 'Nie udało się odczytać kondycji dysków. Proszę spróbować ponownie.',
       'discos.sin_eventos': 'Nie udało się odczytać zdarzeń dysku.',
       'discos.admin_cancelado': 'Anulowano zgodę administratora: nic nie odczytano.',
+      'discos.admin_tiempo':
+        'Nie odpowiedziano na czas na prośbę o zgodę administratora: nic nie odczytano.',
       'discos.admin_fallo':
         'Nie udało się odczytać kondycji dysków z uprawnieniami administratora.',
       'doctor.disco_atencion': 'Dysk {modelo} wymaga uwagi.',
@@ -226,8 +230,6 @@ export const plExtra: TextosParciales = {
       'memoria.sin_confirmar':
         'Przed kontynuowaniem należy potwierdzić działanie w oknie dialogowym.',
       'memoria.modo_invalido': 'Taki tryb optymalizacji nie istnieje.',
-      'memoria.plan_caducado':
-        'Lista wygasła lub nie jest już aktualna. Należy pokazać ją ponownie przed zastosowaniem.',
       'memoria.no_disponible':
         'Optymalizator pamięci nie jest tu dostępny lub nie mógł odczytać systemu.',
       'conversor.ocupado':
@@ -1460,84 +1462,54 @@ export const plExtra: TextosParciales = {
     anteriores: (n: number) => `Wcześniejsze poprawki (${n})`,
   },
   memoria: {
-    boton: 'Pamięć',
-    tituloBoton: 'Optymalizuj pamięć',
-    titulo: 'Optymalizator pamięci',
-    intro:
-      'Należy wybrać tryb i przejrzeć listę. Nic nie jest zamykane ani zatrzymywane, dopóki nie zostanie to potwierdzone, i nigdy nie działa samo.',
-    modo: 'Tryb',
-    modos: {
+    etiqueta: 'Zwolnij pamięć',
+    tituloEtiqueta: 'Zwolnij pamięć RAM',
+    liberando: 'Zwalnianie…',
+    niveles: {
       liviano: 'Lekki',
       moderado: 'Umiarkowany',
       profundo: 'Głęboki',
     },
-    descripciones: {
-      liviano:
-        'Czyści pamięć podręczną aplikacji. Zwalnia miejsce na dysku; niczego nie zamyka ani nie zatrzymuje.',
+    queHace: {
+      liviano: 'Zwalnia pamięć, której WolfCore Dev i jego usługi w tej chwili nie używają.',
       moderado:
-        'Dodatkowo proponuje pozostawienie jednego procesu roboczego PHP i zatrzymanie usług WolfCore Dev bez aktywności i połączeń. Usługi są początkowo niezaznaczone.',
+        'To, co powyżej, oraz pamięć, której w tej chwili nie używają otwarte programy niekrytyczne. Żaden z nich nie zostanie zamknięty.',
       profundo:
-        'Dodatkowo wyświetla własne programy zużywające dużo pamięci, aby można było poprosić je o zamknięcie okna. Są początkowo niezaznaczone.',
+        'To, co powyżej, oraz opróżnienie listy gotowości i pamięci podręcznej plików systemu Windows. Wymaga zgody administratora.',
     },
-    ver: 'Pokaż listę',
-    revisando: 'Sprawdzanie…',
-    vacio: 'W tym trybie nie ma nic do zwolnienia.',
-    tipos: {
-      'cache-app': 'Wyczyść pamięć podręczną',
-      'reducir-pool': 'Pozostaw jeden proces roboczy',
-      'detener-inactivo': 'Zatrzymaj (bezczynny)',
-      'cerrar-programa': 'Poproś o zamknięcie okna',
-    },
-    caches: {
-      sesion: 'Pamięć podręczna HTTP sesji aplikacji',
-    },
-    estimado: (cantidad: string) => `Zwolnione zostałoby około ${cantidad} pamięci RAM`,
-    estimadoDisco: (cantidad: string) =>
-      `Plus około ${cantidad} na dysku (pamięć podręczna to nie RAM)`,
-    marcadas: (n: number, total: number) => `Zaznaczono ${n} z ${total}`,
-    sinDatos:
-      'Nie ma jeszcze dość danych o aktywności, aby zaproponować zatrzymanie usług lub zmniejszenie PHP. Należy zostawić Start otwarty na kilka minut i spojrzeć ponownie.',
-    listadoFallido:
-      'Nie udało się odczytać listy otwartych programów: ta lista może być niekompletna. Należy spróbować ponownie.',
-    avisoDetener:
-      'Bezczynne usługi są początkowo niezaznaczone: zatrzymanie usługi odcina wszystko, co z niej korzysta. Wymienione są tylko te, które w tej chwili nie mają połączeń.',
-    avisoCerrar:
-      'Programy są jedynie proszone o zamknięcie okna, jak po kliknięciu X: mogą zapytać, czy zapisać dane. Program nigdy nie jest zamykany siłą ani przerywany.',
-    protegidos:
-      'Programy systemowe, usługi Windows, programy z podwyższonymi uprawnieniami, inni użytkownicy, FlyEnv, PhpWebStudy i WolfCore Dev (lub cokolwiek, co uruchamiają) nigdy się nie pojawiają.',
-    aplicar: 'Zastosuj zaznaczone',
-    confirmarTitulo: 'Zastosować te działania?',
-    confirmarTexto: (n: number) =>
-      n === 1
-        ? 'Zostanie wykonane 1 działanie z listy.'
-        : `Zostanie wykonanych działań z listy: ${n}.`,
-    confirmarCerrar: (nombres: string) =>
-      `Te programy zostaną poproszone o zamknięcie okna: ${nombres}.`,
-    confirmarDetener: (nombres: string) => `Te usługi zostaną zatrzymane: ${nombres}.`,
-    confirmar: 'Tak, zastosuj',
+    requiereAdmin: 'Wymaga zgody administratora',
+    calculando: 'Obliczanie…',
+    noDisponible: 'Niedostępne',
+    sugerencia: 'Należy wskazać poziom myszą lub zaznaczyć go, aby zobaczyć, co robi i ile zwolni.',
+    liberaria: (cantidad: string) => `Zwolni ≈ ${cantidad}`,
+    notaEstimacion:
+      'To szacunek na podstawie pamięci z tej chwili: rzeczywisty wynik może się różnić. Żaden program nie zostanie zamknięty i nic nie zostanie utracone.',
+    notaProfundo:
+      'Programy mogą przy następnym użyciu potrzebować chwili dłużej, aby ponownie wczytać to, czego potrzebują.',
+    profundoTitulo: 'Zwolnij pamięć w trybie Głębokim',
+    profundoTexto:
+      'Zostaną opróżnione pamięć procesów, lista gotowości i pamięć podręczna plików systemu Windows. Żaden program nie zostanie zamknięty i nic nie zostanie utracone.',
+    confirmarUac:
+      'System Windows wyświetli okno zgody administratora (UAC), które trzeba zaakceptować, aby kontynuować. Jeśli zostanie anulowane, opróżnione zostaną tylko procesy.',
+    continuar: 'Kontynuuj',
     cancelar: 'Anuluj',
-    resultadoTitulo: 'Wynik',
-    liberado: (cantidad: string) => `Szacunkowo: zwolniono około ${cantidad} pamięci RAM`,
-    liberadoDisco: (cantidad: string) => `Plus około ${cantidad} na dysku`,
-    notaPedido:
-      'Oczekuje na reakcję: okno poproszono o zamknięcie, a program nadal jest otwarty (może pytać, czy zapisać dane). Nie jest liczone jako zwolnione.',
-    estados: {
-      hecho: 'Gotowe',
-      pedido: 'Oczekuje na reakcję',
-      saltado: 'Pominięto',
-      error: 'Niepowodzenie',
+    liberadaTitulo: 'Pamięć zwolniona',
+    nivelAplicado: (nivel: string) => `Zastosowany poziom: ${nivel}.`,
+    antes: 'Dostępna pamięć przed',
+    despues: 'Dostępna pamięć po',
+    liberadoReal: 'Faktycznie zwolniono',
+    procesos: (vaciados: number, omitidos: number) =>
+      `Opróżnione procesy: ${vaciados}. Pominięte: ${omitidos}.`,
+    purga: {
+      hecha: 'Lista gotowości i pamięć podręczna plików zostały opróżnione.',
+      cancelada: 'Zgoda administratora została anulowana: opróżniono tylko procesy.',
+      tiempo:
+        'Nie odpowiedziano na czas na prośbę o zgodę administratora: opróżniono tylko procesy.',
+      error: 'Nie udało się opróżnić listy gotowości: opróżniono tylko procesy.',
     },
-    motivos: {
-      no_en_plan: 'Nie było go na liście',
-      protegido: 'To program chroniony',
-      cambio: 'Zmienił się od pokazania listy',
-      sin_ventana: 'Nie ma już okna do zamknięcia',
-      ya_apagado: 'Nie było już nic do zmniejszenia',
-      ocupado: 'Był zajęty (ma połączenia)',
-      no_se_pudo:
-        'Nie udało się wysłać prośby o zamknięcie (program działa z podwyższonymi uprawnieniami)',
-    },
-    otraVez: 'Zacznij od nowa',
+    notaResultado:
+      'Zwolniona ilość to zmierzona różnica dostępnej pamięci. System Windows rozdziela ją ponownie i może się ona zaraz zmienić.',
+    cerrar: 'Zamknij',
   },
   guias: {
     tuneles: {

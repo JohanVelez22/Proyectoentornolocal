@@ -78,6 +78,7 @@ export const es = {
     titulo: 'No se pudo completar la acción',
     arranque: 'No se pudo leer el estado del entorno',
     desconocido: 'Ocurrió un error inesperado.',
+    uacHuerfano: 'Si aparece una ventana de permiso de Windows, puede cancelarla: ya no hace nada.',
     /** Detalles que el núcleo manda como código dentro de un error. */
     detalles: {
       'sintaxis.comillas_sin_cerrar': 'comillas sin cerrar',
@@ -626,8 +627,6 @@ export const es = {
       'editor.escritura_fallo': 'No se pudo guardar el archivo ({codigo}). El original no se tocó.',
       'memoria.sin_confirmar': 'Confirme la acción en el diálogo antes de continuar.',
       'memoria.modo_invalido': 'Ese modo de optimización no existe.',
-      'memoria.plan_caducado':
-        'La lista caducó o ya no es la actual. Vea la lista de nuevo antes de aplicar.',
       'memoria.no_disponible':
         'El optimizador de memoria no está disponible aquí o no pudo leer el sistema.',
       'conversor.archivo_invalido':
@@ -762,6 +761,8 @@ export const es = {
       'discos.sin_lectura': 'No se pudo leer la salud de los discos. Vuelva a intentarlo.',
       'discos.sin_eventos': 'No se pudieron leer los eventos del disco.',
       'discos.admin_cancelado': 'Se canceló el permiso de administrador: no se leyó nada.',
+      'discos.admin_tiempo':
+        'No hubo respuesta al permiso de administrador a tiempo: no se leyó nada.',
       'discos.admin_fallo': 'No se pudo leer la salud de los discos con permisos de administrador.',
       'doctor.disco_atencion': 'El disco {modelo} necesita atención.',
       'doctor.disco_critico':
@@ -5773,70 +5774,55 @@ export const es = {
     sinLeer: 'Sin leer',
   },
   memoria: {
-    boton: 'Memoria',
-    tituloBoton: 'Optimizar la memoria',
-    titulo: 'Optimizador de memoria',
-    intro:
-      'Elija un modo y revise la lista. No se cierra ni se detiene nada hasta que usted lo confirme, y nunca se ejecuta solo.',
-    modo: 'Modo',
-    modos: { liviano: 'Liviano', moderado: 'Moderado', profundo: 'Profundo' },
-    descripciones: {
+    etiqueta: 'Liberar memoria',
+    tituloEtiqueta: 'Liberar memoria RAM',
+    liberando: 'Liberando…',
+    niveles: {
+      liviano: 'Liviano',
+      moderado: 'Moderado',
+      profundo: 'Profundo',
+    },
+    queHace: {
       liviano:
-        'Vacía la caché de la aplicación. Libera espacio en disco; no cierra ni detiene nada.',
+        'Libera la memoria que WolfCore Dev y sus servicios no están usando en este momento.',
       moderado:
-        'Además propone dejar un solo trabajador de PHP y detener servicios de WolfCore Dev sin actividad ni conexiones. Los servicios salen desmarcados.',
+        'Lo anterior, y además la memoria que no están usando ahora los programas abiertos que no son críticos. No cierra ninguno.',
       profundo:
-        'Además lista programas suyos que usan mucha memoria para pedirles que cierren su ventana. Salen desmarcados.',
+        'Lo anterior, y además vacía la lista de espera y la caché de archivos de Windows. Pide permiso de administrador.',
     },
-    ver: 'Ver la lista',
-    revisando: 'Revisando…',
-    vacio: 'No hay nada que liberar en este modo.',
-    tipos: {
-      'cache-app': 'Vaciar caché',
-      'reducir-pool': 'Dejar un solo trabajador',
-      'detener-inactivo': 'Detener (sin actividad)',
-      'cerrar-programa': 'Pedir que cierre su ventana',
-    },
-    caches: {
-      sesion: 'Caché HTTP de la sesión de la aplicación',
-    },
-    estimado: (cantidad: string) => `Se liberarían unos ${cantidad} de RAM`,
-    estimadoDisco: (cantidad: string) => `Y unos ${cantidad} de disco (la caché no es RAM)`,
-    marcadas: (n: number, total: number) => `${n} de ${total} marcadas`,
-    sinDatos:
-      'Aún no hay datos de actividad suficientes para proponer detener servicios o reducir PHP. Deja abierto Inicio unos minutos y vuelve a mirar.',
-    listadoFallido:
-      'No se pudo leer la lista de programas abiertos: esta lista puede estar incompleta. Inténtalo de nuevo.',
-    avisoDetener:
-      'Los servicios sin actividad salen desmarcados: detener uno corta lo que lo use. Solo aparecen los que no tienen conexiones ahora.',
-    avisoCerrar:
-      'A los programas solo se les pide cerrar su ventana, como al pulsar la X: pueden preguntarle si quiere guardar. Nunca se fuerza ni se termina un programa.',
-    protegidos:
-      'Nunca aparecen programas del sistema, servicios de Windows, programas elevados, de otros usuarios, FlyEnv, PhpWebStudy ni WolfCore Dev (ni lo que ellos lanzan).',
-    aplicar: 'Aplicar lo marcado',
-    confirmarTitulo: '¿Aplicar estas acciones?',
-    confirmarTexto: (n: number) =>
-      n === 1 ? 'Se hará 1 acción de la lista.' : `Se harán ${n} acciones de la lista.`,
-    confirmarCerrar: (nombres: string) => `Se pedirá cerrar la ventana de: ${nombres}.`,
-    confirmarDetener: (nombres: string) => `Se detendrán estos servicios: ${nombres}.`,
-    confirmar: 'Sí, aplicar',
+    requiereAdmin: 'Pide permiso de administrador',
+    calculando: 'Calculando…',
+    noDisponible: 'No disponible',
+    sugerencia: 'Pase el ratón por un nivel o enfóquelo para ver qué hace y cuánto liberaría.',
+    liberaria: (cantidad: string) => `Liberaría ≈ ${cantidad}`,
+    notaEstimacion:
+      'Es una estimación con la memoria de este momento: lo real puede variar. No se cierra ningún programa ni se pierde nada.',
+    notaProfundo:
+      'Los programas pueden tardar un instante más la próxima vez que se usen, mientras vuelven a cargar lo que necesitan.',
+    profundoTitulo: 'Liberar memoria en modo Profundo',
+    profundoTexto:
+      'Se vaciará la memoria de los procesos, la lista de espera y la caché de archivos de Windows. No se cierra ningún programa y no se pierde nada.',
+    confirmarUac:
+      'Windows mostrará una ventana de permiso de administrador (UAC) que deberá aceptar para continuar. Si la cancela, solo se vaciarán los procesos.',
+    continuar: 'Continuar',
     cancelar: 'Cancelar',
-    resultadoTitulo: 'Resultado',
-    liberado: (cantidad: string) => `Calculado: unos ${cantidad} de RAM liberados`,
-    liberadoDisco: (cantidad: string) => `Además, unos ${cantidad} de disco`,
-    notaPedido:
-      'Esperando al usuario: se pidió cerrar la ventana y el programa sigue abierto (quizá pregunta si guardas). No se cuenta como liberado.',
-    estados: { hecho: 'Hecho', pedido: 'Esperando al usuario', saltado: 'Omitido', error: 'Falló' },
-    motivos: {
-      no_en_plan: 'No estaba en la lista',
-      protegido: 'Es un programa protegido',
-      cambio: 'Cambió desde que se mostró la lista',
-      sin_ventana: 'Ya no tiene una ventana que cerrar',
-      ya_apagado: 'Ya no había nada que reducir',
-      ocupado: 'Estaba ocupado (tiene conexiones)',
-      no_se_pudo: 'No se pudo pedir el cierre (el programa tiene permisos elevados)',
+    liberadaTitulo: 'Memoria liberada',
+    nivelAplicado: (nivel: string) => `Nivel aplicado: ${nivel}.`,
+    antes: 'Memoria disponible antes',
+    despues: 'Memoria disponible después',
+    liberadoReal: 'Liberado de verdad',
+    procesos: (vaciados: number, omitidos: number) =>
+      `Procesos vaciados: ${vaciados}. Omitidos: ${omitidos}.`,
+    purga: {
+      hecha: 'La lista de espera y la caché de archivos se vaciaron.',
+      cancelada: 'Se canceló el permiso de administrador: solo se vaciaron los procesos.',
+      tiempo:
+        'No hubo respuesta al permiso de administrador a tiempo: solo se vaciaron los procesos.',
+      error: 'No se pudo vaciar la lista de espera: solo se vaciaron los procesos.',
     },
-    otraVez: 'Volver a empezar',
+    notaResultado:
+      'Lo liberado es la diferencia medida de la memoria disponible. Windows la reparte y puede cambiar enseguida.',
+    cerrar: 'Cerrar',
   },
   guias: {
     tuneles: { titulo: 'Guía de túneles', copiar: 'Copiar el comando' },

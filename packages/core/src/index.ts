@@ -37,6 +37,7 @@ export * from './hosts/bloque';
 export * from './hosts/hosts';
 export * from './plataforma/index';
 export * from './sistema/memoria';
+export * from './sistema/liberarMemoria';
 export * from './sistema/limpiezaDisco';
 export * from './herramientas/editorCodigo';
 export { BYTES_TEXTO_DIFF, MAX_BYTES_EDITOR } from './constantesUi';

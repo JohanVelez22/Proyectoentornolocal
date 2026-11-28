@@ -20,6 +20,8 @@ export const trExtra: TextosParciales = {
   },
   acciones: { copiarCompleto: 'Metnin tamamını kopyala' },
   errores: {
+    uacHuerfano:
+      'Bir Windows izin penceresi görünürse iptal edebilirsiniz: artık hiçbir şey yapmaz.',
     codigos: {
       'asistentes.no_existe': 'Bu asistan desteklenmiyor.',
       'asistentes.no_instalado': '{asistente} yüklü değil.',
@@ -34,6 +36,7 @@ export const trExtra: TextosParciales = {
       'discos.sin_lectura': 'Disk sağlığı okunamadı. Lütfen yeniden deneyin.',
       'discos.sin_eventos': 'Disk olayları okunamadı.',
       'discos.admin_cancelado': 'Yönetici izni iptal edildi: hiçbir şey okunmadı.',
+      'discos.admin_tiempo': 'Yönetici izni zamanında yanıtlanmadı: hiçbir şey okunmadı.',
       'discos.admin_fallo': 'Disk sağlığı yönetici izinleriyle okunamadı.',
       'doctor.disco_atencion': '{modelo} diski dikkat gerektiriyor.',
       'doctor.disco_critico': '{modelo} diski kritik durumda: lütfen en kısa sürede yedek alın.',
@@ -207,8 +210,6 @@ export const trExtra: TextosParciales = {
       'editor.escritura_fallo': 'Dosya kaydedilemedi ({codigo}). Asıl dosyaya dokunulmadı.',
       'memoria.sin_confirmar': 'Devam etmeden önce işlemi iletişim kutusunda onaylayın.',
       'memoria.modo_invalido': 'Bu en iyileştirme modu mevcut değil.',
-      'memoria.plan_caducado':
-        'Listenin süresi doldu veya artık güncel değil. Uygulamadan önce yeniden gösterin.',
       'memoria.no_disponible': 'Bellek iyileştirici burada kullanılamıyor veya sistemi okuyamadı.',
       'conversor.ocupado':
         'Bir dönüştürme zaten çalışıyor ve bir diğeri bekliyor: bitmesini bekleyin.',
@@ -1384,69 +1385,54 @@ export const trExtra: TextosParciales = {
     anteriores: (n) => `Önceki yamalar (${n})`,
   },
   memoria: {
-    boton: 'Bellek',
-    tituloBoton: 'Belleği en iyileştir',
-    titulo: 'Bellek iyileştirici',
-    intro:
-      'Bir mod seçin ve listeyi gözden geçirin. Siz onaylayana kadar hiçbir şey kapatılmaz veya durdurulmaz ve kendiliğinden asla çalışmaz.',
-    modo: 'Mod',
-    modos: { liviano: 'Hafif', moderado: 'Orta', profundo: 'Derin' },
-    descripciones: {
-      liviano:
-        'Uygulama önbelleğini temizler. Disk alanı açar; hiçbir şeyi kapatmaz veya durdurmaz.',
+    etiqueta: 'Belleği boşalt',
+    tituloEtiqueta: 'RAM belleğini boşalt',
+    liberando: 'Boşaltılıyor…',
+    niveles: {
+      liviano: 'Hafif',
+      moderado: 'Orta',
+      profundo: 'Derin',
+    },
+    queHace: {
+      liviano: 'WolfCore Dev ve hizmetlerinin şu anda kullanmadığı belleği boşaltır.',
       moderado:
-        'Ayrıca tek bir PHP işçisi bırakmayı ve etkinliği veya bağlantısı olmayan WolfCore Dev hizmetlerini durdurmayı önerir. Hizmetler işaretsiz başlar.',
+        'Yukarıdakine ek olarak, açık ve kritik olmayan programların şu anda kullanmadığı belleği de boşaltır. Hiçbirini kapatmaz.',
       profundo:
-        'Ayrıca belleği çok kullanan kendi programlarınızı listeler; böylece pencerelerini kapatmalarını isteyebilirsiniz. İşaretsiz başlarlar.',
+        'Yukarıdakine ek olarak, Windows bekleme listesini ve dosya önbelleğini boşaltır. Yönetici izni ister.',
     },
-    ver: 'Listeyi göster',
-    revisando: 'Denetleniyor…',
-    vacio: 'Bu modda boşaltılacak bir şey yok.',
-    tipos: {
-      'cache-app': 'Önbelleği temizle',
-      'reducir-pool': 'Tek bir işçi bırak',
-      'detener-inactivo': 'Durdur (boşta)',
-      'cerrar-programa': 'Penceresini kapatmasını iste',
-    },
-    caches: { sesion: 'Uygulama oturumunun HTTP önbelleği' },
-    estimado: (cantidad) => `Yaklaşık ${cantidad} RAM boşaltılacak`,
-    estimadoDisco: (cantidad) => `Ayrıca yaklaşık ${cantidad} disk (önbellek RAM değildir)`,
-    marcadas: (n, total) => `${total} içinden ${n} işaretli`,
-    sinDatos:
-      "Hizmetleri durdurmayı veya PHP'yi azaltmayı önermek için henüz yeterli etkinlik verisi yok. Başlangıç sayfasını birkaç dakika açık bırakın ve yeniden bakın.",
-    listadoFallido:
-      'Açık programların listesi okunamadı: bu liste eksik olabilir. Yeniden deneyin.',
-    avisoDetener:
-      'Boştaki hizmetler işaretsiz başlar: bir hizmeti durdurmak onu kullanan her şeyi keser. Yalnızca şu anda bağlantısı olmayanlar listelenir.',
-    avisoCerrar:
-      "Programlardan yalnızca pencerelerini kapatmaları istenir, X'e tıklamak gibi: kaydetmek isteyip istemediğinizi sorabilirler. Hiçbir program zorla kapatılmaz veya sonlandırılmaz.",
-    protegidos:
-      'Sistem programları, Windows hizmetleri, yükseltilmiş programlar, diğer kullanıcılar, FlyEnv, PhpWebStudy ve WolfCore Dev (veya başlattıkları herhangi bir şey) asla görünmez.',
-    aplicar: 'İşaretlileri uygula',
-    confirmarTitulo: 'Bu işlemler uygulansın mı?',
-    confirmarTexto: (n) =>
-      n === 1 ? 'Listeden 1 işlem çalıştırılacak.' : `Listeden ${n} işlem çalıştırılacak.`,
-    confirmarCerrar: (nombres) =>
-      `Bu programlardan pencerelerini kapatmaları istenecek: ${nombres}.`,
-    confirmarDetener: (nombres) => `Bu hizmetler durdurulacak: ${nombres}.`,
-    confirmar: 'Evet, uygula',
+    requiereAdmin: 'Yönetici izni ister',
+    calculando: 'Hesaplanıyor…',
+    noDisponible: 'Kullanılamıyor',
+    sugerencia:
+      'Ne yaptığını ve ne kadar boşaltacağını görmek için bir düzeyin üzerine gelin veya odaklanın.',
+    liberaria: (cantidad: string) => `≈ ${cantidad} boşaltır`,
+    notaEstimacion:
+      'Bu, şu anki belleğe göre bir tahmindir: gerçek değer farklı olabilir. Hiçbir program kapatılmaz ve hiçbir şey kaybolmaz.',
+    notaProfundo:
+      'Programlar bir sonraki kullanımda, ihtiyaç duyduklarını yeniden yüklerken biraz daha geç yanıt verebilir.',
+    profundoTitulo: 'Belleği Derin modda boşalt',
+    profundoTexto:
+      'İşlemlerin belleği, bekleme listesi ve Windows dosya önbelleği boşaltılacak. Hiçbir program kapatılmaz ve hiçbir şey kaybolmaz.',
+    confirmarUac:
+      'Windows, devam etmek için kabul etmeniz gereken bir yönetici izni penceresi (UAC) gösterecek. İptal ederseniz yalnızca işlemler boşaltılır.',
+    continuar: 'Devam',
     cancelar: 'İptal',
-    resultadoTitulo: 'Sonuç',
-    liberado: (cantidad) => `Tahmini: yaklaşık ${cantidad} RAM boşaltıldı`,
-    liberadoDisco: (cantidad) => `Ayrıca yaklaşık ${cantidad} disk`,
-    notaPedido:
-      'Sizi bekliyor: pencerenin kapatılması istendi ve program hâlâ açık (kaydetmek isteyip istemediğinizi soruyor olabilir). Boşaltılmış sayılmaz.',
-    estados: { hecho: 'Tamam', pedido: 'Sizi bekliyor', saltado: 'Atlandı', error: 'Başarısız' },
-    motivos: {
-      no_en_plan: 'Listede yoktu',
-      protegido: 'Korumalı bir program',
-      cambio: 'Liste gösterildikten sonra değişti',
-      sin_ventana: 'Artık kapatılacak penceresi yok',
-      ya_apagado: 'Azaltılacak bir şey kalmamıştı',
-      ocupado: 'Meşguldü (bağlantıları var)',
-      no_se_pudo: 'Kapatma isteği gönderilemedi (program yükseltilmiş haklarla çalışıyor)',
+    liberadaTitulo: 'Bellek boşaltıldı',
+    nivelAplicado: (nivel: string) => `Uygulanan düzey: ${nivel}.`,
+    antes: 'Önceki kullanılabilir bellek',
+    despues: 'Sonraki kullanılabilir bellek',
+    liberadoReal: 'Gerçekte boşaltılan',
+    procesos: (vaciados: number, omitidos: number) =>
+      `Boşaltılan işlemler: ${vaciados}. Atlanan: ${omitidos}.`,
+    purga: {
+      hecha: 'Bekleme listesi ve dosya önbelleği boşaltıldı.',
+      cancelada: 'Yönetici izni iptal edildi: yalnızca işlemler boşaltıldı.',
+      tiempo: 'Yönetici izni zamanında yanıtlanmadı: yalnızca işlemler boşaltıldı.',
+      error: 'Bekleme listesi boşaltılamadı: yalnızca işlemler boşaltıldı.',
     },
-    otraVez: 'Baştan başla',
+    notaResultado:
+      'Boşaltılan miktar, kullanılabilir bellekteki ölçülen farktır. Windows belleği yeniden dağıtır ve hemen değişebilir.',
+    cerrar: 'Kapat',
   },
   guias: {
     tuneles: { titulo: 'Tünel kılavuzu', copiar: 'Komutu kopyala' },

@@ -84,6 +84,8 @@ export const fr: Textos = {
     titulo: 'L’action n’a pas pu aboutir',
     arranque: 'Impossible de lire l’état de l’environnement',
     desconocido: 'Une erreur inattendue s’est produite.',
+    uacHuerfano:
+      'Si une fenêtre d’autorisation de Windows apparaît, vous pouvez l’annuler : elle ne fait plus rien.',
     /** Détails que le noyau envoie sous forme de code dans une erreur. */
     detalles: {
       'sintaxis.comillas_sin_cerrar': 'guillemets non fermés',
@@ -657,8 +659,6 @@ export const fr: Textos = {
         'Le fichier n’a pas pu être enregistré ({codigo}). L’original n’a pas été touché.',
       'memoria.sin_confirmar': 'Confirmez l’action dans la boîte de dialogue avant de continuer.',
       'memoria.modo_invalido': 'Ce mode d’optimisation n’existe pas.',
-      'memoria.plan_caducado':
-        'La liste a expiré ou n’est plus la liste actuelle. Affichez-la de nouveau avant d’appliquer.',
       'memoria.no_disponible':
         'L’optimiseur de mémoire n’est pas disponible ici ou n’a pas pu lire le système.',
       'conversor.archivo_invalido':
@@ -804,6 +804,8 @@ export const fr: Textos = {
       'discos.sin_lectura': 'Impossible de lire la santé des disques. Veuillez réessayer.',
       'discos.sin_eventos': 'Impossible de lire les événements du disque.',
       'discos.admin_cancelado': 'L’autorisation d’administrateur a été annulée : rien n’a été lu.',
+      'discos.admin_tiempo':
+        'Aucune réponse à l’autorisation de l’administrateur à temps : rien n’a été lu.',
       'discos.admin_fallo':
         'Impossible de lire la santé des disques avec les droits d’administrateur.',
       'doctor.disco_atencion': 'Le disque {modelo} demande de l’attention.',
@@ -5921,80 +5923,56 @@ export const fr: Textos = {
     sinLeer: 'Non lu',
   },
   memoria: {
-    boton: 'Mémoire',
-    tituloBoton: 'Optimiser la mémoire',
-    titulo: 'Optimiseur de mémoire',
-    intro:
-      'Choisissez un mode et vérifiez la liste. Rien n’est fermé ni arrêté tant que vous ne confirmez pas, et rien ne se lance tout seul.',
-    modo: 'Mode',
-    modos: { liviano: 'Léger', moderado: 'Modéré', profundo: 'Approfondi' },
-    descripciones: {
-      liviano:
-        'Vide le cache de l’application. Libère de l’espace disque ; ne ferme ni n’arrête rien.',
+    etiqueta: 'Libérer la mémoire',
+    tituloEtiqueta: 'Libérer la mémoire RAM',
+    liberando: 'Libération…',
+    niveles: {
+      liviano: 'Léger',
+      moderado: 'Modéré',
+      profundo: 'Profond',
+    },
+    queHace: {
+      liviano: 'Libère la mémoire que WolfCore Dev et ses services n’utilisent pas en ce moment.',
       moderado:
-        'Propose aussi de ne garder qu’un seul processus PHP et d’arrêter les services de WolfCore Dev sans activité ni connexions. Les services sont décochés.',
+        'Ce qui précède, plus la mémoire que les programmes ouverts non critiques n’utilisent pas en ce moment. Aucun n’est fermé.',
       profundo:
-        'Liste aussi vos programmes gourmands en mémoire pour leur demander de fermer leur fenêtre. Ils sont décochés.',
+        'Ce qui précède, plus le vidage de la liste d’attente et du cache de fichiers de Windows. Demande l’autorisation de l’administrateur.',
     },
-    ver: 'Afficher la liste',
-    revisando: 'Vérification…',
-    vacio: 'Il n’y a rien à libérer dans ce mode.',
-    tipos: {
-      'cache-app': 'Vider le cache',
-      'reducir-pool': 'Ne garder qu’un processus',
-      'detener-inactivo': 'Arrêter (inactif)',
-      'cerrar-programa': 'Demander de fermer sa fenêtre',
-    },
-    caches: {
-      sesion: 'Cache HTTP de la session de l’application',
-    },
-    estimado: (cantidad: string) => `Environ ${cantidad} de RAM seraient libérés`,
-    estimadoDisco: (cantidad: string) =>
-      `Et environ ${cantidad} de disque (le cache n’est pas de la RAM)`,
-    marcadas: (n: number, total: number) => `${n} sur ${total} cochées`,
-    sinDatos:
-      'Il n’y a pas encore assez de données d’activité pour proposer d’arrêter des services ou de réduire PHP. Laissez Accueil ouvert quelques minutes et regardez à nouveau.',
-    listadoFallido:
-      'La liste des programmes ouverts n’a pas pu être lue : cette liste peut être incomplète. Réessayez.',
-    avisoDetener:
-      'Les services inactifs sont décochés : en arrêter un coupe ce qui l’utilise. Seuls ceux sans connexion en ce moment sont listés.',
-    avisoCerrar:
-      'On demande seulement aux programmes de fermer leur fenêtre, comme en cliquant sur la croix : ils peuvent demander s’il faut enregistrer. Un programme n’est jamais forcé ni terminé.',
-    protegidos:
-      'Les programmes système, les services Windows, les programmes élevés, ceux d’autres utilisateurs, FlyEnv, PhpWebStudy et WolfCore Dev (ni ce qu’ils lancent) n’apparaissent jamais.',
-    aplicar: 'Appliquer la sélection',
-    confirmarTitulo: 'Appliquer ces actions ?',
-    confirmarTexto: (n: number) =>
-      n === 1
-        ? '1 action de la liste sera exécutée.'
-        : `${n} actions de la liste seront exécutées.`,
-    confirmarCerrar: (nombres: string) =>
-      `On demandera à ces programmes de fermer leur fenêtre : ${nombres}.`,
-    confirmarDetener: (nombres: string) => `Ces services seront arrêtés : ${nombres}.`,
-    confirmar: 'Oui, appliquer',
+    requiereAdmin: 'Demande l’autorisation de l’administrateur',
+    calculando: 'Calcul en cours…',
+    noDisponible: 'Non disponible',
+    sugerencia:
+      'Survolez un niveau ou placez-y le focus pour voir ce qu’il fait et combien il libérerait.',
+    liberaria: (cantidad: string) => `Libérerait ≈ ${cantidad}`,
+    notaEstimacion:
+      'Il s’agit d’une estimation avec la mémoire du moment : le résultat réel peut différer. Aucun programme n’est fermé et rien n’est perdu.',
+    notaProfundo:
+      'Les programmes peuvent mettre un instant de plus à répondre la prochaine fois, le temps de recharger ce dont ils ont besoin.',
+    profundoTitulo: 'Libérer la mémoire en mode Profond',
+    profundoTexto:
+      'La mémoire des processus, la liste d’attente et le cache de fichiers de Windows seront vidés. Aucun programme n’est fermé et rien n’est perdu.',
+    confirmarUac:
+      'Windows affichera une fenêtre d’autorisation de l’administrateur (UAC) que vous devrez accepter pour continuer. Si vous l’annulez, seuls les processus seront vidés.',
+    continuar: 'Continuer',
     cancelar: 'Annuler',
-    resultadoTitulo: 'Résultat',
-    liberado: (cantidad: string) => `Estimation : environ ${cantidad} de RAM libérés`,
-    liberadoDisco: (cantidad: string) => `Et environ ${cantidad} de disque`,
-    notaPedido:
-      'En attente de l’utilisateur : on a demandé de fermer la fenêtre et le programme est toujours ouvert (il demande peut-être d’enregistrer). Ce n’est pas compté comme libéré.',
-    estados: {
-      hecho: 'Fait',
-      pedido: 'En attente de l’utilisateur',
-      saltado: 'Ignoré',
-      error: 'Échec',
+    liberadaTitulo: 'Mémoire libérée',
+    nivelAplicado: (nivel: string) => `Niveau appliqué : ${nivel}.`,
+    antes: 'Mémoire disponible avant',
+    despues: 'Mémoire disponible après',
+    liberadoReal: 'Réellement libéré',
+    procesos: (vaciados: number, omitidos: number) =>
+      `Processus vidés : ${vaciados}. Ignorés : ${omitidos}.`,
+    purga: {
+      hecha: 'La liste d’attente et le cache de fichiers ont été vidés.',
+      cancelada:
+        'L’autorisation de l’administrateur a été annulée : seuls les processus ont été vidés.',
+      tiempo:
+        'Aucune réponse à l’autorisation de l’administrateur à temps : seuls les processus ont été vidés.',
+      error: 'La liste d’attente n’a pas pu être vidée : seuls les processus ont été vidés.',
     },
-    motivos: {
-      no_en_plan: 'Ce n’était pas dans la liste',
-      protegido: 'C’est un programme protégé',
-      cambio: 'Cela a changé depuis l’affichage de la liste',
-      sin_ventana: 'Il n’a plus de fenêtre à fermer',
-      ya_apagado: 'Il n’y avait plus rien à réduire',
-      ocupado: 'Il était occupé (il a des connexions)',
-      no_se_pudo:
-        'La demande de fermeture n’a pas pu être envoyée (le programme a des droits élevés)',
-    },
-    otraVez: 'Recommencer',
+    notaResultado:
+      'Le résultat est la différence mesurée de la mémoire disponible. Windows la redistribue et elle peut changer aussitôt.',
+    cerrar: 'Fermer',
   },
   guias: {
     tuneles: { titulo: 'Guide des tunnels', copiar: 'Copier la commande' },

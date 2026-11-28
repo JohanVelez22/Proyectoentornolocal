@@ -213,11 +213,10 @@ import type {
   VersionEnPapelera,
   CambiosCaptura,
   CapturaConfig,
-  AccionMemoria,
-  ModoMemoria,
-  PlanMemoria,
-  ResultadoAccionMemoria,
-  ResultadoMemoria,
+  EstimacionMemoria,
+  MemoriaSistema,
+  NivelMemoria,
+  ResultadoLiberacion,
   CategoriaLimpieza,
   ResumenCategoria,
   ResultadoLimpiezaDisco,
@@ -470,11 +469,10 @@ export type {
   VersionEnPapelera,
   CambiosCaptura,
   CapturaConfig,
-  ModoMemoria,
-  PlanMemoria,
-  ResultadoMemoria,
-  AccionMemoria,
-  ResultadoAccionMemoria,
+  EstimacionMemoria,
+  MemoriaSistema,
+  NivelMemoria,
+  ResultadoLiberacion,
   CategoriaLimpieza,
   ResumenCategoria,
   ResultadoLimpiezaDisco,
@@ -1663,17 +1661,17 @@ export interface ApiEntorno {
   };
   memoria: {
     /**
-     * Lista lo que se podría liberar en ese modo (solo lee). `cerrar-programa` viene desmarcado y
-     * solo en `profundo`; nunca aparecen procesos del sistema, de otros usuarios, FlyEnv ni
-     * WolfCore Dev.
+     * Cuánto liberaría cada nivel (solo lee), calculado con los conjuntos de trabajo y la lista de
+     * espera de ahora. Lo que no se puede calcular viene `null` (la interfaz dice «No disponible»).
      */
-    plan(modo: ModoMemoria): Promise<PlanMemoria>;
+    estimar(): Promise<EstimacionMemoria>;
     /**
-     * Aplica las acciones elegidas del plan `planId` (el que devolvió `plan`; vale 5 minutos y solo
-     * el último). `confirmado` debe ser `true`. Nunca mata procesos: a un programa solo se le pide
-     * cerrar su ventana, y su memoria solo cuenta si de verdad se cerró.
+     * Libera la memoria del nivel: vacía el conjunto de trabajo de los procesos que le tocan (nunca
+     * cierra ni termina nada). `profundo` exige `confirmado === true` y pide permiso de
+     * administrador (UAC) para vaciar la lista de espera; sin confirmar no hace nada. Devuelve lo
+     * medido: memoria disponible antes y después.
      */
-    aplicar(planId: string, ids: string[], confirmado: true): Promise<ResultadoMemoria>;
+    liberar(nivel: NivelMemoria, confirmado?: boolean): Promise<ResultadoLiberacion>;
   };
   limpiezaDisco: {
     /**
@@ -2321,8 +2319,8 @@ export const RUTAS_IPC = [
   'laboratorioGit.ejecutar',
   'laboratorioGit.escribirArchivo',
   'laboratorioGit.reiniciar',
-  'memoria.plan',
-  'memoria.aplicar',
+  'memoria.estimar',
+  'memoria.liberar',
   'limpiezaDisco.analizar',
   'limpiezaDisco.limpiar',
   'limpiezaDisco.cancelar',
