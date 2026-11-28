@@ -1,4 +1,4 @@
-import { FIRMAS, lineasPInvoke } from './pinvokeWin';
+import { FIRMAS, lineasDuenoProceso, lineasPInvoke } from './pinvokeWin';
 import type {
   EstadoPantalla,
   MemoriaSistema,
@@ -86,6 +86,7 @@ export function scriptVaciarWorkingSets(
   return [
     "$ErrorActionPreference = 'Stop'",
     ...lineasPInvoke('Ws', 'WolfWs', FIRMAS.procesos),
+    ...lineasDuenoProceso(),
     '$yo = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value',
     '$ses = [System.Diagnostics.Process]::GetCurrentProcess().SessionId',
     `$objetivos = @(${lista})`,
@@ -101,8 +102,9 @@ export function scriptVaciarWorkingSets(
     '  try {',
     '    $w = $procs[$pid_]',
     `    if (-not $w) { ${linea('CAMBIO')}; continue }`,
-    '    $o = Invoke-CimMethod -InputObject $w -MethodName GetOwnerSid -ErrorAction SilentlyContinue',
-    `    if (-not $o -or $o.Sid -ne $yo) { ${linea('CAMBIO')}; continue }`,
+    // El dueño sale del token; sin token (no se puede abrir) no es del usuario: CAMBIO.
+    '    $d = Get-DuenoWolf $pid_',
+    `    if (-not $d -or $d.Sid -ne $yo) { ${linea('CAMBIO')}; continue }`,
     '    $c = 0; if ($w.CreationDate) { $c = $w.CreationDate.ToFileTimeUtc() }',
     `    if ($c -ne $ini) { ${linea('CAMBIO')}; continue }`,
     `    if ($serv.ContainsKey($pid_)) { ${linea('CAMBIO')}; continue }`,

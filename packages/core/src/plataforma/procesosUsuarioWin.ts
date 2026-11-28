@@ -2,6 +2,7 @@ import path from 'node:path';
 import { ErrorWolf } from '../errores';
 import { codificarPowerShell } from './pathUsuarioWin';
 import { interpretarNetstatEstablecidas, interpretarNetstatTodos } from './netstat';
+import { lineasDuenoProceso } from './pinvokeWin';
 import { rutaPowerShell, rutaSistema32 } from './procesosWin';
 import type { ConexionActiva, Ejecutor, IdentidadUsuario, ProcesoUsuario } from './tipos';
 
@@ -9,7 +10,7 @@ import type { ConexionActiva, Ejecutor, IdentidadUsuario, ProcesoUsuario } from 
  * Procesos del usuario actual para liberar memoria (D54b).
  *
  * - `listar` y `identidad` SOLO LEEN (`Get-CimInstance Win32_Process` filtrado por la sesión y el
- *   SID del usuario actual, sin servicios de Windows).
+ *   token de cada proceso, sin servicios de Windows).
  * - Aquí no hay ni habrá `taskkill`, `Stop-Process`, `TerminateProcess`, `Process.Kill` ni cierre de
  *   ventanas: lo guarda una prueba que lee este archivo.
  *
@@ -27,17 +28,17 @@ const SEP = '|';
  * clase WMI, cuyos nombres de propiedad no se traducen), sin administrador; vacío si no se pudo
  * leer. Es lo que de verdad quedaría libre al vaciar el proceso; `memoria` incluye lo compartido.
  *
- * `elevado`: para TODOS los procesos del usuario, con o sin ventana (uno elevado sin ventana
- * también es inalcanzable). Un proceso que este usuario no puede abrir con todos los derechos
- * (`Process.Handle` falla con acceso denegado) es uno elevado o protegido: no se puede ni
- * inspeccionar ni vaciar ni cerrarle la ventana (UIPI), y se trata como protegido. (`StartTime` no
- * sirve: solo pide PROCESS_QUERY_LIMITED_INFORMATION y no falla.) Leer el nivel de integridad del
- * token exigiría P/Invoke de más y no aporta nada a esta decisión.
+ * Dueño, `elevado` y sesión: del token del proceso (`OpenProcess` limitado, `OpenProcessToken`
+ * con TOKEN_QUERY, `GetTokenInformation`; sin administrador, sin compilar y sin
+ * `Invoke-CimMethod GetOwnerSid`, que tarda ~0,7 s por proceso). Un proceso cuyo token no se
+ * puede abrir (de sistema, protegido, elevado o de otro usuario) NO se lista: es «no propio».
+ * `elevado` es el `TokenElevation` de los que sí se abren (para TODOS, con o sin ventana).
  */
 export function scriptProcesosUsuario(sesion: number): string {
   if (!Number.isInteger(sesion) || sesion < 0) throw new Error(`Sesión no válida: ${sesion}`);
   return [
     "$ErrorActionPreference = 'Stop'",
+    ...lineasDuenoProceso(),
     '$yo = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value',
     '$serv = @{}',
     `Get-CimInstance Win32_Service -Filter "State='Running'" | ForEach-Object { $serv[[int]$_.ProcessId] = 1 }`,
@@ -47,14 +48,14 @@ export function scriptProcesosUsuario(sesion: number): string {
     'Get-Process | ForEach-Object { if ($_.MainWindowHandle -ne 0) { $vent[[int]$_.Id] = 1 } }',
     'function B($t) { if ($t) { [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([string]$t)) } else { "" } }',
     `Get-CimInstance Win32_Process -Filter "SessionId=${sesion}" | ForEach-Object {`,
-    '  $o = Invoke-CimMethod -InputObject $_ -MethodName GetOwnerSid -ErrorAction SilentlyContinue',
-    '  if ($o -and $o.Sid -eq $yo) {',
+    // El dueño, la elevación y la sesión salen del token (sin CIM por proceso). Sin token = no propio.
+    '  $d = Get-DuenoWolf ([int]$_.ProcessId)',
+    '  if ($d -and $d.Sid -eq $yo -and $d.Sesion -eq $_.SessionId) {',
     '    $c = ""; if ($_.CreationDate) { $c = $_.CreationDate.ToFileTimeUtc() }',
     '    $v = 0; if ($vent.ContainsKey([int]$_.ProcessId)) { $v = 1 }',
     '    $s = 0; if ($serv.ContainsKey([int]$_.ProcessId)) { $s = 1 }',
     '    $pv = ""; if ($priv.ContainsKey([int]$_.ProcessId)) { $pv = $priv[[int]$_.ProcessId] }',
-    '    $e = 0',
-    '    try { $pr = [System.Diagnostics.Process]::GetProcessById([int]$_.ProcessId); try { $null = $pr.Handle } finally { $pr.Dispose() } } catch { $e = 1 }',
+    '    $e = 0; if ($d.Elevado) { $e = 1 }',
     `    [Console]::Out.WriteLine(($_.ProcessId, $_.SessionId, $c, $_.WorkingSetSize, $pv, $v, $s, $e, (B $_.Name), (B $_.ExecutablePath)) -join '${SEP}')`,
     '  }',
     '}',

@@ -116,7 +116,8 @@ describe('implementación de Windows: solo lee', () => {
     expect(script).toContain('Win32_Process');
     expect(script).toContain('-Filter "SessionId=2"');
     expect(script).not.toContain('Where-Object');
-    expect(script).toContain('GetOwnerSid');
+    expect(script).toContain('OpenProcessToken');
+    expect(script).not.toContain('GetOwnerSid');
     expect(script).not.toMatch(/Stop-Process|taskkill|Terminate|\.Kill\(|Remove-|Set-/i);
   });
 

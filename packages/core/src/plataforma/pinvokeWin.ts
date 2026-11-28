@@ -103,6 +103,45 @@ export const FIRMAS = {
     },
     { nombre: 'CloseHandle', dll: 'kernel32.dll', retorno: 'bool', parametros: ['ptr'] },
   ],
+  /**
+   * Dueño, elevación y sesión de un proceso leyendo su token, sin administrador y sin CIM:
+   * `OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION)`, `OpenProcessToken(TOKEN_QUERY)`,
+   * `GetTokenInformation` (TokenUser y TokenElevation), `ConvertSidToStringSidW`.
+   */
+  dueno: [
+    {
+      nombre: 'OpenProcess',
+      dll: 'kernel32.dll',
+      retorno: 'ptr',
+      parametros: ['u32', 'bool', 'i32'],
+    },
+    { nombre: 'CloseHandle', dll: 'kernel32.dll', retorno: 'bool', parametros: ['ptr'] },
+    {
+      nombre: 'ProcessIdToSessionId',
+      dll: 'kernel32.dll',
+      retorno: 'bool',
+      parametros: ['u32', 'ref-i32'],
+    },
+    { nombre: 'LocalFree', dll: 'kernel32.dll', retorno: 'ptr', parametros: ['ptr'] },
+    {
+      nombre: 'OpenProcessToken',
+      dll: 'advapi32.dll',
+      retorno: 'bool',
+      parametros: ['ptr', 'u32', 'ref-ptr'],
+    },
+    {
+      nombre: 'GetTokenInformation',
+      dll: 'advapi32.dll',
+      retorno: 'bool',
+      parametros: ['ptr', 'i32', 'ptr', 'u32', 'ref-i32'],
+    },
+    {
+      nombre: 'ConvertSidToStringSidW',
+      dll: 'advapi32.dll',
+      retorno: 'bool',
+      parametros: ['ptr', 'ref-ptr'],
+    },
+  ],
   /** Estado de notificación del usuario (juego o pantalla completa), sin administrador. */
   notificacion: [
     {
@@ -146,4 +185,45 @@ export function lineasPInvoke(
   }
   lineas.push(`$${variable} = $wtb.CreateType()`);
   return lineas;
+}
+
+/**
+ * Líneas que definen `Get-DuenoWolf $pid`: devuelve `@{ Sid; Elevado; Sesion }` leyendo el token del
+ * proceso, o `$null` si no se puede abrir (de sistema, protegido, elevado o de otro usuario: se
+ * trata como «no propio» y nunca se toca). Sin estructuras: `TOKEN_USER` se lee de un buffer con
+ * `Marshal.ReadIntPtr` (su primer campo es el puntero al SID). Todo se libera en `finally`.
+ */
+export function lineasDuenoProceso(): string[] {
+  return [
+    ...lineasPInvoke('Dw', 'WolfDw', FIRMAS.dueno),
+    'function Get-DuenoWolf([int]$id) {',
+    '  $m = [Runtime.InteropServices.Marshal]',
+    '  $h = $Dw::OpenProcess(0x1000, $false, $id)',
+    '  if ($h -eq [IntPtr]::Zero) { return $null }',
+    '  $t = [IntPtr]::Zero; $b = [IntPtr]::Zero; $e = [IntPtr]::Zero; $c = [IntPtr]::Zero',
+    '  try {',
+    '    if (-not $Dw::OpenProcessToken($h, 8, [ref]$t)) { return $null }',
+    '    $n = [int32]0',
+    '    $null = $Dw::GetTokenInformation($t, 1, [IntPtr]::Zero, 0, [ref]$n)',
+    '    if ($n -le 0 -or $n -gt 4096) { return $null }',
+    '    $b = $m::AllocHGlobal($n)',
+    '    if (-not $Dw::GetTokenInformation($t, 1, $b, $n, [ref]$n)) { return $null }',
+    '    if (-not $Dw::ConvertSidToStringSidW($m::ReadIntPtr($b), [ref]$c)) { return $null }',
+    '    $sid = $m::PtrToStringUni($c)',
+    '    $el = 0',
+    '    $e = $m::AllocHGlobal(4); $m::WriteInt32($e, 0)',
+    '    $k = [int32]4',
+    '    if ($Dw::GetTokenInformation($t, 20, $e, 4, [ref]$k)) { $el = $m::ReadInt32($e) }',
+    '    $ses = [int32]-1',
+    '    if (-not $Dw::ProcessIdToSessionId($id, [ref]$ses)) { return $null }',
+    '    return [pscustomobject]@{ Sid = $sid; Elevado = ($el -ne 0); Sesion = $ses }',
+    '  } catch { return $null } finally {',
+    '    if ($c -ne [IntPtr]::Zero) { $null = $Dw::LocalFree($c) }',
+    '    if ($b -ne [IntPtr]::Zero) { $m::FreeHGlobal($b) }',
+    '    if ($e -ne [IntPtr]::Zero) { $m::FreeHGlobal($e) }',
+    '    if ($t -ne [IntPtr]::Zero) { $null = $Dw::CloseHandle($t) }',
+    '    $null = $Dw::CloseHandle($h)',
+    '  }',
+    '}',
+  ];
 }

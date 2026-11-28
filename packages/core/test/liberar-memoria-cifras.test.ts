@@ -10,7 +10,11 @@ import {
 import type { ProcesoUsuario } from '../src/plataforma/tipos';
 import { PlataformaWindows } from '../src/plataforma/win';
 import { LiberadorMemoria } from '../src/sistema/liberarMemoria';
-import { analizarPowerShell, hayPowerShell } from './soporte/parserPowerShell';
+import {
+  analizarPowerShell,
+  hayPowerShell,
+  rutaPowerShellWindows,
+} from './soporte/parserPowerShell';
 
 const MB = 1024 * 1024;
 
@@ -126,7 +130,9 @@ describe('Menor 10: los procesos elevados sin ventana tampoco entran', () => {
     expect(s).not.toContain('if ($v -eq 1) { try');
     expect(s).toContain('Win32_PerfRawData_PerfProc_Process');
     expect(s).toContain('WorkingSetPrivate');
-    expect(s).toContain('.Handle');
+    // La elevación sale del token (TokenElevation), de todos los que se pueden abrir.
+    expect(s).toContain('$d.Elevado');
+    expect(s).not.toContain('.Handle');
   });
 
   it.skipIf(!hayPowerShell())('el script de procesos es PowerShell válido', () => {
@@ -205,7 +211,7 @@ describe('I2: aviso de juego o pantalla completa (SHQueryUserNotificationState)'
     'con PowerShell real (solo lee): contesta un estado conocido',
     () => {
       const r = spawnSync(
-        'powershell',
+        rutaPowerShellWindows(),
         [
           '-NoProfile',
           '-NonInteractive',

@@ -23,7 +23,11 @@ import {
   type DepsLiberarMemoria,
 } from '../src/sistema/liberarMemoria';
 import { carpetaTemporal } from './temporales';
-import { analizarPowerShell, hayPowerShell } from './soporte/parserPowerShell';
+import {
+  analizarPowerShell,
+  hayPowerShell,
+  rutaPowerShellWindows,
+} from './soporte/parserPowerShell';
 
 const MB = 1024 * 1024;
 const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src');
@@ -612,7 +616,8 @@ describe('liberar memoria: los scripts (analizados con el parser, sin ejecutarlo
   it('el de vaciado comprueba sesión, dueño, hora de inicio y servicio por cada PID, y usa EmptyWorkingSet', () => {
     const s = scriptVaciarWorkingSets(objetivos);
     expect(s).toContain('$ses');
-    expect(s).toContain('GetOwnerSid');
+    expect(s).toContain('Get-DuenoWolf');
+    expect(s).not.toContain('GetOwnerSid');
     expect(s).toContain('CreationDate');
     expect(s).toContain('Win32_Service');
     expect(s).toContain('EmptyWorkingSet');
@@ -660,7 +665,7 @@ describe.skipIf(process.platform !== 'win32' || !hayPowerShell())(
   () => {
     it('un PID que no existe sale como CAMBIO y el tipo en memoria se crea sin errores', () => {
       const r = spawnSync(
-        'powershell',
+        rutaPowerShellWindows(),
         [
           '-NoProfile',
           '-NonInteractive',
