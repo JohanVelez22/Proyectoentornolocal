@@ -260,6 +260,8 @@ describe('Mi red: acciones por equipo (D53)', () => {
   });
 });
 
+const RUTA_FOTOS = 'C:' + String.fromCharCode(92) + 'Fotos';
+
 describe('Mi red: dejar de compartir (D53)', () => {
   const carpeta = (nombre: string, extra: Partial<CarpetaCompartida> = {}): CarpetaCompartida => ({
     nombre,
@@ -298,7 +300,7 @@ describe('Mi red: dejar de compartir (D53)', () => {
   it('sin confirmación firme no se llama a la elevación', async () => {
     const { falsa, servicio } = conCarpetas();
     for (const c of [false, undefined, 'true', 1, null]) {
-      await rechaza(servicio.dejarDeCompartir('Fotos', c), 'red.sin_confirmar');
+      await rechaza(servicio.dejarDeCompartir('Fotos', RUTA_FOTOS, c), 'red.sin_confirmar');
     }
     expect(falsa.dejarDeCompartirLlamadas).toBe(0);
     expect(falsa.carpetasQuitadas).toEqual([]);
@@ -320,14 +322,14 @@ describe('Mi red: dejar de compartir (D53)', () => {
       7,
       null,
     ]) {
-      await rechaza(servicio.dejarDeCompartir(n, true), 'red.carpeta_no_valida');
+      await rechaza(servicio.dejarDeCompartir(n, RUTA_FOTOS, true), 'red.carpeta_no_valida');
     }
     expect(falsa.dejarDeCompartirLlamadas).toBe(0);
   });
 
   it('confirmada: abre UN UAC, comprueba que ya no está y devuelve la lista nueva', async () => {
     const { falsa, servicio } = conCarpetas();
-    const r = await servicio.dejarDeCompartir('Fotos', true);
+    const r = await servicio.dejarDeCompartir('Fotos', RUTA_FOTOS, true);
     expect(r.estado).toBe('quitada');
     expect(r.carpetas.map((c) => c.nombre)).not.toContain('Fotos');
     expect(falsa.dejarDeCompartirLlamadas).toBe(1);
@@ -337,12 +339,12 @@ describe('Mi red: dejar de compartir (D53)', () => {
   it('UAC cancelado o plazo vencido: se informa, no es un error y no se quita nada', async () => {
     const { falsa, servicio } = conCarpetas();
     falsa.uacCancelado = true;
-    const c = await servicio.dejarDeCompartir('Fotos', true);
+    const c = await servicio.dejarDeCompartir('Fotos', RUTA_FOTOS, true);
     expect(c.estado).toBe('cancelado');
     expect(c.carpetas.map((x) => x.nombre)).toContain('Fotos');
     falsa.uacCancelado = false;
     falsa.resultadoDejarDeCompartir = { ok: false, motivo: 'tiempo' };
-    const t = await servicio.dejarDeCompartir('Fotos', true);
+    const t = await servicio.dejarDeCompartir('Fotos', RUTA_FOTOS, true);
     expect(t.estado).toBe('tiempo');
     expect(falsa.carpetasQuitadas).toEqual([]);
   });
@@ -350,9 +352,9 @@ describe('Mi red: dejar de compartir (D53)', () => {
   it('un fallo, o que siga compartida tras el «ok», es un error del catálogo', async () => {
     const { falsa, servicio } = conCarpetas();
     falsa.resultadoDejarDeCompartir = { ok: false, motivo: 'error', detalle: 'código 43' };
-    await rechaza(servicio.dejarDeCompartir('Fotos', true), 'red.quitar_fallo');
+    await rechaza(servicio.dejarDeCompartir('Fotos', RUTA_FOTOS, true), 'red.quitar_fallo');
     falsa.resultadoDejarDeCompartir = { ok: true };
-    await rechaza(servicio.dejarDeCompartir('Fotos', true), 'red.quitar_fallo');
+    await rechaza(servicio.dejarDeCompartir('Fotos', RUTA_FOTOS, true), 'red.quitar_fallo');
   });
 
   it('no se piden dos elevaciones a la vez', async () => {
@@ -360,21 +362,32 @@ describe('Mi red: dejar de compartir (D53)', () => {
     let soltar!: () => void;
     const puerta = new Promise<void>((r) => (soltar = r));
     const original = falsa.dejarDeCompartir.bind(falsa);
-    falsa.dejarDeCompartir = async (n) => {
+    falsa.dejarDeCompartir = async (n, r) => {
       await puerta;
-      return original(n);
+      return original(n, r);
     };
-    const primera = servicio.dejarDeCompartir('Fotos', true);
+    const primera = servicio.dejarDeCompartir('Fotos', RUTA_FOTOS, true);
     await new Promise((r) => setTimeout(r, 10));
-    await rechaza(servicio.dejarDeCompartir('Fotos', true), 'red.ocupado');
+    await rechaza(servicio.dejarDeCompartir('Fotos', RUTA_FOTOS, true), 'red.ocupado');
     soltar();
     expect((await primera).estado).toBe('quitada');
+  });
+
+  it('solo quita la carpeta que vio la persona: otra ruta o sin ruta no abre el UAC', async () => {
+    const { falsa, servicio } = conCarpetas();
+    for (const ruta of ['D:\\Otra', '', undefined, 5, null]) {
+      await rechaza(servicio.dejarDeCompartir('Fotos', ruta, true), 'red.carpeta_no_valida');
+    }
+    expect(falsa.dejarDeCompartirLlamadas).toBe(0);
+    await servicio.dejarDeCompartir('Fotos', RUTA_FOTOS, true);
+    // A la plataforma van el nombre y la ruta de la lista, para que el script elevado compruebe las dos.
+    expect(falsa.quitarPedidos).toEqual([{ nombre: 'Fotos', ruta: RUTA_FOTOS }]);
   });
 
   it('si la lista no se puede leer, no se abre el UAC', async () => {
     const { falsa, servicio } = conCarpetas();
     falsa.carpetasCompartidasFalsas = null;
-    await rechaza(servicio.dejarDeCompartir('Fotos', true), 'red.lectura_fallo');
+    await rechaza(servicio.dejarDeCompartir('Fotos', RUTA_FOTOS, true), 'red.lectura_fallo');
     expect(falsa.dejarDeCompartirLlamadas).toBe(0);
   });
 });

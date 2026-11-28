@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { completarPlataforma } from '../src/plataforma';
 import { PlataformaFalsa } from '../src/plataforma/falsa';
 import { SALIDA_COPIA } from '../src/plataforma/hostsAdmin';
@@ -9,6 +9,7 @@ import { PlataformaWindows } from '../src/plataforma/win';
 
 /** D53: la plataforma de Windows con un ejecutor falso: ninguna prueba toca la red ni eleva nada. */
 const ENTORNO = { SystemRoot: 'C:\\Windows' } as NodeJS.ProcessEnv;
+const RUTA = 'D:/Datos/Fotos';
 const POWERSHELL = 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe';
 
 const scriptDe = (args: string[]): string => {
@@ -99,11 +100,21 @@ describe('ping y net view en Windows (D53)', () => {
   it('rechaza IP públicas, nombres y más de 10 paquetes SIN ejecutar nada', async () => {
     const { p, llamadas } = crear(() => ({ codigo: 0 }));
     const base = { intentos: 4, plazoMs: 800 };
-    await expect(p.pingEquipo('8.8.8.8', base)).rejects.toThrow();
-    await expect(p.pingEquipo('pc-sala', base)).rejects.toThrow();
-    await expect(p.pingEquipo('192.168.1.5 -t', base)).rejects.toThrow();
-    await expect(p.pingEquipo('192.168.1.5', { ...base, intentos: 11 })).rejects.toThrow();
-    await expect(p.pingEquipo('192.168.1.5', { ...base, intentos: 0 })).rejects.toThrow();
+    await expect(p.pingEquipo('8.8.8.8', base)).rejects.toMatchObject({
+      codigo: 'red.equipo_no_valido',
+    });
+    await expect(p.pingEquipo('pc-sala', base)).rejects.toMatchObject({
+      codigo: 'red.equipo_no_valido',
+    });
+    await expect(p.pingEquipo('192.168.1.5 -t', base)).rejects.toMatchObject({
+      codigo: 'red.equipo_no_valido',
+    });
+    await expect(p.pingEquipo('192.168.1.5', { ...base, intentos: 11 })).rejects.toMatchObject({
+      codigo: 'red.equipo_no_valido',
+    });
+    await expect(p.pingEquipo('192.168.1.5', { ...base, intentos: 0 })).rejects.toMatchObject({
+      codigo: 'red.equipo_no_valido',
+    });
     expect(llamadas).toHaveLength(0);
   });
 
@@ -175,7 +186,7 @@ describe('dejar de compartir con elevación (D53)', () => {
       return { codigo: 0 };
     });
     const antes = Date.now();
-    expect(await p.dejarDeCompartir('Fotos')).toEqual({ ok: true });
+    expect(await p.dejarDeCompartir('Fotos', RUTA)).toEqual({ ok: true });
     expect(cmd).toBe(POWERSHELL);
     // El exterior pide el UAC (runas) y lleva el script elevado en Base64.
     const exterior = args.join(' ');
@@ -185,6 +196,9 @@ describe('dejar de compartir con elevación (D53)', () => {
       'base64',
     ).toString('utf16le');
     expect(interno).toContain("Remove-SmbShare -Name 'Fotos' -Force");
+    // La carpeta que vio la persona: la misma ruta, no solo el nombre.
+    expect(interno).toContain("[string]$s.Path -ne 'D:/Datos/Fotos'");
+    expect(interno).toContain('@($s).Count -ne 1');
     expect(interno).toContain('$s.Special');
     const limite = Number(/ToUnixTimeMilliseconds\(\) -gt (\d+)/.exec(interno)?.[1]);
     expect(limite).toBeGreaterThan(antes);
@@ -194,15 +208,49 @@ describe('dejar de compartir con elevación (D53)', () => {
   it('rechaza administrativas e inválidas ANTES de abrir ningún UAC', async () => {
     const { p, llamadas } = crear(() => ({ codigo: 0 }));
     for (const mala of ['C$', 'ADMIN$', 'IPC$', 'print$', '', 'a/b', '..', "x'; calc; '", 'a\nb']) {
-      await expect(p.dejarDeCompartir(mala), mala).rejects.toMatchObject({
+      await expect(p.dejarDeCompartir(mala, RUTA), mala).rejects.toMatchObject({
         codigo: 'red.recurso_no_valido',
       });
     }
     expect(llamadas).toHaveLength(0);
   });
 
+  it('una ruta vacía, con control o demasiado larga se rechaza antes de abrir ningún UAC', async () => {
+    const { p, llamadas } = crear(() => ({ codigo: 0 }));
+    for (const mala of ['', 'D:/a' + String.fromCharCode(10) + 'b', 'x'.repeat(1001)]) {
+      await expect(p.dejarDeCompartir('Fotos', mala)).rejects.toMatchObject({
+        codigo: 'red.carpeta_no_valida',
+      });
+    }
+    expect(llamadas).toHaveLength(0);
+  });
+
+  it('si el script elevado ve otra carpeta (44) no se quita y es un error; si vence el plazo exterior, es plazo', async () => {
+    const r = await crear(() => ({ codigo: SALIDA_QUITAR_CARPETA.cambio })).p.dejarDeCompartir(
+      'Fotos',
+      RUTA,
+    );
+    expect(r).toMatchObject({
+      ok: false,
+      motivo: 'error',
+      detalle: 'la carpeta compartida cambió',
+    });
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+      const { p } = crear(() => {
+        // Se corta el proceso por el plazo exterior (90 s): sin código propio.
+        vi.setSystemTime(Date.now() + 90_000);
+        return { codigo: 1, stderr: 'Command failed' };
+      });
+      expect(await p.dejarDeCompartir('Fotos', RUTA)).toEqual({ ok: false, motivo: 'tiempo' });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('cancelar el UAC, vencer el plazo, no permitida, ya no existe y fallo', async () => {
-    const con = (codigo: number) => crear(() => ({ codigo })).p.dejarDeCompartir('Fotos');
+    const con = (codigo: number) => crear(() => ({ codigo })).p.dejarDeCompartir('Fotos', RUTA);
     expect(await con(SALIDA_COPIA.cancelado)).toEqual({ ok: false, motivo: 'cancelado' });
     expect(await con(SALIDA_QUITAR_CARPETA.vencido)).toEqual({ ok: false, motivo: 'tiempo' });
     expect(await con(SALIDA_QUITAR_CARPETA.noExiste)).toEqual({ ok: true });
@@ -224,7 +272,7 @@ describe('dejar de compartir con elevación (D53)', () => {
         enMarcha();
       });
     const p = new PlataformaWindows(ejecutor, undefined, { entorno: ENTORNO });
-    const quitar = p.dejarDeCompartir('Fotos');
+    const quitar = p.dejarDeCompartir('Fotos', RUTA);
     await arrancada;
     p.cancelarEscriturasAdmin();
     expect(await quitar).toEqual({ ok: false, motivo: 'tiempo' });
@@ -240,7 +288,7 @@ describe('dejar de compartir con elevación (D53)', () => {
       undefined,
       { entorno: ENTORNO },
     );
-    const quitar = p.dejarDeCompartir('Fotos');
+    const quitar = p.dejarDeCompartir('Fotos', RUTA);
     p.cancelarEscriturasAdmin();
     expect(await quitar).toEqual({ ok: false, motivo: 'tiempo' });
     expect(llamadas).toBe(0);
@@ -258,7 +306,10 @@ describe('plataforma falsa y respaldo neutro (D53)', () => {
     expect(await completa.carpetasCompartidas()).toBeNull();
     expect(await completa.adaptadoresRed()).toBeNull();
     expect(await completa.vecinosRed()).toBeNull();
-    expect(await completa.dejarDeCompartir('Fotos')).toMatchObject({ ok: false, motivo: 'error' });
+    expect(await completa.dejarDeCompartir('Fotos', RUTA)).toMatchObject({
+      ok: false,
+      motivo: 'error',
+    });
     expect(await completa.recursosDeEquipo('10.0.0.1')).toEqual({ ok: false, motivo: 'error' });
     expect(await completa.pingEquipo('10.0.0.1', { intentos: 4, plazoMs: 800 })).toMatchObject({
       recibidos: 0,
@@ -272,7 +323,7 @@ describe('plataforma falsa y respaldo neutro (D53)', () => {
     f.carpetasCompartidasFalsas = [
       {
         nombre: 'Fotos',
-        ruta: 'C:\\Fotos',
+        ruta: RUTA,
         descripcion: '',
         tipo: 'carpeta',
         administrativa: false,
@@ -280,14 +331,31 @@ describe('plataforma falsa y respaldo neutro (D53)', () => {
         usuarios: 0,
       },
     ];
-    await expect(f.dejarDeCompartir('C$')).rejects.toBeDefined();
+    await expect(f.dejarDeCompartir('C$', RUTA)).rejects.toBeDefined();
     await expect(f.pingEquipo('8.8.8.8', { intentos: 4, plazoMs: 800 })).rejects.toBeDefined();
     f.uacCancelado = true;
-    expect(await f.dejarDeCompartir('Fotos')).toEqual({ ok: false, motivo: 'cancelado' });
+    expect(await f.dejarDeCompartir('Fotos', RUTA)).toEqual({ ok: false, motivo: 'cancelado' });
     expect(f.carpetasQuitadas).toEqual([]);
     f.uacCancelado = false;
-    expect(await f.dejarDeCompartir('Fotos')).toEqual({ ok: true });
+    expect(await f.dejarDeCompartir('Fotos', RUTA)).toEqual({ ok: true });
     expect(f.carpetasQuitadas).toEqual(['Fotos']);
     expect(await f.carpetasCompartidas()).toEqual([]);
+  });
+
+  it('la falsa no quita una carpeta que ya está en otra ruta (como el script elevado)', async () => {
+    const f = new PlataformaFalsa();
+    f.carpetasCompartidasFalsas = [
+      {
+        nombre: 'Fotos',
+        ruta: 'E:/Otra',
+        descripcion: '',
+        tipo: 'carpeta',
+        administrativa: false,
+        oculta: false,
+        usuarios: 0,
+      },
+    ];
+    expect(await f.dejarDeCompartir('Fotos', RUTA)).toMatchObject({ ok: false, motivo: 'error' });
+    expect(f.carpetasQuitadas).toEqual([]);
   });
 });

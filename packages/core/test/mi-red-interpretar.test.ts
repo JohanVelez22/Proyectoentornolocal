@@ -79,15 +79,24 @@ describe('carpetas compartidas de este equipo (D53)', () => {
   });
 
   it('el script elevado vuelve a comprobar la carpeta, trae su plazo y cita el nombre como literal', () => {
-    const s = scriptQuitarCarpeta("Fotos 'viejas'", 1_700_000_000_000);
+    const s = scriptQuitarCarpeta("Fotos 'viejas'", String.raw`C:\Mis 'fotos'`, 1_700_000_000_000);
     expect(s).toContain("Get-SmbShare -Name 'Fotos ''viejas'''");
     expect(s).toContain("Remove-SmbShare -Name 'Fotos ''viejas''' -Force");
     expect(s).toContain('$s.Special');
+    // Solo la carpeta que vio la persona: una sola con ese nombre y con la misma ruta.
+    expect(s).toContain(`@($s).Count -ne 1) { exit ${SALIDA_QUITAR_CARPETA.cambio} }`);
+    expect(s).toContain(
+      String.raw`[string]$s.Path -ne 'C:\Mis ''fotos''') { exit ${SALIDA_QUITAR_CARPETA.cambio} }`,
+    );
+    // Solo «no existe» sale con 42; cualquier otro error de lectura es un fallo (43).
+    expect(s).toContain(
+      `$_.CategoryInfo.Category -eq 'ObjectNotFound') { exit ${SALIDA_QUITAR_CARPETA.noExiste} } else { exit ${SALIDA_QUITAR_CARPETA.fallo} }`,
+    );
     expect(s).toContain("EndsWith('$')");
     expect(s).toContain('1700000000000');
     expect(s).toContain(`exit ${SALIDA_QUITAR_CARPETA.vencido}`);
     // Con comillas tipográficas no se puede cerrar el literal.
-    expect(scriptQuitarCarpeta('a’b', 1)).toContain("'a’’b'");
+    expect(scriptQuitarCarpeta('a’b', String.raw`C:\x`, 1)).toContain("'a’’b'");
   });
 });
 

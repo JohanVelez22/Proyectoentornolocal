@@ -1727,9 +1727,14 @@ export interface ApiEntorno {
     /**
      * Deja de compartir una carpeta de este equipo. `confirmado` solo vale `true` tras el diálogo
      * firme (explica el permiso de administrador y el UAC); abre UN UAC y nunca corre en segundo
-     * plano. UAC cancelado o vencido: `estado` lo dice. No admite las administrativas.
+     * plano. UAC cancelado o vencido: `estado` lo dice. No admite las administrativas. Lleva también la
+     * ruta que vio la persona: si la carpeta ya no es esa, no se quita nada.
      */
-    dejarDeCompartir(nombre: string, confirmado: true): Promise<ResultadoDejarDeCompartir>;
+    dejarDeCompartir(
+      nombre: string,
+      ruta: string,
+      confirmado: true,
+    ): Promise<ResultadoDejarDeCompartir>;
     /** Lectura pasiva: adaptadores, subred y tabla ARP. No envía paquetes. */
     lectura(): Promise<LecturaRed>;
     /**

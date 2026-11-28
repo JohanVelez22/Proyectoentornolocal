@@ -577,6 +577,8 @@ export class PlataformaFalsa implements PlataformaCompleta {
   carpetasCompartidasFalsas: CarpetaCompartida[] | null = [];
   /** Nombres que se «dejaron de compartir» con la elevación simulada. */
   readonly carpetasQuitadas: string[] = [];
+  /** Nombre y ruta de cada petición de dejar de compartir (la elevada comprueba las dos). */
+  readonly quitarPedidos: { nombre: string; ruta: string }[] = [];
   /** Veces que se pidió la elevación para dejar de compartir (también la cancelada). */
   dejarDeCompartirLlamadas = 0;
   /** Resultado forzado de `dejarDeCompartir` (por defecto se quita; `uacCancelado` lo cancela). */
@@ -605,11 +607,17 @@ export class PlataformaFalsa implements PlataformaCompleta {
     return this.carpetasCompartidasFalsas?.map((c) => ({ ...c })) ?? null;
   }
 
-  async dejarDeCompartir(nombre: string): Promise<ResultadoEscritura> {
+  async dejarDeCompartir(nombre: string, ruta: string): Promise<ResultadoEscritura> {
     validarNombreRecurso(nombre);
     this.dejarDeCompartirLlamadas++;
+    this.quitarPedidos.push({ nombre, ruta });
     if (this.uacCancelado) return { ok: false, motivo: 'cancelado' };
     if (this.resultadoDejarDeCompartir) return this.resultadoDejarDeCompartir;
+    // Como el script elevado: si la carpeta ya no está en esa ruta, no se toca.
+    const actual = this.carpetasCompartidasFalsas?.find((c) => c.nombre === nombre);
+    if (actual && actual.ruta !== ruta) {
+      return { ok: false, motivo: 'error', detalle: 'la carpeta compartida cambió' };
+    }
     this.carpetasQuitadas.push(nombre);
     if (this.carpetasCompartidasFalsas) {
       this.carpetasCompartidasFalsas = this.carpetasCompartidasFalsas.filter(

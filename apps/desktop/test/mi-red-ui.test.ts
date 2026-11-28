@@ -44,7 +44,7 @@ describe('Mi red: la interfaz', () => {
   it('no manda rangos, rutas ni comandos: solo la confirmación o una IP/nombre de la lista', () => {
     expect(VUE).toMatch(/api\(\)\.miRed\.escanear\(true\)/);
     expect(VUE).toMatch(/api\(\)\.miRed\.medirVelocidad\(true\)/);
-    expect(VUE).toMatch(/api\(\)\.miRed\.dejarDeCompartir\(c\.nombre, true\)/);
+    expect(VUE).toMatch(/api\(\)\.miRed\.dejarDeCompartir\(c\.nombre, c\.ruta, true\)/);
     expect(VUE).not.toMatch(/v-model:value/);
   });
 

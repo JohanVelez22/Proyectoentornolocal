@@ -578,7 +578,8 @@ const api: ApiEntorno = {
   },
   miRed: {
     carpetas: () => invocar('miRed.carpetas'),
-    dejarDeCompartir: (nombre, confirmado) => invocar('miRed.dejarDeCompartir', nombre, confirmado),
+    dejarDeCompartir: (nombre, ruta, confirmado) =>
+      invocar('miRed.dejarDeCompartir', nombre, ruta, confirmado),
     lectura: () => invocar('miRed.lectura'),
     escanear: (confirmado) => invocar('miRed.escanear', confirmado),
     cancelarEscaneo: () => invocar('miRed.cancelarEscaneo'),

@@ -113,7 +113,7 @@ async function quitar(): Promise<void> {
   const c = quitando.value;
   if (!c || !entiendeUac.value) return;
   quitando.value = null;
-  const r = await ejecutar('quitar', () => api().miRed.dejarDeCompartir(c.nombre, true));
+  const r = await ejecutar('quitar', () => api().miRed.dejarDeCompartir(c.nombre, c.ruta, true));
   if (!r) {
     await cargarCarpetas();
     return;

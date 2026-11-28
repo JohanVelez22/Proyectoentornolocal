@@ -396,10 +396,11 @@ export interface CapacidadesPlataforma {
   /**
    * Deja de compartir una carpeta de este equipo, con elevación (UAC). SOLO la llama quien ya
    * recibió la confirmación firme de la persona. El script elevado vuelve a comprobar que sea una
-   * carpeta normal (no administrativa) y trae un plazo: un UAC contestado tarde no hace nada.
+   * carpeta normal (no administrativa), que siga en la misma ruta que vio la persona y trae un
+   * plazo: un UAC contestado tarde no hace nada.
    * Nunca corre en segundo plano ni por su cuenta; si el UAC se cancela o vence, lo dice.
    */
-  dejarDeCompartir(nombre: string): Promise<ResultadoEscritura>;
+  dejarDeCompartir(nombre: string, ruta: string): Promise<ResultadoEscritura>;
   /** Adaptadores IPv4 con su subred y el perfil de red (privada, pública, dominio). Solo consulta. */
   adaptadoresRed(): Promise<AdaptadorRed[] | null>;
   /** Tabla ARP del equipo (equipos privados vistos). Lectura pasiva: no genera tráfico. */

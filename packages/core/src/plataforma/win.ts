@@ -90,8 +90,8 @@ import {
   type ResultadoRecursos,
   type VecinoRed,
 } from './redWin';
-import { validarNombreRecurso } from '../miRed/validacion';
-import { validarIpPrivada } from '../miRed/validacion';
+import { ErrorWolf } from '../errores';
+import { conControl, validarIpPrivada, validarNombreRecurso } from '../miRed/validacion';
 import { interpretarUnidades, SCRIPT_UNIDADES } from './unidadesWin';
 import {
   interpretarEquipo,
@@ -1189,23 +1189,38 @@ export class PlataformaWindows implements PlataformaCompleta {
 
   /**
    * Quita un recurso compartido con elevación (UAC). El nombre se valida aquí también (nunca los
-   * que terminan en `$`) y el plazo del script elevado se calcula cuando de verdad empieza, tras
-   * esperar la cola: si el UAC se contesta pasado el plazo, el script sale sin tocar nada.
+   * que terminan en `$`) y la ruta que vio la persona (el script elevado solo quita la carpeta si
+   * sigue siendo esa). El plazo del script elevado se calcula cuando de verdad empieza, tras esperar
+   * la cola: si el UAC se contesta pasado el plazo, el script sale sin tocar nada; y si vence el
+   * plazo exterior (se corta el proceso), el resultado es `tiempo`.
    */
-  async dejarDeCompartir(nombre: string): Promise<ResultadoEscritura> {
+  async dejarDeCompartir(nombre: string, ruta: string): Promise<ResultadoEscritura> {
     validarNombreRecurso(nombre);
+    if (typeof ruta !== 'string' || ruta === '' || ruta.length > 1000 || conControl(ruta)) {
+      throw new ErrorWolf(
+        'red.carpeta_no_valida',
+        'Esa carpeta compartida no se puede quitar desde aquí.',
+      );
+    }
     const plazo = 90_000;
     const margen = 15_000;
-    const r = await this.enCola(() =>
-      this.elevarAhora(scriptQuitarCarpeta(nombre, Date.now() + plazo - margen), plazo),
-    );
+    let empezo = 0;
+    const r = await this.enCola(() => {
+      empezo = Date.now();
+      return this.elevarAhora(scriptQuitarCarpeta(nombre, ruta, empezo + plazo - margen), plazo);
+    });
     if (r.ok || r.motivo !== 'error') return r;
+    // El plazo exterior cortó el proceso (sin código propio): es un plazo vencido, no un fallo.
+    if (Date.now() - empezo >= plazo) return { ok: false, motivo: 'tiempo' };
     const salida = /^código (\d+)$/.exec(r.detalle ?? '')?.[1];
     // Ya no estaba compartida: el resultado que se quería.
     if (salida === String(SALIDA_QUITAR_CARPETA.noExiste)) return { ok: true };
     if (salida === String(SALIDA_QUITAR_CARPETA.vencido)) return { ok: false, motivo: 'tiempo' };
     if (salida === String(SALIDA_QUITAR_CARPETA.noPermitida)) {
       return { ok: false, motivo: 'denegado', detalle: 'no es una carpeta compartida normal' };
+    }
+    if (salida === String(SALIDA_QUITAR_CARPETA.cambio)) {
+      return { ok: false, motivo: 'error', detalle: 'la carpeta compartida cambió' };
     }
     return r;
   }
@@ -1215,10 +1230,17 @@ export class PlataformaWindows implements PlataformaCompleta {
     const args = argumentosPing(ip, o);
     if (o.senal?.aborted)
       return { enviados: o.intentos, recibidos: 0, tiemposMs: [], cancelado: true };
-    const r = await this.ejecutar(rutaSistema32(this.entorno, 'ping.exe'), args, {
-      timeoutMs: o.intentos * (o.plazoMs + 1000) + 3000,
-      ...(o.senal ? { senal: o.senal } : {}),
-    });
+    let r;
+    try {
+      r = await this.ejecutar(rutaSistema32(this.entorno, 'ping.exe'), args, {
+        timeoutMs: o.intentos * (o.plazoMs + 1000) + 3000,
+        ...(o.senal ? { senal: o.senal } : {}),
+      });
+    } catch (e) {
+      throw new ErrorWolf('red.lectura_fallo', 'No se pudo hacer el ping.', undefined, {
+        cause: e,
+      });
+    }
     const res = interpretarPing(r.stdout, ip, o.intentos);
     return o.senal?.aborted ? { ...res, cancelado: true } : res;
   }

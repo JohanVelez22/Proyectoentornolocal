@@ -6,6 +6,7 @@ import { registrarIpc, type IpcMainLike, type NucleoIpc, type VentanaLike } from
 type Manejador = (evento: unknown, ...args: unknown[]) => unknown;
 type Respuesta = { ok: boolean; valor?: unknown; error?: { codigo?: string } };
 
+const RUTA = 'C:' + String.fromCharCode(92) + 'Fotos';
 const carpeta = (nombre: string, extra: Partial<CarpetaCompartida> = {}): CarpetaCompartida => ({
   nombre,
   ruta: `C:\\${nombre}`,
@@ -104,13 +105,19 @@ describe('IPC de Mi red (D53)', () => {
   it('dejar de compartir exige true, un nombre acotado y una carpeta no administrativa de la lista', async () => {
     const t = preparar();
     for (const c of [false, undefined, 'true', 1, null]) {
-      expect((await t.llamar('miRed.dejarDeCompartir', 'Fotos', c)).ok).toBe(false);
+      expect((await t.llamar('miRed.dejarDeCompartir', 'Fotos', RUTA, c)).ok).toBe(false);
     }
     for (const n of ['C$', '', 'x'.repeat(81), 5, null, 'No existe', 'a\nb']) {
-      expect((await t.llamar('miRed.dejarDeCompartir', n, true)).ok, String(n)).toBe(false);
+      expect((await t.llamar('miRed.dejarDeCompartir', n, RUTA, true)).ok, String(n)).toBe(false);
+    }
+    // Otra ruta, vacía o larga de más: nada llega al UAC.
+    for (const r of ['D:/Otra', '', 'x'.repeat(1001), 5, null]) {
+      expect((await t.llamar('miRed.dejarDeCompartir', 'Fotos', r, true)).ok, String(r)).toBe(
+        false,
+      );
     }
     expect(t.falsa.dejarDeCompartirLlamadas).toBe(0);
-    expect(await t.llamar('miRed.dejarDeCompartir', 'Fotos', true)).toMatchObject({
+    expect(await t.llamar('miRed.dejarDeCompartir', 'Fotos', RUTA, true)).toMatchObject({
       ok: true,
       valor: { estado: 'quitada' },
     });
@@ -120,7 +127,7 @@ describe('IPC de Mi red (D53)', () => {
   it('un UAC cancelado se devuelve como resultado, no como fallo', async () => {
     const t = preparar();
     t.falsa.uacCancelado = true;
-    expect(await t.llamar('miRed.dejarDeCompartir', 'Fotos', true)).toMatchObject({
+    expect(await t.llamar('miRed.dejarDeCompartir', 'Fotos', RUTA, true)).toMatchObject({
       ok: true,
       valor: { estado: 'cancelado' },
     });

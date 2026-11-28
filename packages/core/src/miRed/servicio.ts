@@ -191,13 +191,18 @@ export class MiRed {
 
   /**
    * Deja de compartir una carpeta de este equipo. Exige `confirmado === true` (el diálogo firme
-   * de la ventana), que la carpeta exista en la lista actual y que no sea administrativa; la
+   * de la ventana), que la carpeta exista en la lista actual con la MISMA ruta que vio la persona y
+   * que no sea administrativa; la
    * plataforma abre UN UAC y vuelve a comprobarlo. Si el UAC se cancela o vence, se informa sin
    * error. Nunca se llama en segundo plano: solo desde el clic de la persona.
    */
-  async dejarDeCompartir(nombre: unknown, confirmado: unknown): Promise<ResultadoDejarDeCompartir> {
+  async dejarDeCompartir(
+    nombre: unknown,
+    ruta: unknown,
+    confirmado: unknown,
+  ): Promise<ResultadoDejarDeCompartir> {
     if (confirmado !== true) throw sinConfirmar();
-    if (!nombreDeRecursoValido(nombre)) {
+    if (!nombreDeRecursoValido(nombre) || typeof ruta !== 'string' || ruta === '') {
       throw new ErrorWolf(
         'red.carpeta_no_valida',
         'Esa carpeta compartida no se puede quitar desde aquí.',
@@ -207,13 +212,14 @@ export class MiRed {
     this.quitando = true;
     try {
       const actual = (await this.carpetas()).find((c) => c.nombre === nombre);
-      if (!actual || actual.administrativa) {
+      // Solo la carpeta que vio la persona: misma ruta que en la lista de ahora.
+      if (!actual || actual.administrativa || actual.ruta !== ruta) {
         throw new ErrorWolf(
           'red.carpeta_no_valida',
           'Esa carpeta compartida no se puede quitar desde aquí.',
         );
       }
-      const r = await this.deps.plataforma.dejarDeCompartir(nombre);
+      const r = await this.deps.plataforma.dejarDeCompartir(nombre, actual.ruta);
       if (!r.ok && r.motivo === 'cancelado') {
         return { estado: 'cancelado', carpetas: await this.carpetas() };
       }

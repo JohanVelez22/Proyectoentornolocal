@@ -2104,8 +2104,12 @@ const TABLA: Record<RutaIpc, Manejador> = {
   // Lo que la ventana manda son textos acotados y confirmaciones exactas (`true`): el núcleo vuelve
   // a validar IP privadas, recursos y la red activa. Nada llega al sistema sin el clic de la persona.
   'miRed.carpetas': (n) => n.miRed.carpetas(),
-  'miRed.dejarDeCompartir': (n, _s, nombre, confirmacion) =>
-    n.miRed.dejarDeCompartir(textoAcotado(nombre, 1, 80, 'carpeta'), confirmado(confirmacion)),
+  'miRed.dejarDeCompartir': (n, _s, nombre, ruta, confirmacion) =>
+    n.miRed.dejarDeCompartir(
+      textoAcotado(nombre, 1, 80, 'carpeta'),
+      textoAcotado(ruta, 1, 1000, 'ruta'),
+      confirmado(confirmacion),
+    ),
   'miRed.lectura': (n) => n.miRed.lectura(),
   'miRed.escanear': (n, _s, confirmacion) => n.miRed.escanear(confirmado(confirmacion)),
   'miRed.cancelarEscaneo': (n) => n.miRed.cancelarEscaneo(),

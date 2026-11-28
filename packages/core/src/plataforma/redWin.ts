@@ -1,3 +1,4 @@
+import { ErrorWolf } from '../errores';
 import { esPrivadaRfc1918 } from '../miRed/rfc1918';
 import { interpretarPerfilRed, type PerfilRed } from './firewallWin';
 
@@ -147,21 +148,28 @@ export const SALIDA_QUITAR_CARPETA = {
   noPermitida: 41,
   /** Ya no existe: nada que quitar. */
   noExiste: 42,
-  /** `Remove-SmbShare` falló. */
+  /** `Remove-SmbShare` o la lectura de la carpeta fallaron (cualquier error que no sea «no existe»). */
   fallo: 43,
+  /** Ya no es la carpeta que vio la persona (otra ruta, o más de una con ese nombre): no se toca. */
+  cambio: 44,
 } as const;
 
 /**
  * Script que corre ELEVADO: vuelve a leer la carpeta compartida y solo la quita si sigue siendo
- * una carpeta normal (no especial, sin `$` y de tipo carpeta); con el plazo UTC incrustado, para
- * que un UAC aceptado tarde no haga nada. El nombre ya viene validado y va como literal.
+ * una carpeta normal (no especial, sin `$` y de tipo carpeta) Y la misma que vio la persona (misma
+ * ruta, una sola con ese nombre); con el plazo UTC incrustado, para que un UAC aceptado tarde no
+ * haga nada. El nombre y la ruta ya vienen validados y van como literales.
  */
-export function scriptQuitarCarpeta(nombre: string, limiteUnixMs: number): string {
+export function scriptQuitarCarpeta(nombre: string, ruta: string, limiteUnixMs: number): string {
   return [
     "$ErrorActionPreference = 'Stop'",
     `if ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() -gt ${Math.floor(limiteUnixMs)}) { exit ${SALIDA_QUITAR_CARPETA.vencido} }`,
     MODULOS,
-    `try { $s = Get-SmbShare -Name ${literal(nombre)} -ErrorAction Stop } catch { exit ${SALIDA_QUITAR_CARPETA.noExiste} }`,
+    // Solo «no existe» (ObjectNotFound) es «ya está quitada»; otro fallo de lectura no lo es.
+    `try { $s = @(Get-SmbShare -Name ${literal(nombre)} -ErrorAction Stop) } catch { if ($_.CategoryInfo.Category -eq 'ObjectNotFound') { exit ${SALIDA_QUITAR_CARPETA.noExiste} } else { exit ${SALIDA_QUITAR_CARPETA.fallo} } }`,
+    `if (@($s).Count -ne 1) { exit ${SALIDA_QUITAR_CARPETA.cambio} }`,
+    '$s = @($s)[0]',
+    `if ([string]$s.Path -ne ${literal(ruta)}) { exit ${SALIDA_QUITAR_CARPETA.cambio} }`,
     `if ($s.Special -or $s.Name.EndsWith('$') -or [string]$s.ShareType -ne 'FileSystemDirectory') { exit ${SALIDA_QUITAR_CARPETA.noPermitida} }`,
     `try { Remove-SmbShare -Name ${literal(nombre)} -Force -ErrorAction Stop } catch { exit ${SALIDA_QUITAR_CARPETA.fallo} }`,
     'exit 0',
@@ -248,16 +256,16 @@ export function interpretarVecinos(salida: string): VecinoRed[] | null {
 
 /** Argumentos de `ping.exe` (IPv4, sin resolver nombres): la IP ya está validada. */
 export function argumentosPing(ip: string, o: OpcionesPing): string[] {
-  if (!esPrivadaRfc1918(ip)) throw new Error('Equipo no válido');
+  if (!esPrivadaRfc1918(ip)) throw new ErrorWolf('red.equipo_no_valido', 'Equipo no válido.');
   if (!Number.isInteger(o.intentos) || o.intentos < 1 || o.intentos > MAX_INTENTOS_PING) {
-    throw new Error('Intentos de ping no válidos');
+    throw new ErrorWolf('red.equipo_no_valido', 'Intentos de ping no válidos.');
   }
   if (
     !Number.isInteger(o.plazoMs) ||
     o.plazoMs < MIN_PLAZO_PING_MS ||
     o.plazoMs > MAX_PLAZO_PING_MS
   ) {
-    throw new Error('Plazo de ping no válido');
+    throw new ErrorWolf('red.equipo_no_valido', 'Plazo de ping no válido.');
   }
   return ['-4', '-n', String(o.intentos), '-w', String(o.plazoMs), ip];
 }

@@ -12,8 +12,11 @@ import { esPrivadaRfc1918 } from './rfc1918';
 const PROHIBIDOS_RECURSO = /["/\\[\]:|<>+=;,?*%]/u;
 
 /** Caracteres de control (0 a 31 y 127). */
-const conControl = (t: string): boolean =>
+export const conControl = (t: string): boolean =>
   [...t].some((c) => c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127);
+
+/** Caracteres de formato invisibles (`\p{Cf}`: controles bidi, ancho cero…): un nombre no debe disfrazarse. */
+const conFormato = (t: string): boolean => /\p{Cf}/u.test(t);
 
 /** Largo máximo del nombre de un recurso compartido de Windows. */
 export const MAX_NOMBRE_RECURSO = 80;
@@ -43,6 +46,7 @@ export function nombreDeRecursoValido(nombre: unknown): nombre is string {
     nombre.length <= MAX_NOMBRE_RECURSO &&
     !PROHIBIDOS_RECURSO.test(nombre) &&
     !conControl(nombre) &&
+    !conFormato(nombre) &&
     nombre === nombre.trim() &&
     !nombre.startsWith('.') &&
     !nombre.endsWith('.') &&

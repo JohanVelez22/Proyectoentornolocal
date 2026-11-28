@@ -194,6 +194,11 @@ describe('validación de equipos y recursos (D53)', () => {
       'IPC$',
       'print$',
       'oculta$',
+      // Caracteres de formato invisibles (bidi, ancho cero, marca de orden de bytes).
+      'Fotos' + String.fromCodePoint(0x202e) + 'fdp.exe',
+      'Fo' + String.fromCodePoint(0x200b) + 'tos',
+      String.fromCodePoint(0x2066) + 'Fotos',
+      'Fotos' + String.fromCodePoint(0xfeff),
       null,
       7,
     ]) {
