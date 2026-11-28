@@ -24,6 +24,7 @@ export const SERVICIOS_NOVEDADES: readonly ServicioInstalable[] = [
   'ollama',
   'meilisearch',
   'cloudflared',
+  'ngrok',
 ];
 
 /** Servicios de datos con instancias por rama y la clave de su carpeta de datos. */

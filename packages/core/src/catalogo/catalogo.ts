@@ -13,6 +13,7 @@ export type ServicioInstalable =
   | 'nginx'
   | 'php'
   | 'cloudflared'
+  | 'ngrok'
   | 'mysql'
   | 'mariadb'
   | 'postgresql'
@@ -55,6 +56,7 @@ export const EJECUTABLE_POR_SERVICIO: Record<ServicioInstalable, string> = {
   nginx: nombreEjecutable('nginx'),
   php: nombreEjecutable('php-cgi'),
   cloudflared: nombreEjecutable('cloudflared'),
+  ngrok: nombreEjecutable('ngrok'),
   mysql: `bin/${nombreEjecutable('mysqld')}`,
   mariadb: `bin/${nombreEjecutable('mariadbd')}`,
   postgresql: `pgsql/bin/${nombreEjecutable('postgres')}`,
@@ -222,6 +224,7 @@ export type ExtensionPhpCatalogo = z.infer<typeof ExtensionPhpSchema>;
 export const CatalogoSchema = z.object({
   nginx: z.array(EntradaSchema),
   cloudflared: z.array(EntradaSchema),
+  ngrok: Lista,
   mysql: Lista,
   mariadb: Lista,
   postgresql: Lista,

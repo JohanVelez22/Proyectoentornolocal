@@ -18,6 +18,15 @@
       "ejecutable": "cloudflared.exe"
     }
   ],
+  "ngrok": [
+    {
+      "version": "3.39.13",
+      "url": "https://bin.equinox.io/a/VUnfuMhAnU/ngrok-v3-3.39.13-windows-amd64.zip",
+      "sha256": "438bad3dbefd7e244be9dfae3889dcf99073b515845b66ab5617e4887bc24636",
+      "formato": "zip",
+      "ejecutable": "ngrok.exe"
+    }
+  ],
   "mysql": [
     {
       "version": "8.4.13",

@@ -36,6 +36,8 @@ export const HOSTS_PERMITIDOS: readonly string[] = [
   // Maven (zip y .sha512 en el archivo de Apache) y Gradle (services.gradle.org redirige a GitHub Releases).
   'archive.apache.org',
   'services.gradle.org',
+  // ngrok: el zip versionado que enlaza su archivo oficial de descargas (SHA-256 publicado allí).
+  'bin.equinox.io',
   // Xdebug: DLL oficiales por rama y variante (catálogo de extensiones de PHP).
   'xdebug.org',
 ];
@@ -71,6 +73,8 @@ export const HOSTS_INDICE: readonly string[] = [
   // Zig: index.json; Dart: listado JSON del bucket y sumas (solo las rutas de `RUTAS_ACOTADAS`).
   'ziglang.org',
   'storage.googleapis.com',
+  // ngrok: archivo oficial de descargas con el SHA-256 de cada versión (lo cita su FAQ).
+  'dl.equinox.io',
 ];
 
 /**
@@ -83,6 +87,9 @@ export const RUTAS_ACOTADAS: Readonly<Record<string, readonly string[]>> = {
     '/dart-archive/channels/stable/release/',
     '/storage/v1/b/dart-archive/o',
   ],
+  // ngrok: solo su archivo de descargas y sus zips (el host es de Equinox, que sirve a otras apps).
+  'dl.equinox.io': ['/ngrok/ngrok-v3/stable/archive'],
+  'bin.equinox.io': ['/a/', '/c/bNyj1mQVY4c/'],
 };
 
 /** Con `/` final, prefijo; sin él, la ruta exacta o una subruta (`/o` y `/o/…`, nunca `/otro`). */

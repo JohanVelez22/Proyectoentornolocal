@@ -21,6 +21,11 @@ export interface DepsNgrok {
   rutas: Rutas;
   plataforma: Pick<PlataformaCompleta, 'restringirAlUsuario' | 'buscarEjecutable'>;
   secretos: () => SecretosTunel | null;
+  /**
+   * ngrok instalado desde Versiones (`bin/ngrok/<versión>/ngrok.exe`, la predeterminada o la más
+   * nueva) o null si no hay. Tiene prioridad sobre el `ngrok` del PATH, que nunca se modifica.
+   */
+  instalado?: () => Promise<string | null>;
 }
 
 /** Dominio `.test` (o alias) del sitio: solo letras, números, puntos y guiones. */
@@ -39,9 +44,9 @@ const HOST_LOCAL = /^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?$/i;
  * - **Host**: `--host-header` está obsoleto; se reescribe `Host` con una política de tráfico
  *   (`add-headers`, la acción oficial; para `host` reemplaza el valor) en `run/ngrok/<sitio>.politica.yml`.
  * - **URL**: `--log stdout --log-format json`; la línea `started tunnel` trae `url`.
- * - **Binario**: ngrok solo publica un enlace rodante (`.../ngrok-v3-stable-windows-amd64.zip`) y una
- *   página HTML con las huellas, sin versión fija ni índice legible: no hay descarga verificable.
- *   Se usa el `ngrok` que el usuario ya tiene instalado (en el PATH).
+ * - **Binario**: el que se instala desde Versiones (zip versionado de bin.equinox.io con el SHA-256
+ *   de su archivo oficial de descargas, verificado al instalar; ver `fuentes/ngrok.ts`) y, si no
+ *   hay, el `ngrok` que el usuario ya tenga en el PATH. Instalarlo no toca el PATH.
  */
 export class Ngrok implements ProveedorTunel {
   readonly id = 'ngrok' as const;
@@ -56,8 +61,16 @@ export class Ngrok implements ProveedorTunel {
     return path.join(this.d.rutas.ngrokRun(), `${sitioId}.politica.yml`);
   }
 
+  /** El instalado desde Versiones y, si no hay, el del PATH. */
+  private async ejecutable(): Promise<string | null> {
+    return (
+      (await this.d.instalado?.().catch(() => null)) ??
+      (await this.d.plataforma.buscarEjecutable('ngrok'))
+    );
+  }
+
   async disponible(): Promise<ResultadoDisponible> {
-    if (!(await this.d.plataforma.buscarEjecutable('ngrok'))) {
+    if (!(await this.ejecutable())) {
       return { ok: false, codigo: 'tuneles.ngrok_no_instalado' };
     }
     const s = this.d.secretos();
@@ -72,7 +85,7 @@ export class Ngrok implements ProveedorTunel {
     if (!idSitioSeguro(sitio.id) || !HOST_LOCAL.test(sitio.dominio)) {
       throw new ErrorWolf('tuneles.cloudflare_datos_invalidos', 'El sitio no es válido.');
     }
-    const exe = await this.d.plataforma.buscarEjecutable('ngrok');
+    const exe = await this.ejecutable();
     if (!exe) throw new ErrorWolf('tuneles.ngrok_no_instalado', 'ngrok no está instalado.');
     const s = this.d.secretos();
     if (!s || !s.disponible()) {

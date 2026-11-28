@@ -43,6 +43,7 @@ describe('hosts y huellas', () => {
         'static.rust-lang.org',
         'ziglang.org',
         'storage.googleapis.com',
+        'dl.equinox.io',
       ].sort(),
     );
     expect(HOSTS_PERMITIDOS).toContain('release-assets.githubusercontent.com');

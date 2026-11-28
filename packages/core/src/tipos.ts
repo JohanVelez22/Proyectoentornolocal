@@ -812,6 +812,7 @@ export const ConfigSchema = z.object({
             'gradle',
             'composer',
             'cloudflared',
+            'ngrok',
           ]),
           z.string().regex(/^[0-9a-z][0-9a-z.+-]{0,39}$/),
         )

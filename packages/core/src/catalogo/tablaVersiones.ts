@@ -28,6 +28,7 @@ export const SERVICIOS_VERSIONES = [
   'ollama',
   'meilisearch',
   'cloudflared',
+  'ngrok',
   'java',
   'dotnet',
   'go',
@@ -52,7 +53,7 @@ export function esServicioVersiones(s: unknown): s is ServicioVersiones {
  * - `instancias`: servicios de datos con varias versiones encendidas a la vez (cada una su puerto);
  * - `pool`: PHP, un pool por rama;
  * - `unica`: Nginx, Mailpit y Ollama, una sola encendida (encender otra cambia la activa);
- * - `ninguno`: Node, Python, Java, .NET, Go, Rust, Bun, Deno, Zig, Kotlin, Dart, Ruby, Maven, Gradle, Composer y cloudflared (solo instalar, desinstalar y predeterminada).
+ * - `ninguno`: Node, Python, Java, .NET, Go, Rust, Bun, Deno, Zig, Kotlin, Dart, Ruby, Maven, Gradle, Composer, cloudflared y ngrok (solo instalar, desinstalar y predeterminada).
  */
 export type TipoInterruptor = 'instancias' | 'pool' | 'unica' | 'ninguno';
 
@@ -74,6 +75,7 @@ export const INTERRUPTOR: Record<ServicioVersiones, TipoInterruptor> = {
   ollama: 'unica',
   meilisearch: 'instancias',
   cloudflared: 'ninguno',
+  ngrok: 'ninguno',
   java: 'ninguno',
   dotnet: 'ninguno',
   go: 'ninguno',

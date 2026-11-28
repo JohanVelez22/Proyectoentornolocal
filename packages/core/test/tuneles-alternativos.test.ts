@@ -72,6 +72,8 @@ let cifrado: boolean;
 let sitios: Sitio[];
 let salidaProceso: string;
 let ejecutables: Map<string, string>;
+/** Versiones de ngrok instaladas desde Versiones (`bin/ngrok/<versión>`). */
+let ngrokInstalados: string[];
 let tailscaleEstado: { ruta: string | null; sesion: boolean };
 let estadoServe: string;
 let llamadas: Array<{ cmd: string; args: string[]; quitar?: readonly string[] }>;
@@ -151,7 +153,9 @@ function crear(opts = { esperaMs: 300, intervaloMs: 10 }) {
     sitios: { listar: async () => sitios },
     almacen: { leer: async () => ({ servicios: { nginx: { puerto: 8080 } } }) } as never,
     // Sin cloudflared instalado: ninguno de estos proveedores lo necesita.
-    instalador: { instalados: async () => [] } as never,
+    instalador: {
+      instalados: async (s: string) => (s === 'ngrok' ? ngrokInstalados : []),
+    } as never,
     rutas,
     urlBase: new UrlBase({
       rutas,
@@ -199,6 +203,7 @@ beforeEach(() => {
   ]);
   cifrado = true;
   sitios = [sitio()];
+  ngrokInstalados = [];
   salidaProceso = SALIDA_NGROK;
   ejecutables = new Map([['ngrok', 'C:\\falso\\ngrok.exe']]);
   tailscaleEstado = { ruta: 'C:\\falso\\tailscale.exe', sesion: true };
@@ -320,6 +325,23 @@ describe('ngrok', () => {
     expect(readFileSync(env(), 'utf8')).toBe(ENV_ORIGINAL);
     expect(existsSync(path.join(rutas.ngrokRun(), 'wolf.yml'))).toBe(false);
     expect(existsSync(path.join(rutas.ngrokRun(), 'wolf.politica.yml'))).toBe(false);
+  });
+
+  it('con ngrok instalado desde Versiones usa ese binario (no el del PATH) y sin él cae al del PATH', async () => {
+    ngrokInstalados = ['3.38.0', '3.39.13'];
+    await crear().abrir('wolf', SI);
+    expect(iniciados[0]!.comando).toBe(path.join(rutas.bin('ngrok', '3.39.13'), 'ngrok.exe'));
+    // Sin el del PATH, el instalado basta; el token sigue yendo solo por el entorno.
+    ejecutables.delete('ngrok');
+    iniciados.length = 0;
+    await crear().abrir('wolf', SI);
+    expect(iniciados[0]!.comando).toBe(path.join(rutas.bin('ngrok', '3.39.13'), 'ngrok.exe'));
+    expect(iniciados[0]!.envSecreto).toEqual({ NGROK_AUTHTOKEN: TOKEN_NGROK });
+    // Sin ninguno de los dos: ngrok no instalado.
+    ngrokInstalados = [];
+    await expect(crear().abrir('wolf', SI)).rejects.toMatchObject({
+      codigo: 'tuneles.ngrok_no_instalado',
+    });
   });
 
   it('sin ngrok instalado, sin token o sin cifrado: error con código y no se lanza nada', async () => {

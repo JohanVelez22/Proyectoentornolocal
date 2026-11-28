@@ -45,6 +45,7 @@ import { fuenteMariadb } from './fuentes/mariadb';
 import { fuenteMongodb } from './fuentes/mongodb';
 import { fuenteMysql } from './fuentes/mysql';
 import { fuenteNginx } from './fuentes/nginx';
+import { fuenteNgrok } from './fuentes/ngrok';
 import { fuenteNode } from './fuentes/node';
 import { fuentePhp } from './fuentes/php';
 import { fuentePostgresql } from './fuentes/postgresql';
@@ -81,6 +82,7 @@ export const FUENTES_VERSIONES: Partial<Record<ServicioInstalable, FuenteVersion
   ollama: fuenteOllama,
   meilisearch: fuenteMeilisearch,
   cloudflared: fuenteCloudflared,
+  ngrok: fuenteNgrok,
   redis: fuenteRedis,
   mongosh: fuenteMongosh,
   mysql: fuenteMysql,

@@ -2415,10 +2415,10 @@ export class Nucleo {
     });
   }
 
-  /** Predeterminada de Node, Python, Composer o cloudflared (o la más nueva instalada). */
+  /** Predeterminada de Node, Python, Composer, cloudflared o ngrok (o la más nueva instalada). */
   private async versionPreferida(servicio: string, instaladas: string[]): Promise<string | null> {
     const elegida = (await this.config.leer()).catalogo.predeterminadas[
-      servicio as TipoRuntime | 'composer' | 'cloudflared'
+      servicio as TipoRuntime | 'composer' | 'cloudflared' | 'ngrok'
     ];
     if (elegida && instaladas.includes(elegida)) return elegida;
     return [...instaladas].sort(compararVersiones).at(-1) ?? null;
@@ -2468,7 +2468,12 @@ export class Nucleo {
       }
       return;
     }
-    if (esTipoRuntime(servicio) || servicio === 'composer' || servicio === 'cloudflared') {
+    if (
+      esTipoRuntime(servicio) ||
+      servicio === 'composer' ||
+      servicio === 'cloudflared' ||
+      servicio === 'ngrok'
+    ) {
       await this.sitios.modificarConfig((c) => {
         c.catalogo.predeterminadas[servicio] = version;
       });

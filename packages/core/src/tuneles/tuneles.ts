@@ -171,7 +171,10 @@ export class Tuneles {
         },
         secretos: () => this.secretos?.() ?? null,
       };
-      this.proveedores.set('ngrok', new Ngrok(comun));
+      this.proveedores.set(
+        'ngrok',
+        new Ngrok({ ...comun, instalado: () => this.rutaNgrokInstalado() }),
+      );
       this.expose = new Expose({ ...comun, phpCli: async () => (await this.phpCli?.()) ?? null });
       this.proveedores.set('expose', this.expose);
     }
@@ -825,6 +828,20 @@ export class Tuneles {
         'cloudflared no está instalado. Instálelo desde Servicios.',
       );
     return path.join(this.d.rutas.bin('cloudflared', version), nombreEjecutable('cloudflared'));
+  }
+
+  /** ngrok instalado desde Versiones (predeterminado o el más nuevo), o null: entonces se usa el del PATH. */
+  private async rutaNgrokInstalado(): Promise<string | null> {
+    const versiones = await this.d.instalador.instalados('ngrok');
+    const cfg: Partial<Config> = await this.d.almacen.leer();
+    const elegida = cfg.catalogo?.predeterminadas?.ngrok;
+    const version =
+      elegida && versiones.includes(elegida)
+        ? elegida
+        : [...versiones].sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))[0];
+    return version
+      ? path.join(this.d.rutas.bin('ngrok', version), nombreEjecutable('ngrok'))
+      : null;
   }
 
   /** Borra lo temporal de todos los proveedores (credenciales) y tapa los secretos de los logs. */

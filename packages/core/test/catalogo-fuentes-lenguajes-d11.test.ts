@@ -78,7 +78,11 @@ describe('D11: hosts', () => {
       expect(HOSTS_INDICE).toContain(h);
     }
     for (const h of [...HOSTS_INDICE, ...HOSTS_PERMITIDOS]) expect(h).not.toMatch(/[*?]/);
-    expect(Object.keys(RUTAS_ACOTADAS)).toEqual(['storage.googleapis.com']);
+    expect(Object.keys(RUTAS_ACOTADAS)).toEqual([
+      'storage.googleapis.com',
+      'dl.equinox.io',
+      'bin.equinox.io',
+    ]);
     expect(urlOficial(`${DART_BASE}3.14.1/sdk/dartsdk-windows-x64-release.zip`)).toBe(true);
     expect(urlIndice(DART_LISTADO)).toBe(true);
     // Otro bucket del mismo host, rutas que salen del prefijo y variantes del host.

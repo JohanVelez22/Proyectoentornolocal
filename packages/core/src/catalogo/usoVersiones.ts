@@ -225,7 +225,7 @@ export async function calcularUsos(d: DepsUsoVersiones): Promise<UsosVersiones> 
     }
 
     // Runtimes (Node, Python, Java…), Composer y cloudflared: la predeterminada efectiva.
-    for (const servicio of [...RUNTIMES_LIMPIABLES, 'composer', 'cloudflared'] as const) {
+    for (const servicio of [...RUNTIMES_LIMPIABLES, 'composer', 'cloudflared', 'ngrok'] as const) {
       await paso([servicio], async () => {
         marcar(
           servicio,
