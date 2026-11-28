@@ -553,6 +553,8 @@ function cambiarRedLocal(valor: boolean): void {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 16px;
   border-radius: 12px;
   border: 1px solid rgba(128, 128, 128, 0.2);
@@ -567,8 +569,9 @@ function cambiarRedLocal(valor: boolean): void {
 }
 .cabeza {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 8px 12px;
 }
 .icono {
   display: grid;
@@ -581,8 +584,9 @@ function cambiarRedLocal(valor: boolean): void {
   flex: none;
 }
 .titulo {
-  flex: 1;
+  flex: 1 1 96px;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 .titulo h3 {
   margin: 0;
@@ -642,6 +646,7 @@ function cambiarRedLocal(valor: boolean): void {
   flex-direction: column;
   gap: 4px;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 .conflicto-boton {
   align-self: flex-start;
@@ -659,6 +664,7 @@ function cambiarRedLocal(valor: boolean): void {
 }
 .mensaje {
   margin: 0;
+  overflow-wrap: anywhere;
   font-size: 12px;
   opacity: 0.76;
 }

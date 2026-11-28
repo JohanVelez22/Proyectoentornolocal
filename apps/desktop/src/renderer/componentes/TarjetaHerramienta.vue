@@ -240,6 +240,8 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 16px;
   border-radius: 12px;
   border: 1px solid rgba(128, 128, 128, 0.2);
