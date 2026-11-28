@@ -21,6 +21,7 @@ import {
   type IdProveedorTunel,
   HERRAMIENTAS_BD,
   IDS_AGENTE,
+  IDS_ASISTENTE,
   IDS_EDITOR,
   IDS_TERMINAL,
   MAX_MENSAJE_COMMIT,
@@ -28,6 +29,8 @@ import {
   type IdEditor,
   type IdTerminal,
   type IdAgente,
+  type IdAsistente,
+  type AccionAsistente,
   ID_PROVEEDOR_IA,
   ID_PROVEEDOR_SMTP,
   destinatarioValido,
@@ -782,6 +785,27 @@ export function idAgente(v: unknown): IdAgente {
     throw new ErrorWolf('agentes.no_existe', 'Ese agente no está soportado.');
   }
   return v as IdAgente;
+}
+
+/** Cliente de «Conectar asistentes»: un id de la lista, nunca una ruta. */
+export function idAsistente(v: unknown): IdAsistente {
+  if (typeof v !== 'string' || !(IDS_ASISTENTE as readonly string[]).includes(v)) {
+    throw new ErrorWolf('asistentes.no_existe', 'Ese asistente no está soportado.');
+  }
+  return v as IdAsistente;
+}
+
+export function accionAsistente(v: unknown): AccionAsistente {
+  if (v !== 'conectar' && v !== 'quitar') throw new Error('Argumento no válido: accion');
+  return v;
+}
+
+/** Huella de la vista previa (sha-256 en hexadecimal). */
+export function huellaAsistente(v: unknown): string {
+  if (typeof v !== 'string' || !/^[0-9a-f]{64}$/.test(v)) {
+    throw new Error('Argumento no válido: huella');
+  }
+  return v;
 }
 
 /** Confirmación del diálogo: exactamente `true` (si no, `agentes.sin_confirmar`). */

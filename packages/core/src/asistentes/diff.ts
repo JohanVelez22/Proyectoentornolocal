@@ -1,5 +1,5 @@
 export interface LineaDiff {
-  tipo: 'igual' | 'añade' | 'quita';
+  tipo: 'igual' | 'mas' | 'menos';
   texto: string;
 }
 
@@ -30,8 +30,8 @@ export function diffLineas(antes: string, despues: string): LineaDiff[] {
   const mb = b.slice(ini, b.length - fin);
   const medio: LineaDiff[] = [];
   if (ma.length * mb.length > MAX_CELDAS) {
-    for (const t of ma) medio.push({ tipo: 'quita', texto: t });
-    for (const t of mb) medio.push({ tipo: 'añade', texto: t });
+    for (const t of ma) medio.push({ tipo: 'menos', texto: t });
+    for (const t of mb) medio.push({ tipo: 'mas', texto: t });
   } else {
     const w = mb.length + 1;
     const tabla = new Uint32Array((ma.length + 1) * w);
@@ -51,13 +51,13 @@ export function diffLineas(antes: string, despues: string): LineaDiff[] {
         i++;
         j++;
       } else if (tabla[(i + 1) * w + j]! >= tabla[i * w + j + 1]!) {
-        medio.push({ tipo: 'quita', texto: ma[i++]! });
+        medio.push({ tipo: 'menos', texto: ma[i++]! });
       } else {
-        medio.push({ tipo: 'añade', texto: mb[j++]! });
+        medio.push({ tipo: 'mas', texto: mb[j++]! });
       }
     }
-    while (i < ma.length) medio.push({ tipo: 'quita', texto: ma[i++]! });
-    while (j < mb.length) medio.push({ tipo: 'añade', texto: mb[j++]! });
+    while (i < ma.length) medio.push({ tipo: 'menos', texto: ma[i++]! });
+    while (j < mb.length) medio.push({ tipo: 'mas', texto: mb[j++]! });
   }
   if (!medio.some((l) => l.tipo !== 'igual')) return [];
   const antesCtx = a

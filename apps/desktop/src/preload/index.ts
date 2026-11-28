@@ -429,6 +429,14 @@ const api: ApiEntorno = {
     quitarMcp: (id, confirmado) => invocar('agentes.quitarMcp', id, confirmado),
     abrir: (id, sitioId, proveedorId) => invocar('agentes.abrir', id, sitioId, proveedorId),
   },
+  asistentes: {
+    estado: () => invocar('asistentes.estado'),
+    vistaPrevia: (id, accion) => invocar('asistentes.vistaPrevia', id, accion),
+    aplicar: (id, accion, huella, confirmado) =>
+      invocar('asistentes.aplicar', id, accion, huella, confirmado),
+    copiarConfiguracion: (id) => invocar('asistentes.copiarConfiguracion', id),
+    abrirCarpeta: (id) => invocar('asistentes.abrirCarpeta', id),
+  },
   php: {
     iniLeer: (rama) => invocar('php.iniLeer', rama),
     iniValores: (rama) => invocar('php.iniValores', rama),

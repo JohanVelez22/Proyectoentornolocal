@@ -163,6 +163,11 @@ import type {
   IdAgente,
   OrigenAgente,
   ResultadoRegistroMcp,
+  AccionAsistente,
+  EstadoAsistente,
+  IdAsistente,
+  ResultadoAplicarAsistente,
+  VistaPrevia as VistaPreviaAsistente,
   AvisoVhost,
   CambioVhost,
   ResultadoEditorVhost,
@@ -298,6 +303,11 @@ export type {
   IdAgente,
   OrigenAgente,
   ResultadoRegistroMcp,
+  AccionAsistente,
+  EstadoAsistente,
+  IdAsistente,
+  ResultadoAplicarAsistente,
+  VistaPreviaAsistente,
   ConfigProveedorIa,
   PresetSmtp,
   ProveedorSmtp,
@@ -1413,6 +1423,26 @@ export interface ApiEntorno {
     abrir(id: IdAgente, sitioId: string, proveedorId?: string): Promise<void>;
   };
   /**
+   * «Conectar asistentes»: el MCP de WolfCore Dev en la configuración de otros programas. Escribir
+   * exige antes la vista previa y su confirmación; el renderer manda ids, nunca rutas ni tokens.
+   */
+  asistentes: {
+    estado(): Promise<EstadoAsistente[]>;
+    /** Lo que cambiaría (solo lectura). */
+    vistaPrevia(id: IdAsistente, accion: AccionAsistente): Promise<VistaPreviaAsistente>;
+    /** Escribe lo que mostró la vista previa (`huella`); `confirmado` sale del diálogo. */
+    aplicar(
+      id: IdAsistente,
+      accion: AccionAsistente,
+      huella: string,
+      confirmado: true,
+    ): Promise<ResultadoAplicarAsistente>;
+    /** Copia al portapapeles el fragmento de configuración (sin el token). */
+    copiarConfiguracion(id: IdAsistente): Promise<void>;
+    /** Abre la carpeta de configuración del cliente (lista blanca, solo al pulsar). */
+    abrirCarpeta(id: IdAsistente): Promise<void>;
+  };
+  /**
    * PHP de cada rama instalada: php.ini (valores rápidos, diff, guardar con prueba y vuelta
    * atrás, copias) y extensiones. El renderer manda rama, texto o nombres; nunca rutas.
    */
@@ -2134,6 +2164,11 @@ export const RUTAS_IPC = [
   'agentes.registrarMcp',
   'agentes.quitarMcp',
   'agentes.abrir',
+  'asistentes.estado',
+  'asistentes.vistaPrevia',
+  'asistentes.aplicar',
+  'asistentes.copiarConfiguracion',
+  'asistentes.abrirCarpeta',
   'mailpit.noLeidos',
   'correo.captadores',
   'correo.elegir',

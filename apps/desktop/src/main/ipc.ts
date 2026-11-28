@@ -62,6 +62,9 @@ import {
   huellaEnvPedida,
   pedidoEnv,
   carpetaExistente,
+  idAsistente,
+  accionAsistente,
+  huellaAsistente,
   claveIa,
   claveSmtp,
   eleccionTunel,
@@ -1387,6 +1390,22 @@ const TABLA: Record<RutaIpc, Manejador> = {
   // Solo lo preparado: el núcleo hace `git commit -F -` (nunca add ni push).
   'git.commitPreparado': (n, _s, sitioId, mensaje) =>
     n.agentes.commitPreparado(idSitioAgente(sitioId), mensajeCommit(mensaje)),
+  // ---- Conectar asistentes: ids y huellas; las rutas salen de una lista cerrada en el núcleo ----
+  'asistentes.estado': (n) => n.asistentes.estado(),
+  'asistentes.vistaPrevia': (n, _s, id, accion) =>
+    n.asistentes.vistaPrevia(idAsistente(id), accionAsistente(accion)),
+  'asistentes.aplicar': (n, _s, id, accion, huella, confirmado) =>
+    n.asistentes.aplicar(
+      idAsistente(id),
+      accionAsistente(accion),
+      huellaAsistente(huella),
+      confirmadoAgente(confirmado),
+    ),
+  'asistentes.copiarConfiguracion': async (n, s, id) => {
+    await s.copiar(await n.asistentes.configuracion(idAsistente(id)));
+  },
+  'asistentes.abrirCarpeta': async (n, s, id) =>
+    s.abrirCarpeta(await carpetaExistente(await n.asistentes.carpetaConfig(idAsistente(id)))),
   // ---- PHP: el renderer manda rama, texto o nombres; las rutas las arma el núcleo ----
   'php.iniLeer': (n, _s, rama) => n.iniPhp.leer(ramaPhpIni(rama)),
   'php.iniValores': (n, _s, rama) => n.iniPhp.valores(ramaPhpIni(rama), CLAVES_RAPIDAS),

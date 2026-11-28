@@ -371,8 +371,8 @@ describe('Asistentes: confirmación, vista previa y token', () => {
     m.instalados.add('cursor');
     escribir(m.ruta('cursor'), '{\n  "mcpServers": {}\n}\n');
     const v = await m.as.vistaPrevia('cursor', 'conectar');
-    expect(v.lineas.some((l) => l.tipo === 'añade' && l.texto.includes('wolfcore'))).toBe(true);
-    expect(v.lineas.some((l) => l.tipo === 'quita')).toBe(true);
+    expect(v.lineas.some((l) => l.tipo === 'mas' && l.texto.includes('wolfcore'))).toBe(true);
+    expect(v.lineas.some((l) => l.tipo === 'menos')).toBe(true);
     expect(JSON.stringify(v)).not.toContain(TOKEN);
     expect(v.variable).toBe('WOLFCORE_MCP_TOKEN');
     expect(v.existeArchivo).toBe(true);
