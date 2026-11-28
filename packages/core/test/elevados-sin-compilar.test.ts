@@ -97,12 +97,40 @@ describe('I3: ningún script elevado compila ni carga código de disco', () => {
     }
   });
 
-  it('Add-Type solo queda en el script (sin elevar) que avisa del cambio de PATH del usuario', () => {
-    const dir = path.join(SRC, 'plataforma');
-    const conAddType = readdirSync(dir)
-      .filter((f) => f.endsWith('.ts'))
-      .filter((f) => /Add-Type/.test(sinComentarios(readFileSync(path.join(dir, f), 'utf8'))));
-    expect(conAddType).toEqual(['pathUsuarioWin.ts']);
+  it('Add-Type solo queda en pathUsuarioWin.ts (sin elevar), mirando todo src/ de forma recursiva', () => {
+    const todos = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+        e.isDirectory() ? todos(path.join(dir, e.name)) : [path.join(dir, e.name)],
+      );
+    const archivos = todos(SRC).filter((f) => /\.(ts|mts|js|mjs|ps1|psm1)$/.test(f));
+    expect(archivos.length).toBeGreaterThan(100);
+    const conAddType = archivos
+      .filter((f) => /Add-Type/i.test(sinComentarios(readFileSync(f, 'utf8'))))
+      .map((f) => path.relative(SRC, f).replace(/\\/g, '/'));
+    expect(conAddType).toEqual(['plataforma/pathUsuarioWin.ts']);
+  });
+
+  it('cada llamada a elevar de win.ts tiene su cuerpo cubierto por esta prueba', async () => {
+    const fuente = sinComentarios(readFileSync(path.join(SRC, 'plataforma/win.ts'), 'utf8'));
+    const llamadas = fuente.match(/this\.elevar\(|this\.elevarAhora\(|\bscriptElevar\(/g) ?? [];
+    // Cada sitio de `win.ts` que eleva y el cuerpo (de `cuerposElevados`) que se revisa. Si se añade
+    // una llamada nueva, esta cuenta deja de cuadrar y obliga a cubrir su cuerpo aquí.
+    const cubiertas: ReadonlyArray<[sitio: string, cuerpo: string | null]> = [
+      ['elevar → elevarAhora (envoltorio con cola)', null],
+      ['elevarAhora → scriptElevar (envoltorio con UAC)', null],
+      ['detenerServicioSistema', 'comando elevado de win.ts #1'],
+      ['quitarSoloLecturaHosts', 'comando elevado de win.ts #2'],
+      ['purgarListaEspera', 'purga de memoria'],
+      ['saludDiscosAdmin (cargador)', 'salud de los discos (admin)'],
+      ['dejarDeCompartir', 'quitar carpeta compartida'],
+      ['elevarConCuerpo (reglas del cortafuegos)', 'quitar reglas del cortafuegos'],
+      ['escribirComoAdmin (copia de hosts)', 'copia de hosts (sistema)'],
+    ];
+    expect(llamadas).toHaveLength(cubiertas.length);
+    const cuerpos = await cuerposElevados();
+    for (const [sitio, cuerpo] of cubiertas) {
+      if (cuerpo !== null) expect(Object.keys(cuerpos), sitio).toContain(cuerpo);
+    }
   });
 
   it.skipIf(!hayPowerShell())('los cuerpos nuevos son PowerShell válido', async () => {
@@ -134,6 +162,17 @@ describe('I3: ningún script elevado compila ni carga código de disco', () => {
       lineasPInvoke('P', 'WolfP', [{ ...FIRMAS.purga[0], dll: 'C:\\x\\a.dll' }]),
     ).toThrow();
     expect(() => lineasPInvoke('P', 'WolfP', [{ ...FIRMAS.purga[0], nombre: "a'b" }])).toThrow();
+  });
+
+  it('un tipo desconocido (parámetro o retorno, también los heredados de Object) lanza', () => {
+    const base = FIRMAS.procesos[0]!;
+    for (const t of ['dword', 'constructor', 'toString', '__proto__', 'hasOwnProperty']) {
+      const malo = t as unknown as 'ptr';
+      expect(() => lineasPInvoke('P', 'WolfP', [{ ...base, parametros: [malo] }]), t).toThrow(
+        /Tipo/,
+      );
+      expect(() => lineasPInvoke('P', 'WolfP', [{ ...base, retorno: malo }]), t).toThrow(/Tipo/);
+    }
   });
 });
 

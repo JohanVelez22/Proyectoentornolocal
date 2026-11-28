@@ -102,15 +102,15 @@ export function scriptVaciarWorkingSets(
     '  try {',
     '    $w = $procs[$pid_]',
     `    if (-not $w) { ${linea('CAMBIO')}; continue }`,
-    // El dueño sale del token; sin token (no se puede abrir) no es del usuario: CAMBIO.
-    '    $d = Get-DuenoWolf $pid_',
-    `    if (-not $d -or $d.Sid -ne $yo) { ${linea('CAMBIO')}; continue }`,
     '    $c = 0; if ($w.CreationDate) { $c = $w.CreationDate.ToFileTimeUtc() }',
     `    if ($c -ne $ini) { ${linea('CAMBIO')}; continue }`,
     `    if ($serv.ContainsKey($pid_)) { ${linea('CAMBIO')}; continue }`,
-    // Primero el handle; la hora de creación se lee de ESE handle justo antes de vaciar.
+    // Primero el handle; el dueño y la hora de creación se leen de ESE handle, el mismo que se vacía.
     '    $h = $Ws::OpenProcess(0x1100, $false, $pid_)',
     `    if ($h -eq [IntPtr]::Zero) { ${linea('NO_SE_PUDO')}; continue }`,
+    // El dueño sale del token del handle; sin token no es del usuario: CAMBIO.
+    '    $d = Get-DuenoWolf $pid_ $h',
+    `    if (-not $d -or $d.Sid -ne $yo) { ${linea('CAMBIO')}; continue }`,
     '    $a = [int64]0; $b = [int64]0; $k = [int64]0; $u = [int64]0',
     `    if (-not $Ws::GetProcessTimes($h, [ref]$a, [ref]$b, [ref]$k, [ref]$u)) { ${linea('NO_SE_PUDO')}; continue }`,
     // El CIM redondea a microsegundos; el handle da cien nanosegundos: se admite una décima de segundo.

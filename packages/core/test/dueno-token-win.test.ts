@@ -72,6 +72,24 @@ describe('el dueño se lee del token, sin CIM por proceso', () => {
     expect(scripts.vaciado).toMatch(/-not \$d -or \$d\.Sid -ne \$yo/);
   });
 
+  it('si falla GetTokenInformation(20) (elevación) el proceso se excluye, no se asume no elevado', () => {
+    const c = lineasDuenoProceso().join('\n');
+    expect(c).toContain(
+      'if (-not $Dw::GetTokenInformation($t, 20, $e, 4, [ref]$k)) { return $null }',
+    );
+    expect(c).not.toContain('$el = 0');
+  });
+
+  it('el vaciado lee el token del MISMO handle que vacía (sin reabrir el proceso por PID)', () => {
+    const s = scripts.vaciado;
+    expect(s).toContain('Get-DuenoWolf $pid_ $h');
+    expect(s.indexOf('$Ws::OpenProcess(0x1100')).toBeLessThan(s.indexOf('Get-DuenoWolf $pid_ $h'));
+    expect(s.indexOf('Get-DuenoWolf $pid_ $h')).toBeLessThan(s.indexOf('$Ws::EmptyWorkingSet($h)'));
+    // Con un handle ajeno, Get-DuenoWolf no lo cierra.
+    const c = lineasDuenoProceso().join('\n');
+    expect(c).toContain('if ($propio) { $null = $Dw::CloseHandle($h) }');
+  });
+
   it.skipIf(!hayPowerShell())('los scripts son PowerShell válido', () => {
     const a = analizarPowerShell(Object.values(scripts));
     for (const x of a) expect(x.errores).toEqual([]);

@@ -178,6 +178,9 @@ export function lineasPInvoke(
   for (const f of firmas) {
     if (!NOMBRE.test(f.nombre)) throw new Error(`Nombre no válido: ${f.nombre}`);
     if (!DLL.test(f.dll)) throw new Error(`DLL no válida: ${f.dll}`);
+    for (const t of [...f.parametros, f.retorno]) {
+      if (!Object.hasOwn(TIPOS_PS, t)) throw new Error(`Tipo no admitido: ${String(t)}`);
+    }
     const params = f.parametros.map((p) => TIPOS_PS[p]).join(', ');
     lineas.push(
       `Add-FirmaWolf $wtb ${comillas(f.nombre)} ${comillas(f.dll)} (${TIPOS_PS[f.retorno]}) ([Type[]]@(${params}))`,
@@ -188,17 +191,21 @@ export function lineasPInvoke(
 }
 
 /**
- * Líneas que definen `Get-DuenoWolf $pid`: devuelve `@{ Sid; Elevado; Sesion }` leyendo el token del
- * proceso, o `$null` si no se puede abrir (de sistema, protegido, elevado o de otro usuario: se
- * trata como «no propio» y nunca se toca). Sin estructuras: `TOKEN_USER` se lee de un buffer con
+ * Líneas que definen `Get-DuenoWolf $pid [$handle]`: devuelve `@{ Sid; Elevado; Sesion }` leyendo el
+ * token del proceso, o `$null` si no se puede (de sistema, protegido, elevado o de otro usuario: se
+ * trata como «no propio» y nunca se toca). Si falla CUALQUIER lectura del token, también la de la
+ * elevación, devuelve `$null` y el proceso queda excluido. Sin `$handle` abre el proceso con
+ * `PROCESS_QUERY_LIMITED_INFORMATION`; con el de quien llama (el que se va a vaciar) lee el token de ESE
+ * mismo handle y no lo cierra. Sin estructuras: `TOKEN_USER` se lee de un buffer con
  * `Marshal.ReadIntPtr` (su primer campo es el puntero al SID). Todo se libera en `finally`.
  */
 export function lineasDuenoProceso(): string[] {
   return [
     ...lineasPInvoke('Dw', 'WolfDw', FIRMAS.dueno),
-    'function Get-DuenoWolf([int]$id) {',
+    'function Get-DuenoWolf([int]$id, [IntPtr]$hext = [IntPtr]::Zero) {',
     '  $m = [Runtime.InteropServices.Marshal]',
-    '  $h = $Dw::OpenProcess(0x1000, $false, $id)',
+    '  $h = $hext; $propio = $false',
+    '  if ($h -eq [IntPtr]::Zero) { $h = $Dw::OpenProcess(0x1000, $false, $id); $propio = $true }',
     '  if ($h -eq [IntPtr]::Zero) { return $null }',
     '  $t = [IntPtr]::Zero; $b = [IntPtr]::Zero; $e = [IntPtr]::Zero; $c = [IntPtr]::Zero',
     '  try {',
@@ -210,10 +217,10 @@ export function lineasDuenoProceso(): string[] {
     '    if (-not $Dw::GetTokenInformation($t, 1, $b, $n, [ref]$n)) { return $null }',
     '    if (-not $Dw::ConvertSidToStringSidW($m::ReadIntPtr($b), [ref]$c)) { return $null }',
     '    $sid = $m::PtrToStringUni($c)',
-    '    $el = 0',
     '    $e = $m::AllocHGlobal(4); $m::WriteInt32($e, 0)',
     '    $k = [int32]4',
-    '    if ($Dw::GetTokenInformation($t, 20, $e, 4, [ref]$k)) { $el = $m::ReadInt32($e) }',
+    '    if (-not $Dw::GetTokenInformation($t, 20, $e, 4, [ref]$k)) { return $null }',
+    '    $el = $m::ReadInt32($e)',
     '    $ses = [int32]-1',
     '    if (-not $Dw::ProcessIdToSessionId($id, [ref]$ses)) { return $null }',
     '    return [pscustomobject]@{ Sid = $sid; Elevado = ($el -ne 0); Sesion = $ses }',
@@ -222,7 +229,7 @@ export function lineasDuenoProceso(): string[] {
     '    if ($b -ne [IntPtr]::Zero) { $m::FreeHGlobal($b) }',
     '    if ($e -ne [IntPtr]::Zero) { $m::FreeHGlobal($e) }',
     '    if ($t -ne [IntPtr]::Zero) { $null = $Dw::CloseHandle($t) }',
-    '    $null = $Dw::CloseHandle($h)',
+    '    if ($propio) { $null = $Dw::CloseHandle($h) }',
     '  }',
     '}',
   ];
