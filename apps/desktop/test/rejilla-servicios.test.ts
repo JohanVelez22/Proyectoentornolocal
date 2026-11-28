@@ -41,8 +41,8 @@ describe('rejilla de Servicios: tarjetas independientes y del mismo tamaño (D54
     expect(r).toMatch(/transition:\s*border-color/);
   });
 
-  it('la cabecera se pliega y los textos largos se parten en vez de empujar la tarjeta', () => {
-    expect(regla(tarjeta, '.cabeza')).toContain('flex-wrap: wrap');
+  it('la cabecera no se pliega (nombre con elipsis) y los textos largos se parten en vez de empujar la tarjeta', () => {
+    expect(regla(tarjeta, '.cabeza')).toContain('flex-wrap: nowrap');
     expect(regla(tarjeta, '.mensaje')).toContain('overflow-wrap: anywhere');
     expect(regla(tarjeta, '.conflicto-cuerpo')).toContain('overflow-wrap: anywhere');
   });
