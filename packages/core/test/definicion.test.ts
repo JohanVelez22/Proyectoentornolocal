@@ -747,7 +747,7 @@ describe('ronda de correcciones 1', () => {
       ].join('\r\n');
       const real = new PlataformaWindows(async (cmd) => {
         llamadas.push(cmd);
-        return { codigo: 0, stdout: cmd === 'netstat' ? netstat : tasklist, stderr: '' };
+        return { codigo: 0, stdout: /netstat/i.test(cmd) ? netstat : tasklist, stderr: '' };
       });
       const redis = defFalsa({
         id: 'redis',
@@ -756,7 +756,7 @@ describe('ronda de correcciones 1', () => {
         puertoAlternativo: 6380,
       });
       const s = crear([defFalsa(), redis], { plataforma: real });
-      const netstats = (): number => llamadas.filter((c) => c === 'netstat').length;
+      const netstats = (): number => llamadas.filter((c) => /netstat/i.test(c)).length;
 
       const e = await s.estados();
       expect(netstats()).toBe(1);

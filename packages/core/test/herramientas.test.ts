@@ -276,7 +276,7 @@ describe('PathUsuario', () => {
       difusiones: 0,
     };
     const exec: Ejecutor = async (cmd, args, opts) => {
-      expect(cmd).toBe('powershell');
+      expect(cmd).toBe(powershellDelSistema(process.env));
       const s = script(args);
       expect(s).toContain("'Environment'");
       if (s.includes('SendMessageTimeout')) {

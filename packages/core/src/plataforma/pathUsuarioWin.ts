@@ -2,6 +2,7 @@ import { literalPowerShell } from './literalPowerShell';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { AccesoPathUsuario, Ejecutor } from './tipos';
+import { rutaPowerShell } from './procesosWin';
 
 /** Texto ↔ Base64 de sus bytes UTF-16LE: viaja como ASCII puro, sin depender de la página de códigos. */
 export const aBase64 = (t: string): string => Buffer.from(t, 'utf16le').toString('base64');
@@ -88,9 +89,13 @@ export class PathUsuarioWindows implements AccesoPathUsuario {
 
   /** Valor actual ('' si el usuario no tiene Path); falla si no se puede leer con seguridad. */
   async valorCrudo(): Promise<{ valor: string; tipo: TipoPath }> {
-    const r = await this.o.exec('powershell', codificarPowerShell(scriptLeer(this.subclave)), {
-      timeoutMs: 30_000,
-    });
+    const r = await this.o.exec(
+      rutaPowerShell(process.env),
+      codificarPowerShell(scriptLeer(this.subclave)),
+      {
+        timeoutMs: 30_000,
+      },
+    );
     const salida = r.stdout.trim();
     if (r.codigo === 0 && salida === 'SIN') {
       this.ultima = { valor: '', tipo: 'ExpandString' };
@@ -131,7 +136,7 @@ export class PathUsuarioWindows implements AccesoPathUsuario {
     const tipo: TipoPath =
       anterior.tipo === 'String' && !valor.includes('%') ? 'String' : 'ExpandString';
     const r = await this.o.exec(
-      'powershell',
+      rutaPowerShell(process.env),
       codificarPowerShell(scriptEscribir(this.subclave, tipo)),
       { timeoutMs: 30_000, entrada: aBase64(valor) },
     );
@@ -146,7 +151,9 @@ export class PathUsuarioWindows implements AccesoPathUsuario {
     }
     // Las terminales que se abran desde ahora ven el cambio sin cerrar sesión (si no se puede, el PATH ya está).
     await this.o
-      .exec('powershell', codificarPowerShell(SCRIPT_DIFUNDIR_ENTORNO), { timeoutMs: 30_000 })
+      .exec(rutaPowerShell(process.env), codificarPowerShell(SCRIPT_DIFUNDIR_ENTORNO), {
+        timeoutMs: 30_000,
+      })
       .catch(() => undefined);
   }
 }

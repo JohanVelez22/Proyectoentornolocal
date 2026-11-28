@@ -395,7 +395,7 @@ async function leerRutaRegistroHklm(
 ): Promise<string | null> {
   try {
     const r = await ejecutar(
-      'powershell',
+      powershellDelSistema(process.env),
       codificarPowerShell(scriptRutaRegistro(subclave, valor)),
       {
         timeoutMs: 15_000,

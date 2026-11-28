@@ -332,7 +332,7 @@ export async function muestraSistemaWindows(
 ): Promise<MuestraPlataforma> {
   try {
     const r = await ejecutar(
-      'powershell',
+      rutaPowerShell(process.env),
       [
         '-NoLogo',
         '-NoProfile',
@@ -408,7 +408,8 @@ export const rutaVcvars64 = (vs: string): string =>
   path.win32.join(vs, 'VC', 'Auxiliary', 'Build', 'vcvars64.bat');
 
 /** Intérprete de comandos del sistema (para ejecutar un .cmd). */
-export const interpreteComandos = (): string => process.env.ComSpec ?? 'cmd.exe';
+export const interpreteComandos = (): string =>
+  process.env.ComSpec ?? rutaSistema32(process.env, 'cmd.exe');
 
 /** tar.exe de Windows (bsdtar en System32, no el de Git). */
 export const rutaTarSistema = (): string =>
@@ -640,7 +641,7 @@ export class PlataformaWindows implements PlataformaCompleta {
   async leerVariableUsuario(nombre: string): Promise<string | null> {
     if (!NOMBRE_VARIABLE.test(nombre)) throw new Error(`Nombre de variable no válido: ${nombre}`);
     const r = await this.ejecutar(
-      'powershell',
+      rutaPowerShell(this.entorno),
       codificarPowerShell(scriptLeerVariableUsuario(nombre)),
       {
         timeoutMs: 15_000,
@@ -661,7 +662,7 @@ export class PlataformaWindows implements PlataformaCompleta {
     }
     try {
       const r = await this.ejecutar(
-        'powershell',
+        rutaPowerShell(this.entorno),
         codificarPowerShell(scriptVariableUsuario(nombre, valor === null)),
         { timeoutMs: 30_000, ...(valor !== null ? { entrada: aBase64(valor) } : {}) },
       );
@@ -722,16 +723,20 @@ export class PlataformaWindows implements PlataformaCompleta {
       if (!NOMBRE_SERVICIO.test(n)) throw new Error(`Nombre de servicio no válido: ${n}`);
     }
     if (nombres.length === 0) return [];
-    const r = await this.ejecutar('powershell', codificarPowerShell(scriptServicios(nombres)), {
-      timeoutMs: 20000,
-    });
+    const r = await this.ejecutar(
+      rutaPowerShell(this.entorno),
+      codificarPowerShell(scriptServicios(nombres)),
+      {
+        timeoutMs: 20000,
+      },
+    );
     return interpretarServiciosSistema(r.stdout, nombres);
   }
 
   async limpiarEntradaRustup(carpetaDatos: string): Promise<'ausente' | 'quitada' | 'ajena'> {
     const clave = `HKCU:\\${CLAVE_DESINSTALAR_RUSTUP}`;
     const leer = await this.ejecutar(
-      'powershell',
+      rutaPowerShell(this.entorno),
       codificarPowerShell(
         [
           "$ErrorActionPreference = 'SilentlyContinue'",
@@ -749,7 +754,7 @@ export class PlataformaWindows implements PlataformaCompleta {
     }
     // Solo se borra la clave de Rustup cuyo desinstalador está en nuestra carpeta de datos.
     await this.ejecutar(
-      'powershell',
+      rutaPowerShell(this.entorno),
       codificarPowerShell(
         `Remove-Item -LiteralPath ${literal(clave)} -Recurse -Force -ErrorAction SilentlyContinue`,
       ),
@@ -782,9 +787,13 @@ export class PlataformaWindows implements PlataformaCompleta {
   }
 
   async vcRedistInstalado(): Promise<boolean> {
-    const r = await this.ejecutar('powershell', codificarPowerShell(SCRIPT_VCREDIST), {
-      timeoutMs: 15000,
-    });
+    const r = await this.ejecutar(
+      rutaPowerShell(this.entorno),
+      codificarPowerShell(SCRIPT_VCREDIST),
+      {
+        timeoutMs: 15000,
+      },
+    );
     return r.codigo === 0 && r.stdout.trim() === '1';
   }
 
@@ -913,9 +922,13 @@ export class PlataformaWindows implements PlataformaCompleta {
 
   async antivirus(carpeta: string): Promise<EstadoAntivirus | null> {
     try {
-      const r = await this.ejecutar('powershell', codificarPowerShell(SCRIPT_ANTIVIRUS), {
-        timeoutMs: 20_000,
-      });
+      const r = await this.ejecutar(
+        rutaPowerShell(this.entorno),
+        codificarPowerShell(SCRIPT_ANTIVIRUS),
+        {
+          timeoutMs: 20_000,
+        },
+      );
       if (r.codigo !== 0) return null;
       return interpretarAntivirus(r.stdout, carpeta);
     } catch {
@@ -958,7 +971,7 @@ export class PlataformaWindows implements PlataformaCompleta {
   async duenoEsUsuario(ruta: string): Promise<boolean> {
     const script = scriptDuenoDeRuta(ruta);
     try {
-      const r = await this.ejecutar('powershell', codificarPowerShell(script), {
+      const r = await this.ejecutar(rutaPowerShell(this.entorno), codificarPowerShell(script), {
         timeoutMs: 20_000,
       });
       return r.codigo === 0 && r.stdout.trim() === 'SI';
@@ -1007,9 +1020,13 @@ export class PlataformaWindows implements PlataformaCompleta {
 
   async perfilRedDe(ip: string): Promise<PerfilRed | null> {
     try {
-      const r = await this.ejecutar('powershell', codificarPowerShell(scriptPerfilRed(ip)), {
-        timeoutMs: 15_000,
-      });
+      const r = await this.ejecutar(
+        rutaPowerShell(this.entorno),
+        codificarPowerShell(scriptPerfilRed(ip)),
+        {
+          timeoutMs: 15_000,
+        },
+      );
       return r.codigo === 0 ? interpretarPerfilRed(r.stdout) : null;
     } catch {
       return null;
@@ -1472,9 +1489,13 @@ export class PlataformaWindows implements PlataformaCompleta {
 
   async reglasEntradaPermitidas(): Promise<ReglasEntrada> {
     try {
-      const r = await this.ejecutar('powershell', codificarPowerShell(SCRIPT_REGLAS_ENTRADA), {
-        timeoutMs: 60_000,
-      });
+      const r = await this.ejecutar(
+        rutaPowerShell(this.entorno),
+        codificarPowerShell(SCRIPT_REGLAS_ENTRADA),
+        {
+          timeoutMs: 60_000,
+        },
+      );
       if (r.codigo !== 0) return { ok: false, reglas: [] };
       return { ok: true, reglas: interpretarReglasEntrada(r.stdout) };
     } catch {
@@ -1486,7 +1507,7 @@ export class PlataformaWindows implements PlataformaCompleta {
     if (nombres.length === 0) return [];
     try {
       const r = await this.ejecutar(
-        'powershell',
+        rutaPowerShell(this.entorno),
         codificarPowerShell(scriptExportarReglas(nombres)),
         {
           timeoutMs: 60_000,
@@ -1555,9 +1576,13 @@ export class PlataformaWindows implements PlataformaCompleta {
    */
   async leerAlmacenFirewall(): Promise<RegistroProtegido[] | null> {
     try {
-      const r = await this.ejecutar('powershell', codificarPowerShell(SCRIPT_LEER_ALMACEN), {
-        timeoutMs: 30_000,
-      });
+      const r = await this.ejecutar(
+        rutaPowerShell(this.entorno),
+        codificarPowerShell(SCRIPT_LEER_ALMACEN),
+        {
+          timeoutMs: 30_000,
+        },
+      );
       return r.codigo === 0 ? interpretarAlmacen(r.stdout) : null;
     } catch {
       return null;
@@ -1593,9 +1618,13 @@ export class PlataformaWindows implements PlataformaCompleta {
   }
 
   async raicesSistema(): Promise<string> {
-    const r = await this.ejecutar('powershell', codificarPowerShell(SCRIPT_RAICES), {
-      timeoutMs: 30_000,
-    });
+    const r = await this.ejecutar(
+      rutaPowerShell(this.entorno),
+      codificarPowerShell(SCRIPT_RAICES),
+      {
+        timeoutMs: 30_000,
+      },
+    );
     if (r.codigo !== 0) {
       throw new Error(`No se pudieron leer las raíces del sistema: ${r.stderr.trim() || r.codigo}`);
     }
@@ -1663,10 +1692,14 @@ export class PlataformaWindows implements PlataformaCompleta {
       });
       const externo = scriptElevar(codificarComando(interno));
       const desde = Date.now();
-      const r = await this.ejecutar('powershell', ['-NoProfile', '-Command', externo], {
-        ...(o.tiempoLimiteMs ? { timeoutMs: o.tiempoLimiteMs } : {}),
-        senal: ctl.signal,
-      });
+      const r = await this.ejecutar(
+        rutaPowerShell(this.entorno),
+        ['-NoProfile', '-Command', externo],
+        {
+          ...(o.tiempoLimiteMs ? { timeoutMs: o.tiempoLimiteMs } : {}),
+          senal: ctl.signal,
+        },
+      );
       if (r.codigo !== 0 && /cancel/i.test(r.stderr)) return { ok: false, motivo: 'cancelado' };
       const mapeado = MOTIVO_SALIDA_COPIA[r.codigo];
       if (mapeado) return mapeado;
@@ -1723,22 +1756,38 @@ export class PlataformaWindows implements PlataformaCompleta {
   }
 
   async quienUsaPuerto(puerto: number): Promise<{ pid: number; nombre: string } | null> {
-    const r = await this.ejecutar('netstat', ['-ano', '-p', 'TCP'], { timeoutMs: 15000 });
+    const r = await this.ejecutar(
+      rutaSistema32(this.entorno, 'netstat.exe'),
+      ['-ano', '-p', 'TCP'],
+      { timeoutMs: 15000 },
+    );
     const pid = interpretarNetstat(r.stdout, puerto);
     if (pid === null) return null;
-    const t = await this.ejecutar('tasklist', ['/FI', `PID eq ${pid}`, '/FO', 'CSV', '/NH'], {
-      timeoutMs: 15000,
-    });
+    const t = await this.ejecutar(
+      rutaSistema32(this.entorno, 'tasklist.exe'),
+      ['/FI', `PID eq ${pid}`, '/FO', 'CSV', '/NH'],
+      {
+        timeoutMs: 15000,
+      },
+    );
     return interpretarTasklist(t.stdout) ?? { pid, nombre: 'desconocido' };
   }
 
   async duenosDePuertos(puertos: number[]): Promise<Map<number, { pid: number; nombre: string }>> {
     const res = new Map<number, { pid: number; nombre: string }>();
     if (puertos.length === 0) return res;
-    const r = await this.ejecutar('netstat', ['-ano', '-p', 'TCP'], { timeoutMs: 15000 });
+    const r = await this.ejecutar(
+      rutaSistema32(this.entorno, 'netstat.exe'),
+      ['-ano', '-p', 'TCP'],
+      { timeoutMs: 15000 },
+    );
     const pids = interpretarNetstatVarios(r.stdout, puertos);
     if (pids.size === 0) return res;
-    const t = await this.ejecutar('tasklist', ['/FO', 'CSV', '/NH'], { timeoutMs: 15000 });
+    const t = await this.ejecutar(
+      rutaSistema32(this.entorno, 'tasklist.exe'),
+      ['/FO', 'CSV', '/NH'],
+      { timeoutMs: 15000 },
+    );
     const nombres = interpretarTasklistTodos(t.stdout);
     for (const [puerto, pid] of pids)
       res.set(puerto, { pid, nombre: nombres.get(pid) ?? 'desconocido' });
@@ -1757,9 +1806,13 @@ export class PlataformaWindows implements PlataformaCompleta {
 
   async certificadoInstalado(huella: string): Promise<boolean> {
     if (!/^[0-9A-Fa-f]{40}$/.test(huella)) return false;
-    const r = await this.ejecutar('certutil', ['-user', '-store', 'Root', huella], {
-      timeoutMs: 15000,
-    });
+    const r = await this.ejecutar(
+      rutaSistema32(this.entorno, 'certutil.exe'),
+      ['-user', '-store', 'Root', huella],
+      {
+        timeoutMs: 15000,
+      },
+    );
     return r.codigo === 0;
   }
 
@@ -1769,7 +1822,9 @@ export class PlataformaWindows implements PlataformaCompleta {
    */
   private async certutil(args: string[]): Promise<ResultadoEscritura> {
     // Sin límite corto: Windows muestra su propio aviso de confirmación y espera al usuario.
-    const r = await this.ejecutar('certutil', args, { timeoutMs: 120000 });
+    const r = await this.ejecutar(rutaSistema32(this.entorno, 'certutil.exe'), args, {
+      timeoutMs: 120000,
+    });
     if (r.codigo === 0) return { ok: true };
     const texto = `${r.stderr}${r.stdout}`.trim();
     const bajo = texto.toLowerCase();
@@ -1786,9 +1841,13 @@ export class PlataformaWindows implements PlataformaCompleta {
   }
 
   async procesoVivo(pid: number): Promise<{ vivo: boolean; ejecutable?: string }> {
-    const t = await this.ejecutar('tasklist', ['/FI', `PID eq ${pid}`, '/FO', 'CSV', '/NH'], {
-      timeoutMs: 15000,
-    });
+    const t = await this.ejecutar(
+      rutaSistema32(this.entorno, 'tasklist.exe'),
+      ['/FI', `PID eq ${pid}`, '/FO', 'CSV', '/NH'],
+      {
+        timeoutMs: 15000,
+      },
+    );
     const p = interpretarTasklist(t.stdout);
     if (p && p.pid === pid) return { vivo: true, ejecutable: p.nombre };
     // Con el sistema ocupado tasklist puede fallar o volver vacío con el proceso vivo: darlo
@@ -1801,7 +1860,7 @@ export class PlataformaWindows implements PlataformaCompleta {
     try {
       // CreationDate de Win32_Process como FILETIME UTC: no depende de la zona ni del idioma.
       const r = await this.ejecutar(
-        'powershell',
+        rutaPowerShell(this.entorno),
         [
           '-NoProfile',
           '-NonInteractive',
@@ -1822,7 +1881,7 @@ export class PlataformaWindows implements PlataformaCompleta {
     try {
       // En Base64 UTF-8: la carpeta de datos puede tener tildes y la consola usa la página OEM.
       const r = await this.ejecutar(
-        'powershell',
+        rutaPowerShell(this.entorno),
         [
           '-NoProfile',
           '-NonInteractive',
@@ -1841,7 +1900,11 @@ export class PlataformaWindows implements PlataformaCompleta {
   }
 
   async matarArbol(pid: number): Promise<void> {
-    await this.ejecutar('taskkill', ['/PID', String(pid), '/T', '/F'], { timeoutMs: 15000 });
+    await this.ejecutar(
+      rutaSistema32(this.entorno, 'taskkill.exe'),
+      ['/PID', String(pid), '/T', '/F'],
+      { timeoutMs: 15000 },
+    );
   }
 
   async abrirUrl(url: string): Promise<void> {
@@ -1854,7 +1917,10 @@ export class PlataformaWindows implements PlataformaCompleta {
     if (u.protocol !== 'http:' && u.protocol !== 'https:') {
       throw new Error(`URL no permitida: ${url}`);
     }
-    await this.ejecutar('rundll32', ['url.dll,FileProtocolHandler', u.href]);
+    await this.ejecutar(rutaSistema32(this.entorno, 'rundll32.exe'), [
+      'url.dll,FileProtocolHandler',
+      u.href,
+    ]);
   }
 
   ejecutable(nombre: 'nginx' | 'php-cgi' | 'php' | 'cloudflared'): string {
@@ -1868,7 +1934,7 @@ export class PlataformaWindows implements PlataformaCompleta {
     try {
       // UTF-8 para que una carpeta con tildes (o redirigida a OneDrive) llegue bien.
       const r = await this.ejecutar(
-        'powershell',
+        rutaPowerShell(this.entorno),
         [
           '-NoProfile',
           '-Command',

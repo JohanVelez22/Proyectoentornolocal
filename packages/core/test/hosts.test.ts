@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import path, { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { carpetaTemporal } from './temporales';
 import { Eventos, type EventosNucleo } from '../src/eventos';
@@ -200,7 +200,7 @@ describe('intérpretes', () => {
 describe('PlataformaWindows con ejecutor falso', () => {
   it('quienUsaPuerto combina netstat y tasklist', async () => {
     const p = new PlataformaWindows(async (cmd) =>
-      cmd === 'netstat'
+      /netstat/i.test(cmd)
         ? { codigo: 0, stdout: NETSTAT, stderr: '' }
         : { codigo: 0, stdout: '"nginx.exe","4321","Console","1","1 KB"', stderr: '' },
     );
@@ -211,8 +211,8 @@ describe('PlataformaWindows con ejecutor falso', () => {
   it('duenosDePuertos resuelve varios puertos con un solo netstat y un solo tasklist', async () => {
     const llamadas: string[] = [];
     const p = new PlataformaWindows(async (cmd) => {
-      llamadas.push(cmd);
-      return cmd === 'netstat'
+      llamadas.push(path.win32.basename(cmd, '.exe'));
+      return /netstat/i.test(cmd)
         ? { codigo: 0, stdout: NETSTAT, stderr: '' }
         : {
             codigo: 0,
@@ -330,7 +330,10 @@ describe('PlataformaWindows con ejecutor falso', () => {
     });
     await p.abrirUrl('https://a.test/?x=1&calc.exe');
     expect(llamadas).toEqual([
-      ['rundll32', ['url.dll,FileProtocolHandler', 'https://a.test/?x=1&calc.exe']],
+      [
+        expect.stringMatching(/System32.rundll32.exe$/i),
+        ['url.dll,FileProtocolHandler', 'https://a.test/?x=1&calc.exe'],
+      ],
     ]);
     expect(llamadas.some(([c]) => c === 'cmd')).toBe(false);
   });
