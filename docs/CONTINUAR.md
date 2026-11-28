@@ -174,5 +174,5 @@ Linux solo se puede probar a medias en WSL2. macOS, solo en CI.
 - **Código:**
   - `packages/core`: núcleo, detrás de `Nucleo`; la capa `plataforma/` es lo único que depende del sistema.
   - `apps/desktop`: Electron (main y renderer, con Vue 3, Naive UI y Pinia).
-  - `apps/cli`: la CLI `wolf`.
+  - La CLI `wolf` es un cliente que la app copia a su carpeta de datos y que habla con el servidor local de órdenes de `apps/desktop` (ver `docs/manual/12-cli-wolf.md`).
 - **CI:** `.github/workflows/ci.yml`.
