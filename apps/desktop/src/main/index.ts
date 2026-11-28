@@ -26,7 +26,6 @@ import {
   type PreferenciasUi,
   type Rutas,
   type TemaUi,
-  validarRutaRecursoRed,
 } from '@pel/core';
 import type { ApiSistema } from '../shared/api';
 import { Notificador } from './notificaciones';
@@ -47,6 +46,7 @@ import {
 } from './sesion';
 import { carpetaExistente, urlAbrible, urlHttp } from './validacion';
 import { abrirGrabadora } from './grabadora';
+import { abrirRecursoEnExplorador } from './explorador';
 import { imprimirHtmlAPdf } from './conversorPdf';
 import { crearEjecutorUtilityProcess } from './conversorProceso';
 import { crearEjecutorDiffUtilityProcess } from './diffProceso';
@@ -125,10 +125,10 @@ const sistema: ApiSistema = {
     const error = await shell.openPath(await carpetaExistente(ruta));
     if (error) throw new Error(error);
   },
-  // Carpeta compartida de otro equipo (D53): última barrera antes de `shell.openPath`.
+  // Carpeta compartida de otro equipo (D53): `explorer.exe` por ruta absoluta y sin shell, con la
+  // ruta revalidada (la última barrera); no pasa por `shell.openPath`.
   async abrirRecursoRed(ruta) {
-    const error = await shell.openPath(validarRutaRecursoRed(ruta));
-    if (error) throw new Error(error);
+    abrirRecursoEnExplorador(ruta);
   },
   async copiar(texto) {
     clipboard.writeText(texto);
