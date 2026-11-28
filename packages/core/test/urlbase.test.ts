@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -7,6 +8,7 @@ import {
   readFileSync,
   renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from 'node:fs';
 import os from 'node:os';
@@ -333,6 +335,16 @@ describe('UrlBase', () => {
       expect(readFileSync(env(), 'utf8')).toBe('B=2\n');
       expect(readdirSync(carpeta).filter((f) => f.includes('pel-tmp'))).toEqual([]);
     });
+
+    it.skipIf(process.platform === 'win32')(
+      'el archivo nuevo conserva los permisos del que reemplaza',
+      async () => {
+        writeFileSync(env(), 'A=1\n', { mode: 0o600 });
+        chmodSync(env(), 0o600);
+        await escribirAtomico(env(), Buffer.from('B=2\n'));
+        expect(statSync(env()).mode & 0o777).toBe(0o600);
+      },
+    );
 
     it('si el rename falla siempre, el .env original queda intacto y sin temporales', async () => {
       writeFileSync(env(), 'A=1\n');

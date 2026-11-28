@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { copyFile, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Ejecutor } from '../plataforma/tipos';
 import type { Rutas } from '../rutas';
@@ -147,7 +147,17 @@ export async function escribirAtomico(
   const renombrar = o.renombrar ?? rename;
   const tmp = `${destino}.pel-tmp-${randomBytes(4).toString('hex')}`;
   try {
-    await writeFile(tmp, datos);
+    // El archivo nuevo conserva los permisos del que reemplaza (p. ej. 0600 en una configuración
+    // con claves). En Windows el modo solo marca «solo lectura»: no se copia.
+    const modo =
+      process.platform === 'win32'
+        ? undefined
+        : await stat(destino).then(
+            (i) => i.mode & 0o777,
+            () => undefined,
+          );
+    await writeFile(tmp, datos, modo === undefined ? undefined : { mode: modo });
+    if (modo !== undefined) await chmod(tmp, modo);
     for (let i = 0; ; i++) {
       try {
         await renombrar(tmp, destino);
