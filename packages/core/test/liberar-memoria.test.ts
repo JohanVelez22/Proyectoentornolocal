@@ -106,17 +106,21 @@ describe('liberar memoria: estimación (D54b)', () => {
     const e = await liberador(falsa).estimar();
     expect(e.niveles.liviano).toEqual({
       bytes: 1500 * MB,
+      tipo: 'hasta',
       procesos: 3,
       requiereAdmin: false,
     });
     // chrome 900 + Code 600 + sinventana 700 (el pequeño de 10 MB no cuenta).
     expect(e.niveles.moderado).toEqual({
       bytes: 1500 * MB + 2200 * MB,
+      tipo: 'hasta',
       procesos: 6,
       requiereAdmin: false,
     });
+    // Profundo: los procesos como Moderado; la lista de espera va aparte (dos cifras).
     expect(e.niveles.profundo).toEqual({
-      bytes: 1500 * MB + 2200 * MB + 6 * 1024 * MB,
+      bytes: 1500 * MB + 2200 * MB,
+      tipo: 'hasta',
       procesos: 6,
       requiereAdmin: true,
     });
@@ -124,7 +128,7 @@ describe('liberar memoria: estimación (D54b)', () => {
     expect(e.sistema?.disponible).toBe(8 * 1024 * MB);
   });
 
-  it('si no se puede medir la lista de espera, Profundo es null y lo demás se calcula', async () => {
+  it('si no se puede medir la lista de espera, esa cifra es null y las de los procesos se calculan', async () => {
     const falsa = escenario();
     falsa.memoria = {
       total: 16 * 1024 * MB,
@@ -133,7 +137,8 @@ describe('liberar memoria: estimación (D54b)', () => {
       listaEspera: null,
     };
     const e = await liberador(falsa).estimar();
-    expect(e.niveles.profundo.bytes).toBeNull();
+    expect(e.listaEspera).toBeNull();
+    expect(e.niveles.profundo.bytes).toBe(3700 * MB);
     expect(e.niveles.liviano.bytes).toBe(1500 * MB);
     expect(e.niveles.moderado.bytes).not.toBeNull();
   });
@@ -272,6 +277,8 @@ describe('liberar memoria: confirmación y Profundo', () => {
       [{ ok: false, motivo: 'tiempo' }, 'tiempo'],
       [{ ok: false, motivo: 'denegado', detalle: 'x' }, 'error'],
       [{ ok: false, motivo: 'error', detalle: 'fallo' }, 'error'],
+      // Menor 3: la lista de espera se vació y la caché no, con su propio estado.
+      [{ ok: false, motivo: 'sin-cache', detalle: 'caché' }, 'sin-cache'],
     ] as const;
     for (const [res, esperado] of casos) {
       const falsa = escenario();
@@ -320,7 +327,7 @@ describe('liberar memoria: lo liberado de verdad', () => {
     const vaciado = (1500 * MB + 2200 * MB) * 0.9;
     expect(r.recortado).toBeCloseTo(vaciado, -3);
     expect(r.despues!.disponible - r.antes!.disponible).toBeCloseTo(vaciado, -3);
-    expect(r.liberado).toBe(r.despues!.disponible - r.antes!.disponible);
+    expect(r.aumentoDisponible).toBe(r.despues!.disponible - r.antes!.disponible);
   });
 
   it('si la memoria baja (otro programa pidió más), lo liberado es 0 y no un número negativo', async () => {
@@ -333,16 +340,16 @@ describe('liberar memoria: lo liberado de verdad', () => {
       return n++ === 0 ? m : { ...m, disponible: m.disponible - 5 * 1024 * MB };
     };
     const r = await liberador(envuelta).liberar('liviano', true);
-    expect(r.liberado).toBe(0);
+    expect(r.aumentoDisponible).toBe(0);
   });
 
-  it('si no se puede medir, liberado es null («No disponible»), nunca una cifra inventada', async () => {
+  it('si no se puede medir, aumentoDisponible es null («No disponible»), nunca una cifra inventada', async () => {
     const falsa = escenario();
     falsa.memoria = null;
     const r = await liberador(falsa).liberar('liviano', true);
     expect(r.antes).toBeNull();
     expect(r.despues).toBeNull();
-    expect(r.liberado).toBeNull();
+    expect(r.aumentoDisponible).toBeNull();
   });
 
   it('Profundo pasa la lista de espera a memoria libre', async () => {
@@ -483,7 +490,7 @@ describe('liberar memoria: Windows (ejecutor falso, nada real)', () => {
     expect(await con(SALIDA_PURGA.listaEspera)).toMatchObject({ ok: false, motivo: 'error' });
     expect(await con(SALIDA_PURGA.cacheArchivos)).toMatchObject({
       ok: false,
-      motivo: 'error',
+      motivo: 'sin-cache',
       detalle: expect.stringContaining('caché de archivos'),
     });
   });

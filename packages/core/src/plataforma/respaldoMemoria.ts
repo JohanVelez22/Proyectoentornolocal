@@ -22,6 +22,7 @@ export const RESPALDO_MEMORIA_NEUTRO: Pick<
   | 'memoriaDelSistema'
   | 'vaciarWorkingSets'
   | 'purgarListaEspera'
+  | 'estadoPantalla'
   | 'rutasLimpieza'
   | 'navegadoresAbiertos'
   | 'esAdministrador'
@@ -61,6 +62,7 @@ export const RESPALDO_MEMORIA_NEUTRO: Pick<
     motivo: 'error',
     detalle: 'no disponible en este sistema',
   }),
+  estadoPantalla: async () => null,
   // Limpieza de disco (D37): fuera de Windows aún no hay rutas conocidas, así que no hay nada.
   rutasLimpieza: async () => [],
   navegadoresAbiertos: async () => [],

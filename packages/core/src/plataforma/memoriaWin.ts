@@ -1,5 +1,10 @@
 import { FIRMAS, lineasPInvoke } from './pinvokeWin';
-import type { MemoriaSistema, ObjetivoVaciado, ResultadoVaciadoProceso } from './tipos';
+import type {
+  EstadoPantalla,
+  MemoriaSistema,
+  ObjetivoVaciado,
+  ResultadoVaciadoProceso,
+} from './tipos';
 
 /**
  * Liberar memoria en Windows (D54b). Tres piezas, todas con la PowerShell de System32 por ruta
@@ -186,4 +191,33 @@ export function scriptPurgarListaEspera(): string {
     `if (-not $cache) { exit ${SALIDA_PURGA.cacheArchivos} }`,
     'exit 0',
   ].join('\n');
+}
+
+/**
+ * Lee `SHQueryUserNotificationState` (shell32, sin administrador) y dice el número tal cual:
+ * `PANTALLA|n`. Por P/Invoke en memoria, como el resto.
+ */
+export const SCRIPT_ESTADO_PANTALLA = [
+  "$ErrorActionPreference = 'Stop'",
+  ...lineasPInvoke('No', 'WolfNo', FIRMAS.notificacion),
+  '$e = 0',
+  'if ($No::SHQueryUserNotificationState([ref]$e) -ne 0) { exit 1 }',
+  `[Console]::Out.WriteLine('PANTALLA${SEP}' + $e)`,
+].join('\n');
+
+/**
+ * `QUERY_USER_NOTIFICATION_STATE` → lo que se avisa. 2 `QUNS_BUSY` (aplicación a pantalla
+ * completa), 3 `QUNS_RUNNING_D3D_FULL_SCREEN` (juego), 4 `QUNS_PRESENTATION_MODE`; el resto
+ * (1 ausente, 5 acepta avisos, 6 hora de silencio, 7 aplicación) no impide liberar memoria.
+ * Null si la salida no cuadra.
+ */
+export function interpretarEstadoPantalla(salida: string): EstadoPantalla | null {
+  const m = /^PANTALLA\|(\d{1,2})$/.exec(salida.trim());
+  if (!m) return null;
+  const n = Number(m[1]);
+  if (n < 1 || n > 7) return null;
+  if (n === 2) return 'ocupado';
+  if (n === 3) return 'pantalla-completa';
+  if (n === 4) return 'presentacion';
+  return 'libre';
 }

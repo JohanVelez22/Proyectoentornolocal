@@ -34,8 +34,10 @@ import type {
   EstadoAntivirus,
   EstadoCaptura,
   ConexionActiva,
+  EstadoPantalla,
   MemoriaSistema,
   ObjetivoVaciado,
+  ResultadoPurga,
   ResultadoVaciadoProceso,
   EstadoCierre,
   IdentidadUsuario,
@@ -527,7 +529,12 @@ export class PlataformaFalsa implements PlataformaCompleta {
   readonly vaciados: ObjetivoVaciado[][] = [];
   fallaVaciado = false;
   /** Lo que contesta `purgarListaEspera` y las veces que se pidió. */
-  resultadoPurga: ResultadoEscritura = { ok: true };
+  resultadoPurga: ResultadoPurga = { ok: true };
+  /** Lo que contesta `estadoPantalla`; null = no se pudo leer. */
+  pantalla: EstadoPantalla | null = 'libre';
+  async estadoPantalla(): Promise<EstadoPantalla | null> {
+    return this.pantalla;
+  }
   purgas = 0;
   async memoriaDelSistema(): Promise<MemoriaSistema | null> {
     return this.memoria ? { ...this.memoria } : null;
@@ -559,7 +566,7 @@ export class PlataformaFalsa implements PlataformaCompleta {
     });
   }
 
-  async purgarListaEspera(): Promise<ResultadoEscritura> {
+  async purgarListaEspera(): Promise<ResultadoPurga> {
     this.purgas++;
     if (this.resultadoPurga.ok && this.memoria) {
       this.memoria.libre = (this.memoria.libre ?? 0) + (this.memoria.listaEspera ?? 0);

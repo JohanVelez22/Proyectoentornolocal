@@ -72,8 +72,10 @@ import {
 } from './procesosWin';
 import { ProcesosUsuarioWindows } from './procesosUsuarioWin';
 import {
+  interpretarEstadoPantalla,
   interpretarMemoriaSistema,
   interpretarVaciado,
+  SCRIPT_ESTADO_PANTALLA,
   SALIDA_PURGA,
   SCRIPT_MEMORIA_SISTEMA,
   scriptPurgarListaEspera,
@@ -158,8 +160,10 @@ import type {
   ConexionActiva,
   EstadoCierre,
   IdentidadUsuario,
+  EstadoPantalla,
   MemoriaSistema,
   ObjetivoVaciado,
+  ResultadoPurga,
   ResultadoVaciadoProceso,
   ProcesoUsuario,
   NavegadorLimpieza,
@@ -1094,8 +1098,22 @@ export class PlataformaWindows implements PlataformaCompleta {
     return hechos;
   }
 
+  /** ¿Juego o pantalla completa? (`SHQueryUserNotificationState`, sin elevar); null si no se pudo leer. */
+  async estadoPantalla(): Promise<EstadoPantalla | null> {
+    try {
+      const r = await this.ejecutar(
+        rutaPowerShell(this.entorno),
+        codificarPowerShell(SCRIPT_ESTADO_PANTALLA),
+        { timeoutMs: 20_000 },
+      );
+      return r.codigo === 0 ? interpretarEstadoPantalla(r.stdout) : null;
+    } catch {
+      return null;
+    }
+  }
+
   /** Vacía la lista de espera y la caché de archivos con UAC (cola de elevaciones, plazo, sin salida). */
-  async purgarListaEspera(): Promise<ResultadoEscritura> {
+  async purgarListaEspera(): Promise<ResultadoPurga> {
     const r = await this.elevar(scriptPurgarListaEspera(), 150_000);
     if (r.ok || r.motivo !== 'error') return r;
     const salida = /^código (\d+)$/.exec(r.detalle ?? '')?.[1];
@@ -1110,9 +1128,10 @@ export class PlataformaWindows implements PlataformaCompleta {
       return { ok: false, motivo: 'error', detalle: 'Windows no vació la lista de espera' };
     }
     if (salida === String(SALIDA_PURGA.cacheArchivos)) {
+      // La lista de espera sí se vació: es un estado propio, no un fallo de todo.
       return {
         ok: false,
-        motivo: 'error',
+        motivo: 'sin-cache',
         detalle: 'la lista de espera se vació, pero no la caché de archivos',
       };
     }

@@ -4,6 +4,7 @@ import type {
   ObjetivoVaciado,
   PlataformaCompleta,
   ProcesoUsuario,
+  EstadoPantalla,
 } from '../plataforma/tipos';
 import { conReales, esFlyEnv, motivoProtegido, type ContextoProteccion } from './memoria';
 
@@ -20,11 +21,15 @@ import { conReales, esFlyEnv, motivoProtegido, type ContextoProteccion } from '.
  * - Se elige por PID y propietario (usuario y sesión actuales), no por nombre; los nombres
  *   protegidos de `memoria.ts` son una barrera adicional. La plataforma vuelve a comprobar el dueño,
  *   la sesión, la hora de inicio y que no sea un servicio de cada PID justo antes de actuar.
- * - Las cifras son honestas: la estimación sale de los conjuntos de trabajo y la lista de espera
- *   de AHORA; lo liberado es la diferencia medida de memoria disponible antes y después. Lo que no
- *   se pueda medir es `null` (la interfaz dice «No disponible»), nunca una cifra inventada.
- * - No se detecta el modo de juego ni una aplicación a pantalla completa: no hay una forma barata
- *   y fiable de saberlo sin administrador, así que no se avisa de ello.
+ * - Las cifras son honestas. La estimación de Liviano y Moderado sale del conjunto de trabajo
+ *   PRIVADO de cada proceso (lo que de verdad quedaría libre) si se pudo leer sin administrador;
+ *   si no, es un «hasta ≈» con el conjunto de trabajo total. Profundo da dos cifras: lo de los
+ *   procesos y, aparte, la lista de espera (que pasa a memoria libre). Lo medido después es el
+ *   AUMENTO de la memoria disponible y de la libre en ese momento (Windows reutiliza esa memoria
+ *   enseguida). Lo que no se pueda medir es `null` (la interfaz dice «No disponible»).
+ * - Si Windows dice que hay un juego, una presentación o una aplicación a pantalla completa
+ *   (`SHQueryUserNotificationState`, sin administrador), `estimar` lo devuelve en `pantalla` y la
+ *   interfaz avisa antes de Moderado y Profundo (liberar memoria puede causar tirones).
  */
 
 export const NIVELES_MEMORIA = ['liviano', 'moderado', 'profundo'] as const;
@@ -37,8 +42,16 @@ export const MINIMO_PROCESO_USUARIO_BYTES = 30 * MB;
 export const MINIMO_PROCESO_PROPIO_BYTES = 5 * MB;
 
 export interface EstimacionNivel {
-  /** Bytes que aproximadamente liberaría; null si no se pudo calcular. */
+  /**
+   * Bytes (≈) que liberaría vaciar los procesos del nivel (sin la lista de espera de Profundo, que
+   * va aparte en `EstimacionMemoria.listaEspera`); null si no se pudo calcular.
+   */
   bytes: number | null;
+  /**
+   * `privada`: salió del conjunto de trabajo privado (estimación). `hasta`: no se pudo leer el
+   * privado de algún proceso y es un tope (el conjunto de trabajo total): «hasta ≈».
+   */
+  tipo: 'privada' | 'hasta';
   /** Procesos cuyo conjunto de trabajo se vaciaría. */
   procesos: number;
   /** Profundo: necesita permiso de administrador (UAC). */
@@ -51,17 +64,22 @@ export interface EstimacionMemoria {
   sistema: MemoriaSistema | null;
   /** Tamaño de la lista de espera al calcular; null si no se pudo leer. */
   listaEspera: number | null;
+  /** Juego o pantalla completa ahora mismo; null si no se pudo leer (no se avisa de lo que no se sabe). */
+  pantalla: EstadoPantalla | null;
 }
 
-export type EstadoPurga = 'no-aplica' | 'hecha' | 'cancelada' | 'tiempo' | 'error';
+/** `sin-cache`: la lista de espera se vació, pero Windows no vació la caché de archivos. */
+export type EstadoPurga = 'no-aplica' | 'hecha' | 'sin-cache' | 'cancelada' | 'tiempo' | 'error';
 
 export interface ResultadoLiberacion {
   nivel: NivelMemoria;
   /** Memoria del equipo antes y después (null = no se pudo medir). */
   antes: MemoriaSistema | null;
   despues: MemoriaSistema | null;
-  /** Aumento medido de la memoria disponible (nunca negativo); null si no se pudo medir. */
-  liberado: number | null;
+  /** Aumento medido ahora de la memoria disponible (nunca negativo); null si no se pudo medir. */
+  aumentoDisponible: number | null;
+  /** Aumento medido ahora de la memoria libre (la de la lista a cero); null si no se pudo medir. */
+  aumentoLibre: number | null;
   /** Suma de lo que bajaron los conjuntos de trabajo vaciados (lo que dicen los procesos). */
   recortado: number;
   procesosVaciados: number;
@@ -79,6 +97,7 @@ export interface DepsLiberarMemoria {
     | 'rutasProtegidas'
     | 'descendientes'
     | 'memoriaDelSistema'
+    | 'estadoPantalla'
     | 'vaciarWorkingSets'
     | 'purgarListaEspera'
   >;
@@ -99,6 +118,16 @@ interface Seleccion {
   propios: ProcesoUsuario[];
   usuario: ProcesoUsuario[];
 }
+
+const ESTADO_PURGA: Readonly<
+  Record<'cancelado' | 'denegado' | 'error' | 'tiempo' | 'sin-cache', EstadoPurga>
+> = {
+  cancelado: 'cancelada',
+  denegado: 'error',
+  error: 'error',
+  tiempo: 'tiempo',
+  'sin-cache': 'sin-cache',
+};
 
 const confirmar = (confirmado: unknown): void => {
   if (confirmado !== true) {
@@ -175,24 +204,45 @@ export class LiberadorMemoria {
    * ahora. Solo lee. Lo que no se puede calcular queda `null`.
    */
   async estimar(): Promise<EstimacionMemoria> {
-    const [sistema, sel] = await Promise.all([this.medir(), this.seleccionar().catch(() => null)]);
-    const suma = (l: ProcesoUsuario[]): number => l.reduce((t, p) => t + p.memoria, 0);
+    const [sistema, sel, pantalla] = await Promise.all([
+      this.medir(),
+      this.seleccionar().catch(() => null),
+      this.d.plataforma.estadoPantalla().catch(() => null),
+    ]);
     const listaEspera = sistema?.listaEspera ?? null;
-    const liviano = sel ? suma(sel.propios) : null;
-    const moderado = sel && liviano !== null ? liviano + suma(sel.usuario) : null;
+    // Con el privado de TODOS los procesos es una estimación; si falta alguno, un tope («hasta»).
+    const calcular = (l: ProcesoUsuario[]): { bytes: number; tipo: 'privada' | 'hasta' } => {
+      const privado = l.every((p) => typeof p.memoriaPrivada === 'number');
+      return {
+        bytes: l.reduce((t, p) => t + (privado ? p.memoriaPrivada! : p.memoria), 0),
+        tipo: privado ? 'privada' : 'hasta',
+      };
+    };
+    const liviano = sel ? calcular(sel.propios) : null;
+    const moderado = sel ? calcular([...sel.propios, ...sel.usuario]) : null;
+    const nProcesos = sel ? sel.propios.length + sel.usuario.length : 0;
     return {
       sistema,
       listaEspera,
+      pantalla,
       niveles: {
-        liviano: { bytes: liviano, procesos: sel?.propios.length ?? 0, requiereAdmin: false },
-        moderado: {
-          bytes: moderado,
-          procesos: sel ? sel.propios.length + sel.usuario.length : 0,
+        liviano: {
+          bytes: liviano?.bytes ?? null,
+          tipo: liviano?.tipo ?? 'hasta',
+          procesos: sel?.propios.length ?? 0,
           requiereAdmin: false,
         },
+        moderado: {
+          bytes: moderado?.bytes ?? null,
+          tipo: moderado?.tipo ?? 'hasta',
+          procesos: nProcesos,
+          requiereAdmin: false,
+        },
+        // Los procesos, igual que Moderado; la lista de espera va aparte (`listaEspera`).
         profundo: {
-          bytes: moderado !== null && listaEspera !== null ? moderado + listaEspera : null,
-          procesos: sel ? sel.propios.length + sel.usuario.length : 0,
+          bytes: moderado?.bytes ?? null,
+          tipo: moderado?.tipo ?? 'hasta',
+          procesos: nProcesos,
           requiereAdmin: true,
         },
       },
@@ -226,11 +276,12 @@ export class LiberadorMemoria {
     let purga: EstadoPurga = 'no-aplica';
     let detallePurga: string | null = null;
     if (nivel === 'profundo') {
-      // Tras vaciar los conjuntos de trabajo, para que sus páginas también salgan de la lista.
+      // Tras vaciar los conjuntos de trabajo, para que sus páginas también salgan de la lista (y
+      // dentro de la purga, la caché de archivos antes que la lista de espera).
       const p = await this.d.plataforma.purgarListaEspera();
       if (p.ok) purga = 'hecha';
       else {
-        purga = p.motivo === 'cancelado' ? 'cancelada' : p.motivo === 'tiempo' ? 'tiempo' : 'error';
+        purga = ESTADO_PURGA[p.motivo];
         detallePurga = p.detalle ?? null;
       }
     }
@@ -243,7 +294,12 @@ export class LiberadorMemoria {
       nivel,
       antes,
       despues,
-      liberado: antes && despues ? Math.max(0, despues.disponible - antes.disponible) : null,
+      aumentoDisponible:
+        antes && despues ? Math.max(0, despues.disponible - antes.disponible) : null,
+      aumentoLibre:
+        antes?.libre != null && despues?.libre != null
+          ? Math.max(0, despues.libre - antes.libre)
+          : null,
       recortado: hechos.reduce((t, v) => t + Math.max(0, v.antes - v.despues), 0),
       procesosVaciados: hechos.length,
       procesosSaltados: objetivos.length - hechos.length,

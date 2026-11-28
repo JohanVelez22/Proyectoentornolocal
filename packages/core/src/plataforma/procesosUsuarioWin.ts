@@ -26,15 +26,20 @@ import type {
 const SEP = '|';
 
 /**
- * Una línea por proceso: pid|sesion|inicio|memoria|ventana|servicio|elevado|nombre(b64)|ruta(b64).
+ * Una línea por proceso: pid|sesion|inicio|memoria|privada|ventana|servicio|elevado|nombre(b64)|ruta(b64).
  * `sesion` es la del proceso actual, ya validada como entero (va en el filtro de la consulta, que
  * se hace en WMI y no procesando todo con `Where-Object`).
  *
- * `elevado`: solo para los que tienen ventana (los únicos candidatos). Un proceso que este usuario
- * no puede abrir con todos los derechos (`Process.Handle` falla con acceso denegado) es uno
- * elevado o protegido: no se puede ni inspeccionar ni cerrarle la ventana (UIPI), y se trata como
- * protegido. (`StartTime` no sirve: solo pide PROCESS_QUERY_LIMITED_INFORMATION y no falla.)
- * Leer el nivel de integridad del token exigiría compilar código C# (`Add-Type`), que no es barato.
+ * `privada`: conjunto de trabajo privado (`WorkingSetPrivate` del contador de rendimiento por
+ * clase WMI, cuyos nombres de propiedad no se traducen), sin administrador; vacío si no se pudo
+ * leer. Es lo que de verdad quedaría libre al vaciar el proceso; `memoria` incluye lo compartido.
+ *
+ * `elevado`: para TODOS los procesos del usuario, con o sin ventana (uno elevado sin ventana
+ * también es inalcanzable). Un proceso que este usuario no puede abrir con todos los derechos
+ * (`Process.Handle` falla con acceso denegado) es uno elevado o protegido: no se puede ni
+ * inspeccionar ni vaciar ni cerrarle la ventana (UIPI), y se trata como protegido. (`StartTime` no
+ * sirve: solo pide PROCESS_QUERY_LIMITED_INFORMATION y no falla.) Leer el nivel de integridad del
+ * token exigiría P/Invoke de más y no aporta nada a esta decisión.
  */
 export function scriptProcesosUsuario(sesion: number): string {
   if (!Number.isInteger(sesion) || sesion < 0) throw new Error(`Sesión no válida: ${sesion}`);
@@ -43,6 +48,8 @@ export function scriptProcesosUsuario(sesion: number): string {
     '$yo = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value',
     '$serv = @{}',
     `Get-CimInstance Win32_Service -Filter "State='Running'" | ForEach-Object { $serv[[int]$_.ProcessId] = 1 }`,
+    '$priv = @{}',
+    'try { Get-CimInstance Win32_PerfRawData_PerfProc_Process | ForEach-Object { $priv[[int]$_.IDProcess] = [int64]$_.WorkingSetPrivate } } catch { }',
     '$vent = @{}',
     'Get-Process | ForEach-Object { if ($_.MainWindowHandle -ne 0) { $vent[[int]$_.Id] = 1 } }',
     'function B($t) { if ($t) { [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([string]$t)) } else { "" } }',
@@ -52,9 +59,10 @@ export function scriptProcesosUsuario(sesion: number): string {
     '    $c = ""; if ($_.CreationDate) { $c = $_.CreationDate.ToFileTimeUtc() }',
     '    $v = 0; if ($vent.ContainsKey([int]$_.ProcessId)) { $v = 1 }',
     '    $s = 0; if ($serv.ContainsKey([int]$_.ProcessId)) { $s = 1 }',
+    '    $pv = ""; if ($priv.ContainsKey([int]$_.ProcessId)) { $pv = $priv[[int]$_.ProcessId] }',
     '    $e = 0',
-    '    if ($v -eq 1) { try { $null = [System.Diagnostics.Process]::GetProcessById([int]$_.ProcessId).Handle } catch { $e = 1 } }',
-    `    [Console]::Out.WriteLine(($_.ProcessId, $_.SessionId, $c, $_.WorkingSetSize, $v, $s, $e, (B $_.Name), (B $_.ExecutablePath)) -join '${SEP}')`,
+    '    try { $pr = [System.Diagnostics.Process]::GetProcessById([int]$_.ProcessId); try { $null = $pr.Handle } finally { $pr.Dispose() } } catch { $e = 1 }',
+    `    [Console]::Out.WriteLine(($_.ProcessId, $_.SessionId, $c, $_.WorkingSetSize, $pv, $v, $s, $e, (B $_.Name), (B $_.ExecutablePath)) -join '${SEP}')`,
     '  }',
     '}',
   ].join('\n');
@@ -130,8 +138,9 @@ export function interpretarProcesosUsuario(salida: string): ProcesoUsuario[] {
     const t = linea.trim();
     if (t === '') continue;
     const c = t.split(SEP);
-    if (c.length !== 9) continue;
-    const [pid, sesion, inicio, memoria, ventana, servicio, elevado, nombre, ruta] = c as [
+    if (c.length !== 10) continue;
+    const [pid, sesion, inicio, memoria, privada, ventana, servicio, elevado, nombre, ruta] = c as [
+      string,
       string,
       string,
       string,
@@ -152,6 +161,7 @@ export function interpretarProcesosUsuario(salida: string): ProcesoUsuario[] {
       ruta: r !== null && path.win32.isAbsolute(r) ? r : null,
       inicio: /^\d+$/.test(inicio) ? inicio : null,
       memoria: /^\d+$/.test(memoria) ? Number(memoria) : 0,
+      memoriaPrivada: /^\d+$/.test(privada) ? Number(privada) : null,
       ventana: ventana === '1',
       sesion: Number(sesion),
       // El script solo deja pasar los del usuario actual; la identidad real se compara aparte.

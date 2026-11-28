@@ -365,7 +365,13 @@ export interface CapacidadesPlataforma {
    * administrador (UAC) con la cola de elevaciones; no devuelve datos (quien llama mide después,
    * sin elevar). Solo la llama quien ya tiene la confirmación de la persona.
    */
-  purgarListaEspera(): Promise<ResultadoEscritura>;
+  purgarListaEspera(): Promise<ResultadoPurga>;
+  /**
+   * ¿Hay un juego, una aplicación a pantalla completa o una presentación en marcha?
+   * (`SHQueryUserNotificationState`, sin administrador.) null si no se pudo leer: quien llama no
+   * avisa de lo que no sabe (D54b).
+   */
+  estadoPantalla(): Promise<EstadoPantalla | null>;
   /** Usuario (identificador estable) y sesión del proceso actual. */
   identidadActual(): Promise<IdentidadUsuario>;
   /**
@@ -500,8 +506,13 @@ export interface ProcesoUsuario {
   ruta: string | null;
   /** Hora de creación (texto opaco: se compara por igualdad); distingue un PID reutilizado. */
   inicio: string | null;
-  /** Memoria de trabajo en bytes. */
+  /** Memoria de trabajo en bytes (conjunto de trabajo total: incluye lo compartido). */
   memoria: number;
+  /**
+   * Conjunto de trabajo PRIVADO en bytes (lo que no comparte con otros procesos y de verdad
+   * quedaría libre al vaciarlo, D54b); null o ausente si no se pudo leer sin administrador.
+   */
+  memoriaPrivada?: number | null;
   /** ¿Tiene una ventana principal visible que se pueda cerrar? */
   ventana: boolean;
   sesion: number;
@@ -515,6 +526,25 @@ export interface ProcesoUsuario {
    */
   elevado?: boolean;
 }
+
+/**
+ * Lo que dice Windows de la pantalla del usuario: `libre` (nada que avisar), `pantalla-completa`
+ * (un juego o programa Direct3D a pantalla completa), `ocupado` (una aplicación a pantalla
+ * completa) o `presentacion` (modo presentación).
+ */
+export type EstadoPantalla = 'libre' | 'pantalla-completa' | 'ocupado' | 'presentacion';
+
+/**
+ * Resultado de `purgarListaEspera`: como una escritura, más `sin-cache` (la lista de espera sí se
+ * vació, pero Windows no vació la caché de archivos del sistema).
+ */
+export type ResultadoPurga =
+  | { ok: true }
+  | {
+      ok: false;
+      motivo: 'cancelado' | 'denegado' | 'error' | 'tiempo' | 'sin-cache';
+      detalle?: string;
+    };
 
 /** Memoria física del equipo en bytes (D54b). `null` en un campo = no se pudo medir. */
 export interface MemoriaSistema {

@@ -99,15 +99,15 @@ describe('implementación de Windows: solo lee y cierra con amabilidad', () => {
 
   it('interpreta la salida y descarta líneas raras', () => {
     const salida = [
-      `100|1|133000000000000000|943718400|1|0|0|${b64('chrome.exe')}|${b64('C:\\Program Files\\Google\\chrome.exe')}`,
-      `101|1||1024|0|1|0|${b64('serv.exe')}|`,
-      `104|1|5|10|1|0|1|${b64('alto.exe')}|${b64('C:\\alto.exe')}`,
+      `100|1|133000000000000000|943718400||1|0|0|${b64('chrome.exe')}|${b64('C:\\Program Files\\Google\\chrome.exe')}`,
+      `101|1||1024||0|1|0|${b64('serv.exe')}|`,
+      `104|1|5|10||1|0|1|${b64('alto.exe')}|${b64('C:\\alto.exe')}`,
       'basura',
-      `abc|1|1|1|1|1|0|${b64('x')}|${b64('C:\\x')}`,
-      `102|1|5|10|1|0|0|***|${b64('C:\\x')}`,
-      `103|1|5|10|1|0|0|${b64('rel.exe')}|${b64('relativa\\rel.exe')}`,
-      // Con el formato anterior (sin la columna de elevado) no se acepta.
-      `105|1|5|10|1|0|${b64('viejo.exe')}|${b64('C:\\viejo.exe')}`,
+      `abc|1|1|1||1|1|0|${b64('x')}|${b64('C:\\x')}`,
+      `102|1|5|10||1|0|0|***|${b64('C:\\x')}`,
+      `103|1|5|10||1|0|0|${b64('rel.exe')}|${b64('relativa\\rel.exe')}`,
+      // Con el formato anterior (sin la columna del privado) no se acepta.
+      `105|1|5|10||1|0|${b64('viejo.exe')}|${b64('C:\\viejo.exe')}`,
     ].join('\r\n');
     const l = interpretarProcesosUsuario(salida);
     expect(l.map((p) => p.pid)).toEqual([100, 101, 104, 103]);
@@ -138,8 +138,8 @@ describe('implementación de Windows: solo lee y cierra con amabilidad', () => {
       return {
         codigo: 0,
         stdout: [
-          `100|2|11|1000|1|0|0|${b64('a.exe')}|${b64('C:\\a.exe')}`,
-          `101|0|11|1000|1|0|0|${b64('b.exe')}|${b64('C:\\b.exe')}`,
+          `100|2|11|1000||1|0|0|${b64('a.exe')}|${b64('C:\\a.exe')}`,
+          `101|0|11|1000||1|0|0|${b64('b.exe')}|${b64('C:\\b.exe')}`,
         ].join('\n'),
         stderr: '',
       };

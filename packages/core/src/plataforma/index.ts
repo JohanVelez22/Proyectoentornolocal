@@ -136,6 +136,7 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'memoriaDelSistema',
   'vaciarWorkingSets',
   'purgarListaEspera',
+  'estadoPantalla',
   'rutasLimpieza',
   'navegadoresAbiertos',
   'esAdministrador',
