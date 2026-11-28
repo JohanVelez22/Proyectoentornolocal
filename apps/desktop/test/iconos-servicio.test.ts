@@ -22,6 +22,8 @@ describe('Iconos de servicio (D54b C2)', () => {
   it('las bases comparten el de bases y PHP y correo tienen el suyo', () => {
     expect(iconoDeServicio({ id: 'mysql', categoria: 'bd' })).toBe(ICONOS_CATEGORIA.bd);
     expect(iconoDeServicio({ id: 'php-8.4', categoria: 'php' })).toBe(ICONOS_CATEGORIA.php);
-    expect(iconoDeServicio({ id: 'mailpit', categoria: 'herramienta' })).toBe(ICONOS_CATEGORIA.correo);
+    expect(iconoDeServicio({ id: 'mailpit', categoria: 'herramienta' })).toBe(
+      ICONOS_CATEGORIA.correo,
+    );
   });
 });

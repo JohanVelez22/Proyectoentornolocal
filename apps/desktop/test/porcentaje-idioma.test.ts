@@ -3,7 +3,7 @@ import { cambiarIdioma } from '../src/renderer/i18n';
 import { formatoPorcentaje } from '../src/renderer/utilidades/metricas';
 
 /** Espacios duros y estrechos de Intl → espacio normal, para comparar. */
-const norm = (s: string): string => s.replace(/[\s  ]/g, ' ');
+const norm = (s: string): string => s.replace(/\s/g, ' ');
 
 describe('Porcentaje según el idioma (D54b C2)', () => {
   afterEach(() => cambiarIdioma('es'));

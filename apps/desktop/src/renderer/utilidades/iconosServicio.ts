@@ -1,11 +1,4 @@
-import {
-  CodeSlash,
-  Construct,
-  Globe,
-  Layers,
-  Mail,
-  Sparkles,
-} from '@vicons/ionicons5';
+import { CodeSlash, Construct, Globe, Layers, Mail, Sparkles } from '@vicons/ionicons5';
 import type { Component } from 'vue';
 import { categoriaDe, type CategoriaUi } from '../stores/servicios';
 
@@ -23,6 +16,9 @@ export const ICONOS_CATEGORIA: Record<CategoriaUi, Component> = {
   herramientas: Construct,
 };
 
-export function iconoDeServicio(s: { id: string; categoria?: Parameters<typeof categoriaDe>[0]['categoria'] }): Component {
+export function iconoDeServicio(s: {
+  id: string;
+  categoria?: Parameters<typeof categoriaDe>[0]['categoria'];
+}): Component {
   return ICONOS_CATEGORIA[categoriaDe(s)];
 }
