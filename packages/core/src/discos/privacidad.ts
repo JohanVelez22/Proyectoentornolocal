@@ -7,15 +7,21 @@
 // eslint-disable-next-line no-control-regex
 const CONTROL = /[\u0000-\u001f\u007f]/g;
 
-/** Lo que no puede formar parte de una palabra (se usa en vez de `\b`, que no ve `_`). */
-const FUERA = '(?<![A-Za-z0-9_])';
-const FIN = '(?![A-Za-z0-9_])';
+/**
+ * Lo que no puede formar parte de una palabra (se usa en vez de `\b`). El guion bajo cuenta como
+ * SEPARADOR: en `WD_WCC4E1234567` o `Disk_S4EWNX0R123456A` la serie va tras un `_` y se tapa.
+ */
+const FUERA = '(?<![A-Za-z0-9])';
+const FIN = '(?![A-Za-z0-9])';
 
 /**
  * Una palabra larga (≥ 16) que mezcla letras y cifras parece un número de serie o un identificador:
  * se tapa. Un modelo normal (`Samsung SSD 970 EVO Plus 1TB`) no la tiene.
  */
-const PARECE_SERIE = /\b(?=[A-Za-z0-9]*\d)(?=[A-Za-z0-9]*[A-Za-z])[A-Za-z0-9]{16,}\b/g;
+const PARECE_SERIE = new RegExp(
+  `${FUERA}(?=[A-Za-z0-9]*\\d)(?=[A-Za-z0-9]*[A-Za-z])[A-Za-z0-9]{16,}${FIN}`,
+  'g',
+);
 /**
  * Series más cortas (`S4EWNX0R123456A`, `WX12A1234567`, `21025A801234`, `1907E1A2B3C4`): 10 o más
  * caracteres alfanuméricos seguidos con al menos 6 cifras entre ellos. Con guion (`WD-WCC4E1234567`)
@@ -30,14 +36,19 @@ const PARECE_GUID = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 /** `0x` + 16 o más cifras hexadecimales (identificadores de bajo nivel). */
 const PARECE_HEX_LARGO = /\b0x[0-9a-f]{16,}\b/gi;
 
-export function enmascararSerie(texto: string): string {
-  return texto
+/**
+ * `serieCorta` (por defecto sí) añade la regla de las series de 10 o más caracteres con 6 cifras. Los
+ * MODELOS (`ST2000DM008`, `HDS721010CLA332`) tienen esa misma forma y no se pueden distinguir de una
+ * serie corta, así que `modeloSeguro` la desactiva y solo tapa lo inequívoco (largos, EUI, GUID).
+ */
+export function enmascararSerie(texto: string, opciones: { serieCorta?: boolean } = {}): string {
+  const base = texto
     .replace(PARECE_EUI_PREFIJO, '…')
     .replace(PARECE_EUI_GRUPOS, '…')
     .replace(PARECE_GUID, '…')
     .replace(PARECE_HEX_LARGO, '…')
-    .replace(PARECE_SERIE, '…')
-    .replace(PARECE_SERIE_CORTA, '…');
+    .replace(PARECE_SERIE, '…');
+  return opciones.serieCorta === false ? base : base.replace(PARECE_SERIE_CORTA, '…');
 }
 
 /**
@@ -73,8 +84,10 @@ function taparIdentidad(texto: string, id: IdentidadLocal): string {
     [id.usuario, '[usuario]'],
   ] as const) {
     const v = (valor ?? '').trim();
-    // Con 1 o 2 letras taparía medio texto: eso no se puede distinguir de una palabra cualquiera.
-    if (v.length < 3) continue;
+    // Los nombres de 1 o 2 caracteres también se tapan, pero SOLO como palabra completa y sin
+    // distinguir mayúsculas: en un texto con un usuario «a» se verá «[usuario]» donde diga «a». Es
+    // el precio de no dejar salir un nombre corto; los rodeados de letras o cifras no se tocan.
+    if (v === '') continue;
     t = t.replace(
       new RegExp(`(?<![\\p{L}\\p{N}_])${escaparRegex(v)}(?![\\p{L}\\p{N}_])`, 'giu'),
       marca,
@@ -114,10 +127,16 @@ export function sanearTextoSistema(
   return sinSerie.length > max ? `${sinSerie.slice(0, max).trimEnd()}…` : sinSerie;
 }
 
-/** Modelo del disco: texto corto, sin control y sin lo que parezca una serie; null si queda vacío. */
+/**
+ * Modelo del disco: texto corto, sin control y sin lo que parezca una serie; null si queda vacío.
+ * No aplica la regla de las series cortas (`serieCorta: false`): `ST2000DM008` o `HDS721010CLA332`
+ * son modelos y deben verse. Las series largas, los EUI y los GUID se siguen tapando.
+ */
 export function modeloSeguro(v: unknown): string | null {
   if (typeof v !== 'string') return null;
-  const t = enmascararSerie(v.replace(CONTROL, ' ').replace(/\s+/g, ' ').trim())
+  const t = enmascararSerie(v.replace(CONTROL, ' ').replace(/\s+/g, ' ').trim(), {
+    serieCorta: false,
+  })
     .slice(0, 80)
     .trim();
   return t === '' || /^[…\s]+$/.test(t) ? null : t;

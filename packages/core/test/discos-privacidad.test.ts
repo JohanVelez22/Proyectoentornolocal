@@ -20,11 +20,37 @@ describe('series de fabricantes (I4)', () => {
     expect(t).toContain('…');
   });
 
-  it('también por sanearTextoSistema y modeloSeguro', () => {
+  it('también por sanearTextoSistema', () => {
     for (const s of SERIES) {
       expect(sanearTextoSistema(`serie=${s};`)).not.toContain(s.replace(/^WD-/, ''));
-      expect(modeloSeguro(`Modelo ${s}`)).not.toMatch(/\d{6}/);
     }
+  });
+
+  it('el guion bajo separa: la serie detrás de «_» se tapa (también la larga)', () => {
+    for (const s of ['S4EWNX0R123456A', 'WCC4E1234567']) {
+      const t = enmascararSerie(`Disk_${s} falló`);
+      expect(t).not.toContain(s);
+      expect(t).toBe('Disk_… falló');
+    }
+    expect(enmascararSerie('Disk_S3Z9NB0K123456789A falló')).toBe('Disk_… falló');
+    expect(modeloSeguro('Generic_S3Z9NB0K123456789A')).toBe('Generic_…');
+  });
+
+  it('modeloSeguro no aplica la regla de series cortas: los modelos reales se ven', () => {
+    for (const m of [
+      'ST2000DM008',
+      'ST4000DM004-2CV104',
+      'HDS721010CLA332',
+      'WDC WD10EZEX-08WN4A0',
+      'TOSHIBA DT01ACA100',
+    ]) {
+      expect(modeloSeguro(m), m).toBe(m);
+    }
+    // Las series largas, los EUI y los GUID sí se tapan en un modelo.
+    expect(modeloSeguro('Generic S3Z9NB0K123456789A')).toBe('Generic …');
+    expect(modeloSeguro('NVMe eui.0025385211700000')).toBe('NVMe …');
+    // Y la regla corta sigue activa en el texto de los eventos.
+    expect(sanearTextoSistema('serie ST2000DM008 fallo')).not.toContain('ST2000DM008');
   });
 
   it('no toca modelos ni textos normales', () => {
@@ -90,9 +116,14 @@ describe('rutas (I4)', () => {
     const id = { equipo: 'PC-DE-MARIA', usuario: 'mperez' };
     const t = sanearTextoSistema('El equipo PC-DE-MARIA, usuario MPerez: disco 1 falló', 300, id);
     expect(t).toBe('El equipo [equipo], usuario [usuario]: disco 1 falló');
-    // Sin dependencias no se inventa nada; los nombres muy cortos no se tapan.
+    // Sin dependencias no se inventa nada.
     expect(sanearTextoSistema('usuario mperez', 300)).toBe('usuario mperez');
-    expect(sanearTextoSistema('a b', 300, { usuario: 'a', equipo: '' })).toBe('a b');
+    // Los nombres de menos de 3 caracteres se tapan solo como palabra completa.
+    expect(sanearTextoSistema('a b', 300, { usuario: 'a', equipo: '' })).toBe('[usuario] b');
+    expect(sanearTextoSistema('Fallo en PC y ab, abc', 300, { equipo: 'pc', usuario: 'ab' })).toBe(
+      'Fallo en [equipo] y [usuario], abc',
+    );
+    expect(sanearTextoSistema('capa pcs', 300, { equipo: 'pc' })).toBe('capa pcs');
     // Una palabra más larga que lo contiene no se toca.
     expect(sanearTextoSistema('mperezgarcia', 300, { usuario: 'mperez' })).toBe('mperezgarcia');
   });

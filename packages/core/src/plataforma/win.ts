@@ -458,7 +458,12 @@ export function scriptDuenoDeRuta(ruta: string): string {
 
 export class PlataformaWindows implements PlataformaCompleta {
   private contador = 0;
-  /** Ids de lecturas con administrador ya aceptadas (cada id se usa una sola vez). */
+  /**
+   * Solo un refuerzo: ids de lecturas con administrador ya aceptadas. Cada lectura estrena un id
+   * (pid, contador y UUID), así que el control que de verdad impide repetir una lectura es la
+   * ventana de tiempo y el id incrustado en el valor del registro (`interpretarLecturaRegistro`).
+   * Esta lista solo cubre un reintento interno con el mismo id; crece un id por lectura aceptada.
+   */
   private readonly idsLeidosAdmin = new Set<string>();
   /** PowerShell exteriores que esperan un UAC (se cortan al cerrar la app). */
   private readonly elevaciones = new Set<AbortController>();
