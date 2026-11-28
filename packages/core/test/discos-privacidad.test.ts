@@ -146,7 +146,7 @@ describe('la plataforma pasa COMPUTERNAME y USERNAME al saneado', () => {
     const p = new PlataformaWindows(
       async () => ({ codigo: 0, stdout: salida, stderr: '' }),
       undefined,
-      { entorno: { SystemRoot: 'C:\Windows', COMPUTERNAME: 'PC-DE-MARIA', USERNAME: 'mperez' } },
+      { entorno: { SystemRoot: 'C:\\Windows', COMPUTERNAME: 'PC-DE-MARIA', USERNAME: 'mperez' } },
     );
     const r = await p.eventosDisco();
     expect(r?.[0]?.detalle).toBe('Fallo en [equipo] para [usuario]');

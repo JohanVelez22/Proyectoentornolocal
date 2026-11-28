@@ -1105,9 +1105,9 @@ describe('ACL por SID con PowerShell -EncodedCommand (I1)', () => {
   });
 
   it('una ruta con comillas tipográficas o apóstrofos queda dentro del literal (sin inyección)', () => {
-    const sc = scriptAclUsuario("C:\O’x’; Write-Output INYECTADO; ‘y\a‚b‛c'd\cli.json");
+    const sc = scriptAclUsuario("C:\\O’x’; Write-Output INYECTADO; ‘y\\a‚b‛c'd\\cli.json");
     expect(sc).toContain(
-      "Get-Acl -LiteralPath 'C:\O’’x’’; Write-Output INYECTADO; ‘‘y\a‚‚b‛‛c''d\cli.json'",
+      "Get-Acl -LiteralPath 'C:\\O’’x’’; Write-Output INYECTADO; ‘‘y\\a‚‚b‛‛c''d\\cli.json'",
     );
   });
 
