@@ -285,6 +285,28 @@ describe('net view (D53)', () => {
     ]);
   });
 
+  it('aguanta nombres largos o con espacios tomando las columnas de la cabecera', () => {
+    const salida = [
+      'Shared resources at \\\\192.168.1.5',
+      '',
+      'Share name                          Type   Used as  Comment',
+      '',
+      '-------------------------------------------------------------------------------',
+      'Documentos de la familia Pérez      Disk            Fotos y papeles',
+      'Disk compartido                     Disk',
+      'Mis  fotos  viejas                  Disk            Dos espacios',
+      'Impresora de la oficina grande      Print           Canon',
+      'The command completed successfully.',
+      '',
+    ].join('\r\n');
+    expect(interpretarNetView(salida)).toEqual([
+      { nombre: 'Documentos de la familia Pérez', tipo: 'Disk', comentario: 'Fotos y papeles' },
+      { nombre: 'Disk compartido', tipo: 'Disk', comentario: '' },
+      { nombre: 'Mis  fotos  viejas', tipo: 'Disk', comentario: 'Dos espacios' },
+      { nombre: 'Impresora de la oficina grande', tipo: 'Print', comentario: 'Canon' },
+    ]);
+  });
+
   it('interpreta la salida en español sin tomar la última línea por un recurso', () => {
     const es = [
       'Recursos compartidos en \\\\192.168.1.5',

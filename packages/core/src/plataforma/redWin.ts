@@ -292,12 +292,33 @@ export function interpretarNetView(salida: string): RecursoRed[] {
   const lineas = salida.split(/\r?\n/);
   const inicio = lineas.findIndex((l) => /^-{5,}\s*$/.test(l.trim()));
   if (inicio < 0) return [];
+  // Columnas por posición, tomadas de la cabecera (columnas separadas por 2 o más espacios): así
+  // un nombre largo o con espacios no se confunde con el tipo. Si la cabecera no sirve, o la fila
+  // no encaja (caracteres de doble ancho…), se cae a separar por dos espacios.
+  const cabecera = lineas
+    .slice(0, inicio)
+    .reverse()
+    .find((l) => l.trim() !== '');
+  const inicios: number[] = [];
+  if (cabecera !== undefined) {
+    for (const m of cabecera.matchAll(/(?<=^|\s{2})\S/g)) inicios.push(m.index);
+  }
+  const [colTipo, colUsado] = inicios.length >= 2 ? inicios.slice(1) : [];
   const res: RecursoRed[] = [];
   for (const bruta of lineas.slice(inicio + 1)) {
     const linea = bruta.trimEnd();
     if (linea.trim() === '') {
       if (res.length > 0) break;
       continue;
+    }
+    if (colTipo !== undefined && /^\s*$/.test(linea.slice(colTipo - 2, colTipo))) {
+      const nombre = linea.slice(0, colTipo).trim();
+      const tipo = linea.slice(colTipo, colUsado ?? undefined).trim();
+      if (nombre !== '' && tipo !== '' && /^\S+$/.test(tipo) && linea[colTipo] !== ' ') {
+        // «Usado como» va casi siempre vacío en un equipo remoto: el comentario es lo que sigue.
+        res.push({ nombre, tipo, comentario: linea.slice(colUsado ?? linea.length).trim() });
+        continue;
+      }
     }
     const m = /^(\S.*?)\s{2,}(\S+)(?:\s+(.*))?$/.exec(linea);
     if (!m) continue;
