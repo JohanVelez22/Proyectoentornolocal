@@ -131,11 +131,23 @@ describe('rutas (I4)', () => {
     expect(t).toBe('El equipo [equipo], usuario [usuario]: disco 1 falló');
     // Sin dependencias no se inventa nada.
     expect(sanearTextoSistema('usuario mperez', 300)).toBe('usuario mperez');
-    // Los nombres de menos de 3 caracteres se tapan solo como palabra completa.
-    expect(sanearTextoSistema('a b', 300, { usuario: 'a', equipo: '' })).toBe('[usuario] b');
+    // Los nombres de menos de 3 caracteres se tapan solo en contextos de identidad.
+    const corto = { usuario: 'a', equipo: 'pc' };
+    expect(sanearTextoSistema('Conectado a la red', 300, corto)).toBe('Conectado a la red');
+    expect(sanearTextoSistema('a b', 300, { usuario: 'a', equipo: '' })).toBe('a b');
     expect(sanearTextoSistema('Fallo en PC y ab, abc', 300, { equipo: 'pc', usuario: 'ab' })).toBe(
-      'Fallo en [equipo] y [usuario], abc',
+      'Fallo en PC y ab, abc',
     );
+    expect(sanearTextoSistema('cuenta a@correo.es', 300, corto)).toBe('cuenta [usuario]@correo.es');
+    expect(sanearTextoSistema(String.raw`en \a\b`, 300, { usuario: 'a' })).toBe(
+      String.raw`en \[usuario]\b`,
+    );
+    expect(sanearTextoSistema('Usuario A inició; equipo PC falló', 300, corto)).toBe(
+      'Usuario [usuario] inició; equipo [equipo] falló',
+    );
+    // El guion bajo separa, como en las series: «ana_pc» tapa «ana».
+    expect(sanearTextoSistema('ana_pc falló', 300, { usuario: 'ana' })).toBe('[usuario]_pc falló');
+    expect(sanearTextoSistema('disco_ana', 300, { usuario: 'ana' })).toBe('disco_[usuario]');
     expect(sanearTextoSistema('capa pcs', 300, { equipo: 'pc' })).toBe('capa pcs');
     // Una palabra más larga que lo contiene no se toca.
     expect(sanearTextoSistema('mperezgarcia', 300, { usuario: 'mperez' })).toBe('mperezgarcia');

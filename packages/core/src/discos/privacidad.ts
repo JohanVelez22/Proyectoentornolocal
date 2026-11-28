@@ -74,6 +74,10 @@ export interface IdentidadLocal {
   usuario?: string | null;
 }
 
+/** Límites de una palabra para los nombres (letras y cifras de cualquier idioma; `_` separa). */
+const FUERA_ID = '(?<![\\p{L}\\p{N}])';
+const FIN_ID = '(?![\\p{L}\\p{N}])';
+
 const escaparRegex = (t: string): string => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** Tapa el nombre del equipo y del usuario donde aparezcan como palabra (sin mayúsculas ni minúsculas). */
@@ -84,14 +88,17 @@ function taparIdentidad(texto: string, id: IdentidadLocal): string {
     [id.usuario, '[usuario]'],
   ] as const) {
     const v = (valor ?? '').trim();
-    // Los nombres de 1 o 2 caracteres también se tapan, pero SOLO como palabra completa y sin
-    // distinguir mayúsculas: en un texto con un usuario «a» se verá «[usuario]» donde diga «a». Es
-    // el precio de no dejar salir un nombre corto; los rodeados de letras o cifras no se tocan.
+    // Con 3 o más caracteres se tapa como palabra completa (el guion bajo SEPARA, como en las
+    // series: `ana_pc` tapa `ana`). Un nombre de 1 o 2 caracteres («a») está dentro de palabras
+    // corrientes, así que solo se tapa en contextos de identidad: `\nombre\`, `nombre@`,
+    // `usuario nombre` y `equipo nombre`.
     if (v === '') continue;
-    t = t.replace(
-      new RegExp(`(?<![\\p{L}\\p{N}_])${escaparRegex(v)}(?![\\p{L}\\p{N}_])`, 'giu'),
-      marca,
-    );
+    const nombre = escaparRegex(v);
+    const patron =
+      v.length >= 3
+        ? `${FUERA_ID}${nombre}${FIN_ID}`
+        : `(?<=\\\\)${nombre}(?=\\\\)|${FUERA_ID}${nombre}(?=@)|(?<=${FUERA_ID}(?:usuario|equipo):?\\s+)${nombre}${FIN_ID}`;
+    t = t.replace(new RegExp(patron, 'giu'), marca);
   }
   return t;
 }
