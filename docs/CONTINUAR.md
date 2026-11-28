@@ -6,7 +6,7 @@ Este documento sirve para retomar el proyecto en otro equipo, con otra herramien
 
 - **Rama de trabajo:** `feat/etapa-c`. La rama `main` está en `8eac050` («Etapa D: entorno completo…», D1–D52), que es la última fusión aprobada por el usuario.
 - **Etapa D cerrada en `feat/etapa-c`:**
-  - D53 (red y NTLM), D54a/D54b (memoria, interfaz, pgvector multibase), D54c (segunda pasada de diseño), D55–D58 (rendimiento, salud de discos, asistentes MCP).
+  - D53 (red y NTLM), D54a/D54b (memoria, interfaz, pgvector multibase), D54c (segunda pasada de diseño), D54d (fuente única de problemas, caché de discos, «Iniciar todo»), D55–D58 (rendimiento, salud de discos, asistentes MCP).
   - CI en verde en los 6 trabajos (Windows, Linux y macOS × verificar y empaquetado) en el último commit de cada tanda.
   - Nota de diseño de la interfaz: 7,5/10 (segunda pasada, 2026-11-28), frente a 6,5 en la primera.
 - **Fusión a `main`:** pendiente. Solo la aprueba el usuario.
@@ -26,7 +26,6 @@ Estas pruebas no se pueden automatizar o necesitan su presencia:
 - Repetir el borrado de un sitio real (pide UAC).
 - Cancelar el aviso viejo del cortafuegos para nginx.
 - Borrar las carpetas vacías `C:\wc-tmp-d52` y `C:\wc-d40`.
-- Decidir si se levanta la protección de 7 archivos (ver 3.1).
 
 ## 2. Cómo empezar en otro equipo
 
@@ -85,24 +84,18 @@ Las pruebas de integración de pgvector (`npm run test:win:pgvector`) compilan p
 
 ### 3.1 Archivos protegidos
 
-Hasta que el usuario diga lo contrario, no se añaden a ningún commit:
+`packages/core/src/plataforma/unidadesWin.ts` no se añade nunca a un commit.
 
-- `packages/core/src/plataforma/unidadesWin.ts`, siempre.
-- `vistas/Inicio.vue`, `componentes/PanelRendimiento.vue`, `componentes/TarjetaDisco.vue`, `vistas/Regex.vue`, `stores/servicios.ts`, `utilidades/disco.ts` y `utilidades/herramientas.ts` (en `apps/desktop/src/renderer/`).
-
-Hay trabajo listo que depende de levantar esa protección (ver 4.1).
+El 2026-11-28 el usuario levantó la protección de los otros 7 archivos (`Inicio.vue`, `PanelRendimiento.vue`, `TarjetaDisco.vue`, `Regex.vue`, `stores/servicios.ts`, `utilidades/disco.ts` y `utilidades/herramientas.ts`). Ya se editan con normalidad, revisando con `git diff` antes de cada `git add` que solo lleven cambios propios.
 
 ## 4. Lo que falta
 
-### 4.1 Listo para aplicar si el usuario lo aprueba
+### 4.1 Hecho en D54d (2026-11-28)
 
-- **Bloque «Problemas detectados» en Inicio** leyendo de la fuente única `stores/problemas.ts`, colocado antes de «Rendimiento», e icono Toggle en la métrica «Servicios encendidos». Hoy la pastilla y la campana ya leen del store, y una prueba comprueba que su cálculo coincide con el de Inicio.
-- **D54d, tres menores:**
-  - distintivo de memoria dentro de la cabecera del gráfico (PanelRendimiento);
-  - caché de unidades en el store de métricas en lugar de TarjetaDisco;
-  - unificar «Iniciar todo» y «por arrancar» (`stores/servicios.ts`), con el mismo orden de arranque y el mismo manejo de errores, y una prueba que lo demuestre.
-
-Si la protección no se levanta, pasan a la Etapa F.
+- Inicio, la pastilla de la cabecera y la campana leen los problemas de una sola fuente (`stores/problemas.ts`). En Inicio, «Problemas detectados» tiene su propio bloque antes de «Rendimiento».
+- El distintivo de memoria alta va dentro de la cabecera del gráfico de RAM.
+- La caché de unidades vive en `stores/metricas.ts`: caduca a los 5 minutos, las consultas simultáneas comparten una lectura y los fallos no se guardan.
+- «Iniciar todo» y el contador «por arrancar» usan el mismo criterio del núcleo (`Servicios.porArrancar()`), con el mismo orden de arranque y el mismo manejo de errores, probado. Ahora el contador incluye también los servicios con inicio automático (por ejemplo, Mailpit) y los procesos de proyecto.
 
 ### 4.2 Etapa F (solo Windows, primero)
 
@@ -113,7 +106,8 @@ Del plan de etapas (`docs/superpowers/roadmap/2026-11-19-plan-etapas.md`) más l
   - índice fijo en Ajustes;
   - aplicar `AvisoPlegable` al resto de avisos largos;
   - «sin instalar» repetido en las tarjetas de Herramientas;
-  - separador «·» del disco en los idiomas distintos del inglés;
+  - separador «·» del disco en los idiomas distintos del inglés (se ve «C: · 382 GB libres»);
+  - el aviso «No hay servicios instalados que encender» del botón «Iniciar todo», que ahora también cuenta procesos de proyecto;
   - pruebas con DOM de los plegables.
 - **Funciones anotadas:**
   - puente `wolf mcp` por stdio;
