@@ -38,6 +38,7 @@ import { nombreEjecutable } from '../plataforma/sistema';
 import {
   activarVectorEnBases,
   activarVectorEnPlantilla,
+  estadoPlantilla,
   estadoVectorBases,
   quitarVectorDePlantilla,
   type EstadoVectorBases,
@@ -700,8 +701,9 @@ export class BasesDeDatos {
           listarBases: async () => (await c.listarBases()).map((b) => b.nombre),
           servidorTieneVector: () => c.tieneVector(),
           vectorActivo: (b) => c.vectorActivo(b),
-          activar: (b) => c.activarVector(b),
-          quitar: (b) => c.quitarVector(b),
+          // El puerto es el único sitio que escribe en template1 (el cliente lo rechaza en lo demás).
+          activar: (b) => (b === 'template1' ? c.activarVectorPlantilla() : c.activarVector(b)),
+          quitar: (b) => (b === 'template1' ? c.quitarVectorPlantilla() : c.quitarVector(b)),
           esDatosReales,
         }),
       objetivo,
@@ -714,6 +716,15 @@ export class BasesDeDatos {
     esDatosReales: (base: string) => Promise<boolean>,
   ): Promise<EstadoVectorBases> {
     return this.conPuertoVector(objetivo, esDatosReales, (p) => estadoVectorBases(p));
+  }
+
+  /** Solo template1: ¿lleva pgvector? null si no se pudo leer. */
+  async plantillaVector(objetivo: ObjetivoBd): Promise<boolean | null> {
+    return this.conPuertoVector(
+      objetivo,
+      async () => true,
+      (p) => estadoPlantilla(p),
+    );
   }
 
   /** pgvector en varias bases de la instancia, con un informe por base. */

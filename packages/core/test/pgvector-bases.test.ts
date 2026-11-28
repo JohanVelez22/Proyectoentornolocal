@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { ErrorWolf } from '../src/errores';
 import {
+  CandadoPgvector,
   activarVectorEnBases,
   activarVectorEnPlantilla,
+  estadoPlantilla,
   estadoVectorBases,
   motivoDeError,
   quitarVectorDePlantilla,
@@ -80,7 +82,7 @@ describe('pgvector en varias bases (D54b)', () => {
     expect(r.map((x) => [x.base, x.estado, x.motivo])).toEqual([
       ['a', 'activada', undefined],
       ['fantasma', 'error', 'no-existe'],
-      ['template1', 'error', 'no-existe'],
+      ['template1', 'error', 'sistema'],
       ['x"; DROP DATABASE a; --', 'error', 'no-existe'],
     ]);
     expect(llamadas).toEqual(['activar:a']);
@@ -177,12 +179,96 @@ describe('pgvector en varias bases (D54b)', () => {
     expect(await estadoVectorBases(p)).toEqual({
       servidorTiene: true,
       bases: [
-        { base: 'a', activo: true, datosReales: false },
-        { base: 'b', activo: false, datosReales: false },
-        { base: 'c', activo: false, datosReales: true },
+        { base: 'a', activo: true, datosReales: false, valida: true },
+        { base: 'b', activo: false, datosReales: false, valida: true },
+        { base: 'c', activo: false, datosReales: true, valida: true },
       ],
+      truncado: false,
       plantilla: true,
     });
+  });
+
+  it('un nombre de base raro sale con valida:false y no tumba el lote ni se consulta', async () => {
+    const { p } = falso({ bases: ['a', 'Mi Base', 'b'] });
+    const consultadas: string[] = [];
+    const antes = p.vectorActivo;
+    p.vectorActivo = async (b) => {
+      consultadas.push(b);
+      return antes(b);
+    };
+    const e = await estadoVectorBases(p);
+    expect(e.bases.map((b) => [b.base, b.valida])).toEqual([
+      ['a', true],
+      ['Mi Base', false],
+      ['b', true],
+    ]);
+    expect(consultadas).not.toContain('Mi Base');
+    const r = await activarVectorEnBases(p, { bases: ['Mi Base'], confirmado: true });
+    expect(r).toEqual([{ base: 'Mi Base', estado: 'error', motivo: 'nombre-no-valido' }]);
+  });
+
+  it('más de 200 bases: se marca truncado y solo se listan las primeras', async () => {
+    const muchas = Array.from({ length: 205 }, (_, i) => `b${i}`);
+    const { p } = falso({ bases: muchas });
+    const e = await estadoVectorBases(p);
+    expect(e.bases).toHaveLength(200);
+    expect(e.truncado).toBe(true);
+  });
+
+  it('la plantilla es null cuando no se puede leer (estado ligero y completo)', async () => {
+    const { p } = falso();
+    p.vectorActivo = async (b) => {
+      if (b === 'template1') throw new Error('sin conexión');
+      return false;
+    };
+    expect(await estadoPlantilla(p)).toBeNull();
+    expect((await estadoVectorBases(p)).plantilla).toBeNull();
+  });
+
+  it('los errores de «ninguna base» y «demasiadas» son del catálogo', async () => {
+    const { p } = falso();
+    await expect(activarVectorEnBases(p, { bases: [], confirmado: true })).rejects.toMatchObject({
+      codigo: 'bd.vector_sin_bases',
+    });
+    const muchas = Array.from({ length: 201 }, (_, i) => `b${i}`);
+    await expect(
+      activarVectorEnBases(p, { bases: muchas, confirmado: true }),
+    ).rejects.toMatchObject({ codigo: 'bd.vector_demasiadas' });
+  });
+
+  it('una carrera (activar devuelve false) cuenta como «ya estaba»; 2BP01 es «dependencias»', async () => {
+    const { p } = falso();
+    p.activar = async () => false;
+    expect(await activarVectorEnBases(p, { bases: ['a'], confirmado: true })).toEqual([
+      { base: 'a', estado: 'ya-estaba' },
+    ]);
+    expect(motivoDeError(new Error('No se pudo quitar (2BP01).'))).toBe('dependencias');
+  });
+
+  it('las bases del sistema se rechazan por nombre, sin ejecutar nada', async () => {
+    const { p, llamadas } = falso({ bases: ['a', 'postgres'] });
+    const r = await activarVectorEnBases(p, {
+      bases: ['postgres', 'template0', 'template1'],
+      confirmado: true,
+    });
+    expect(r.map((x) => x.motivo)).toEqual(['sistema', 'sistema', 'sistema']);
+    expect(llamadas).toEqual([]);
+  });
+
+  it('el candado deja pasar una operación a la vez y avisa con bd.vector_ocupado; se libera al acabar o fallar', async () => {
+    const c = new CandadoPgvector();
+    let soltar!: () => void;
+    const larga = c.con(() => new Promise<void>((r) => (soltar = r)));
+    await expect(c.con(async () => 1)).rejects.toMatchObject({ codigo: 'bd.vector_ocupado' });
+    soltar();
+    await larga;
+    await expect(c.con(async () => 7)).resolves.toBe(7);
+    await expect(
+      c.con(async () => {
+        throw new Error('x');
+      }),
+    ).rejects.toThrow('x');
+    await expect(c.con(async () => 8)).resolves.toBe(8);
   });
 
   it('motivoDeError clasifica por el código de PostgreSQL y por el mensaje de «no instalado»', () => {

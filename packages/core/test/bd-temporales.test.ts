@@ -158,7 +158,12 @@ describe('ClientePostgres: rol temporal', () => {
     const { cliente, consultas } = pgFalso();
     await cliente.conectar({ host: 'h', puerto: 1, usuario: 'postgres', clave: 'x' });
     await cliente.reiniciarBase('mi_base');
-    expect(consultas.map((c) => c.sql)).toEqual([
+    // Las consultas a pg_extension (¿la base o template1 llevan pgvector?) no son de esta prueba.
+    expect(
+      consultas
+        .map((c) => c.sql)
+        .filter((q) => !q.includes('pg_extension') && !q.startsWith('SET search_path')),
+    ).toEqual([
       'DROP DATABASE IF EXISTS "mi_base" WITH (FORCE)',
       `CREATE DATABASE "mi_base" ENCODING 'UTF8' TEMPLATE template0 LC_COLLATE 'C' LC_CTYPE 'C'`,
     ]);

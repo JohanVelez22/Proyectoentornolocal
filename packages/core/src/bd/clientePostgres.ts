@@ -60,6 +60,12 @@ const id = (nombre: string): string => {
   return `"${nombre}"`;
 };
 
+function noSistemaVector(nombre: string): void {
+  if (SISTEMA.includes(nombre)) {
+    throw new Error(`No se puede tocar pgvector en la base del sistema ${nombre}.`);
+  }
+}
+
 function noSistema(nombre: string, verbo: 'borrar' | 'crear'): void {
   if (SISTEMA.includes(nombre)) {
     throw new Error(`No se puede ${verbo} la base del sistema ${nombre}.`);
@@ -75,6 +81,7 @@ function traducir(e: unknown, accion: string): Error {
   else if (c === '3D000') motivo = 'la base no existe';
   else if (c === '42501' || c === '28000' || c === '28P01') motivo = 'permiso denegado';
   else if (c === '55006') motivo = 'la base está en uso';
+  else if (c === '2BP01') motivo = 'hay objetos que usan la extensión';
   else if (c === 'ECONNREFUSED' || c === 'ECONNRESET' || c.startsWith('08'))
     motivo = 'se perdió la conexión con el servidor';
   return new Error(`No se pudo ${accion}: ${motivo}${c ? ` (${c})` : ''}.`);
@@ -291,6 +298,9 @@ export class ClientePostgres {
     noSistema(nombre, 'crear');
     const { usuario, clave } = opts;
     let rol = '';
+    let avisoVector: string | null = null;
+    const salida = (r: ResultadoCrearBasePg): ResultadoCrearBasePg =>
+      avisoVector ? { ...r, aviso: [r.aviso, avisoVector].filter(Boolean).join(' ') } : r;
     if (usuario !== undefined) {
       rol = id(usuario);
       if (ROLES_RESERVADOS.includes(usuario)) {
@@ -356,27 +366,28 @@ export class ClientePostgres {
         // Desde aquí la base es de esta creación: un reintento tras un fallo posterior la retoma.
         creada = true;
         opts.alCrearBase?.();
+        avisoVector = await this.heredarVector(nombre);
       } else if (usuario !== undefined) {
         await this.filas(`ALTER DATABASE ${bd} OWNER TO ${rol}`);
       }
       // Solo una base que nace aquí (o que el proyecto ya creó: `aislar`) se cierra a PUBLIC; una
       // que ya existía puede tener otros usuarios.
       if (usuario !== undefined && (creada || opts.aislar)) await this.aislarBase(nombre, usuario);
-      if (usuario === undefined) return { usuarioActualizado: false };
-      if (!existia) return { usuarioActualizado: false };
+      if (usuario === undefined) return salida({ usuarioActualizado: false });
+      if (!existia) return salida({ usuarioActualizado: false });
       if (!opts.cambiarClave) {
-        return {
+        return salida({
           usuarioActualizado: false,
           aviso: `El usuario ${usuario} ya existía: se usó su clave actual y es el dueño de la base ${nombre}.`,
-        };
+        });
       }
       // La clave de un rol existente se cambia al FINAL: si algo anterior falla, queda como estaba.
       await rolConClave('ALTER ROLE');
       claveCambiada = true;
-      return {
+      return salida({
         usuarioActualizado: true,
         aviso: `El usuario ${usuario} ya existía: su clave se cambió a la nueva.`,
-      };
+      });
     } catch (e) {
       if (e instanceof ErrorWolf) throw e;
       const err = traducir(e, `crear la base ${nombre}`);
@@ -565,13 +576,16 @@ export class ClientePostgres {
   }
 
   /** Deja la base vacía (la borra y la vuelve a crear a nombre del administrador). */
-  async reiniciarBase(nombre: string): Promise<void> {
+  async reiniciarBase(nombre: string): Promise<string | null> {
     const bd = id(nombre);
     noSistema(nombre, 'borrar');
+    // Si la base llevaba pgvector, la vacía lo conserva (aunque template1 no lo tenga).
+    const tenia = await this.vectorActivo(nombre).catch(() => false);
     await this.filas(`DROP DATABASE IF EXISTS ${bd} WITH (FORCE)`);
     await this.filas(
       `CREATE DATABASE ${bd} ENCODING 'UTF8' TEMPLATE template0 LC_COLLATE 'C' LC_CTYPE 'C'`,
     );
+    return this.heredarVector(nombre, tenia);
   }
 
   /**
@@ -724,7 +738,7 @@ export class ClientePostgres {
   }
 
   /** Crea la base con la codificación y las reglas regionales de `locale` (de `localeBase`). */
-  async crearBaseConLocale(nombre: string, locale: string): Promise<void> {
+  async crearBaseConLocale(nombre: string, locale: string): Promise<string | null> {
     const bd = id(nombre);
     noSistema(nombre, 'crear');
     const partes = locale.split('|');
@@ -740,6 +754,7 @@ export class ClientePostgres {
     } catch (e) {
       throw traducir(e, `crear la base ${nombre}`);
     }
+    return this.heredarVector(nombre);
   }
 
   /** Tablas de la base, sin las del sistema ni las vistas. */
@@ -771,21 +786,42 @@ export class ClientePostgres {
     }
   }
 
-  /** Activa pgvector en `base` (la extensión es por base). */
-  async activarVector(base: string): Promise<void> {
+  /**
+   * Activa pgvector en `base` (la extensión es por base). Devuelve false si ya existía (otra
+   * conexión la creó a la vez: 23505 o 42710). Las bases del sistema solo las toca
+   * `activarVectorPlantilla`, para `template1`.
+   */
+  async activarVector(base: string): Promise<boolean> {
     validarNombrePg(base);
+    noSistemaVector(base);
+    return this.crearVector(base);
+  }
+
+  private async crearVector(base: string): Promise<boolean> {
     try {
       await this.enBase(base, (q) =>
         q.query('CREATE EXTENSION IF NOT EXISTS "vector" SCHEMA public'),
       );
+      return true;
     } catch (e) {
       const c = (e as { code?: unknown } | null)?.code;
       const m = e instanceof Error ? e.message : '';
+      if (c === '23505' || c === '42710') return false;
       if (c === '0A000' || c === '58P01' || /is not available|extension control file/.test(m)) {
         throw new Error('pgvector no está instalado: use "Instalar pgvector" en Bases de datos.');
       }
       throw traducir(e, `activar pgvector en ${base}`);
     }
+  }
+
+  /** Crea pgvector en `template1`: las bases que se creen después la tendrán. */
+  async activarVectorPlantilla(): Promise<boolean> {
+    return this.crearVector('template1');
+  }
+
+  /** Quita pgvector de `template1` (sin CASCADE). */
+  async quitarVectorPlantilla(): Promise<void> {
+    await this.borrarVector('template1');
   }
 
   /** ¿La extensión vector está creada en `base` (también `template1`)? Sin interpolar nada. */
@@ -807,10 +843,30 @@ export class ClientePostgres {
   /** Quita pgvector de `base` sin CASCADE: si hay columnas que lo usan, falla y no borra nada. */
   async quitarVector(base: string): Promise<void> {
     validarNombrePg(base);
+    noSistemaVector(base);
+    await this.borrarVector(base);
+  }
+
+  private async borrarVector(base: string): Promise<void> {
     try {
       await this.enBase(base, (q) => q.query('DROP EXTENSION IF EXISTS "vector"'));
     } catch (e) {
       throw traducir(e, `quitar pgvector de ${base}`);
+    }
+  }
+
+  /**
+   * Las bases nuevas nacen de template0 (para fijar la codificación), no de template1: si
+   * template1 lleva pgvector, se hereda a mano. Un fallo no deshace la creación: se avisa.
+   */
+  private async heredarVector(nombre: string, forzar = false): Promise<string | null> {
+    try {
+      if (!forzar && !(await this.vectorActivo('template1'))) return null;
+      await this.crearVector(nombre);
+      return null;
+    } catch (e) {
+      const m = e instanceof Error ? e.message : '';
+      return `La base ${nombre} se creó, pero no se pudo activar pgvector en ella: ${m}`;
     }
   }
 

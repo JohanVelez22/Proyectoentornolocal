@@ -1,4 +1,8 @@
 import { ErrorWolf } from '../errores';
+import { NOMBRE_BD_PG } from './clientePostgres';
+
+/** Bases que nunca se tocan: son del propio PostgreSQL. */
+const SISTEMA = ['postgres', 'template0', 'template1'];
 
 /**
  * pgvector en varias bases de PostgreSQL (D54b). La extensión es por base: cada base tiene las
@@ -12,7 +16,8 @@ export interface PuertoVector {
   servidorTieneVector(): Promise<boolean>;
   /** ¿La extensión está creada en esa base (también `template1`)? */
   vectorActivo(base: string): Promise<boolean>;
-  activar(base: string): Promise<void>;
+  /** `false` si la extensión ya existía (p. ej. otra conexión la creó a la vez): cuenta como «ya estaba». */
+  activar(base: string): Promise<boolean | void>;
   /** `DROP EXTENSION` sin CASCADE: si hay columnas que la usan, falla y no se borra nada. */
   quitar(base: string): Promise<void>;
   /** ¿Es la base de un sitio con `datosReales`? (ante la duda, true). */
@@ -20,7 +25,15 @@ export interface PuertoVector {
 }
 
 export type MotivoVector =
-  'sin-pgvector' | 'no-existe' | 'permiso' | 'conexion' | 'en-uso' | 'otro';
+  | 'sin-pgvector'
+  | 'no-existe'
+  | 'permiso'
+  | 'conexion'
+  | 'en-uso'
+  | 'dependencias'
+  | 'sistema'
+  | 'nombre-no-valido'
+  | 'otro';
 
 export interface ResultadoBaseVector {
   base: string;
@@ -30,9 +43,12 @@ export interface ResultadoBaseVector {
 
 export interface EstadoVectorBases {
   servidorTiene: boolean;
-  bases: { base: string; activo: boolean; datosReales: boolean }[];
-  /** La extensión está en `template1`: las bases nuevas nacen con ella. */
-  plantilla: boolean;
+  /** `valida: false` = nombre que PostgreSQL permite pero WolfCore no maneja: no se puede elegir. */
+  bases: { base: string; activo: boolean; datosReales: boolean; valida: boolean }[];
+  /** Hay más bases de las que caben en una operación: solo se listan las primeras. */
+  truncado: boolean;
+  /** La extensión está en `template1` (las bases nuevas nacen con ella); null si no se pudo leer. */
+  plantilla: boolean | null;
 }
 
 const TOPE_BASES = 200;
@@ -44,6 +60,7 @@ export function motivoDeError(e: unknown): MotivoVector {
   if (/\(3D000\)/.test(m)) return 'no-existe';
   if (/\((42501|28000|28P01)\)/.test(m)) return 'permiso';
   if (/\(55006\)/.test(m)) return 'en-uso';
+  if (/\(2BP01\)/.test(m)) return 'dependencias';
   if (/\((08\w+|ECONNREFUSED|ECONNRESET)\)/.test(m)) return 'conexion';
   return 'otro';
 }
@@ -66,18 +83,49 @@ async function exigirServidor(p: PuertoVector): Promise<void> {
   }
 }
 
+/** Solo `template1`: ¿lleva pgvector? null si no se puede leer (p. ej. PostgreSQL apagado). */
+export async function estadoPlantilla(p: PuertoVector): Promise<boolean | null> {
+  try {
+    return await p.vectorActivo('template1');
+  } catch {
+    return null;
+  }
+}
+
 /** Qué bases tienen ya la extensión, cuáles son de datos reales y si `template1` la lleva. */
 export async function estadoVectorBases(p: PuertoVector): Promise<EstadoVectorBases> {
   const servidorTiene = await p.servidorTieneVector();
-  const nombres = (await p.listarBases()).slice(0, TOPE_BASES);
+  const todas = await p.listarBases();
   const bases: EstadoVectorBases['bases'] = [];
-  for (const base of nombres) {
+  for (const base of todas.slice(0, TOPE_BASES)) {
+    // Un nombre raro no tumba el lote: sale marcado y sin consultar nada de él.
+    if (!NOMBRE_BD_PG.test(base)) {
+      bases.push({ base, activo: false, datosReales: false, valida: false });
+      continue;
+    }
     const activo = await p.vectorActivo(base).catch(() => false);
     const datosReales = await p.esDatosReales(base).catch(() => true);
-    bases.push({ base, activo, datosReales });
+    bases.push({ base, activo, datosReales, valida: true });
   }
-  const plantilla = servidorTiene ? await p.vectorActivo('template1').catch(() => false) : false;
-  return { servidorTiene, bases, plantilla };
+  const plantilla = servidorTiene ? await estadoPlantilla(p) : false;
+  return { servidorTiene, bases, truncado: todas.length > TOPE_BASES, plantilla };
+}
+
+/** Candado de operación: compilar, activar en bases y tocar template1 no se pisan entre sí. */
+export class CandadoPgvector {
+  private ocupado = false;
+
+  async con<T>(fn: () => Promise<T>): Promise<T> {
+    if (this.ocupado) {
+      throw new ErrorWolf('bd.vector_ocupado', 'Ya hay otra operación de pgvector en curso.');
+    }
+    this.ocupado = true;
+    try {
+      return await fn();
+    } finally {
+      this.ocupado = false;
+    }
+  }
 }
 
 /**
@@ -91,16 +139,28 @@ export async function activarVectorEnBases(
 ): Promise<ResultadoBaseVector[]> {
   exigirConfirmado(o.confirmado);
   const pedidas = [...new Set(o.bases)];
-  if (pedidas.length === 0) throw new Error('Elija al menos una base.');
-  if (pedidas.length > TOPE_BASES) throw new Error('Demasiadas bases en una sola operación.');
+  if (pedidas.length === 0) {
+    throw new ErrorWolf('bd.vector_sin_bases', 'Elija al menos una base.');
+  }
+  if (pedidas.length > TOPE_BASES) {
+    throw new ErrorWolf('bd.vector_demasiadas', 'Demasiadas bases en una sola operación.');
+  }
   await exigirServidor(p);
   const existentes = new Set(await p.listarBases());
   const aceptadas = new Set(o.datosRealesConfirmadas ?? []);
   const informe: ResultadoBaseVector[] = [];
   for (const base of pedidas) {
+    if (SISTEMA.includes(base)) {
+      informe.push({ base, estado: 'error', motivo: 'sistema' });
+      continue;
+    }
     // Solo bases del catálogo: nunca plantillas ni nombres inventados.
     if (!existentes.has(base)) {
       informe.push({ base, estado: 'error', motivo: 'no-existe' });
+      continue;
+    }
+    if (!NOMBRE_BD_PG.test(base)) {
+      informe.push({ base, estado: 'error', motivo: 'nombre-no-valido' });
       continue;
     }
     try {
@@ -112,8 +172,8 @@ export async function activarVectorEnBases(
         informe.push({ base, estado: 'ya-estaba' });
         continue;
       }
-      await p.activar(base);
-      informe.push({ base, estado: 'activada' });
+      const creada = await p.activar(base);
+      informe.push({ base, estado: creada === false ? 'ya-estaba' : 'activada' });
     } catch (e) {
       informe.push({ base, estado: 'error', motivo: motivoDeError(e) });
     }
@@ -130,8 +190,8 @@ export async function activarVectorEnPlantilla(
   await exigirServidor(p);
   try {
     if (await p.vectorActivo('template1')) return { base: 'template1', estado: 'ya-estaba' };
-    await p.activar('template1');
-    return { base: 'template1', estado: 'activada' };
+    const creada = await p.activar('template1');
+    return { base: 'template1', estado: creada === false ? 'ya-estaba' : 'activada' };
   } catch (e) {
     return { base: 'template1', estado: 'error', motivo: motivoDeError(e) };
   }

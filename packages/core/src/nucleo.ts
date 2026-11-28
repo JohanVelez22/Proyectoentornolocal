@@ -67,7 +67,11 @@ import type {
 } from './perfiles/tipos';
 import { detectarFormato, type FormatoRespaldo } from './bd/formato';
 import { InstaladorPgvector, type ResultadoBuildTools } from './bd/pgvector';
-import type { EstadoVectorBases, ResultadoBaseVector } from './bd/pgvectorBases';
+import {
+  CandadoPgvector,
+  type EstadoVectorBases,
+  type ResultadoBaseVector,
+} from './bd/pgvectorBases';
 import {
   Respaldos,
   type OpcionesRestaurar,
@@ -2705,22 +2709,27 @@ export class Nucleo {
     return this.pgvector.instalarBuildTools();
   }
 
+  /** Compilar, activar en bases y tocar template1 no se pisan: una sola operación de pgvector a la vez. */
+  private readonly candadoPgvector = new CandadoPgvector();
+
   compilarPgvector(): Promise<{ version: string }> {
-    return this.pgvector.compilarEInstalar();
+    return this.candadoPgvector.con(() => this.pgvector.compilarEInstalar());
   }
 
-  activarVector(base: string): Promise<void> {
-    return this.bd.activarVector(base);
+  /**
+   * «Activar vector» de una base: pasa por el mismo camino que varias bases, así hereda el rechazo
+   * de las bases del sistema, «solo bases del catálogo» y el aviso de datos reales.
+   */
+  async activarVector(base: string): Promise<ResultadoBaseVector> {
+    const [r] = await this.activarVectorEnBases('postgresql', { bases: [base], confirmado: true });
+    return r!;
   }
 
-  /** ¿La base es la de un sitio con `datosReales`? (ante la duda, sí). */
+  /** ¿La base es la de un sitio con `datosReales`? (ante la duda, sí). Lee los sitios una sola vez. */
   private esBaseDeDatosReales(objetivo: ObjetivoBd): (base: string) => Promise<boolean> {
-    return (base) =>
-      baseDeDatosReales(
-        { sitios: () => this.sitios.listar(), baseDe: baseDeSitio },
-        objetivo,
-        base,
-      );
+    let sitios: ReturnType<GestorSitios['listar']> | null = null;
+    const una = (): ReturnType<GestorSitios['listar']> => (sitios ??= this.sitios.listar());
+    return (base) => baseDeDatosReales({ sitios: una, baseDe: baseDeSitio }, objetivo, base);
   }
 
   /** pgvector por base de una instancia de PostgreSQL: dónde está, cuáles son de datos reales y template1. */
@@ -2737,7 +2746,9 @@ export class Nucleo {
       datosRealesConfirmadas?: readonly string[];
     },
   ): Promise<ResultadoBaseVector[]> {
-    return this.bd.activarVectorEnBases(objetivo, o, this.esBaseDeDatosReales(objetivo));
+    return this.candadoPgvector.con(() =>
+      this.bd.activarVectorEnBases(objetivo, o, this.esBaseDeDatosReales(objetivo)),
+    );
   }
 
   /** «Activar también en las bases nuevas» (o quitarlo): crea o borra la extensión en template1. */
@@ -2745,7 +2756,12 @@ export class Nucleo {
     objetivo: ObjetivoBd,
     o: { activar: boolean; confirmado: boolean },
   ): Promise<ResultadoBaseVector> {
-    return this.bd.vectorEnPlantilla(objetivo, o);
+    return this.candadoPgvector.con(() => this.bd.vectorEnPlantilla(objetivo, o));
+  }
+
+  /** Ruta ligera: solo lee template1 (null si no se puede). */
+  plantillaVector(objetivo: ObjetivoBd = 'postgresql'): Promise<boolean | null> {
+    return this.bd.plantillaVector(objetivo);
   }
 
   // ---- IA local (Ollama) ----

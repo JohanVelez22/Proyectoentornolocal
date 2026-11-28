@@ -433,7 +433,7 @@ describe('ClientePostgres', () => {
   it('quitarVector no usa CASCADE y un error sale traducido, sin SQL', async () => {
     const { cliente, consultas } = montar();
     await cliente.conectar(cx);
-    await cliente.quitarVector('template1');
+    await cliente.quitarVectorPlantilla();
     expect(consultas.at(-1)!.sql).toBe('DROP EXTENSION IF EXISTS "vector"');
     expect(consultas.at(-1)!.sql).not.toMatch(/cascade/i);
     const malo = new ClientePostgres(async () => ({
@@ -446,6 +446,119 @@ describe('ClientePostgres', () => {
     const e = await malo.quitarVector('x').catch((x: Error) => x);
     expect((e as Error).message).toContain('No se pudo quitar pgvector de x');
     expect((e as Error).message).not.toContain('SECRETO');
+  });
+
+  it('activarVector y quitarVector rechazan las bases del sistema; solo la plantilla escribe en template1', async () => {
+    const { cliente, consultas, conexiones } = montar();
+    await cliente.conectar(cx);
+    for (const n of ['postgres', 'template0', 'template1']) {
+      await expect(cliente.activarVector(n)).rejects.toThrow('base del sistema');
+      await expect(cliente.quitarVector(n)).rejects.toThrow('base del sistema');
+    }
+    expect(consultas).toEqual([]);
+    await cliente.activarVectorPlantilla();
+    expect(conexiones.at(-1)!.base).toBe('template1');
+    expect(consultas.at(-1)!.sql).toBe('CREATE EXTENSION IF NOT EXISTS "vector" SCHEMA public');
+  });
+
+  it('una carrera en CREATE EXTENSION (23505 o 42710) cuenta como que ya estaba; 2BP01 habla de objetos que la usan', async () => {
+    for (const code of ['23505', '42710']) {
+      const c = new ClientePostgres(async () => ({
+        query: async (sql: string) => {
+          if (sql.startsWith('CREATE EXTENSION')) throw Object.assign(new Error('x'), { code });
+          return { rows: [] };
+        },
+        end: async () => undefined,
+      }));
+      await c.conectar(cx);
+      expect(await c.activarVector('a')).toBe(false);
+    }
+    const d = new ClientePostgres(async () => ({
+      query: async (sql: string) => {
+        if (sql.startsWith('DROP EXTENSION'))
+          throw Object.assign(new Error('SECRETO'), { code: '2BP01' });
+        return { rows: [] };
+      },
+      end: async () => undefined,
+    }));
+    await d.conectar(cx);
+    const e = (await d.quitarVector('a').catch((x: Error) => x)) as Error;
+    expect(e.message).toContain('(2BP01)');
+    expect(e.message).toContain('hay objetos que usan la extensión');
+    expect(e.message).not.toContain('SECRETO');
+  });
+
+  describe('las bases que crea WolfCore heredan pgvector de template1 (nacen de template0)', () => {
+    /** template1 lleva pgvector; `extras` decide otras respuestas. */
+    const conPlantilla = (plantilla: boolean, baseConVector = false, falla = false) => {
+      const sqls: string[] = [];
+      const bases: string[] = [];
+      const c = new ClientePostgres(async (x) => {
+        if (x.base) bases.push(x.base);
+        return {
+          query: async (sql: string, params?: unknown[]) => {
+            sqls.push(sql);
+            if (sql.includes('pg_extension')) {
+              const n = x.base === 'template1' ? (plantilla ? 1 : 0) : baseConVector ? 1 : 0;
+              return { rows: [{ n }] };
+            }
+            if (falla && sql.startsWith('CREATE EXTENSION')) {
+              throw Object.assign(new Error('boom'), { code: '58P01' });
+            }
+            if (sql.includes('FROM pg_database')) return { rows: [{ n: 0 }] };
+            void params;
+            return { rows: [] };
+          },
+          end: async () => undefined,
+        };
+      });
+      return { c, sqls, bases };
+    };
+
+    it('crearBase activa pgvector en la nueva si template1 lo lleva, y no si no', async () => {
+      const si = conPlantilla(true);
+      await si.c.conectar(cx);
+      await si.c.crearBase('nueva');
+      expect(si.bases).toContain('nueva');
+      expect(si.sqls.filter((q) => q.startsWith('CREATE EXTENSION'))).toHaveLength(1);
+      const no = conPlantilla(false);
+      await no.c.conectar(cx);
+      await no.c.crearBase('nueva');
+      expect(no.sqls.some((q) => q.startsWith('CREATE EXTENSION'))).toBe(false);
+    });
+
+    it('si activarlo falla, la creación no falla y se avisa', async () => {
+      const x = conPlantilla(true, false, true);
+      await x.c.conectar(cx);
+      const r = await x.c.crearBase('nueva');
+      expect(r.aviso).toContain('se creó, pero no se pudo activar pgvector');
+    });
+
+    it('crearBaseConLocale hereda igual', async () => {
+      const x = conPlantilla(true);
+      await x.c.conectar(cx);
+      await x.c.crearBaseConLocale('nueva', 'UTF8|C|C').catch(() => undefined);
+      // El formato del orden lo arma el servidor; aquí solo importa que se pida la extensión.
+      expect(x.sqls.filter((q) => q.startsWith('CREATE EXTENSION'))).toHaveLength(1);
+    });
+
+    it('reiniciarBase vuelve a activarlo si la base lo tenía, aunque template1 no', async () => {
+      const x = conPlantilla(false, true);
+      await x.c.conectar(cx);
+      await x.c.reiniciarBase('mi_base');
+      const orden = x.sqls.filter((q) =>
+        /^(DROP DATABASE|CREATE DATABASE|CREATE EXTENSION)/.test(q),
+      );
+      expect(orden.map((q) => q.split(' ').slice(0, 2).join(' '))).toEqual([
+        'DROP DATABASE',
+        'CREATE DATABASE',
+        'CREATE EXTENSION',
+      ]);
+      const sin = conPlantilla(false, false);
+      await sin.c.conectar(cx);
+      await sin.c.reiniciarBase('mi_base');
+      expect(sin.sqls.some((q) => q.startsWith('CREATE EXTENSION'))).toBe(false);
+    });
   });
 
   it('tieneVector consulta pg_available_extensions', async () => {
