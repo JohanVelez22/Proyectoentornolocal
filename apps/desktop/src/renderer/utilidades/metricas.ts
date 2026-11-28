@@ -119,7 +119,12 @@ export function formatoBps(n: number): string {
 
 export function formatoPorcentaje(n: number): string {
   if (!Number.isFinite(n)) return '—';
-  return `${formatearNumero(n, { maximumFractionDigits: n < 10 ? 1 : 0 })} ${textos.unidades.porcentaje}`;
+  // Intl con `style: 'percent'` pone el signo y el espacio como los usa cada idioma
+  // («41%» en inglés, «41 %» en español y alemán, «%41» en turco).
+  return formatearNumero(n / 100, {
+    style: 'percent',
+    maximumFractionDigits: n < 10 ? 1 : 0,
+  });
 }
 
 /** Tiempo encendido: "45 s", "12 min", "3 h 5 min", "2 d 4 h". */
