@@ -620,7 +620,7 @@ describe('D46: scripts del cortafuegos real (solo se comprueba su texto: nunca s
     expect(s).not.toMatch(/-DisplayName|-Program\b/);
     expect(s).toContain("$r.Direction -eq 'Inbound'");
     expect(s).toContain("$r.Action -eq 'Allow'");
-    expect(s).toContain('[WolfRuta]::Real');
+    expect(s).toContain('Get-RutaReal');
     expect(s).toContain("GetExtension($rl) -ne '.exe'");
     expect(s).toContain("n = '{AAAA-1}'");
     expect(s).toContain('exit 41');

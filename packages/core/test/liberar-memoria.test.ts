@@ -425,6 +425,29 @@ describe('liberar memoria: Windows (ejecutor falso, nada real)', () => {
     expect(llamadas).toHaveLength(1);
   });
 
+  it('si el vaciado se corta a medias, devuelve lo ya hecho; si no hizo nada, falla con el catálogo', async () => {
+    const corte = new PlataformaWindows(
+      async () => ({
+        codigo: 1,
+        stdout: '100|VACIADO|900|90\n',
+        stderr: 'timeout',
+      }),
+      undefined,
+      { entorno: { SystemRoot: 'C:\\Windows' } },
+    );
+    const objetivos = [
+      { pid: 100, inicio: '1' },
+      { pid: 101, inicio: '2' },
+    ];
+    expect(await corte.vaciarWorkingSets(objetivos)).toEqual([
+      { pid: 100, estado: 'vaciado', antes: 900, despues: 90 },
+    ]);
+    const nada = new PlataformaWindows(async () => ({ codigo: 1, stdout: '', stderr: 'x' }));
+    await expect(nada.vaciarWorkingSets(objetivos)).rejects.toMatchObject({
+      codigo: 'memoria.no_disponible',
+    });
+  });
+
   it('purgarListaEspera eleva con el patrón común (-Command exterior con runas, plazo) y no escribe nada en %TEMP%', async () => {
     const dir = await carpetaTemporal('pel-mem-');
     const llamadas: { cmd: string; args: string[]; timeoutMs?: number }[] = [];
@@ -571,7 +594,10 @@ describe('liberar memoria: los scripts (analizados con el parser, sin ejecutarlo
     expect(s).not.toMatch(/Out-File|Set-Content|\[IO\.File\]|%TEMP%|\$env:TEMP|HKLM|WriteLine/i);
     // Tamaño fijo: el mismo comando siempre.
     expect(scriptPurgarListaEspera()).toBe(s);
-    expect(s).toContain('SeProfileSingleProcessPrivilege');
+    // Privilegios por número (RtlAdjustPrivilege): 5 = cuota, 13 = perfil de un solo proceso.
+    expect(s).toContain('RtlAdjustPrivilege');
+    expect(s).toContain('Activar-Privilegio 13');
+    expect(s).not.toMatch(/Add-Type|OpenProcessToken|AdjustTokenPrivileges|LookupPrivilegeValue/);
     // El comando elevado, ya envuelto, cabe holgado en una línea de comandos.
     expect(scriptElevar(codificarComando(s)).length).toBeLessThan(12_000);
   });
@@ -585,19 +611,64 @@ describe('liberar memoria: los scripts (analizados con el parser, sin ejecutarlo
     expect(s).toContain('EmptyWorkingSet');
   });
 
-  it('el C# del script elevado compila (se compila, no se ejecuta nada)', () => {
-    if (process.platform !== 'win32') return;
+  it('la purga vacía primero la caché de archivos y después la lista de espera (Menor 4)', () => {
     const s = scriptPurgarListaEspera();
-    const miembro = /-MemberDefinition '([^']+)'/.exec(s)![1]!;
-    const cmd = `Add-Type -Namespace WolfPrueba -Name Compila -MemberDefinition '${miembro}'; [Console]::Out.Write('compilo')`;
-    const r = spawnSync(
-      'powershell',
-      ['-NoProfile', '-NonInteractive', '-EncodedCommand', codificarComando(cmd)],
-      { encoding: 'utf8', windowsHide: true, timeout: 120_000 },
+    expect(s.indexOf('SetSystemFileCacheSize(')).toBeGreaterThan(0);
+    expect(s.indexOf('SetSystemFileCacheSize(')).toBeLessThan(
+      s.indexOf('NtSetSystemInformation(80'),
     );
-    expect(r.stdout).toBe('compilo');
+    // Si falla la caché se sigue con la lista y se sale con su propio código al final.
+    expect(s.indexOf('NtSetSystemInformation(80')).toBeLessThan(
+      s.indexOf(`exit ${SALIDA_PURGA.cacheArchivos}`),
+    );
+  });
+
+  it('el vaciado lee Win32_Process y Win32_Service una sola vez, antes del bucle (Menor 2)', () => {
+    const s = scriptVaciarWorkingSets(objetivos);
+    expect(s.match(/Get-CimInstance Win32_Process/g)).toHaveLength(1);
+    expect(s.match(/Get-CimInstance Win32_Service/g)).toHaveLength(1);
+    const bucle = s.indexOf('foreach ($x in $objetivos)');
+    expect(s.indexOf('Get-CimInstance Win32_Process')).toBeLessThan(bucle);
+    expect(s.indexOf('Get-CimInstance Win32_Service')).toBeLessThan(bucle);
+    // Plazo propio: al vencer deja de vaciar y sale bien (lo ya impreso es lo hecho).
+    expect(s).toContain('$reloj.ElapsedMilliseconds -gt 90000) { break }');
+    expect(() => scriptVaciarWorkingSets(objetivos, 5)).toThrow();
+  });
+
+  it('el vaciado abre el handle y compara la hora de creación en ESE handle antes de vaciar (Menor 1)', () => {
+    const s = scriptVaciarWorkingSets(objetivos);
+    const abrir = s.indexOf('$Ws::OpenProcess(');
+    const tiempos = s.indexOf('$Ws::GetProcessTimes($h');
+    const vaciar = s.indexOf('$Ws::EmptyWorkingSet($h)');
+    expect(abrir).toBeGreaterThan(0);
+    expect(abrir).toBeLessThan(tiempos);
+    expect(tiempos).toBeLessThan(vaciar);
+    // El handle se cierra siempre.
+    expect(s).toContain('finally { if ($h -ne [IntPtr]::Zero) { $null = $Ws::CloseHandle($h) } }');
   });
 });
+
+describe.skipIf(process.platform !== 'win32' || !hayPowerShell())(
+  'liberar memoria: el script de vaciado con PowerShell real (sin vaciar nada)',
+  () => {
+    it('un PID que no existe sale como CAMBIO y el tipo en memoria se crea sin errores', () => {
+      const r = spawnSync(
+        'powershell',
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-EncodedCommand',
+          codificarComando(
+            scriptVaciarWorkingSets([{ pid: 4_000_000, inicio: '133000000000000000' }]),
+          ),
+        ],
+        { encoding: 'utf8', windowsHide: true, timeout: 120_000 },
+      );
+      expect(r.status).toBe(0);
+      expect(r.stdout.trim()).toBe('4000000|CAMBIO|0|0');
+    });
+  },
+);
 
 describe('guardia: liberar memoria no tiene cómo matar un proceso', () => {
   const PROHIBIDO =

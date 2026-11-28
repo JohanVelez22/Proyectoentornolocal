@@ -1,4 +1,5 @@
 import { literalPowerShell } from './literalPowerShell';
+import { FIRMAS, lineasPInvoke } from './pinvokeWin';
 /**
  * D46: scripts que cambian el cortafuegos de Windows (quitar y recrear reglas de entrada Allow
  * peligrosas de WolfCore Dev) y la lectura que las exporta. Solo los corre la plataforma,
@@ -238,38 +239,35 @@ export function reglaRestaurable(r: ReglaExportada): boolean {
 }
 
 /**
- * `WolfRuta.Real`: ruta real (uniones y enlaces resueltos, nombres 8.3 expandidos) de lo que
- * exista; lo que falte al final se añade tal cual. Null si no se puede resolver.
+ * `Get-RutaReal`: ruta real (uniones y enlaces resueltos, nombres 8.3 expandidos) de lo que
+ * exista; lo que falte al final se añade tal cual. Null si no se puede resolver. El P/Invoke es en
+ * memoria (`System.Reflection.Emit`, ver `pinvokeWin.ts`): el comando es elevado y `Add-Type`
+ * dejaría una `.dll` compilada en el %TEMP% del usuario.
  */
 export const AYUDA_RUTA = [
-  "Add-Type -TypeDefinition @'",
-  'using System; using System.IO; using System.Runtime.InteropServices; using System.Text; using Microsoft.Win32.SafeHandles;',
-  'public static class WolfRuta {',
-  '  [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]',
-  '  static extern SafeFileHandle CreateFileW(string n, uint a, uint s, IntPtr c, uint d, uint f, IntPtr t);',
-  '  [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]',
-  '  static extern uint GetFinalPathNameByHandleW(SafeFileHandle h, StringBuilder b, uint l, uint f);',
-  '  public static string Real(string p) {',
-  '    char B = (char)92; string resto = null; string cur = p;',
-  '    while (!File.Exists(cur) && !Directory.Exists(cur)) {',
-  '      string par = Path.GetDirectoryName(cur); string nom = Path.GetFileName(cur);',
-  '      if (string.IsNullOrEmpty(par) || string.IsNullOrEmpty(nom)) return null;',
-  '      resto = resto == null ? nom : nom + B + resto; cur = par;',
-  '    }',
-  '    using (SafeFileHandle h = CreateFileW(cur, 0, 7, IntPtr.Zero, 3, 0x02000000, IntPtr.Zero)) {',
-  '      if (h.IsInvalid) return null;',
-  '      StringBuilder b = new StringBuilder(1024);',
-  '      uint n = GetFinalPathNameByHandleW(h, b, 1024, 0);',
-  '      if (n == 0 || n >= 1024) return null;',
-  '      string r = b.ToString();',
-  '      string pre = new string(B, 2) + "?" + B;',
-  '      if (r.StartsWith(pre + "UNC" + B)) return null;',
-  '      if (r.StartsWith(pre)) r = r.Substring(4);',
-  '      return resto == null ? r : r.TrimEnd(B) + B + resto;',
-  '    }',
+  ...lineasPInvoke('Ruta', 'WolfRuta', FIRMAS.ruta),
+  'function Get-RutaReal([string]$p) {',
+  '  $sep = [char]92; $resto = $null; $cur = $p',
+  '  while (-not [IO.File]::Exists($cur) -and -not [IO.Directory]::Exists($cur)) {',
+  '    $par = [IO.Path]::GetDirectoryName($cur); $nom = [IO.Path]::GetFileName($cur)',
+  '    if ([string]::IsNullOrEmpty($par) -or [string]::IsNullOrEmpty($nom)) { return $null }',
+  '    if ($null -eq $resto) { $resto = $nom } else { $resto = $nom + $sep + $resto }',
+  '    $cur = $par',
   '  }',
+  '  $h = $Ruta::CreateFileW($cur, 0, 7, [IntPtr]::Zero, 3, 0x02000000, [IntPtr]::Zero)',
+  '  if ($h -eq [IntPtr]::new(-1)) { return $null }',
+  '  try {',
+  '    $sb = [Text.StringBuilder]::new(1024)',
+  '    $n = $Ruta::GetFinalPathNameByHandleW($h, $sb, 1024, 0)',
+  '    if ($n -eq 0 -or $n -ge 1024) { return $null }',
+  '    $r = $sb.ToString()',
+  "    $pre = ([string]$sep * 2) + '?' + $sep",
+  "    if ($r.StartsWith($pre + 'UNC' + $sep)) { return $null }",
+  '    if ($r.StartsWith($pre)) { $r = $r.Substring(4) }',
+  '    if ($null -eq $resto) { return $r }',
+  '    return $r.TrimEnd($sep) + $sep + $resto',
+  '  } finally { $null = $Ruta::CloseHandle($h) }',
   '}',
-  "'@",
 ];
 
 const VIGILADOS_PS = `@(${PROGRAMAS_VIGILADOS.map(lit).join(', ')})`;
@@ -286,14 +284,14 @@ const FUNCION_PROGRAMA_PROPIO = [
   `$vigilados = ${VIGILADOS_PS}`,
   'function Test-ProgramaPropio([string]$prog, [string]$raiz, [string]$tipo, [string]$tmp) {',
   '  if ([string]::IsNullOrWhiteSpace($prog) -or $prog.Contains([string][char]37)) { return $false }',
-  '  $real = [WolfRuta]::Real($prog); $base = [WolfRuta]::Real($raiz)',
+  '  $real = Get-RutaReal $prog; $base = Get-RutaReal $raiz',
   '  if (-not $real -or -not $base) { return $false }',
   '  $rl = $real.ToLowerInvariant(); $bl = $base.ToLowerInvariant().TrimEnd([char]92)',
   '  if (-not $rl.StartsWith($bl + [string][char]92)) { return $false }',
   "  if ([IO.Path]::GetExtension($rl) -ne '.exe') { return $false }",
   '  if ($vigilados -notcontains [IO.Path]::GetFileNameWithoutExtension($rl)) { return $false }',
   "  if ($tipo -eq 'prueba') {",
-  '    $t = [WolfRuta]::Real($tmp)',
+  '    $t = Get-RutaReal $tmp',
   '    if (-not $t) { return $false }',
   '    $tl = $t.ToLowerInvariant().TrimEnd([char]92)',
   '    if (-not $bl.StartsWith($tl + [string][char]92)) { return $false }',

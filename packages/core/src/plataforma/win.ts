@@ -1085,10 +1085,13 @@ export class PlataformaWindows implements PlataformaCompleta {
       codificarPowerShell(scriptVaciarWorkingSets(objetivos)),
       { timeoutMs: 120_000 },
     );
-    if (r.codigo !== 0) {
+    const hechos = interpretarVaciado(r.stdout, objetivos);
+    // Si PowerShell se cortó (plazo de Node) o falló a medias, lo que ya imprimió es lo hecho: se
+    // devuelve eso y el resto queda sin contar. Solo si no hizo nada se avisa del fallo.
+    if (r.codigo !== 0 && hechos.length === 0) {
       throw new ErrorWolf('memoria.no_disponible', 'No se pudo vaciar la memoria de los procesos.');
     }
-    return interpretarVaciado(r.stdout, objetivos);
+    return hechos;
   }
 
   /** Vacía la lista de espera y la caché de archivos con UAC (cola de elevaciones, plazo, sin salida). */

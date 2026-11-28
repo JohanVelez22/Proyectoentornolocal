@@ -1,3 +1,4 @@
+import { FIRMAS, lineasPInvoke } from './pinvokeWin';
 import type { MemoriaSistema, ObjetivoVaciado, ResultadoVaciadoProceso } from './tipos';
 
 /**
@@ -46,47 +47,73 @@ export function interpretarMemoriaSistema(salida: string): MemoriaSistema | null
 }
 
 const MAX_OBJETIVOS = 400;
+/** Plazo propio del script de vaciado: al vencer se para y devuelve lo ya hecho (< el de Node). */
+export const PLAZO_VACIADO_MS = 90_000;
 
 /**
  * Una línea por PID: `pid|ESTADO|antes|despues` (bytes del conjunto de trabajo). ESTADO: VACIADO,
  * CAMBIO (no es el mismo proceso: otro dueño o sesión, otra hora de inicio o es un servicio) o
  * NO_SE_PUDO (no se pudo abrir con ese derecho: elevado o protegido).
+ *
+ * Win32_Process y Win32_Service se leen UNA vez al principio (no una consulta por proceso). La
+ * hora de creación se comprueba sobre el MISMO handle que recibe `EmptyWorkingSet`, abierto antes
+ * (mientras el handle esté abierto el PID no se puede reutilizar). Si se acaba el plazo, el script
+ * deja de vaciar y sale bien: lo que ya imprimió es lo hecho y el resto no se cuenta.
  */
-export function scriptVaciarWorkingSets(objetivos: ObjetivoVaciado[]): string {
+export function scriptVaciarWorkingSets(
+  objetivos: ObjetivoVaciado[],
+  plazoMs = PLAZO_VACIADO_MS,
+): string {
   if (objetivos.length > MAX_OBJETIVOS) throw new Error('Demasiados procesos.');
+  if (!Number.isInteger(plazoMs) || plazoMs < 1000 || plazoMs > 600_000) {
+    throw new Error('Plazo no válido.');
+  }
   for (const o of objetivos) {
     if (!Number.isInteger(o.pid) || o.pid <= 4) throw new Error(`PID no válido: ${o.pid}`);
     if (!/^[1-9]\d{0,18}$/.test(o.inicio) || BigInt(o.inicio) > 9223372036854775807n) {
       throw new Error('Hora de inicio no válida.');
     }
   }
-  const lista = objetivos.map((o) => `@(${o.pid}, [int64]${o.inicio})`).join(', ');
+  // Cadenas `pid:inicio`: un `@(@(a, b))` de un solo objetivo se aplanaría y fallaría.
+  const lista = objetivos.map((o) => `'${o.pid}:${o.inicio}'`).join(', ');
   const linea = (estado: string, antes = '0', despues = '0'): string =>
     `[Console]::Out.WriteLine(($pid_, '${estado}', ${antes}, ${despues}) -join '${SEP}')`;
   return [
     "$ErrorActionPreference = 'Stop'",
-    `Add-Type -Namespace Wolf -Name Ws -MemberDefinition '[DllImport("kernel32.dll", SetLastError=true)] public static extern IntPtr OpenProcess(uint a, bool h, int p); [DllImport("kernel32.dll")] public static extern bool CloseHandle(IntPtr h); [DllImport("psapi.dll", SetLastError=true)] public static extern bool EmptyWorkingSet(IntPtr h);'`,
+    ...lineasPInvoke('Ws', 'WolfWs', FIRMAS.procesos),
     '$yo = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value',
     '$ses = [System.Diagnostics.Process]::GetCurrentProcess().SessionId',
     `$objetivos = @(${lista})`,
+    '$reloj = [System.Diagnostics.Stopwatch]::StartNew()',
+    '$procs = @{}',
+    'Get-CimInstance Win32_Process -Filter "SessionId=$ses" | ForEach-Object { $procs[[int]$_.ProcessId] = $_ }',
+    '$serv = @{}',
+    `Get-CimInstance Win32_Service -Filter "State='Running'" | ForEach-Object { $serv[[int]$_.ProcessId] = 1 }`,
     'foreach ($x in $objetivos) {',
-    '  $pid_ = [int]$x[0]; $ini = [int64]$x[1]',
+    `  if ($reloj.ElapsedMilliseconds -gt ${plazoMs}) { break }`,
+    '  $q = $x.Split([char]58); $pid_ = [int]$q[0]; $ini = [int64]$q[1]',
+    '  $h = [IntPtr]::Zero',
     '  try {',
-    '    $w = Get-CimInstance Win32_Process -Filter "ProcessId=$pid_"',
-    `    if (-not $w -or $w.SessionId -ne $ses) { ${linea('CAMBIO')}; continue }`,
+    '    $w = $procs[$pid_]',
+    `    if (-not $w) { ${linea('CAMBIO')}; continue }`,
     '    $o = Invoke-CimMethod -InputObject $w -MethodName GetOwnerSid -ErrorAction SilentlyContinue',
     `    if (-not $o -or $o.Sid -ne $yo) { ${linea('CAMBIO')}; continue }`,
     '    $c = 0; if ($w.CreationDate) { $c = $w.CreationDate.ToFileTimeUtc() }',
     `    if ($c -ne $ini) { ${linea('CAMBIO')}; continue }`,
-    `    if (Get-CimInstance Win32_Service -Filter "ProcessId=$pid_") { ${linea('CAMBIO')}; continue }`,
+    `    if ($serv.ContainsKey($pid_)) { ${linea('CAMBIO')}; continue }`,
+    // Primero el handle; la hora de creación se lee de ESE handle justo antes de vaciar.
+    '    $h = $Ws::OpenProcess(0x1100, $false, $pid_)',
+    `    if ($h -eq [IntPtr]::Zero) { ${linea('NO_SE_PUDO')}; continue }`,
+    '    $a = [int64]0; $b = [int64]0; $k = [int64]0; $u = [int64]0',
+    `    if (-not $Ws::GetProcessTimes($h, [ref]$a, [ref]$b, [ref]$k, [ref]$u)) { ${linea('NO_SE_PUDO')}; continue }`,
+    // El CIM redondea a microsegundos; el handle da cien nanosegundos: se admite una décima de segundo.
+    `    if ([math]::Abs($a - $ini) -gt 1000000) { ${linea('CAMBIO')}; continue }`,
     '    $p = [System.Diagnostics.Process]::GetProcessById($pid_)',
     '    $antes = [int64]$p.WorkingSet64',
-    '    $h = [Wolf.Ws]::OpenProcess(0x1100, $false, $pid_)',
-    `    if ($h -eq [IntPtr]::Zero) { ${linea('NO_SE_PUDO', '$antes', '$antes')}; continue }`,
-    '    try { $null = [Wolf.Ws]::EmptyWorkingSet($h) } finally { $null = [Wolf.Ws]::CloseHandle($h) }',
+    '    $null = $Ws::EmptyWorkingSet($h)',
     '    $p.Refresh()',
     `    ${linea('VACIADO', '$antes', '[int64]$p.WorkingSet64')}`,
-    `  } catch { ${linea('NO_SE_PUDO')} }`,
+    `  } catch { ${linea('NO_SE_PUDO')} } finally { if ($h -ne [IntPtr]::Zero) { $null = $Ws::CloseHandle($h) } }`,
     '}',
   ].join('\n');
 }
@@ -129,33 +156,34 @@ export const SALIDA_PURGA = {
   cacheArchivos: 43,
 } as const;
 
+/** Privilegios que se piden con `RtlAdjustPrivilege` (números de ntdll, sin cadenas ni LUID). */
+const PRIVILEGIO_CUOTA = 5; // SeIncreaseQuotaPrivilege
+const PRIVILEGIO_PERFIL = 13; // SeProfileSingleProcessPrivilege
+
 /**
  * Comando ELEVADO (corto, de tamaño fijo, sin entradas del usuario): activa los privilegios
- * `SeProfileSingleProcessPrivilege` y `SeIncreaseQuotaPrivilege` de su propio token, vacía la lista
- * de espera (`NtSetSystemInformation`, `SystemMemoryListInformation`, `MemoryPurgeStandbyList`) y
- * la caché de archivos (`SetSystemFileCacheSize(-1, -1, 0)`). No toca ningún proceso, no escribe
- * nada y no devuelve datos: solo su código de salida.
+ * `SeIncreaseQuotaPrivilege` y `SeProfileSingleProcessPrivilege` de su propio token
+ * (`RtlAdjustPrivilege`), vacía PRIMERO la caché de archivos (`SetSystemFileCacheSize(-1, -1, 0)`)
+ * y DESPUÉS la lista de espera (`NtSetSystemInformation`, `SystemMemoryListInformation`,
+ * `MemoryPurgeStandbyList`): así lo que la caché suelta también sale de la lista. Si la caché falla
+ * se sigue con la lista y al final sale con `cacheArchivos`. No toca ningún proceso, no escribe
+ * nada y no devuelve datos: solo su código de salida. El P/Invoke es en memoria
+ * (`System.Reflection.Emit`): sin `Add-Type`, sin compilador y sin archivos en %TEMP%.
  */
 export function scriptPurgarListaEspera(): string {
   return [
     "$ErrorActionPreference = 'Stop'",
-    `Add-Type -Namespace Wolf -Name Pur -MemberDefinition '[DllImport("ntdll.dll")] public static extern int NtSetSystemInformation(int c, ref int i, int l); [DllImport("kernel32.dll")] public static extern bool SetSystemFileCacheSize(IntPtr a, IntPtr b, int f); [DllImport("advapi32.dll", SetLastError=true)] public static extern bool OpenProcessToken(IntPtr h, int a, out IntPtr t); [DllImport("advapi32.dll", CharSet=CharSet.Unicode)] public static extern bool LookupPrivilegeValue(string s, string n, out long l); [DllImport("advapi32.dll", SetLastError=true)] public static extern bool AdjustTokenPrivileges(IntPtr t, bool d, ref TP n, int l, IntPtr p, IntPtr r); [StructLayout(LayoutKind.Sequential, Pack=1)] public struct TP { public int Count; public long Luid; public int Attr; }'`,
-    '$t = [IntPtr]::Zero',
-    `if (-not [Wolf.Pur]::OpenProcessToken([System.Diagnostics.Process]::GetCurrentProcess().Handle, 0x28, [ref]$t)) { exit ${SALIDA_PURGA.privilegio} }`,
-    'function Activar-Privilegio($nombre) {',
-    '  $tp = New-Object Wolf.Pur+TP; $tp.Count = 1; $tp.Attr = 2',
-    '  $l = [int64]0',
-    '  if (-not [Wolf.Pur]::LookupPrivilegeValue($null, $nombre, [ref]$l)) { return $false }',
-    '  $tp.Luid = $l',
-    '  $null = [Wolf.Pur]::AdjustTokenPrivileges($t, $false, [ref]$tp, 0, [IntPtr]::Zero, [IntPtr]::Zero)',
-    '  return ([System.Runtime.InteropServices.Marshal]::GetLastWin32Error() -eq 0)',
+    ...lineasPInvoke('Pur', 'WolfPur', FIRMAS.purga),
+    'function Activar-Privilegio([int]$numero) {',
+    '  $antes = [byte]0',
+    '  return ($Pur::RtlAdjustPrivilege($numero, 1, 0, [ref]$antes) -eq 0)',
     '}',
-    `if (-not (Activar-Privilegio 'SeProfileSingleProcessPrivilege')) { exit ${SALIDA_PURGA.privilegio} }`,
+    '$cache = $false',
+    `if (Activar-Privilegio ${PRIVILEGIO_CUOTA}) { $cache = $Pur::SetSystemFileCacheSize([IntPtr]::new(-1), [IntPtr]::new(-1), 0) }`,
+    `if (-not (Activar-Privilegio ${PRIVILEGIO_PERFIL})) { exit ${SALIDA_PURGA.privilegio} }`,
     '$orden = 4',
-    `if ([Wolf.Pur]::NtSetSystemInformation(80, [ref]$orden, 4) -ne 0) { exit ${SALIDA_PURGA.listaEspera} }`,
-    "if (-not (Activar-Privilegio 'SeIncreaseQuotaPrivilege')) { exit " +
-      `${SALIDA_PURGA.cacheArchivos} }`,
-    `if (-not [Wolf.Pur]::SetSystemFileCacheSize([IntPtr]::new(-1), [IntPtr]::new(-1), 0)) { exit ${SALIDA_PURGA.cacheArchivos} }`,
+    `if ($Pur::NtSetSystemInformation(80, [ref]$orden, 4) -ne 0) { exit ${SALIDA_PURGA.listaEspera} }`,
+    `if (-not $cache) { exit ${SALIDA_PURGA.cacheArchivos} }`,
     'exit 0',
   ].join('\n');
 }
