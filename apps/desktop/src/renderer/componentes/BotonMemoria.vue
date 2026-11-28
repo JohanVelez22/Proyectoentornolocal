@@ -160,7 +160,7 @@ const aumento = (bytes: number | null): string =>
         <template #icon
           ><NIcon><IconoMemoria /></NIcon
         ></template>
-        {{ trabajando ? t.liberando : t.etiqueta }}
+        <span class="memoria-texto">{{ trabajando ? t.liberando : t.etiqueta }}</span>
         <NIcon class="flecha" :size="14" aria-hidden="true"><IconoAbrir /></NIcon>
       </NButton>
     </template>
@@ -307,6 +307,17 @@ const aumento = (bytes: number | null): string =>
 </template>
 
 <style scoped>
+/* Barra estrecha (ventana pequeña o escala de Windows alta): el botón queda como icono y flecha;
+   el nombre sigue en su título y en la etiqueta accesible. */
+@container (max-width: 760px) {
+  .memoria-texto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+}
 .memoria-panel {
   display: flex;
   flex-direction: column;

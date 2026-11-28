@@ -66,7 +66,9 @@ const notification = useNotification();
 
 const avisos = useAvisos();
 const panelAvisos = ref(false);
-const contraido = ref(false);
+/** Ventana estrecha (p. ej. escala de Windows alta): el menú lateral empieza plegado. */
+const ANCHO_PLEGAR = 900;
+const contraido = ref(typeof window !== 'undefined' && window.innerWidth < ANCHO_PLEGAR);
 const falloArranque = ref(false);
 
 const preferencias = usePreferencias();
@@ -168,7 +170,14 @@ watch(
 let bajaAviso: (() => void) | null = null;
 let bajaCaptura: (() => void) | null = null;
 
+/** Al cruzar el umbral se pliega o despliega solo; el usuario puede cambiarlo después. */
+let consultaAncho: MediaQueryList | null = null;
+function alCambiarAncho(e: MediaQueryListEvent): void {
+  contraido.value = e.matches;
+}
 onMounted(() => {
+  consultaAncho = window.matchMedia(`(max-width: ${ANCHO_PLEGAR - 1}px)`);
+  consultaAncho.addEventListener('change', alCambiarAncho);
   // El historial no es imprescindible: si no carga, la campana queda en cero.
   void avisos.cargar().catch(() => undefined);
   avisos.iniciar(abrirAviso);
@@ -204,6 +213,7 @@ async function mostrarAvisoInicio(): Promise<void> {
   notification.info({ title: textos.avisoInicio.titulo, content: aviso, closable: true });
 }
 onBeforeUnmount(() => {
+  consultaAncho?.removeEventListener('change', alCambiarAncho);
   bajaAviso?.();
   bajaCaptura?.();
   avisos.detener();
@@ -344,6 +354,10 @@ onBeforeUnmount(() => {
 .principal {
   height: 100vh;
 }
+/* Menú plegado: los títulos de grupo no caben en el carril de 64 px y se verían cortados. */
+:deep(.n-menu.n-menu--collapsed .n-menu-item-group-title) {
+  display: none;
+}
 /*
  * Título a la izquierda, buscador centrado y controles a la derecha. Las dos columnas de los lados
  * reparten el sitio por igual (1fr), así el buscador queda en el centro de la barra salvo que los
@@ -387,6 +401,7 @@ onBeforeUnmount(() => {
 }
 .cabecera-acciones {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
