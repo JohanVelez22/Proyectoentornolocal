@@ -7,6 +7,8 @@ import { api } from '../../api';
 import { useAccion } from '../../composables/useAccion';
 import { textos } from '../../i18n';
 import { lineasEquipo, resumenEquipo } from '../../utilidades/equipo';
+import EventosDisco from './EventosDisco.vue';
+import SaludDiscos from './SaludDiscos.vue';
 
 const t = textos.herramientas.entorno;
 const te = t.equipo;
@@ -107,6 +109,9 @@ onMounted(async () => {
         <span class="herr-tenue">{{ te.privacidad }}</span>
       </div>
     </div>
+
+    <SaludDiscos />
+    <EventosDisco />
 
     <div class="herr-fila">
       <NButton secondary size="small" :loading="ocupado('cargar')" @click="cargar(true)">

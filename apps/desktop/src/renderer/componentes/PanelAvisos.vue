@@ -28,6 +28,8 @@ const filas = computed(() =>
  * de actualización, nunca actualiza solo); "Ver versiones" si no hay atajo; "Ver" en el resto.
  */
 function textoBoton(a: Aviso): string {
+  // Salud de un disco (D57): lleva a los respaldos y las instantáneas; no respalda por sí solo.
+  if (a.tipo === 'salud-disco') return t.hacerRespaldo;
   if (a.tipo !== 'version-nueva') return t.ver;
   return argsDeAviso(a.accion?.args)?.actualizar ? t.actualizar : t.verVersiones;
 }
