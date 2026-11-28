@@ -13,6 +13,11 @@
   - Nueva tarjeta «Espacio en disco» con el espacio libre del sistema y de los datos de WolfCore, que se pone ámbar o roja si queda poco. Su botón «Liberar espacio» ofrece limpiar versiones sin uso, limpiar temporales y cachés, o ver qué ocupa más.
   - Una sola tarjeta, «Servicios y procesos», reúne lo que está en marcha con su uso de CPU y memoria y, debajo, el resto de los servicios.
 
+- **Liberar memoria en tres niveles**
+  - El botón de la barra superior ofrece **Liviano** (WolfCore Dev y lo que supervisa), **Moderado** (además los programas abiertos que no son críticos) y **Profundo** (además la caché de archivos y la lista de espera de Windows, con confirmación y permiso de administrador).
+  - Solo vacía el conjunto de trabajo de los procesos; no cierra nada. Las cifras son honestas: «≈» con la memoria privada, «hasta ≈» si solo se puede dar un tope, dos cifras en Profundo y, al terminar, el «Aumento medido ahora» de la memoria disponible y de la libre.
+  - Antes de Moderado y Profundo avisa si Windows indica que hay un juego o una aplicación a pantalla completa, porque liberar memoria puede causar tirones.
+
 - **Pastilla de estado de la barra superior**
   - Siempre muestra un texto corto («Todo apagado», «3 encendidos», «1 con error», «Conectando…» o «Sin conexión») y, al pulsarla, abre Servicios.
 
@@ -87,3 +92,16 @@
 - El laboratorio de Git usa un remoto local en una carpeta propia y no toca sus proyectos ni su configuración de git.
 - Compartir por túnel se cierra al vencer el plazo, al pulsar "Dejar de compartir", si el túnel cae y al salir de WolfCore Dev; solo hay una compartición a la vez.
 - Los archivos de texto o tipo desconocido de más de 8 MB no se comparten, porque no se pueden revisar por completo.
+
+## Lo que se retiró del antiguo optimizador de memoria
+
+El botón **Memoria** de la barra superior era un «Optimizador de memoria» que proponía una lista de acciones. Se sustituyó por **Liberar memoria** y estas acciones **ya no existen**:
+
+- **Detener servicios inactivos** sin conexiones.
+- **Reducir el pool de PHP** a un solo trabajador.
+- **Pedir a los programas abiertos que cierren su ventana.**
+- **Vaciar la caché HTTP** de la sesión de la aplicación.
+
+**Por qué:** se pidió expresamente que liberar memoria no cierre ni termine ningún proceso ni cambie lo que usted tiene en marcha. Detener servicios, reducir trabajadores y cerrar ventanas sí lo hacían, y la caché HTTP liberaba disco, no memoria. Ahora lo único que se hace con un proceso es recortar su memoria de trabajo, algo que Windows deshace solo cuando el programa vuelve a necesitarla.
+
+**Qué sigue pudiendo hacer:** parar un servicio que no necesita sigue estando a un clic, desde su propia tarjeta en **Servicios** (y desde **Inicio**, en «Servicios y procesos»), con las mismas comprobaciones de siempre. El número de **Trabajadores PHP** se sigue cambiando en **Ajustes → Servicios**.

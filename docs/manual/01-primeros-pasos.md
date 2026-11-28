@@ -59,7 +59,7 @@ En la barra superior encontrará, de izquierda a derecha:
 
 1. El título de la pantalla actual.
 2. El buscador central (**Buscar o ejecutar un comando**, atajo `Ctrl+K`).
-3. El botón **Memoria** (abre el **Optimizador de memoria**).
+3. El botón **Liberar memoria** (abre un menú con tres niveles: **Liviano**, **Moderado** y **Profundo**; ver [13 · Perfiles y ajustes](13-perfiles-y-ajustes.md)).
 4. La campana de **Avisos** (abre el **Centro de avisos**).
 5. Los selectores rápidos de **Cambiar idioma** (muestra el código del idioma activo, por ejemplo `ES`; la interfaz está disponible en 16 idiomas, ver [13 · Perfiles y ajustes](13-perfiles-y-ajustes.md)) y **Cambiar tema** (Claro, Oscuro o Sistema).
 6. La **pastilla de estado** global, siempre visible con un texto corto:
