@@ -110,7 +110,9 @@ async function liberar(n: NivelMemoria): Promise<void> {
 
 /** El permiso vencido a tiempo deja la ventana de Windows abierta: se avisa de que ya no hace nada. */
 const textoPurga = (p: Exclude<ResultadoLiberacion['purga'], 'no-aplica'>): string =>
-  p === 'tiempo' ? `${t.purga.tiempo} ${textos.errores.uacHuerfano}` : t.purga[p === 'sin-cache' ? 'sinCache' : p];
+  p === 'tiempo'
+    ? `${t.purga.tiempo} ${textos.errores.uacHuerfano}`
+    : t.purga[p === 'sin-cache' ? 'sinCache' : p];
 
 /** Memoria disponible o «No disponible» si no se pudo medir. */
 const cifra = (m: { disponible: number } | null): string =>

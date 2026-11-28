@@ -3,12 +3,7 @@ import { ErrorWolf } from '../errores';
 import { codificarPowerShell } from './pathUsuarioWin';
 import { interpretarNetstatEstablecidas, interpretarNetstatTodos } from './netstat';
 import { rutaPowerShell, rutaSistema32 } from './procesosWin';
-import type {
-  ConexionActiva,
-  Ejecutor,
-  IdentidadUsuario,
-  ProcesoUsuario,
-} from './tipos';
+import type { ConexionActiva, Ejecutor, IdentidadUsuario, ProcesoUsuario } from './tipos';
 
 /**
  * Procesos del usuario actual para liberar memoria (D54b).
