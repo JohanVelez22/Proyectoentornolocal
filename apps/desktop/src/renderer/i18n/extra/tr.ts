@@ -208,6 +208,8 @@ export const trExtra: TextosParciales = {
       'editor.copia_fallo': 'Yedek kopya oluşturulamadı ({codigo}); hiçbir şey kaydedilmedi.',
       'editor.lectura_fallo': 'Dosya okunamadı ({codigo}).',
       'editor.escritura_fallo': 'Dosya kaydedilemedi ({codigo}). Asıl dosyaya dokunulmadı.',
+      'doctor.reparacion_tiempo':
+        'Yönetici izni zamanında yanıtlanmadı: hiçbir şey değiştirilmedi.',
       'memoria.sin_confirmar': 'Devam etmeden önce işlemi iletişim kutusunda onaylayın.',
       'memoria.modo_invalido': 'Böyle bir boşaltma düzeyi yok.',
       'memoria.no_disponible': 'Belleği boşaltma burada kullanılamıyor veya sistemi okuyamadı.',

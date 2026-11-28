@@ -204,6 +204,8 @@ export const koExtra: TextosParciales = {
       'editor.copia_fallo': '백업 사본을 만들 수 없어({codigo}) 아무것도 저장하지 않았습니다.',
       'editor.lectura_fallo': '파일을 읽을 수 없습니다({codigo}).',
       'editor.escritura_fallo': '파일을 저장할 수 없습니다({codigo}). 원본은 건드리지 않았습니다.',
+      'doctor.reparacion_tiempo':
+        '관리자 권한 승인에 제때 응답하지 않았습니다. 아무것도 변경되지 않았습니다.',
       'memoria.sin_confirmar': '계속하기 전에 대화 상자에서 작업을 확인하십시오.',
       'memoria.modo_invalido': '해당 확보 단계가 없습니다.',
       'memoria.no_disponible':

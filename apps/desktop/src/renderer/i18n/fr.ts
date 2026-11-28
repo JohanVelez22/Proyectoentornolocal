@@ -844,6 +844,8 @@ export const fr: Textos = {
       'doctor.reparacion_fallida': 'La réparation n’a pas pu être appliquée.',
       'doctor.reparacion_cancelada':
         'L’autorisation administrateur a été annulée : rien n’a été modifié.',
+      'doctor.reparacion_tiempo':
+        'Aucune réponse à l’autorisation de l’administrateur à temps : rien n’a été modifié.',
       'doctor.reparacion_denegada':
         'Windows ou un antivirus a refusé l’accès : rien n’a été modifié.',
       'doctor.ya_resuelto': 'Le problème n’existait plus : il n’y a rien eu à modifier.',

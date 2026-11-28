@@ -228,6 +228,8 @@ export const nlExtra: TextosParciales = {
       'editor.lectura_fallo': 'Het bestand kon niet worden gelezen ({codigo}).',
       'editor.escritura_fallo':
         'Het bestand kon niet worden opgeslagen ({codigo}). Het origineel is niet aangeraakt.',
+      'doctor.reparacion_tiempo':
+        'De beheerderstoestemming is niet op tijd beantwoord: er is niets gewijzigd.',
       'memoria.sin_confirmar': 'Bevestig de actie in het dialoogvenster voordat u doorgaat.',
       'memoria.modo_invalido': 'Dat vrijmaakniveau bestaat niet.',
       'memoria.no_disponible':

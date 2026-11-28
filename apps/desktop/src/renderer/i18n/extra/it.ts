@@ -224,6 +224,8 @@ export const itExtra: TextosParciales = {
       'editor.lectura_fallo': 'Non è stato possibile leggere il file ({codigo}).',
       'editor.escritura_fallo':
         "Non è stato possibile salvare il file ({codigo}). L'originale non è stato toccato.",
+      'doctor.reparacion_tiempo':
+        'Nessuna risposta all’autorizzazione di amministratore in tempo: non è stato modificato nulla.',
       'memoria.sin_confirmar': "Confermi l'azione nella finestra di dialogo prima di continuare.",
       'memoria.modo_invalido': 'Quel livello di liberazione non esiste.',
       'memoria.no_disponible':

@@ -68,13 +68,18 @@ export const fallo = (e: unknown): ResultadoReparacion => ({
   codigo: esErrorWolf(e) ? e.codigo : 'doctor.reparacion_fallida',
 });
 
-/** Traduce el resultado de una escritura de la plataforma. */
+/**
+ * Traduce el resultado de una escritura de la plataforma. Un permiso de administrador sin contestar
+ * a tiempo (`tiempo`) se cuenta con el mensaje de la operación: por defecto el genérico de una
+ * reparación; la del archivo hosts pide `hosts.tiempo_agotado` (que habla de ese archivo).
+ */
 export function segunEscritura(
   r: { ok: true } | { ok: false; motivo: string },
+  codigoTiempo: 'doctor.reparacion_tiempo' | 'hosts.tiempo_agotado' = 'doctor.reparacion_tiempo',
 ): ResultadoReparacion {
   if (r.ok) return { ok: true };
   if (r.motivo === 'cancelado') return { ok: false, codigo: 'doctor.reparacion_cancelada' };
-  if (r.motivo === 'tiempo') return { ok: false, codigo: 'hosts.tiempo_agotado' };
+  if (r.motivo === 'tiempo') return { ok: false, codigo: codigoTiempo };
   if (r.motivo === 'denegado') return { ok: false, codigo: 'doctor.reparacion_denegada' };
   return { ok: false, codigo: 'doctor.reparacion_fallida' };
 }

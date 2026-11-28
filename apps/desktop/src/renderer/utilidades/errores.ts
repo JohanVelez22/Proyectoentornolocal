@@ -18,7 +18,11 @@ export interface ErrorIpc {
  * Códigos de un permiso de administrador (UAC) que nadie contestó a tiempo: la ventana de Windows
  * puede seguir abierta (no se puede cerrar desde aquí) y, si se acepta más tarde, ya no hace nada.
  */
-const CODIGOS_UAC_VENCIDO = new Set(['hosts.tiempo_agotado', 'discos.admin_tiempo']);
+const CODIGOS_UAC_VENCIDO = new Set([
+  'hosts.tiempo_agotado',
+  'discos.admin_tiempo',
+  'doctor.reparacion_tiempo',
+]);
 
 export function traducirError(e: ErrorIpc, t: Textos = textos): string {
   const texto = traducirErrorBase(e, t);

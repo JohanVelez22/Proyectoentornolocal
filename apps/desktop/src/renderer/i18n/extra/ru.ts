@@ -224,6 +224,8 @@ export const ruExtra: TextosParciales = {
       'editor.copia_fallo': 'Не удалось создать резервную копию ({codigo}); ничего не сохранено.',
       'editor.lectura_fallo': 'Не удалось прочитать файл ({codigo}).',
       'editor.escritura_fallo': 'Не удалось сохранить файл ({codigo}). Оригинал не затронут.',
+      'doctor.reparacion_tiempo':
+        'Запрос разрешения администратора не был подтверждён вовремя: ничего не изменено.',
       'memoria.sin_confirmar': 'Подтвердите действие в диалоге, прежде чем продолжить.',
       'memoria.modo_invalido': 'Такого уровня освобождения не существует.',
       'memoria.no_disponible':

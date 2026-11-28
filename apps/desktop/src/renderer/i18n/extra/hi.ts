@@ -195,6 +195,7 @@ export const hiExtra: TextosParciales = {
       'editor.copia_fallo': 'बैकअप प्रति नहीं बनाई जा सकी ({codigo}); कुछ भी सहेजा नहीं गया।',
       'editor.lectura_fallo': 'फ़ाइल पढ़ी नहीं जा सकी ({codigo})।',
       'editor.escritura_fallo': 'फ़ाइल सहेजी नहीं जा सकी ({codigo})। मूल फ़ाइल को छुआ नहीं गया।',
+      'doctor.reparacion_tiempo': 'व्यवस्थापक की अनुमति का समय पर उत्तर नहीं मिला: कुछ भी नहीं बदला गया।',
       'memoria.sin_confirmar': 'आगे बढ़ने से पहले डायलॉग में क्रिया की पुष्टि करें।',
       'memoria.modo_invalido': 'वह मेमोरी खाली करने का स्तर मौजूद नहीं है।',
       'memoria.no_disponible': 'मेमोरी खाली करना यहाँ उपलब्ध नहीं है या सिस्टम को पढ़ नहीं सका।',

@@ -227,6 +227,8 @@ export const plExtra: TextosParciales = {
       'editor.lectura_fallo': 'Nie udało się odczytać pliku ({codigo}).',
       'editor.escritura_fallo':
         'Nie udało się zapisać pliku ({codigo}). Oryginał nie został tknięty.',
+      'doctor.reparacion_tiempo':
+        'Nie odpowiedziano na czas na prośbę o zgodę administratora: nic nie zmieniono.',
       'memoria.sin_confirmar':
         'Przed kontynuowaniem należy potwierdzić działanie w oknie dialogowym.',
       'memoria.modo_invalido': 'Taki poziom zwalniania nie istnieje.',

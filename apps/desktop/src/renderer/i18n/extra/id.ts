@@ -208,6 +208,8 @@ export const idExtra: TextosParciales = {
       'editor.lectura_fallo': 'Berkas tidak dapat dibaca ({codigo}).',
       'editor.escritura_fallo':
         'Berkas tidak dapat disimpan ({codigo}). Berkas asli tidak disentuh.',
+      'doctor.reparacion_tiempo':
+        'Izin administrator tidak dijawab tepat waktu: tidak ada yang diubah.',
       'memoria.sin_confirmar': 'Konfirmasikan tindakan di dialog sebelum melanjutkan.',
       'memoria.modo_invalido': 'Tingkat pembebasan itu tidak ada.',
       'memoria.no_disponible':

@@ -240,6 +240,8 @@ export const deExtra: TextosParciales = {
       'editor.lectura_fallo': 'Die Datei konnte nicht gelesen werden ({codigo}).',
       'editor.escritura_fallo':
         'Die Datei konnte nicht gespeichert werden ({codigo}). Das Original wurde nicht angetastet.',
+      'doctor.reparacion_tiempo':
+        'Die Administratorberechtigung wurde nicht rechtzeitig beantwortet: Es wurde nichts geändert.',
       'memoria.sin_confirmar': 'Bestätigen Sie die Aktion im Dialog, bevor Sie fortfahren.',
       'memoria.modo_invalido': 'Diese Freigabestufe existiert nicht.',
       'memoria.no_disponible':

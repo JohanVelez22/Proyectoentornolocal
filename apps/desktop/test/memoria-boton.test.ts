@@ -101,3 +101,20 @@ describe('BotonMemoria.vue', () => {
     expect(plantilla).toContain('listaEspera()');
   });
 });
+
+describe('Menor 8: el plazo vencido del permiso de administrador en el Doctor', () => {
+  it('«doctor.reparacion_tiempo» existe en los 16 idiomas y no habla del archivo hosts', () => {
+    for (const id of idiomas) {
+      const codigos = diccionarios[id].errores.codigos as Record<string, string>;
+      expect(codigos['doctor.reparacion_tiempo'], id).toBeTruthy();
+      expect(codigos['doctor.reparacion_tiempo'], id).not.toMatch(/hosts/i);
+    }
+  });
+
+  it('se le añade el aviso de que la ventana de Windows ya no hace nada', async () => {
+    const { traducirError } = await import('../src/renderer/utilidades/errores');
+    const texto = traducirError({ codigo: 'doctor.reparacion_tiempo', mensaje: 'x' });
+    expect(texto).toContain(diccionarios.es.errores.codigos['doctor.reparacion_tiempo']);
+    expect(texto).toContain(diccionarios.es.errores.uacHuerfano);
+  });
+});

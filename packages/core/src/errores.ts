@@ -207,7 +207,7 @@ export const PARAMETROS_ERROR = {
   'captura.permiso_denegado': [],
   'captura.sin_imagen': [],
   'captura.imagen_invalida': [],
-  // optimizador de RAM (D36)
+  // liberar memoria (D54b)
   'memoria.sin_confirmar': [],
   'memoria.modo_invalido': [],
   'memoria.no_disponible': [],
@@ -573,6 +573,7 @@ export const PARAMETROS_ERROR = {
   'doctor.reparacion_fallida': [],
   'doctor.reparacion_cancelada': [],
   'doctor.reparacion_denegada': [],
+  'doctor.reparacion_tiempo': [],
   'doctor.sin_puerto_libre': [],
   'doctor.ya_resuelto': [],
   'doctor.ca_vieja_sin_quitar': [],

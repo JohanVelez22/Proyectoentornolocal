@@ -809,6 +809,8 @@ export const pt: Textos = {
       'doctor.reparacion_fallida': 'Não foi possível aplicar o reparo.',
       'doctor.reparacion_cancelada':
         'A permissão de administrador foi cancelada: nada foi alterado.',
+      'doctor.reparacion_tiempo':
+        'Não houve resposta à permissão de administrador a tempo: nada foi alterado.',
       'doctor.reparacion_denegada': 'O Windows ou um antivírus negou o acesso: nada foi alterado.',
       'doctor.ya_resuelto': 'O problema já não existia: não foi preciso alterar nada.',
       'doctor.ca_vieja_sin_quitar':

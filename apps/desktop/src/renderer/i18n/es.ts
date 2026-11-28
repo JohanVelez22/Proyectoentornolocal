@@ -798,6 +798,8 @@ export const es = {
         'Este hallazgo no tiene una reparación automática: siga las indicaciones.',
       'doctor.reparacion_fallida': 'No se pudo aplicar la reparación.',
       'doctor.reparacion_cancelada': 'Se canceló el permiso de administrador: no se cambió nada.',
+      'doctor.reparacion_tiempo':
+        'No hubo respuesta al permiso de administrador a tiempo: no se cambió nada.',
       'doctor.reparacion_denegada': 'Windows o un antivirus negó el acceso: no se cambió nada.',
       'doctor.ya_resuelto': 'El problema ya no estaba: no hizo falta cambiar nada.',
       'doctor.ca_vieja_sin_quitar':

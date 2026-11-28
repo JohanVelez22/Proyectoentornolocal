@@ -19,7 +19,7 @@ const REESCRIBIR: Reparacion = {
 const reescribir = (d: DepsDoctor) => async (): Promise<ResultadoReparacion> => {
   try {
     const r = await d.hosts.reparar(await d.dominios(), { carpetaRespaldo: d.carpetaRespaldos });
-    return segunEscritura(r);
+    return segunEscritura(r, 'hosts.tiempo_agotado');
   } catch (e) {
     return fallo(e);
   }
@@ -125,7 +125,10 @@ export async function revisarHosts(d: DepsDoctor): Promise<HallazgoInterno[]> {
       },
       aplicar: async () => {
         try {
-          return segunEscritura(await d.plataforma.quitarSoloLecturaHosts());
+          return segunEscritura(
+            await d.plataforma.quitarSoloLecturaHosts(),
+            'hosts.tiempo_agotado',
+          );
         } catch (e) {
           return fallo(e);
         }

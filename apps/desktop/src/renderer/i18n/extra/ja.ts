@@ -215,6 +215,8 @@ export const jaExtra: TextosParciales = {
       'editor.lectura_fallo': 'ファイルを読み取れませんでした（{codigo}）。',
       'editor.escritura_fallo':
         'ファイルを保存できませんでした（{codigo}）。元のファイルには手を加えていません。',
+      'doctor.reparacion_tiempo':
+        '管理者の許可が時間内に応答されませんでした。何も変更されていません。',
       'memoria.sin_confirmar': '続行する前に、ダイアログで操作を確認してください。',
       'memoria.modo_invalido': 'その解放レベルは存在しません。',
       'memoria.no_disponible':

@@ -795,6 +795,8 @@ export const en: Textos = {
       'doctor.reparacion_fallida': 'The fix could not be applied.',
       'doctor.reparacion_cancelada':
         'The administrator permission was cancelled: nothing was changed.',
+      'doctor.reparacion_tiempo':
+        'There was no response to the administrator permission in time: nothing was changed.',
       'doctor.reparacion_denegada': 'Windows or an antivirus denied access: nothing was changed.',
       'doctor.ya_resuelto': 'The problem was already gone: nothing needed to change.',
       'doctor.ca_vieja_sin_quitar':

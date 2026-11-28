@@ -222,6 +222,8 @@ export const ukExtra: TextosParciales = {
       'editor.copia_fallo': 'Не вдалося створити резервну копію ({codigo}); нічого не збережено.',
       'editor.lectura_fallo': 'Не вдалося прочитати файл ({codigo}).',
       'editor.escritura_fallo': 'Не вдалося зберегти файл ({codigo}). Оригінал не чіпали.',
+      'doctor.reparacion_tiempo':
+        'Запит дозволу адміністратора не підтверджено вчасно: нічого не змінено.',
       'memoria.sin_confirmar': 'Підтвердьте дію в діалозі, перш ніж продовжити.',
       'memoria.modo_invalido': 'Такого рівня звільнення не існує.',
       'memoria.no_disponible':

@@ -174,6 +174,7 @@ export const zhExtra: TextosParciales = {
       'editor.copia_fallo': '无法创建备份副本（{codigo}）；未保存任何内容。',
       'editor.lectura_fallo': '无法读取该文件（{codigo}）。',
       'editor.escritura_fallo': '无法保存该文件（{codigo}）。原文件未被改动。',
+      'doctor.reparacion_tiempo': '未能及时响应管理员权限请求：未做任何更改。',
       'memoria.sin_confirmar': '请先在对话框中确认操作，然后再继续。',
       'memoria.modo_invalido': '不存在该释放级别。',
       'memoria.no_disponible': '此处无法使用释放内存功能，或无法读取系统信息。',
