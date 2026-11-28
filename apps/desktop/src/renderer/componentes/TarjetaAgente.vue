@@ -37,7 +37,7 @@ const versionDesconocida = computed(() => a.value.instalado && a.value.version =
       ></span>
       <div class="titulo">
         <strong>{{ a.nombre }}</strong>
-        <span v-if="a.paquete" class="tenue mono">{{ a.paquete }}</span>
+        <span v-if="a.paquete" class="tenue mono" :title="a.paquete">{{ a.paquete }}</span>
       </div>
       <NTag size="small" :bordered="false" :type="a.instalado ? 'success' : 'default'">
         {{ a.instalado ? t.instalado : t.noInstalado }}
@@ -74,7 +74,7 @@ const versionDesconocida = computed(() => a.value.instalado && a.value.version =
           <dd class="tenue">{{ t.origen[a.origen] }}</dd>
         </div>
         <div class="ancho">
-          <dd class="tenue ruta"><TextoLargo :texto="a.ruta ?? ''" mono /></dd>
+          <dd class="tenue ruta"><TextoLargo :texto="a.ruta ?? ''" mono por-inicio /></dd>
         </div>
       </template>
       <p v-else-if="!a.instalable" class="nota">{{ t.soloGuia }}</p>
@@ -90,7 +90,7 @@ const versionDesconocida = computed(() => a.value.instalado && a.value.version =
       >
         {{ a.mcpRegistrado ? t.mcpRegistrado : t.mcpSinRegistrar }}
       </NTag>
-      <span class="tenue ruta"><TextoLargo :texto="a.archivoConfig" mono /></span>
+      <span class="tenue ruta"><TextoLargo :texto="a.archivoConfig" mono por-inicio /></span>
     </div>
 
     <footer class="acciones" role="group" :aria-label="a.nombre">
@@ -103,7 +103,6 @@ const versionDesconocida = computed(() => a.value.instalado && a.value.version =
       <NButton
         v-else-if="a.instalable"
         size="small"
-        type="primary"
         secondary
         :loading="instalando"
         @click="emit('instalar')"
@@ -164,6 +163,12 @@ const versionDesconocida = computed(() => a.value.instalado && a.value.version =
 }
 .titulo strong {
   font-size: 14px;
+}
+/* El paquete en una sola línea con elipsis (D54c). */
+.titulo .tenue {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .tenue {
   font-size: 12px;

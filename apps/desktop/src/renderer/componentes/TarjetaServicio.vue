@@ -418,8 +418,7 @@ function cambiarRedLocal(valor: boolean): void {
       <NButton
         v-else
         size="small"
-        :type="encendido ? 'default' : 'primary'"
-        :secondary="encendido"
+        secondary
         :disabled="iniciando"
         :loading="trabajando || iniciando"
         @click="cambiar"

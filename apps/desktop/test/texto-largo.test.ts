@@ -73,8 +73,8 @@ describe('TextoLargo: legible entero con teclado y copiable', () => {
 
   it('Agentes (ruta y archivo de configuración) y el nombre del proyecto lo usan', () => {
     const agente = fuente('componentes', 'TarjetaAgente.vue');
-    expect(agente).toContain('<TextoLargo :texto="a.ruta ?? \'\'" mono />');
-    expect(agente).toContain('<TextoLargo :texto="a.archivoConfig" mono />');
+    expect(agente).toContain('<TextoLargo :texto="a.ruta ?? \'\'" mono por-inicio />');
+    expect(agente).toContain('<TextoLargo :texto="a.archivoConfig" mono por-inicio />');
     expect(fuente('componentes', 'TarjetaProyecto.vue')).toMatch(
       /<TextoLargo :texto="nombre"[^>]*:copiable="false"/,
     );

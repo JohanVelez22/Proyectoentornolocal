@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { Download, Open, Power } from '@vicons/ionicons5';
+import { CloudDownloadOutline, Open, Power } from '@vicons/ionicons5';
 import { NAlert, NButton, NIcon, NTag } from 'naive-ui';
 import { computed } from 'vue';
 import type { EstadoCaptador } from '../../shared/api';
 import { textos } from '../i18n';
+import { ICONOS_CATEGORIA } from '../utilidades/iconosServicio';
 import EstadoPunto from './EstadoPunto.vue';
+
+const IconoCorreo = ICONOS_CATEGORIA.correo;
 
 const props = defineProps<{
   captador: EstadoCaptador;
@@ -24,16 +27,33 @@ const estado = computed(() => (props.captador.encendido ? 'encendido' : 'apagado
 
 <template>
   <article class="tarjeta" :class="{ elegida: captador.elegido }">
+    <!-- Misma cabecera que TarjetaServicio: icono, nombre con elipsis y estado a la derecha. -->
     <header class="cabeza">
-      <strong class="nombre">{{ captador.nombre }}</strong>
-      <NTag v-if="captador.opcional" size="small" :bordered="false">{{ t.captador.opcional }}</NTag>
-      <NTag v-if="captador.elegido" size="small" type="success" :bordered="false">
-        {{ t.captador.elegido }}
-      </NTag>
-      <span class="estado">
-        <EstadoPunto v-if="captador.instalado" :estado="estado" />
-        <small v-else class="tenue">{{ t.captador.noInstalado }}</small>
-      </span>
+      <span class="icono"
+        ><NIcon :size="18"><component :is="IconoCorreo" /></NIcon
+      ></span>
+      <div class="titulo">
+        <strong class="nombre" :title="captador.nombre">{{ captador.nombre }}</strong>
+        <span class="etiquetas">
+          <NTag v-if="captador.opcional" size="small" :bordered="false">{{
+            t.captador.opcional
+          }}</NTag>
+          <NTag
+            v-if="captador.elegido"
+            size="small"
+            type="success"
+            :bordered="false"
+            :title="t.captador.elegido"
+          >
+            {{ t.captador.elegido }}
+          </NTag>
+        </span>
+      </div>
+      <EstadoPunto
+        class="estado"
+        :estado="captador.instalado ? estado : 'apagado'"
+        :etiqueta="captador.instalado ? undefined : t.captador.noInstalado"
+      />
     </header>
 
     <NAlert v-if="captador.avisoMantenimiento" type="warning" :show-icon="false" class="aviso">
@@ -56,9 +76,9 @@ const estado = computed(() => (props.captador.encendido ? 'encendido' : 'apagado
     </dl>
 
     <footer class="botones">
-      <NButton v-if="!captador.instalado" size="small" type="primary" @click="emit('instalar')">
+      <NButton v-if="!captador.instalado" size="small" secondary @click="emit('instalar')">
         <template #icon
-          ><NIcon><Download /></NIcon
+          ><NIcon><CloudDownloadOutline /></NIcon
         ></template>
         {{ t.captador.instalar }}
       </NButton>
@@ -93,6 +113,9 @@ const estado = computed(() => (props.captador.encendido ? 'encendido' : 'apagado
 
 <style scoped>
 .tarjeta {
+  box-sizing: border-box;
+  height: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -106,15 +129,52 @@ const estado = computed(() => (props.captador.encendido ? 'encendido' : 'apagado
 }
 .cabeza {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+  gap: 12px;
+}
+.icono {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: rgba(var(--acento-rgb), 0.12);
+  color: var(--texto-enlace);
+  flex: none;
+}
+.titulo {
+  flex: 1 1 0;
+  min-width: 0;
 }
 .nombre {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 14.5px;
 }
+/* La etiqueta (opcional, elegido) va bajo el nombre; la fila reserva su alto en todas las tarjetas. */
+.etiquetas {
+  overflow: hidden;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  min-height: 22px;
+  margin-top: 2px;
+}
+.etiquetas :deep(.n-tag) {
+  min-width: 0;
+  max-width: 100%;
+}
+.etiquetas :deep(.n-tag__content) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .estado {
-  margin-left: auto;
+  flex: none;
+  white-space: nowrap;
 }
 .tenue {
   font-size: 12px;
@@ -143,6 +203,7 @@ const estado = computed(() => (props.captador.encendido ? 'encendido' : 'apagado
   font-size: 13px;
 }
 .botones {
+  margin-top: auto;
   display: flex;
   gap: 6px;
   flex-wrap: wrap;

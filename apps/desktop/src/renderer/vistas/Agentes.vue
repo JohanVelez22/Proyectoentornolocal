@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { InformationCircleOutline, Refresh } from '@vicons/ionicons5';
+import { Refresh } from '@vicons/ionicons5';
+import AvisoPlegable from '../componentes/AvisoPlegable.vue';
 import { NAlert, NButton, NFormItem, NIcon, NModal, NSkeleton, type SelectOption } from 'naive-ui';
 import Desplegable from '../componentes/Desplegable.vue';
 import { computed, onMounted, ref } from 'vue';
@@ -141,12 +142,7 @@ function abrir(): void {
       </NButton>
     </div>
 
-    <NAlert type="info" :show-icon="true" class="nota-mcp">
-      <template #icon
-        ><NIcon><InformationCircleOutline /></NIcon
-      ></template>
-      {{ t.notaMcp }}
-    </NAlert>
+    <AvisoPlegable :titulo="t.notaMcpTitulo" class="nota-mcp">{{ t.notaMcp }}</AvisoPlegable>
     <NAlert v-if="sitioPedido" type="success" :show-icon="false">
       {{ t.sitioElegido(sitioPedido.nombre || sitioPedido.dominio) }}
     </NAlert>

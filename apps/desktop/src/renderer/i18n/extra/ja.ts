@@ -292,6 +292,9 @@ export const jaExtra: TextosParciales = {
       },
     },
     datosConexion: '接続情報',
+    grupos: {
+      herramientas: '開発ユーティリティ',
+    },
   },
   bd: {
     pgvector: {
@@ -2226,5 +2229,8 @@ export const jaExtra: TextosParciales = {
     tunelesRapidos: 'クイックトンネルの仕組み',
     seguridadBuzones: 'キャッチャーとセキュリティに関する注記',
     sinProveedores: 'リモート SMTP プロバイダーはまだありません',
+  },
+  agentes: {
+    notaMcpTitulo: 'エージェントが MCP で認証される仕組み',
   },
 };

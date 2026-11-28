@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CloudDownload } from '@vicons/ionicons5';
+import { CloudDownloadOutline } from '@vicons/ionicons5';
 import { fuenteFirmaDe } from '@pel/core';
 import { NButton, NIcon, NProgress, NTag, type SelectOption } from 'naive-ui';
 import Desplegable from './Desplegable.vue';
@@ -151,15 +151,9 @@ onMounted(() => {
           {{ ocupado('versiones') ? t.buscando : t.sinVersiones }}
         </template>
       </Desplegable>
-      <NButton
-        size="small"
-        type="primary"
-        :disabled="!elegida"
-        :loading="instalando"
-        @click="instalar"
-      >
+      <NButton size="small" secondary :disabled="!elegida" :loading="instalando" @click="instalar">
         <template #icon
-          ><NIcon><CloudDownload /></NIcon
+          ><NIcon><CloudDownloadOutline /></NIcon
         ></template>
         {{ tx.acciones.instalar }}
       </NButton>

@@ -283,6 +283,9 @@ export const trExtra: TextosParciales = {
       },
     },
     datosConexion: 'Bağlantı bilgileri',
+    grupos: {
+      herramientas: 'Geliştirme yardımcıları',
+    },
   },
   bd: {
     pgvector: {
@@ -2205,5 +2208,8 @@ export const trExtra: TextosParciales = {
     tunelesRapidos: 'Hızlı tüneller nasıl çalışır',
     seguridadBuzones: 'Yakalayıcılar ve güvenlikle ilgili notlar',
     sinProveedores: 'Henüz uzak SMTP sağlayıcısı yok',
+  },
+  agentes: {
+    notaMcpTitulo: 'Ajanlar MCP’de nasıl kimlik doğrular',
   },
 };

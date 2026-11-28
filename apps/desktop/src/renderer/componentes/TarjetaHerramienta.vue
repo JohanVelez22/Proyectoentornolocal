@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CloudDownload, Grid, Open, Refresh, Terminal } from '@vicons/ionicons5';
+import { CloudDownloadOutline, Grid, Open, Refresh, Terminal } from '@vicons/ionicons5';
 import { NButton, NIcon, NProgress, NSkeleton, NTooltip, useMessage } from 'naive-ui';
 import { computed, onMounted, ref, watch } from 'vue';
 import {
@@ -189,13 +189,13 @@ watch(
             <span tabindex="-1">
               <NButton
                 size="small"
-                type="primary"
+                secondary
                 :disabled="sinPhp"
                 :loading="ocupado('instalar')"
                 @click="instalar"
               >
                 <template #icon
-                  ><NIcon><CloudDownload /></NIcon
+                  ><NIcon><CloudDownloadOutline /></NIcon
                 ></template>
                 {{ tx.acciones.instalar }}
               </NButton>

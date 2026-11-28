@@ -308,6 +308,9 @@ export const itExtra: TextosParciales = {
       },
     },
     datosConexion: 'Dati di connessione',
+    grupos: {
+      herramientas: 'Utilità di sviluppo',
+    },
   },
   bd: {
     pgvector: {
@@ -2304,5 +2307,8 @@ export const itExtra: TextosParciales = {
     tunelesRapidos: 'Come funzionano i tunnel rapidi',
     seguridadBuzones: 'Note su catturatori e sicurezza',
     sinProveedores: 'Nessun provider SMTP remoto per ora',
+  },
+  agentes: {
+    notaMcpTitulo: 'Come si autenticano gli agenti sull’MCP',
   },
 };

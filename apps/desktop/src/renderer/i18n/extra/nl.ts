@@ -313,6 +313,9 @@ export const nlExtra: TextosParciales = {
       },
     },
     datosConexion: 'Verbindingsgegevens',
+    grupos: {
+      herramientas: 'Ontwikkelhulpmiddelen',
+    },
   },
   bd: {
     pgvector: {
@@ -2317,5 +2320,8 @@ export const nlExtra: TextosParciales = {
     tunelesRapidos: 'Hoe snelle tunnels werken',
     seguridadBuzones: 'Opmerkingen over mailvangers en beveiliging',
     sinProveedores: 'Nog geen externe SMTP-providers',
+  },
+  agentes: {
+    notaMcpTitulo: 'Hoe agents zich bij de MCP authenticeren',
   },
 };

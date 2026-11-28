@@ -1421,7 +1421,7 @@ export const en: Textos = {
       bd: 'Databases',
       correo: 'Mail',
       ia: 'AI',
-      herramientas: 'Tools',
+      herramientas: 'Developer utilities',
     },
     gruposAyuda: {
       web: 'Server that handles the .test domains.',
@@ -3467,7 +3467,8 @@ export const en: Textos = {
       sistema: 'System',
       datos: 'WolfCore data',
       ambos: 'System and WolfCore data',
-      libre: (unidad: string, libre: string, pct: number) => `${unidad} · ${libre} free (${pct} %)`,
+      libre: (unidad: string, libre: string, pct: number) =>
+        `${unidad} ${libre} free (${Number.isFinite(pct) ? new Intl.NumberFormat('en', { style: 'percent', maximumFractionDigits: 0 }).format(pct / 100) : `${pct}%`})`,
       poco: 'Low free space',
       casiLleno: 'Almost out of space',
       liberar: 'Free up space',
@@ -5389,7 +5390,7 @@ export const en: Textos = {
       'Claude Code, Codex CLI, Hermes Agent, Opencode, Gemini CLI, Qwen Code, GitHub Copilot CLI and Antigravity CLI: detect or install them and open them in a project. Those that allow it connect to the WolfCore Dev MCP. None of them opens on its own.',
     recargar: 'Detect again',
     notaMcp:
-      'The registered MCP only authenticates when the agent is opened from WolfCore Dev ("Open in a project"): the token travels in the WOLFCORE_MCP_TOKEN variable of that terminal and is never written to the agent configuration. Opened elsewhere, the agent sees the «wolfcore» entry but cannot connect.',
+      'The registered MCP only authenticates when the agent is opened from WolfCore Dev (“Open in a project”): the token travels in the WOLFCORE_MCP_TOKEN variable of that terminal and is never written to the agent configuration. Opened elsewhere, the agent sees the “wolfcore” entry but cannot connect.',
     sitioElegido: (nombre: string) => `Choose an agent to open it in ${nombre}.`,
     instalado: 'Installed',
     noInstalado: 'Not installed',
@@ -5441,6 +5442,7 @@ export const en: Textos = {
         'WolfCore Dev never opens an agent on its own: you always ask for it. This notice is shown only once.',
       aceptar: 'Got it, open',
     },
+    notaMcpTitulo: 'How agents authenticate with the MCP',
   },
   depuracion: {
     descripcion:

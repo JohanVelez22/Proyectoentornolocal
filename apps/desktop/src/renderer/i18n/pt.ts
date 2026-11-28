@@ -1436,7 +1436,7 @@ export const pt: Textos = {
       bd: 'Bancos de dados',
       correo: 'E-mail',
       ia: 'IA',
-      herramientas: 'Ferramentas',
+      herramientas: 'Utilitários de desenvolvimento',
     },
     gruposAyuda: {
       web: 'Servidor que atende os domínios .test.',
@@ -5383,7 +5383,7 @@ export const pt: Textos = {
     explicacion:
       'Conectar permite que o seu assistente de IA (Claude, Codex…) veja e gerencie os seus serviços do WolfCore Dev; o que é delicado sempre pede a sua confirmação.',
     alcance:
-      'O WolfCore Dev só adiciona ou remove a própria entrada «wolfcore» na configuração de cada programa, salva antes uma cópia com data e nunca grava o seu token nesses arquivos.',
+      'O WolfCore Dev só adiciona ou remove a própria entrada “wolfcore” na configuração de cada programa, salva antes uma cópia com data e nunca grava o seu token nesses arquivos.',
     notaVariable:
       'Para que funcione, abra o assistente a partir do WolfCore Dev (IA › Agentes › «Abrir em um projeto»).',
     recargar: 'Detectar de novo',
@@ -5439,7 +5439,7 @@ export const pt: Textos = {
       'Claude Code, Codex CLI, Hermes Agent, Opencode, Gemini CLI, Qwen Code, GitHub Copilot CLI e Antigravity CLI: detecte-os ou instale-os e abra-os em um projeto. Os que permitem se conectam ao MCP do WolfCore Dev. Nenhum abre sozinho.',
     recargar: 'Detectar de novo',
     notaMcp:
-      'O MCP registrado só autentica quando o agente é aberto pelo WolfCore Dev ("Abrir em um projeto"): o token vai na variável WOLFCORE_MCP_TOKEN desse terminal e nunca fica gravado na configuração do agente. Aberto por fora, o agente vê a entrada «wolfcore», mas não consegue se conectar.',
+      'O MCP registrado só autentica quando o agente é aberto pelo WolfCore Dev (“Abrir em um projeto”): o token vai na variável WOLFCORE_MCP_TOKEN desse terminal e nunca fica gravado na configuração do agente. Aberto por fora, o agente vê a entrada «wolfcore», mas não consegue se conectar.',
     sitioElegido: (nombre: string) => `Escolha um agente para abri-lo em ${nombre}.`,
     instalado: 'Instalado',
     noInstalado: 'Não instalado',
@@ -5491,6 +5491,7 @@ export const pt: Textos = {
         'O WolfCore Dev nunca abre um agente por conta própria: é sempre você que pede. Este aviso é mostrado uma única vez.',
       aceptar: 'Entendi, abrir',
     },
+    notaMcpTitulo: 'Como os agentes se autenticam no MCP',
   },
   depuracion: {
     descripcion:

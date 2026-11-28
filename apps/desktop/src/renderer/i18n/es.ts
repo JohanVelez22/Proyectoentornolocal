@@ -1430,7 +1430,7 @@ export const es = {
       bd: 'Bases de datos',
       correo: 'Correo',
       ia: 'IA',
-      herramientas: 'Herramientas',
+      herramientas: 'Utilidades de desarrollo',
     },
     gruposAyuda: {
       web: 'Servidor que atiende los dominios .test.',
@@ -5470,6 +5470,7 @@ export const es = {
         'WolfCore Dev nunca abre un agente por su cuenta: siempre lo pide usted. Este aviso se muestra una sola vez.',
       aceptar: 'Entendido, abrir',
     },
+    notaMcpTitulo: 'Cómo se autentica el MCP de los agentes',
   },
   depuracion: {
     descripcion:

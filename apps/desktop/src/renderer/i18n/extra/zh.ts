@@ -240,6 +240,9 @@ export const zhExtra: TextosParciales = {
       },
     },
     datosConexion: '连接信息',
+    grupos: {
+      herramientas: '开发实用工具',
+    },
   },
   bd: {
     pgvector: {
@@ -2015,5 +2018,8 @@ export const zhExtra: TextosParciales = {
     tunelesRapidos: '快速隧道的工作方式',
     seguridadBuzones: '关于捕获器与安全的说明',
     sinProveedores: '尚未添加远程 SMTP 服务商',
+  },
+  agentes: {
+    notaMcpTitulo: '代理如何通过 MCP 进行认证',
   },
 };

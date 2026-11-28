@@ -19,8 +19,13 @@ const props = withDefaults(
     /** Botón «Copiar el texto completo» (rutas sí; nombres no hace falta). */
     copiable?: boolean;
     mono?: boolean;
+    /**
+     * Recorta por el principio (se ve el final de la ruta, que es lo que distingue) con una sola
+     * elipsis, en vez de por el centro (D54c).
+     */
+    porInicio?: boolean;
   }>(),
-  { cola: 24, copiable: true, mono: false },
+  { cola: 24, copiable: true, mono: false, porInicio: false },
 );
 
 const message = useMessage();
@@ -65,7 +70,7 @@ async function copiar(): Promise<void> {
 </script>
 
 <template>
-  <span class="texto-largo" :class="{ mono }">
+  <span class="texto-largo" :class="{ mono, 'por-inicio': porInicio }">
     <NTooltip :show="visible" trigger="manual" placement="top-start" :style="{ maxWidth: '520px' }">
       <template #trigger>
         <span
@@ -79,10 +84,17 @@ async function copiar(): Promise<void> {
           @blur="visible = false"
           @keydown.esc="visible = false"
         >
-          <span ref="inicio" class="inicio" :aria-hidden="recortado ? 'true' : undefined">{{
+          <span
+            v-if="porInicio"
+            ref="inicio"
+            class="inicio rtl"
+            :aria-hidden="recortado ? 'true' : undefined"
+            ><bdi>{{ texto }}</bdi></span
+          ><span v-else ref="inicio" class="inicio" :aria-hidden="recortado ? 'true' : undefined">{{
             partes.inicio
-          }}</span><span
-            v-if="partes.fin"
+          }}</span
+          ><span
+            v-if="partes.fin && !porInicio"
             class="fin"
             :aria-hidden="recortado ? 'true' : undefined"
             >{{ partes.fin }}</span
@@ -133,6 +145,18 @@ async function copiar(): Promise<void> {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* Recorte por el principio: la elipsis va a la izquierda y el texto conserva su orden. */
+.inicio.rtl {
+  direction: rtl;
+  text-align: left;
+  flex: 1;
+}
+.por-inicio {
+  gap: 8px;
+}
+.por-inicio .cuerpo {
+  flex: 1;
 }
 .fin {
   flex-shrink: 0;

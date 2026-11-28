@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { LockClosed, ShieldCheckmark, Star, StarOutline, Warning } from '@vicons/ionicons5';
+import {
+  CloudDownloadOutline,
+  LockClosed,
+  ShieldCheckmark,
+  Star,
+  StarOutline,
+  Warning,
+} from '@vicons/ionicons5';
 import { NButton, NIcon, NInputNumber, NSwitch, NTooltip } from 'naive-ui';
 import { computed, ref, watch } from 'vue';
 import type { TablaVersiones } from '../../shared/api';
@@ -86,11 +93,14 @@ const huellaTexto = computed(() =>
       <NButton
         v-else
         size="tiny"
-        type="primary"
+        secondary
         :disabled="ocupada"
         :aria-label="`${t.instalar} ${f.version}`"
         @click="emit('instalar')"
       >
+        <template #icon
+          ><NIcon><CloudDownloadOutline /></NIcon
+        ></template>
         {{ t.instalar }}
       </NButton>
     </div>

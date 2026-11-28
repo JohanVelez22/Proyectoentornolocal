@@ -1495,7 +1495,7 @@ export const fr: Textos = {
       bd: 'Bases de données',
       correo: 'Courrier',
       ia: 'IA',
-      herramientas: 'Outils',
+      herramientas: 'Utilitaires de développement',
     },
     gruposAyuda: {
       web: 'Serveur qui sert les domaines .test.',
@@ -5563,7 +5563,7 @@ export const fr: Textos = {
       'Claude Code, Codex CLI, Hermes Agent, Opencode, Gemini CLI, Qwen Code, GitHub Copilot CLI et Antigravity CLI : détectez-les ou installez-les et ouvrez-les dans un projet. Ceux qui le permettent se connectent au MCP de WolfCore Dev. Aucun ne s’ouvre tout seul.',
     recargar: 'Détecter à nouveau',
     notaMcp:
-      'Le MCP enregistré n’authentifie que lorsque l’agent est ouvert depuis WolfCore Dev ("Ouvrir dans un projet") : le jeton se trouve dans la variable WOLFCORE_MCP_TOKEN de ce terminal et n’est jamais écrit dans la configuration de l’agent. Ouvert de l’extérieur, l’agent voit l’entrée « wolfcore » mais ne peut pas se connecter.',
+      'Le MCP enregistré n’authentifie que lorsque l’agent est ouvert depuis WolfCore Dev (« Ouvrir dans un projet ») : le jeton se trouve dans la variable WOLFCORE_MCP_TOKEN de ce terminal et n’est jamais écrit dans la configuration de l’agent. Ouvert de l’extérieur, l’agent voit l’entrée « wolfcore » mais ne peut pas se connecter.',
     sitioElegido: (nombre: string) => `Choisissez un agent pour l’ouvrir dans ${nombre}.`,
     instalado: 'Installé',
     noInstalado: 'Non installé',
@@ -5616,6 +5616,7 @@ export const fr: Textos = {
         'WolfCore Dev n’ouvre jamais un agent de lui-même : c’est toujours vous qui le demandez. Cet avis n’est affiché qu’une seule fois.',
       aceptar: 'Compris, ouvrir',
     },
+    notaMcpTitulo: 'Comment les agents s’authentifient auprès du MCP',
   },
   depuracion: {
     descripcion:

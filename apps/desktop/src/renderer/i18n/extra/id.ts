@@ -281,6 +281,9 @@ export const idExtra: TextosParciales = {
       },
     },
     datosConexion: 'Detail koneksi',
+    grupos: {
+      herramientas: 'Utilitas pengembangan',
+    },
   },
   bd: {
     pgvector: {
@@ -2207,5 +2210,8 @@ export const idExtra: TextosParciales = {
     tunelesRapidos: 'Cara kerja tunnel cepat',
     seguridadBuzones: 'Catatan tentang penangkap email dan keamanan',
     sinProveedores: 'Belum ada penyedia SMTP jarak jauh',
+  },
+  agentes: {
+    notaMcpTitulo: 'Cara agen mengautentikasi ke MCP',
   },
 };

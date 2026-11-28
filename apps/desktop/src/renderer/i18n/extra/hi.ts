@@ -264,6 +264,9 @@ export const hiExtra: TextosParciales = {
       },
     },
     datosConexion: 'कनेक्शन विवरण',
+    grupos: {
+      herramientas: 'डेवलपमेंट उपयोगिताएँ',
+    },
   },
   bd: {
     pgvector: {
@@ -2112,5 +2115,8 @@ export const hiExtra: TextosParciales = {
     tunelesRapidos: 'त्वरित टनल कैसे काम करते हैं',
     seguridadBuzones: 'कैचर और सुरक्षा से जुड़े नोट',
     sinProveedores: 'अभी तक कोई रिमोट SMTP प्रदाता नहीं है',
+  },
+  agentes: {
+    notaMcpTitulo: 'एजेंट MCP पर कैसे प्रमाणित होते हैं',
   },
 };

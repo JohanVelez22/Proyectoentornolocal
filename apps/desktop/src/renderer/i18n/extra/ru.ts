@@ -308,6 +308,9 @@ export const ruExtra: TextosParciales = {
       },
     },
     datosConexion: 'Данные подключения',
+    grupos: {
+      herramientas: 'Вспомогательные средства разработки',
+    },
   },
   bd: {
     pgvector: {
@@ -2297,5 +2300,8 @@ export const ruExtra: TextosParciales = {
     tunelesRapidos: 'Как работают быстрые туннели',
     seguridadBuzones: 'Заметки о перехватчиках почты и безопасности',
     sinProveedores: 'Удалённых SMTP-провайдеров пока нет',
+  },
+  agentes: {
+    notaMcpTitulo: 'Как агенты проходят аутентификацию в MCP',
   },
 };

@@ -279,6 +279,9 @@ export const koExtra: TextosParciales = {
       },
     },
     datosConexion: '연결 정보',
+    grupos: {
+      herramientas: '개발 유틸리티',
+    },
   },
   bd: {
     pgvector: {
@@ -2163,5 +2166,8 @@ export const koExtra: TextosParciales = {
     tunelesRapidos: '빠른 터널의 작동 방식',
     seguridadBuzones: '수신기 및 보안 관련 참고 사항',
     sinProveedores: '아직 원격 SMTP 공급자가 없습니다',
+  },
+  agentes: {
+    notaMcpTitulo: '에이전트가 MCP에 인증하는 방법',
   },
 };

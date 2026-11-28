@@ -313,6 +313,9 @@ export const plExtra: TextosParciales = {
       },
     },
     datosConexion: 'Dane połączenia',
+    grupos: {
+      herramientas: 'Narzędzia pomocnicze dla programistów',
+    },
   },
   bd: {
     pgvector: {
@@ -2313,5 +2316,8 @@ export const plExtra: TextosParciales = {
     tunelesRapidos: 'Jak działają szybkie tunele',
     seguridadBuzones: 'Uwagi o przechwytywaczach poczty i bezpieczeństwie',
     sinProveedores: 'Nie ma jeszcze zdalnych dostawców SMTP',
+  },
+  agentes: {
+    notaMcpTitulo: 'Jak agenci uwierzytelniają się w MCP',
   },
 };

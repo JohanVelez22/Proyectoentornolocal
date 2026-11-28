@@ -326,6 +326,9 @@ export const deExtra: TextosParciales = {
       },
     },
     datosConexion: 'Verbindungsdaten',
+    grupos: {
+      herramientas: 'Entwickler-Hilfsmittel',
+    },
   },
   bd: {
     pgvector: {
@@ -2340,5 +2343,8 @@ export const deExtra: TextosParciales = {
     tunelesRapidos: 'So funktionieren Schnelltunnel',
     seguridadBuzones: 'Hinweise zu Mail-Fängern und Sicherheit',
     sinProveedores: 'Noch keine entfernten SMTP-Anbieter',
+  },
+  agentes: {
+    notaMcpTitulo: 'So authentifizieren sich Agenten am MCP',
   },
 };

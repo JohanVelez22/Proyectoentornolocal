@@ -305,6 +305,9 @@ export const ukExtra: TextosParciales = {
       },
     },
     datosConexion: 'Дані підключення',
+    grupos: {
+      herramientas: 'Допоміжні засоби розробки',
+    },
   },
   bd: {
     pgvector: {
@@ -2291,5 +2294,8 @@ export const ukExtra: TextosParciales = {
     tunelesRapidos: 'Як працюють швидкі тунелі',
     seguridadBuzones: 'Нотатки про перехоплювачі пошти та безпеку',
     sinProveedores: 'Віддалених SMTP-провайдерів поки немає',
+  },
+  agentes: {
+    notaMcpTitulo: 'Як агенти автентифікуються в MCP',
   },
 };

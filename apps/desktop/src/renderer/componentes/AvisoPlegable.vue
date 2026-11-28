@@ -22,7 +22,13 @@ const idCuerpo = `aviso-plegable-${useId()}`;
 </script>
 
 <template>
-  <NAlert :type="tipo" :show-icon="false" :bordered="false" class="aviso-plegable">
+  <NAlert
+    :type="tipo"
+    :show-icon="false"
+    :bordered="false"
+    class="aviso-plegable"
+    :class="`tipo-${tipo}`"
+  >
     <button
       type="button"
       class="cabeza"
@@ -40,6 +46,26 @@ const idCuerpo = `aviso-plegable-${useId()}`;
 </template>
 
 <style scoped>
+/*
+ * Tema oscuro (D54c): el fondo de Naive UI queda opaco y apagado; se sustituye por el color del
+ * aviso al 8 % con un borde de 1 px al 25 %, como el resto de bloques de aviso.
+ */
+.aviso-plegable.tipo-info {
+  --aviso-rgb: var(--acento-rgb);
+}
+.aviso-plegable.tipo-warning {
+  --aviso-rgb: 217, 119, 6;
+}
+.aviso-plegable.tipo-error {
+  --aviso-rgb: 220, 38, 38;
+}
+.aviso-plegable.tipo-success {
+  --aviso-rgb: 22, 163, 74;
+}
+:global(:root[data-tema='oscuro'] .aviso-plegable) {
+  background: rgba(var(--aviso-rgb), 0.08);
+  border: 1px solid rgba(var(--aviso-rgb), 0.25);
+}
 .cabeza {
   display: flex;
   align-items: center;
