@@ -4252,7 +4252,10 @@ export const pt: Textos = {
           dominio: 'rede de domínio',
           desconocido: 'perfil desconhecido',
         },
-        publica: 'Em redes públicas, outros computadores não são explorados.',
+        publica:
+          'Em redes públicas, outros computadores não são explorados. Para mudar a rede para Privada no Windows: Configurações › Rede e Internet › Propriedades › Perfil de rede.',
+        tunel: 'A rede ativa é uma VPN ou um túnel, então outros computadores não são explorados.',
+        ipEsteEquipo: 'IP deste computador',
         perfilDesconocido:
           'Não foi possível verificar se a rede é privada ou pública, então outros computadores não são explorados.',
         sinRed: 'Não há uma rede privada ativa para explorar.',
@@ -4278,6 +4281,7 @@ export const pt: Textos = {
           titulo: 'Procurar computadores na sua rede',
           texto: (red: string, cantidad: number) =>
             `Será enviado um ping a cada um dos ${cantidad} endereços de ${red}, um após o outro e com limite de velocidade, para encontrar computadores.`,
+          adaptador: (nombre: string) => `Adaptador de rede: ${nombre}.`,
           limites:
             'Só a sua rede privada ativa é explorada (no máximo 254 endereços). Nenhuma porta é testada e nenhum computador é acessado. Você pode cancelar a qualquer momento.',
           boton: 'Procurar computadores',

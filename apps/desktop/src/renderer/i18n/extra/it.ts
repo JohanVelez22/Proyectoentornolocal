@@ -862,7 +862,10 @@ export const itExtra: TextosParciales = {
           dominio: 'rete di dominio',
           desconocido: 'profilo sconosciuto',
         },
-        publica: 'Nelle reti pubbliche non si esplorano altri dispositivi.',
+        publica:
+          'Nelle reti pubbliche non si esplorano altri dispositivi. Per impostare la rete su Privata in Windows: Impostazioni › Rete e Internet › Proprietà › Profilo di rete.',
+        tunel: 'La rete attiva è una VPN o un tunnel, quindi non si esplorano altri dispositivi.',
+        ipEsteEquipo: 'IP di questo dispositivo',
         perfilDesconocido:
           'Non è stato possibile verificare se la rete è privata o pubblica, quindi non si esplorano altri dispositivi.',
         sinRed: 'Non c’è una rete privata attiva da esplorare.',
@@ -888,6 +891,7 @@ export const itExtra: TextosParciales = {
           titulo: 'Cercare dispositivi nella sua rete',
           texto: (red: string, cantidad: number) =>
             `Verrà inviato un ping a ciascuno dei ${cantidad} indirizzi di ${red}, uno dopo l’altro e con velocità limitata, per trovare dispositivi.`,
+          adaptador: (nombre: string) => `Scheda di rete: ${nombre}.`,
           limites:
             'Viene esplorata solo la sua rete privata attiva (al massimo 254 indirizzi). Non si testano porte né si accede ad alcun dispositivo. Può annullare in qualsiasi momento.',
           boton: 'Cerca dispositivi',

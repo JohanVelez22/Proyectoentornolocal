@@ -707,7 +707,10 @@ export const zhExtra: TextosParciales = {
           dominio: '域网络',
           desconocido: '配置文件未知',
         },
-        publica: '在公用网络中不会探测其他设备。',
+        publica:
+          '在公用网络中不会探测其他设备。要在 Windows 中将网络改为专用：设置 › 网络和 Internet › 属性 › 网络配置文件类型。',
+        tunel: '当前活动网络是 VPN 或隧道，因此不会探测其他设备。',
+        ipEsteEquipo: '本设备的 IP',
         perfilDesconocido: '无法确认网络是专用还是公用，因此不会探测其他设备。',
         sinRed: '没有可探测的活动专用网络。',
         escanear: '查找设备',
@@ -732,6 +735,7 @@ export const zhExtra: TextosParciales = {
           titulo: '在您的网络中查找设备',
           texto: (red: string, cantidad: number) =>
             `将依次向 ${red} 的 ${cantidad} 个地址各发送一次 Ping，并限制速度，以查找设备。`,
+          adaptador: (nombre: string) => `网络适配器：${nombre}`,
           limites:
             '仅探测您当前的专用网络（最多 254 个地址）。不会测试端口，也不会访问任何设备。您可以随时取消。',
           boton: '查找设备',

@@ -814,7 +814,10 @@ export const jaExtra: TextosParciales = {
           dominio: 'ドメインネットワーク',
           desconocido: 'プロファイル不明',
         },
-        publica: 'パブリックネットワークでは、他の機器を探索しません。',
+        publica:
+          'パブリックネットワークでは、他の機器を探索しません。Windows でネットワークをプライベートに変更するには、「設定」›「ネットワークとインターネット」›「プロパティ」›「ネットワーク プロファイル」を開いてください。',
+        tunel: '使用中のネットワークは VPN またはトンネルのため、他の機器は探索しません。',
+        ipEsteEquipo: 'この機器の IP',
         perfilDesconocido:
           'ネットワークがプライベートかパブリックかを確認できなかったため、他の機器は探索しません。',
         sinRed: '探索できる使用中のプライベートネットワークがありません。',
@@ -841,6 +844,7 @@ export const jaExtra: TextosParciales = {
           titulo: 'ネットワーク上の機器を検索',
           texto: (red: string, cantidad: number) =>
             `${red} の ${cantidad} 件のアドレスそれぞれに、速度を制限して順番に ping を送信し、機器を探します。`,
+          adaptador: (nombre: string) => `ネットワーク アダプター: ${nombre}`,
           limites:
             '使用中のプライベートネットワークのみを探索します（最大 254 件のアドレス）。ポートのテストや機器へのアクセスは行いません。いつでもキャンセルできます。',
           boton: '機器を検索',

@@ -786,7 +786,10 @@ export const koExtra: TextosParciales = {
           dominio: '도메인 네트워크',
           desconocido: '프로필 알 수 없음',
         },
-        publica: '공용 네트워크에서는 다른 장치를 탐색하지 않습니다.',
+        publica:
+          '공용 네트워크에서는 다른 장치를 탐색하지 않습니다. Windows에서 네트워크를 개인용으로 바꾸려면 설정 › 네트워크 및 인터넷 › 속성 › 네트워크 프로필에서 변경해 주십시오.',
+        tunel: '사용 중인 네트워크가 VPN 또는 터널이므로 다른 장치를 탐색하지 않습니다.',
+        ipEsteEquipo: '이 장치의 IP',
         perfilDesconocido:
           '네트워크가 개인용인지 공용인지 확인할 수 없어 다른 장치를 탐색하지 않습니다.',
         sinRed: '탐색할 수 있는 사용 중인 개인 네트워크가 없습니다.',
@@ -813,6 +816,7 @@ export const koExtra: TextosParciales = {
           titulo: '네트워크에서 장치 찾기',
           texto: (red: string, cantidad: number) =>
             `장치를 찾기 위해 ${red}의 주소 ${cantidad}개 각각에 속도를 제한하여 차례로 ping을 보냅니다.`,
+          adaptador: (nombre: string) => `네트워크 어댑터: ${nombre}`,
           limites:
             '사용 중인 개인 네트워크만 탐색합니다(최대 주소 254개). 포트를 검사하지 않으며 어떤 장치에도 접속하지 않습니다. 언제든지 취소하실 수 있습니다.',
           boton: '장치 찾기',

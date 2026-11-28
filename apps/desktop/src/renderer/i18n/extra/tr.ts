@@ -808,7 +808,10 @@ export const trExtra: TextosParciales = {
           dominio: 'etki alanı ağı',
           desconocido: 'profil bilinmiyor',
         },
-        publica: 'Genel ağlarda diğer cihazlar taranmaz.',
+        publica:
+          'Genel ağlarda diğer cihazlar taranmaz. Windows’ta ağı Özel olarak değiştirmek için: Ayarlar › Ağ ve İnternet › Özellikler › Ağ profili.',
+        tunel: 'Etkin ağ bir VPN veya tünel olduğundan diğer cihazlar taranmaz.',
+        ipEsteEquipo: 'Bu cihazın IP’si',
         perfilDesconocido:
           'Ağın özel mi genel mi olduğu denetlenemedi, bu nedenle diğer cihazlar taranmaz.',
         sinRed: 'Taranacak etkin bir özel ağ yok.',
@@ -835,6 +838,7 @@ export const trExtra: TextosParciales = {
           titulo: 'Ağınızda cihaz arayın',
           texto: (red: string, cantidad: number) =>
             `Cihazları bulmak için ${red} içindeki ${cantidad} adresin her birine, hız sınırlı olarak ve sırayla bir ping gönderilecek.`,
+          adaptador: (nombre: string) => `Ağ bağdaştırıcısı: ${nombre}.`,
           limites:
             'Yalnızca etkin özel ağınız taranır (en fazla 254 adres). Hiçbir bağlantı noktası denenmez ve hiçbir cihaza erişilmez. İstediğiniz zaman iptal edebilirsiniz.',
           boton: 'Cihaz ara',

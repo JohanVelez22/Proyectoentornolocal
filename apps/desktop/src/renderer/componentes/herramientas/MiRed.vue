@@ -64,6 +64,7 @@ const motivoSinEscaneo = computed(() => {
   if (!e || e.permitido) return null;
   if (e.motivo === 'publica') return t.equipos.publica;
   if (e.motivo === 'perfil_desconocido') return t.equipos.perfilDesconocido;
+  if (e.motivo === 'tunel') return t.equipos.tunel;
   return t.equipos.sinRed;
 });
 
@@ -331,7 +332,7 @@ const perfilTexto = (p: string | null): string =>
         {{ t.equipos.redActiva }}:
         <span class="mono"
           >{{ adaptadorActivo.nombre }} ·
-          {{ escaneo?.red ?? `${adaptadorActivo.ip}/${adaptadorActivo.prefijo}` }}</span
+          {{ escaneo?.red ?? `${t.equipos.ipEsteEquipo}: ${adaptadorActivo.ip}` }}</span
         >
         · {{ perfilTexto(adaptadorActivo.perfil) }}
       </p>
@@ -380,6 +381,7 @@ const perfilTexto = (p: string | null): string =>
                   <NButton
                     size="small"
                     secondary
+                    :disabled="!escaneo?.permitido"
                     :loading="ocupado(`ping-${e.ip}`)"
                     data-testid="mi-red-ping"
                     @click="hacerPing(e.ip)"
@@ -388,6 +390,7 @@ const perfilTexto = (p: string | null): string =>
                   <NButton
                     size="small"
                     secondary
+                    :disabled="!escaneo?.permitido"
                     :loading="ocupado(`carpetas-${e.ip}`)"
                     data-testid="mi-red-ver-carpetas"
                     @click="verCarpetas(e.ip)"
@@ -422,6 +425,7 @@ const perfilTexto = (p: string | null): string =>
               <NButton
                 size="small"
                 secondary
+                :disabled="!escaneo?.permitido"
                 :loading="ocupado(`abrir-${r.nombre}`)"
                 data-testid="mi-red-abrir"
                 @click="abrir(equipoAbierto.ip, r.nombre)"
@@ -539,6 +543,9 @@ const perfilTexto = (p: string | null): string =>
     >
       <p class="pregunta">
         {{ t.equipos.confirmar.texto(escaneo?.red ?? '', escaneo?.equipos ?? 0) }}
+      </p>
+      <p v-if="adaptadorActivo" class="herr-tenue" data-testid="mi-red-escaneo-adaptador">
+        {{ t.equipos.confirmar.adaptador(adaptadorActivo.nombre) }}
       </p>
       <NAlert type="info" :show-icon="false" class="aviso">{{
         t.equipos.confirmar.limites

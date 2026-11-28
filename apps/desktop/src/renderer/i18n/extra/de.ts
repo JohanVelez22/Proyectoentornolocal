@@ -878,7 +878,11 @@ export const deExtra: TextosParciales = {
           dominio: 'Domänennetzwerk',
           desconocido: 'unbekanntes Profil',
         },
-        publica: 'In öffentlichen Netzwerken werden keine anderen Geräte erkundet.',
+        publica:
+          'In öffentlichen Netzwerken werden keine anderen Geräte erkundet. So stellen Sie das Netzwerk in Windows auf „Privat“ um: Einstellungen › Netzwerk und Internet › Eigenschaften › Netzwerkprofil.',
+        tunel:
+          'Das aktive Netzwerk ist ein VPN oder ein Tunnel; daher werden keine anderen Geräte erkundet.',
+        ipEsteEquipo: 'IP-Adresse dieses Geräts',
         perfilDesconocido:
           'Es konnte nicht geprüft werden, ob das Netzwerk privat oder öffentlich ist; daher werden keine anderen Geräte erkundet.',
         sinRed: 'Es gibt kein aktives privates Netzwerk zum Erkunden.',
@@ -904,6 +908,7 @@ export const deExtra: TextosParciales = {
           titulo: 'Geräte in Ihrem Netzwerk suchen',
           texto: (red: string, cantidad: number) =>
             `An jede der ${cantidad} Adressen von ${red} wird nacheinander und mit begrenzter Geschwindigkeit ein Ping gesendet, um Geräte zu finden.`,
+          adaptador: (nombre: string) => `Netzwerkadapter: ${nombre}.`,
           limites:
             'Es wird nur Ihr aktives privates Netzwerk erkundet (höchstens 254 Adressen). Es werden keine Ports getestet und auf kein Gerät zugegriffen. Sie können jederzeit abbrechen.',
           boton: 'Geräte suchen',

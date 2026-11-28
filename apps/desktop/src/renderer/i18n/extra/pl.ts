@@ -856,7 +856,10 @@ export const plExtra: TextosParciales = {
           dominio: 'sieć domenowa',
           desconocido: 'nieznany profil',
         },
-        publica: 'W sieciach publicznych inne urządzenia nie są przeszukiwane.',
+        publica:
+          'W sieciach publicznych inne urządzenia nie są przeszukiwane. Aby zmienić sieć na prywatną w systemie Windows: Ustawienia › Sieć i Internet › Właściwości › Profil sieci.',
+        tunel: 'Aktywna sieć to VPN lub tunel, więc inne urządzenia nie są przeszukiwane.',
+        ipEsteEquipo: 'IP tego urządzenia',
         perfilDesconocido:
           'Nie udało się sprawdzić, czy sieć jest prywatna, czy publiczna, więc inne urządzenia nie są przeszukiwane.',
         sinRed: 'Brak aktywnej sieci prywatnej do przeszukania.',
@@ -882,6 +885,7 @@ export const plExtra: TextosParciales = {
           titulo: 'Wyszukiwanie urządzeń w Państwa sieci',
           texto: (red: string, cantidad: number) =>
             `Ping zostanie wysłany pod każdy z ${cantidad} adresów w ${red}, jeden po drugim i z ograniczoną szybkością, aby znaleźć urządzenia.`,
+          adaptador: (nombre: string) => `Karta sieciowa: ${nombre}.`,
           limites:
             'Przeszukiwana jest tylko Państwa aktywna sieć prywatna (najwyżej 254 adresy). Nie są testowane porty ani nie ma dostępu do żadnego urządzenia. Można anulować w dowolnej chwili.',
           boton: 'Szukaj urządzeń',

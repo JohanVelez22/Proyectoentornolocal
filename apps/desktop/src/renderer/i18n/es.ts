@@ -4240,7 +4240,10 @@ export const es = {
           dominio: 'red de dominio',
           desconocido: 'perfil desconocido',
         },
-        publica: 'En redes públicas no se exploran otros equipos.',
+        publica:
+          'En redes públicas no se exploran otros equipos. Para cambiar la red a Privada en Windows: Configuración › Red e Internet › Propiedades › Perfil de red.',
+        tunel: 'La red activa es una VPN o un túnel, así que no se exploran otros equipos.',
+        ipEsteEquipo: 'IP de este equipo',
         perfilDesconocido:
           'No se pudo comprobar si la red es privada o pública, así que no se exploran otros equipos.',
         sinRed: 'No hay una red privada activa que explorar.',
@@ -4266,6 +4269,7 @@ export const es = {
           titulo: 'Buscar equipos en su red',
           texto: (red: string, cantidad: number) =>
             `Se enviará un ping a cada una de las ${cantidad} direcciones de ${red}, una tras otra y con límite de velocidad, para encontrar equipos.`,
+          adaptador: (nombre: string) => `Adaptador de red: ${nombre}.`,
           limites:
             'Solo se explora su red privada activa (como mucho 254 direcciones). No se prueban puertos ni se entra en ningún equipo. Puede cancelar en cualquier momento.',
           boton: 'Buscar equipos',

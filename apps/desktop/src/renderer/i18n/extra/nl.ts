@@ -867,7 +867,11 @@ export const nlExtra: TextosParciales = {
           dominio: 'domeinnetwerk',
           desconocido: 'onbekend profiel',
         },
-        publica: 'In openbare netwerken worden geen andere apparaten verkend.',
+        publica:
+          'In openbare netwerken worden geen andere apparaten verkend. Zo zet u het netwerk in Windows op Privé: Instellingen › Netwerk en internet › Eigenschappen › Netwerkprofiel.',
+        tunel:
+          'Het actieve netwerk is een VPN of een tunnel, dus er worden geen andere apparaten verkend.',
+        ipEsteEquipo: 'IP-adres van dit apparaat',
         perfilDesconocido:
           'Er kon niet worden gecontroleerd of het netwerk privé of openbaar is, dus er worden geen andere apparaten verkend.',
         sinRed: 'Er is geen actief privénetwerk om te verkennen.',
@@ -894,6 +898,7 @@ export const nlExtra: TextosParciales = {
           titulo: 'Apparaten in uw netwerk zoeken',
           texto: (red: string, cantidad: number) =>
             `Naar elk van de ${cantidad} adressen van ${red} wordt een ping gestuurd, een voor een en met beperkte snelheid, om apparaten te vinden.`,
+          adaptador: (nombre: string) => `Netwerkadapter: ${nombre}.`,
           limites:
             'Alleen uw actieve privénetwerk wordt verkend (hoogstens 254 adressen). Er worden geen poorten getest en er wordt geen toegang tot een apparaat verkregen. U kunt op elk moment annuleren.',
           boton: 'Apparaten zoeken',

@@ -4361,7 +4361,11 @@ export const fr: Textos = {
           dominio: 'réseau de domaine',
           desconocido: 'profil inconnu',
         },
-        publica: 'Sur les réseaux publics, les autres appareils ne sont pas explorés.',
+        publica:
+          'Sur les réseaux publics, les autres appareils ne sont pas explorés. Pour passer le réseau en Privé dans Windows : Paramètres › Réseau et Internet › Propriétés › Profil réseau.',
+        tunel:
+          'Le réseau actif est un VPN ou un tunnel ; les autres appareils ne sont donc pas explorés.',
+        ipEsteEquipo: 'IP de cet appareil',
         perfilDesconocido:
           'Impossible de vérifier si le réseau est privé ou public ; les autres appareils ne sont donc pas explorés.',
         sinRed: 'Aucun réseau privé actif à explorer.',
@@ -4387,6 +4391,7 @@ export const fr: Textos = {
           titulo: 'Rechercher des appareils sur votre réseau',
           texto: (red: string, cantidad: number) =>
             `Un ping sera envoyé à chacune des ${cantidad} adresses de ${red}, l’une après l’autre et à débit limité, pour trouver des appareils.`,
+          adaptador: (nombre: string) => `Carte réseau : ${nombre}.`,
           limites:
             'Seul votre réseau privé actif est exploré (254 adresses au maximum). Aucun port n’est testé et aucun appareil n’est consulté. Vous pouvez annuler à tout moment.',
           boton: 'Rechercher des appareils',

@@ -4209,7 +4209,10 @@ export const en: Textos = {
           dominio: 'domain network',
           desconocido: 'unknown profile',
         },
-        publica: 'Other devices are not explored on public networks.',
+        publica:
+          'Other devices are not explored on public networks. To switch the network to Private in Windows: Settings › Network & internet › Properties › Network profile.',
+        tunel: 'The active network is a VPN or a tunnel, so other devices are not explored.',
+        ipEsteEquipo: 'This device’s IP',
         perfilDesconocido:
           'Could not check whether the network is private or public, so other devices are not explored.',
         sinRed: 'There is no active private network to explore.',
@@ -4235,6 +4238,7 @@ export const en: Textos = {
           titulo: 'Find devices on your network',
           texto: (red: string, cantidad: number) =>
             `A ping will be sent to each of the ${cantidad} addresses of ${red}, one after another and at a limited rate, to find devices.`,
+          adaptador: (nombre: string) => `Network adapter: ${nombre}.`,
           limites:
             'Only your active private network is explored (at most 254 addresses). No ports are tested and no device is accessed. You can cancel at any time.',
           boton: 'Find devices',

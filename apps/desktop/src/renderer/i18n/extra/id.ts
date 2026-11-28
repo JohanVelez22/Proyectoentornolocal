@@ -803,7 +803,11 @@ export const idExtra: TextosParciales = {
           dominio: 'jaringan domain',
           desconocido: 'profil tidak diketahui',
         },
-        publica: 'Di jaringan publik, perangkat lain tidak dijelajahi.',
+        publica:
+          'Di jaringan publik, perangkat lain tidak dijelajahi. Untuk mengubah jaringan menjadi Pribadi di Windows: Pengaturan › Jaringan & internet › Properti › Profil jaringan.',
+        tunel:
+          'Jaringan aktif adalah VPN atau terowongan, sehingga perangkat lain tidak dijelajahi.',
+        ipEsteEquipo: 'IP perangkat ini',
         perfilDesconocido:
           'Tidak dapat memeriksa apakah jaringan ini pribadi atau publik, sehingga perangkat lain tidak dijelajahi.',
         sinRed: 'Tidak ada jaringan pribadi aktif untuk dijelajahi.',
@@ -830,6 +834,7 @@ export const idExtra: TextosParciales = {
           titulo: 'Cari perangkat di jaringan Anda',
           texto: (red: string, cantidad: number) =>
             `Satu ping akan dikirim ke masing-masing dari ${cantidad} alamat di ${red}, satu per satu dan dengan kecepatan terbatas, untuk menemukan perangkat.`,
+          adaptador: (nombre: string) => `Adapter jaringan: ${nombre}.`,
           limites:
             'Hanya jaringan pribadi aktif Anda yang dijelajahi (paling banyak 254 alamat). Tidak ada port yang diuji dan tidak ada perangkat yang diakses. Anda dapat membatalkan kapan saja.',
           boton: 'Cari perangkat',

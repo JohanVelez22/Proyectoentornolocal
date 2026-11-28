@@ -67,6 +67,22 @@ describe('Mi red: la interfaz', () => {
     expect(VUE).toMatch(/PLAN_VELOCIDAD\.bajadaMb/);
   });
 
+  it('sin permiso de exploración (red pública, VPN…) los botones por equipo también se desactivan', () => {
+    // Buscar, ping, ver carpetas y abrir: cuatro botones con la misma condición.
+    expect(VUE.match(/:disabled="!escaneo\?\.permitido"/g)).toHaveLength(4);
+    expect(VUE).toMatch(/data-testid="mi-red-ping"/);
+    expect(VUE).toMatch(/data-testid="mi-red-abrir"/);
+  });
+
+  it('la red activa muestra la red o la etiqueta «IP de este equipo», y el diálogo, el adaptador', () => {
+    expect(VUE).toMatch(
+      /escaneo\?\.red \?\? `\$\{t\.equipos\.ipEsteEquipo\}: \$\{adaptadorActivo\.ip\}`/,
+    );
+    expect(VUE).not.toMatch(/\$\{adaptadorActivo\.ip\}\/\$\{adaptadorActivo\.prefijo\}/);
+    expect(VUE).toMatch(/t\.equipos\.confirmar\.adaptador\(adaptadorActivo\.nombre\)/);
+    expect(VUE).toMatch(/e\.motivo === 'tunel'/);
+  });
+
   it('el MCP y la CLI no exponen nada de Mi red', () => {
     const carpetas = [
       join(RAIZ, 'packages', 'core', 'src', 'mcp'),
@@ -119,12 +135,17 @@ describe('Mi red: textos en los 16 idiomas', () => {
       // La confirmación de dejar de compartir explica el UAC y que no se cambia nada si se cancela.
       expect(t.carpetas.confirmar.uac, id).toMatch(/UAC/);
       expect(t.equipos.publica, id).not.toBe('');
+      // En red pública, el aviso dice cómo pasar a Privada (con la ruta de Ajustes de Windows).
+      expect(t.equipos.publica, id).toContain('›');
+      expect(t.equipos.tunel, id).not.toBe('');
+      expect(t.equipos.ipEsteEquipo, id).toMatch(/IP/);
+      expect(t.equipos.confirmar.adaptador('Wi-Fi 5'), id).toContain('Wi-Fi 5');
     }
   });
 
   it('las frases clave de seguridad coinciden con lo pedido, en español e inglés', () => {
     expect(diccionarios.es.herramientas.miRed.equipos.publica).toBe(
-      'En redes públicas no se exploran otros equipos.',
+      'En redes públicas no se exploran otros equipos. Para cambiar la red a Privada en Windows: Configuración › Red e Internet › Propiedades › Perfil de red.',
     );
     expect(diccionarios.es.herramientas.miRed.carpetas.confirmar.uac).toMatch(/administrador/);
     expect(diccionarios.en.herramientas.miRed.carpetas.confirmar.uac).toMatch(/administrator/);
