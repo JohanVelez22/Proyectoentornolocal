@@ -25,6 +25,7 @@ import {
   NLayoutHeader,
   NLayoutSider,
   NMenu,
+  NTooltip,
   useNotification,
   type MenuOption,
 } from 'naive-ui';
@@ -74,7 +75,23 @@ const falloArranque = ref(false);
 const preferencias = usePreferencias();
 const sitios = useSitios();
 
-const icono = (c: Component) => () => h(NIcon, null, { default: () => h(c) });
+/**
+ * Icono de una entrada del menú. Plegado, el carril solo muestra iconos: cada uno lleva un globo
+ * con el nombre de la pantalla (el de Naive UI no sale en las entradas dentro de un grupo) y el
+ * globo cubre toda la entrada, no solo el dibujo.
+ */
+const icono = (c: Component, clave: SeccionNav) => () => {
+  const dibujo = h(NIcon, null, { default: () => h(c) });
+  if (!contraido.value) return dibujo;
+  return h(
+    NTooltip,
+    { placement: 'right' },
+    {
+      trigger: () => h('span', { class: 'icono-plegado' }, [dibujo]),
+      default: () => textos.nav[clave],
+    },
+  );
+};
 const ICONOS: Record<SeccionNav, Component> = {
   inicio: IconoInicio,
   proyectos: IconoProyectos,
@@ -96,7 +113,7 @@ const item = (k: SeccionNav): MenuOption => ({
   key: k,
   // El recorrido de bienvenida resalta la entrada por el atributo data-nav de su texto.
   label: () => h('span', { 'data-nav': k }, textos.nav[k]),
-  icon: icono(ICONOS[k]),
+  icon: icono(ICONOS[k], k),
 });
 /** Barra lateral agrupada (se rearma al cambiar de idioma). */
 const opciones = computed<MenuOption[]>(() => [
@@ -125,6 +142,12 @@ const pastilla = computed(() =>
     conError: servicios.resumen.conErrorVigilados,
   }),
 );
+
+/** Plegado, el menú solo muestra iconos: cada entrada lleva su nombre para lectores de pantalla. */
+function propsEntrada(o: MenuOption): Record<string, string> {
+  const clave = typeof o.key === 'string' ? o.key : '';
+  return clave in ICONOS ? { 'aria-label': textos.nav[clave as SeccionNav] } : {};
+}
 
 function navegar(clave: string): void {
   void router.push({ name: clave });
@@ -249,6 +272,7 @@ onBeforeUnmount(() => {
         :collapsed-icon-size="20"
         :icon-size="18"
         :indent="20"
+        :node-props="propsEntrada"
         @update:value="navegar"
       />
     </NLayoutSider>
@@ -354,9 +378,28 @@ onBeforeUnmount(() => {
 .principal {
   height: 100vh;
 }
-/* Menú plegado: los títulos de grupo no caben en el carril de 64 px y se verían cortados. */
+/*
+ * Menú plegado: los títulos de grupo no caben en el carril de 64 px y se verían cortados; un
+ * filete fino separa los grupos en su lugar.
+ */
 :deep(.n-menu.n-menu--collapsed .n-menu-item-group-title) {
   display: none;
+}
+:deep(.n-menu.n-menu--collapsed .n-menu-item-group + .n-menu-item-group) {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(128, 128, 128, 0.22);
+}
+/* El logotipo es oscuro: sobre el fondo del tema oscuro se aclara para que se distinga. */
+:global(:root[data-tema='oscuro'] .logo) {
+  filter: brightness(1.7) saturate(1.15);
+}
+/* El globo del menú plegado cubre la entrada entera. */
+:deep(.icono-plegado) {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
 }
 /*
  * Título a la izquierda, buscador centrado y controles a la derecha. Las dos columnas de los lados
