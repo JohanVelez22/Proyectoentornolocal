@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  conservarVeredicto,
   decidirAlertas,
   estadoSaludVacio,
   INTERVALO_MIN_AVISO_MS,
@@ -160,7 +161,144 @@ describe('leerEstadoGuardado', () => {
         corregidosEn: null,
         avisoNivel: 0,
         avisoEn: null,
+        ultimo: null,
       },
     });
+  });
+});
+
+describe('estado guardado: fechas del futuro (M3)', () => {
+  const AHORA = 1_800_000_000_000;
+  const base = (extra: Record<string, unknown>) => ({
+    discos: {
+      d0: {
+        veredicto: 'atencion',
+        corregidos: 5,
+        corregidosEn: 1,
+        avisoNivel: 1,
+        avisoEn: 1,
+        ...extra,
+      },
+    },
+  });
+
+  it('descarta avisoEn, corregidosEn y el último dato si son posteriores a ahora', () => {
+    const r = leerEstadoGuardado(
+      base({
+        corregidosEn: AHORA + 1,
+        avisoEn: AHORA + 5_000,
+        ultimo: { veredicto: 'critico', motivos: ['desgaste'], en: AHORA + 1, origen: 'admin' },
+      }),
+      AHORA,
+    ).discos['d0'];
+    expect(r).toMatchObject({ corregidosEn: null, corregidos: null, avisoEn: null, ultimo: null });
+  });
+
+  it('conserva las fechas pasadas', () => {
+    const r = leerEstadoGuardado(
+      base({
+        corregidosEn: AHORA - 1000,
+        avisoEn: AHORA,
+        ultimo: {
+          veredicto: 'critico',
+          motivos: ['desgaste', 'x'],
+          en: AHORA - 5,
+          origen: 'admin',
+        },
+      }),
+      AHORA,
+    ).discos['d0'];
+    expect(r).toMatchObject({
+      corregidos: 5,
+      corregidosEn: AHORA - 1000,
+      avisoEn: AHORA,
+      ultimo: { veredicto: 'critico', motivos: ['desgaste'], en: AHORA - 5, origen: 'admin' },
+    });
+  });
+
+  it('un último dato mal formado se descarta', () => {
+    for (const ultimo of [
+      5,
+      { veredicto: 'raro', en: 1, origen: 'admin' },
+      { veredicto: 'bien', en: 1, origen: 'x' },
+    ]) {
+      expect(leerEstadoGuardado(base({ ultimo }), AHORA).discos['d0']?.ultimo).toBeNull();
+    }
+  });
+});
+
+describe('una lectura con menos información no rebaja el veredicto (I1)', () => {
+  const T = 1_800_000_000_000;
+  const ctr = {
+    temperaturaC: 40,
+    temperaturaMaxC: null,
+    desgastePct: 95,
+    erroresLecturaCorregidos: 0,
+    erroresLecturaNoCorregidos: 0,
+    erroresEscrituraCorregidos: 0,
+    erroresEscrituraNoCorregidos: 0,
+    horasEncendido: 10,
+  };
+
+  it('guarda el resultado de los contadores con su fecha y su origen', () => {
+    const r = decidirAlertas(
+      [disco('atencion', { contadores: ctr, motivos: ['desgaste'] })],
+      estadoSaludVacio(),
+      T,
+      undefined,
+      'admin',
+    );
+    expect(r.estado.discos['d0']?.ultimo).toEqual({
+      veredicto: 'atencion',
+      motivos: ['desgaste'],
+      en: T,
+      origen: 'admin',
+    });
+    // Una lectura sin contadores no borra ni cambia el último dato.
+    const s = decidirAlertas([disco('bien')], r.estado, T + 1000);
+    expect(s.estado.discos['d0']?.ultimo).toEqual(r.estado.discos['d0']?.ultimo);
+  });
+
+  it('conservarVeredicto: conserva el peor, con fecha y origen', () => {
+    const ultimo = {
+      veredicto: 'critico' as const,
+      motivos: ['errores_sin_corregir' as const],
+      en: T,
+      origen: 'admin' as const,
+    };
+    expect(conservarVeredicto({ veredicto: 'bien', motivos: [] }, false, ultimo)).toEqual({
+      veredicto: 'critico',
+      motivos: ['errores_sin_corregir'],
+      conservado: { en: new Date(T).toISOString(), origen: 'admin' },
+    });
+    // Si lo nuevo es igual o peor, manda lo nuevo; si trae contadores, también.
+    expect(
+      conservarVeredicto({ veredicto: 'critico', motivos: ['estado_warning'] }, false, ultimo),
+    ).toEqual({ veredicto: 'critico', motivos: ['estado_warning'], conservado: null });
+    expect(conservarVeredicto({ veredicto: 'bien', motivos: [] }, true, ultimo).veredicto).toBe(
+      'bien',
+    );
+    expect(
+      conservarVeredicto({ veredicto: 'no_disponible', motivos: [] }, false, null).conservado,
+    ).toBeNull();
+  });
+
+  it('el último dato se sobrescribe con una lectura nueva con contadores (sanos incluidos)', () => {
+    const a = decidirAlertas(
+      [disco('atencion', { contadores: ctr, motivos: ['desgaste'] })],
+      estadoSaludVacio(),
+      T,
+      undefined,
+      'admin',
+    );
+    const sana = { ...ctr, desgastePct: 10 };
+    const b = decidirAlertas(
+      [disco('bien', { contadores: sana })],
+      a.estado,
+      T + 1000,
+      undefined,
+      'admin',
+    );
+    expect(b.estado.discos['d0']?.ultimo).toMatchObject({ veredicto: 'bien', en: T + 1000 });
   });
 });

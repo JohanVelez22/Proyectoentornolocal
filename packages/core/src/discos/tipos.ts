@@ -79,11 +79,24 @@ export interface LecturaDiscos {
   prediccion: EstadoPrediccion;
 }
 
+/** Dato conservado de una lectura anterior con contadores (la actual no los trajo). */
+export interface DatoConservado {
+  /** ISO. */
+  en: string;
+  origen: 'admin' | 'sondeo';
+}
+
 export interface DiscoSalud extends DiscoLeido {
   /** Clave estable de este disco entre lecturas (modelo, tamaño y número); no es un número de serie. */
   clave: string;
   veredicto: Veredicto;
   motivos: MotivoVeredicto[];
+  /**
+   * Si el veredicto sigue siendo el de una lectura anterior con contadores (la de ahora no los
+   * trajo): de cuándo es y de dónde vino. La interfaz lo muestra como «Último dato con permisos
+   * de administrador: <fecha>».
+   */
+  datoConservado?: DatoConservado | null;
   /** En este disco están los datos de WolfCore Dev. */
   contieneDatos: boolean;
   /** En este disco están las carpetas de los proyectos. */

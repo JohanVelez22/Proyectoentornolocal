@@ -4,13 +4,14 @@ import type { EntradaAviso } from '../avisos/avisos';
 import { ErrorWolf } from '../errores';
 import type { PlataformaCompleta } from '../plataforma/tipos';
 import {
+  conservarVeredicto,
   decidirAlertas,
   estadoSaludVacio,
   leerEstadoGuardado,
   type EstadoSaludGuardado,
 } from './alertas';
 import type { DiscoLeido, DiscoSalud, EventoDisco, LecturaDiscos, ResultadoSalud } from './tipos';
-import { evaluarDisco } from './veredicto';
+import { evaluarDisco, tieneContadores } from './veredicto';
 
 /** Primera revisión tras arrancar (diferida: nunca frena el inicio) y cada cuánto se repite. */
 export const RETRASO_PRIMERA_REVISION_MS = 90_000;
@@ -45,6 +46,11 @@ export class SaludDiscos {
   private enCurso: Promise<ResultadoSalud> | null = null;
   /** Una sola escritura del estado a la vez. */
   private cola: Promise<void> = Promise.resolve();
+  /**
+   * Las lecturas (la de administrador y el sondeo) van una detrás de otra: cada una decide sus
+   * avisos con el estado que dejó la anterior, así no se publica dos veces lo mismo.
+   */
+  private serie: Promise<unknown> = Promise.resolve();
   private temporizador: ReturnType<typeof setInterval> | null = null;
   private espera: ReturnType<typeof setTimeout> | null = null;
   private cerrado = false;
@@ -58,7 +64,10 @@ export class SaludDiscos {
   private async cargarEstado(): Promise<EstadoSaludGuardado> {
     if (this.estado) return this.estado;
     try {
-      this.estado = leerEstadoGuardado(JSON.parse(await readFile(this.d.archivoEstado, 'utf8')));
+      this.estado = leerEstadoGuardado(
+        JSON.parse(await readFile(this.d.archivoEstado, 'utf8')),
+        this.ahora,
+      );
     } catch {
       this.estado = estadoSaludVacio();
     }
@@ -96,12 +105,19 @@ export class SaludDiscos {
     }
     const discos: DiscoSalud[] = lectura.discos.map((l) => {
       const clave = claveDisco(l);
-      const { veredicto, motivos } = evaluarDisco(l, previo.discos[clave]?.corregidos ?? null);
+      const guardado = previo.discos[clave];
+      // Una lectura sin contadores no rebaja lo que dijeron los de una anterior.
+      const { veredicto, motivos, conservado } = conservarVeredicto(
+        evaluarDisco(l, guardado?.corregidos ?? null),
+        tieneContadores(l.contadores),
+        guardado?.ultimo ?? null,
+      );
       return {
         ...l,
         clave,
         veredicto,
         motivos,
+        datoConservado: conservado,
         contieneDatos: datos !== null && l.unidades.includes(datos),
         contieneProyectos: l.unidades.some((u) => proyectos.has(u)),
       };
@@ -116,9 +132,15 @@ export class SaludDiscos {
   }
 
   /** Alertas por transición: publica solo lo que pasó a peor y guarda el estado nuevo. */
-  private async alertar(discos: DiscoSalud[]): Promise<void> {
+  private async alertar(discos: DiscoSalud[], conAdmin: boolean): Promise<void> {
     const previo = await this.cargarEstado();
-    const { avisos, estado } = decidirAlertas(discos, previo, this.ahora);
+    const { avisos, estado } = decidirAlertas(
+      discos,
+      previo,
+      this.ahora,
+      undefined,
+      conAdmin ? 'admin' : 'sondeo',
+    );
     this.guardarEstado(estado);
     if (avisos.length === 0 || !(await this.d.avisosActivados().catch(() => false))) return;
     for (const a of avisos) {
@@ -144,11 +166,17 @@ export class SaludDiscos {
    * solo lo llama quien tiene el clic de la persona. Lanza un error del catálogo si no hay lectura.
    */
   async leer(o: { admin?: boolean } = {}): Promise<ResultadoSalud> {
-    if (o.admin) return this.leerConAdmin();
-    this.enCurso ??= this.leerSinAdmin().finally(() => {
+    if (o.admin) return structuredClone(await this.enSerie(() => this.leerConAdmin()));
+    this.enCurso ??= this.enSerie(() => this.leerSinAdmin()).finally(() => {
       this.enCurso = null;
     });
     return structuredClone(await this.enCurso);
+  }
+
+  private enSerie<T>(fn: () => Promise<T>): Promise<T> {
+    const p = this.serie.then(fn, fn);
+    this.serie = p.catch(() => undefined);
+    return p;
   }
 
   private async leerSinAdmin(): Promise<ResultadoSalud> {
@@ -156,7 +184,7 @@ export class SaludDiscos {
     if (!lectura)
       throw new ErrorWolf('discos.sin_lectura', 'No se pudo leer la salud de los discos.');
     const { resultado } = await this.armar(lectura, false);
-    await this.alertar(resultado.discos);
+    await this.alertar(resultado.discos, false);
     return resultado;
   }
 
@@ -172,7 +200,7 @@ export class SaludDiscos {
       );
     }
     const { resultado } = await this.armar(r.lectura, true);
-    await this.alertar(resultado.discos);
+    await this.alertar(resultado.discos, true);
     return resultado;
   }
 

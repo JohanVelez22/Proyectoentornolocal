@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { access, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -229,6 +229,15 @@ describe('SaludDiscos', () => {
       expect(leer).not.toHaveBeenCalled();
       await vi.advanceTimersByTimeAsync(1001);
       expect(leer).toHaveBeenCalledTimes(1);
+      // Espera a que la primera revisión termine de verdad (deja su estado en disco).
+      for (let i = 0; i < 500; i++) {
+        const hecho = await access(path.join(carpeta, 'run', 'salud-discos.json')).then(
+          () => true,
+          () => false,
+        );
+        if (hecho) break;
+        await new Promise((r) => setImmediate(r));
+      }
       await s.guardado();
       await new Promise((r) => setImmediate(r));
       await vi.advanceTimersByTimeAsync(5000);
@@ -239,6 +248,99 @@ describe('SaludDiscos', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('lectura sin administrador tras una con administrador (I1) y cola (M5)', () => {
+  const sinContadores = (): LecturaDiscos => ({ discos: [nvme()], prediccion: 'no_disponible' });
+  const conErrores = (): LecturaDiscos => ({
+    discos: [
+      nvme({
+        motivoSinContadores: null,
+        contadores: { ...contadoresNulos, erroresLecturaNoCorregidos: 3, temperaturaC: 40 },
+      }),
+    ],
+    prediccion: 'ok',
+  });
+
+  it('el veredicto de los contadores leídos con administrador no se rebaja ni se vuelve a avisar', async () => {
+    const { s, plataforma, avisos, avanzar } = montar(sinContadores());
+    plataforma.discosAdmin = { ok: true, lectura: conErrores() };
+    expect((await s.leer()).discos[0]?.veredicto).toBe('bien');
+    const admin = await s.leer({ admin: true });
+    expect(admin.discos[0]).toMatchObject({ veredicto: 'critico', datoConservado: null });
+    expect(avisos).toHaveLength(1);
+    avanzar(60_000);
+    const luego = await s.leer();
+    expect(luego.discos[0]).toMatchObject({
+      veredicto: 'critico',
+      motivos: ['errores_sin_corregir'],
+      contadores: null,
+      datoConservado: { origen: 'admin', en: new Date(1_800_000_000_000).toISOString() },
+    });
+    avanzar(8 * 3_600_000);
+    expect((await s.leer()).discos[0]?.veredicto).toBe('critico');
+    // Recuperar la misma información con administrador tampoco repite el aviso.
+    await s.leer({ admin: true });
+    expect(avisos).toHaveLength(1);
+  });
+
+  it('el dato conservado sobrevive a reiniciar la app (se guarda en el estado)', async () => {
+    const { s, plataforma } = montar(sinContadores());
+    plataforma.discosAdmin = { ok: true, lectura: conErrores() };
+    await s.leer({ admin: true });
+    await s.guardado();
+    const otro = montar(sinContadores());
+    const nuevo = new SaludDiscos({
+      plataforma: otro.plataforma,
+      archivoEstado: path.join(carpeta, 'run', 'salud-discos.json'),
+      carpetaDatos: () => 'C:\\x',
+      carpetasProyectos: async () => [],
+      publicar: () => undefined,
+      avisosActivados: async () => true,
+      ahora: () => 1_800_000_100_000,
+    });
+    creados.push(nuevo);
+    expect((await nuevo.leer()).discos[0]).toMatchObject({
+      veredicto: 'critico',
+      datoConservado: { origen: 'admin' },
+    });
+  });
+
+  it('una lectura con contadores sanos sí lo sustituye', async () => {
+    const { s, plataforma } = montar(sinContadores());
+    plataforma.discosAdmin = { ok: true, lectura: conErrores() };
+    await s.leer({ admin: true });
+    plataforma.discosAdmin = {
+      ok: true,
+      lectura: {
+        discos: [
+          nvme({ motivoSinContadores: null, contadores: { ...contadoresNulos, temperaturaC: 35 } }),
+        ],
+        prediccion: 'ok',
+      },
+    };
+    expect((await s.leer({ admin: true })).discos[0]?.veredicto).toBe('bien');
+    expect((await s.leer()).discos[0]).toMatchObject({ veredicto: 'bien', datoConservado: null });
+  });
+
+  it('la lectura con administrador y el sondeo van en cola: un solo aviso', async () => {
+    const { s, plataforma, avisos } = montar(conErrores());
+    plataforma.discosAdmin = { ok: true, lectura: conErrores() };
+    const [a, b] = await Promise.all([s.leer({ admin: true }), s.leer()]);
+    expect(a.discos[0]?.veredicto).toBe('critico');
+    expect(b.discos[0]?.veredicto).toBe('critico');
+    expect(avisos).toHaveLength(1);
+  });
+
+  it('un fallo de una lectura no bloquea la cola', async () => {
+    const { s, plataforma } = montar(null);
+    plataforma.discosAdmin = { ok: false, motivo: 'cancelado' };
+    await expect(s.leer({ admin: true })).rejects.toMatchObject({
+      codigo: 'discos.admin_cancelado',
+    });
+    plataforma.discos = sinContadores();
+    expect((await s.leer()).discos).toHaveLength(1);
   });
 });
 
