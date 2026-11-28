@@ -40,6 +40,8 @@ export const idExtra: TextosParciales = {
       'doctor.disco_atencion': 'Disk {modelo} perlu perhatian.',
       'doctor.disco_critico': 'Disk {modelo} dalam kondisi kritis: segera buat cadangan.',
       'servicios.no_encendio': '{nombre} gagal dijalankan. Periksa Layanan dan lognya.',
+      'tuneles.binario_alterado':
+        'Berkas {nombre} yang terpasang tidak lagi sama dengan yang diverifikasi saat pemasangan, sehingga tidak akan digunakan. Silakan pasang ulang melalui Layanan.',
       'tuneles.sitio_no_confiable':
         '{dominio} belum dipercaya: centang «Saya percaya repositori ini» di proyek sebelum memublikasikannya.',
       'clientehttp.peticion_invalida': 'Data tidak valid dalam permintaan: {campo}.',

@@ -237,6 +237,8 @@ export const fr: Textos = {
         'Le chiffrement du système n’est pas disponible : impossible d’enregistrer des identifiants.',
       'tuneles.token_invalido':
         'Le jeton n’est pas valide : uniquement des lettres, des chiffres et _ . - (de 8 à 200 caractères). Enregistrez-le à nouveau dans les options du tunnel.',
+      'tuneles.binario_alterado':
+        'Le fichier de {nombre} installé n’est plus celui qui a été vérifié à l’installation ; il ne sera donc pas utilisé. Réinstallez-le depuis Services.',
       'tuneles.ngrok_no_instalado':
         'ngrok n’est pas installé sur cet ordinateur. Installez-le depuis ngrok.com puis réessayez.',
       'tuneles.ngrok_sin_token':

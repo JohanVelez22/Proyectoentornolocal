@@ -49,6 +49,8 @@ export const itExtra: TextosParciales = {
         'Il disco {modelo} è in stato critico: faccia una copia di sicurezza il prima possibile.',
       'servicios.no_encendio':
         '{nombre} non è riuscito ad avviarsi. Controlli Servizi e i relativi log.',
+      'tuneles.binario_alterado':
+        'Il file di {nombre} installato non è più quello verificato durante l’installazione, quindi non verrà usato. Lo reinstalli da Servizi.',
       'tuneles.sitio_no_confiable':
         '{dominio} non è ancora attendibile: nel progetto selezioni «Mi fido di questo repository» prima di pubblicarlo.',
       'clientehttp.peticion_invalida': 'Dati non validi nella richiesta: {campo}.',

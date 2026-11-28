@@ -35,6 +35,8 @@ export const zhExtra: TextosParciales = {
       'doctor.disco_atencion': '磁盘 {modelo} 需要注意。',
       'doctor.disco_critico': '磁盘 {modelo} 处于严重状态：请尽快进行备份。',
       'servicios.no_encendio': '{nombre} 未能启动。请查看“服务”及其日志。',
+      'tuneles.binario_alterado':
+        '已安装的 {nombre} 文件与安装时验证的文件不一致，因此不会使用。请在“服务”中重新安装。',
       'tuneles.sitio_no_confiable':
         '{dominio} 尚未受信任：发布前，请先在项目中勾选“我信任此仓库”。',
       'clientehttp.peticion_invalida': '请求中的数据无效：{campo}。',

@@ -53,6 +53,8 @@ export const plExtra: TextosParciales = {
         'Dysk {modelo} jest w stanie krytycznym: proszę jak najszybciej wykonać kopię zapasową.',
       'servicios.no_encendio':
         'Nie udało się uruchomić: {nombre}. Należy sprawdzić Usługi i ich dzienniki.',
+      'tuneles.binario_alterado':
+        'Zainstalowany plik {nombre} nie jest już tym, który zweryfikowano podczas instalacji, dlatego nie zostanie użyty. Należy zainstalować go ponownie w sekcji Usługi.',
       'tuneles.sitio_no_confiable':
         'Strona {dominio} nie jest jeszcze zaufana: przed publikacją należy zaznaczyć w projekcie „Ufam temu repozytorium”.',
       'clientehttp.peticion_invalida': 'Nieprawidłowe dane w żądaniu: {campo}.',

@@ -153,6 +153,39 @@ describe('Instalador', () => {
     expect(await inst.instalado('cloudflared', '1.0')).toBe(true);
   });
 
+  it('cloudflared y ngrok guardan el SHA-256 del .exe extraído y integridadEjecutable lo comprueba', async () => {
+    const exe = Buffer.from('MZ-cloudflared');
+    const inst = new Instalador(rutas, eventos, fetchDe(exe));
+    await inst.instalar({
+      servicio: 'cloudflared',
+      version: '1.0',
+      url: 'https://github.com/cloudflare/cloudflared/releases/download/1.0/cf.exe',
+      sha256: sha(exe),
+      formato: 'exe',
+    });
+    const carpeta = rutas.bin('cloudflared', '1.0');
+    expect((await readFile(path.join(carpeta, '.pel-exe-sha256'), 'utf8')).trim()).toBe(sha(exe));
+    expect(await inst.integridadEjecutable('cloudflared', '1.0')).toBe('ok');
+    // Cambiado después de instalarlo: ya no es el verificado.
+    await writeFile(path.join(carpeta, 'cloudflared.exe'), 'MZ-otro');
+    expect(await inst.integridadEjecutable('cloudflared', '1.0')).toBe('alterado');
+    // Sin el .exe (la carpeta sigue): ausente.
+    await rm(path.join(carpeta, 'cloudflared.exe'));
+    expect(await inst.integridadEjecutable('cloudflared', '1.0')).toBe('ausente');
+    expect(await inst.integridadEjecutable('cloudflared', '9.9')).toBe('ausente');
+    // Una instalación hecha antes de la marca no se puede comprobar y se da por buena.
+    await writeFile(path.join(carpeta, 'cloudflared.exe'), 'MZ-antiguo');
+    await rm(path.join(carpeta, '.pel-exe-sha256'));
+    expect(await inst.integridadEjecutable('cloudflared', '1.0')).toBe('ok');
+  });
+
+  it('los demás servicios no llevan marca de huella del ejecutable', async () => {
+    const inst = new Instalador(rutas, eventos, fetchDe(zipGenerico));
+    await inst.instalar(vGenerico(zipGenerico));
+    expect(existsSync(path.join(rutas.bin('mailpit', '1.28.0'), '.pel-exe-sha256'))).toBe(false);
+    expect(await inst.integridadEjecutable('mailpit', '1.28.0')).toBe('ok');
+  });
+
   it("formato 'archivo' copia composer.phar a bin/composer/<v>/composer.phar", async () => {
     const phar = Buffer.from('#!/usr/bin/env php composer');
     const inst = new Instalador(rutas, eventos, fetchDe(phar));

@@ -134,6 +134,22 @@ export interface OpcionesInstalar {
 }
 
 const MARCA = '.pel-version';
+/**
+ * SHA-256 del ejecutable ya extraído (junto a `.pel-version`): quien lo lanza lo comprueba antes
+ * (`integridadEjecutable`) y no usa un binario cambiado después de instalarlo. Solo en los
+ * programas que la aplicación lanza ella misma como túnel.
+ */
+const MARCA_EXE = '.pel-exe-sha256';
+const CON_HUELLA_DE_EXE: ReadonlySet<string> = new Set(['ngrok', 'cloudflared']);
+
+/** Estado del ejecutable instalado frente a la huella que se guardó al instalarlo. */
+export type IntegridadEjecutable = 'ok' | 'alterado' | 'ausente';
+
+const sha256DeArchivo = async (ruta: string): Promise<string> => {
+  const hash = createHash('sha256');
+  for await (const trozo of createReadStream(ruta)) hash.update(trozo as Buffer);
+  return hash.digest('hex');
+};
 
 /** Rechaza versiones que no vienen del catálogo oficial o que escaparían de bin/<servicio>. */
 export function validarVersion(v: VersionDisponible, clave: string): void {
@@ -209,6 +225,26 @@ export class Instalador {
     const exe = ejecutableDe(servicio);
     if (!exe) return false;
     return existsSync(path.join(this.rutas.bin(servicio, version), exe));
+  }
+
+  /**
+   * ¿El ejecutable instalado sigue siendo el que se verificó? `ausente` si falta el archivo;
+   * `alterado` si su SHA-256 ya no es el de la marca; `ok` si coincide. Una instalación hecha
+   * antes de que existiera la marca no se puede comprobar y se da por buena.
+   */
+  async integridadEjecutable(servicio: string, version: string): Promise<IntegridadEjecutable> {
+    const exe = ejecutableDe(servicio);
+    if (!exe || !claveValida(version)) return 'ausente';
+    const carpeta = this.rutas.bin(servicio, version);
+    const ruta = path.join(carpeta, exe);
+    if (!existsSync(ruta)) return 'ausente';
+    if (!CON_HUELLA_DE_EXE.has(servicio)) return 'ok';
+    const esperada = (await readFile(path.join(carpeta, MARCA_EXE), 'utf8').catch(() => null))
+      ?.trim()
+      .toLowerCase();
+    if (!esperada) return 'ok';
+    const actual = await sha256DeArchivo(ruta).catch(() => null);
+    return actual === esperada ? 'ok' : 'alterado';
   }
 
   async instalados(servicio: string): Promise<string[]> {
@@ -475,6 +511,12 @@ export class Instalador {
         throw new Error(`El paquete descargado no contiene ${exe}`);
       }
       await writeFile(path.join(origen, MARCA), v.version);
+      if (CON_HUELLA_DE_EXE.has(v.servicio)) {
+        await writeFile(
+          path.join(origen, MARCA_EXE),
+          await sha256DeArchivo(path.join(origen, exe)),
+        );
+      }
 
       // Mover la versión a su sitio es lo único que se cruza con la limpieza y el arranque de los
       // servicios: va con el cerrojo del servicio (la descarga, no).

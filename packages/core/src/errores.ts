@@ -99,6 +99,7 @@ export const PARAMETROS_ERROR = {
   'tuneles.sin_cifrado': [],
   'tuneles.token_invalido': [],
   'tuneles.ngrok_no_instalado': [],
+  'tuneles.binario_alterado': ['nombre'],
   'tuneles.ngrok_sin_token': [],
   'tuneles.ngrok_desactualizado': [],
   'tuneles.expose_datos_reales': [],

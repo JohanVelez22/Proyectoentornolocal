@@ -51,6 +51,8 @@ export const deExtra: TextosParciales = {
         'Das Laufwerk {modelo} befindet sich in einem kritischen Zustand: Erstellen Sie so bald wie möglich eine Sicherung.',
       'servicios.no_encendio':
         '{nombre} konnte nicht gestartet werden. Prüfen Sie Dienste und die zugehörigen Protokolle.',
+      'tuneles.binario_alterado':
+        'Die installierte Datei von {nombre} ist nicht mehr die bei der Installation geprüfte und wird daher nicht verwendet. Installieren Sie sie unter Dienste erneut.',
       'tuneles.sitio_no_confiable':
         '{dominio} ist noch nicht vertrauenswürdig: Aktivieren Sie im Projekt „Ich vertraue diesem Repository“, bevor Sie es veröffentlichen.',
       'clientehttp.peticion_invalida': 'Ungültige Daten in der Anfrage: {campo}.',

@@ -37,6 +37,8 @@ export const hiExtra: TextosParciales = {
       'doctor.disco_atencion': 'डिस्क {modelo} पर ध्यान देने की ज़रूरत है।',
       'doctor.disco_critico': 'डिस्क {modelo} गंभीर स्थिति में है: जल्द से जल्द बैकअप लें।',
       'servicios.no_encendio': '{nombre} शुरू नहीं हो सका। सेवाएँ और उसके लॉग देखें।',
+      'tuneles.binario_alterado':
+        'इंस्टॉल की गई {nombre} फ़ाइल अब वह नहीं है जिसे इंस्टॉल करते समय जाँचा गया था, इसलिए उसका उपयोग नहीं किया जाएगा। कृपया उसे सेवाएँ से दोबारा इंस्टॉल करें।',
       'tuneles.sitio_no_confiable':
         '{dominio} पर अभी तक भरोसा नहीं किया गया है: प्रकाशित करने से पहले प्रोजेक्ट में «मैं इस रिपॉज़िटरी पर भरोसा करता हूँ» चुनें।',
       'clientehttp.peticion_invalida': 'अनुरोध में अमान्य डेटा: {campo}।',

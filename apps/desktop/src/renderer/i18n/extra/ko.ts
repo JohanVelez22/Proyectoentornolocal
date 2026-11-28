@@ -40,6 +40,8 @@ export const koExtra: TextosParciales = {
         '디스크 {modelo}이(가) 위험한 상태입니다. 가능한 한 빨리 백업하십시오.',
       'servicios.no_encendio':
         '{nombre}을(를) 시작하지 못했습니다. 서비스와 해당 로그를 확인하십시오.',
+      'tuneles.binario_alterado':
+        '설치된 {nombre} 파일이 설치 시 검증된 파일과 달라 사용되지 않습니다. 서비스 메뉴에서 다시 설치하십시오.',
       'tuneles.sitio_no_confiable':
         '{dominio}은(는) 아직 신뢰할 수 없습니다. 게시하기 전에 프로젝트에서 "이 저장소를 신뢰합니다"를 선택하십시오.',
       'clientehttp.peticion_invalida': '요청의 데이터가 올바르지 않습니다: {campo}.',

@@ -233,6 +233,8 @@ export const pt: Textos = {
         'A criptografia do sistema não está disponível: não é possível salvar credenciais.',
       'tuneles.token_invalido':
         'O token não é válido: apenas letras, números e _ . - (de 8 a 200 caracteres). Guarde-o novamente nas opções do túnel.',
+      'tuneles.binario_alterado':
+        'O ficheiro do {nombre} instalado já não é o que foi verificado na instalação, por isso não será utilizado. Reinstale-o em Serviços.',
       'tuneles.ngrok_no_instalado':
         'O ngrok não está instalado neste computador. Instale-o em ngrok.com e tente novamente.',
       'tuneles.ngrok_sin_token': 'Falta o token do ngrok: guarde-o nas opções do túnel.',

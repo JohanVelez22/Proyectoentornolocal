@@ -40,6 +40,8 @@ export const jaExtra: TextosParciales = {
         'ディスク {modelo} は危険な状態です。できるだけ早くバックアップを取ってください。',
       'servicios.no_encendio':
         '{nombre} を起動できませんでした。サービスとそのログを確認してください。',
+      'tuneles.binario_alterado':
+        'インストール済みの {nombre} のファイルは、インストール時に検証したものと異なるため、使用されません。「サービス」から再インストールしてください。',
       'tuneles.sitio_no_confiable':
         '{dominio} はまだ信頼されていません。公開する前に、プロジェクトで「このリポジトリを信頼する」にチェックを入れてください。',
       'clientehttp.peticion_invalida': 'リクエストのデータが無効です: {campo}。',

@@ -227,6 +227,8 @@ export const es = {
         'El cifrado del sistema no está disponible: no se pueden guardar credenciales.',
       'tuneles.token_invalido':
         'El token no es válido: solo letras, números y _ . - (de 8 a 200 caracteres). Guárdelo de nuevo en las opciones del túnel.',
+      'tuneles.binario_alterado':
+        'El archivo de {nombre} instalado ya no es el que se verificó al instalarlo, así que no se usará. Vuelva a instalarlo desde Servicios.',
       'tuneles.ngrok_no_instalado':
         'ngrok no está instalado en este equipo. Instálelo desde ngrok.com y vuelva a intentarlo.',
       'tuneles.ngrok_sin_token': 'Falta el token de ngrok: guárdelo en las opciones del túnel.',

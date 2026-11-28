@@ -74,6 +74,8 @@ let salidaProceso: string;
 let ejecutables: Map<string, string>;
 /** Versiones de ngrok instaladas desde Versiones (`bin/ngrok/<versión>`). */
 let ngrokInstalados: string[];
+/** Integridad por versión de ngrok (por omisión, 'ok'). */
+let integridadNgrok: Map<string, 'ok' | 'alterado' | 'ausente'>;
 let tailscaleEstado: { ruta: string | null; sesion: boolean };
 let estadoServe: string;
 let llamadas: Array<{ cmd: string; args: string[]; quitar?: readonly string[] }>;
@@ -155,6 +157,7 @@ function crear(opts = { esperaMs: 300, intervaloMs: 10 }) {
     // Sin cloudflared instalado: ninguno de estos proveedores lo necesita.
     instalador: {
       instalados: async (s: string) => (s === 'ngrok' ? ngrokInstalados : []),
+      integridadEjecutable: async (_s: string, v: string) => integridadNgrok.get(v) ?? 'ok',
     } as never,
     rutas,
     urlBase: new UrlBase({
@@ -204,6 +207,7 @@ beforeEach(() => {
   cifrado = true;
   sitios = [sitio()];
   ngrokInstalados = [];
+  integridadNgrok = new Map();
   salidaProceso = SALIDA_NGROK;
   ejecutables = new Map([['ngrok', 'C:\\falso\\ngrok.exe']]);
   tailscaleEstado = { ruta: 'C:\\falso\\tailscale.exe', sesion: true };
@@ -342,6 +346,37 @@ describe('ngrok', () => {
     await expect(crear().abrir('wolf', SI)).rejects.toMatchObject({
       codigo: 'tuneles.ngrok_no_instalado',
     });
+  });
+
+  it('elige la versión más nueva por número (3.10 > 3.9), deja bin/ngrok solo al usuario y no lo repite', async () => {
+    ngrokInstalados = ['3.9.0', '3.10.0'];
+    const t = crear();
+    await t.abrir('wolf', SI);
+    expect(iniciados[0]!.comando).toBe(path.join(rutas.bin('ngrok', '3.10.0'), 'ngrok.exe'));
+    expect(restringidos).toContain(path.dirname(rutas.bin('ngrok', '_')));
+    const veces = restringidos.filter((r) => r === path.dirname(rutas.bin('ngrok', '_'))).length;
+    await t.cerrar('wolf').catch(() => undefined);
+    await t.abrir('wolf', SI).catch(() => undefined);
+    expect(restringidos.filter((r) => r === path.dirname(rutas.bin('ngrok', '_')))).toHaveLength(
+      veces,
+    );
+  });
+
+  it('un ngrok instalado cuyo .exe cambió no se usa (ni se cae al del PATH): error con el nombre y sin lanzar', async () => {
+    ngrokInstalados = ['3.39.13'];
+    integridadNgrok.set('3.39.13', 'alterado');
+    await expect(crear().abrir('wolf', SI)).rejects.toMatchObject({
+      codigo: 'tuneles.binario_alterado',
+      datos: { nombre: 'ngrok' },
+    });
+    expect(iniciados).toEqual([]);
+  });
+
+  it('si la carpeta existe pero falta el .exe, se usa el ngrok del PATH', async () => {
+    ngrokInstalados = ['3.39.13'];
+    integridadNgrok.set('3.39.13', 'ausente');
+    await crear().abrir('wolf', SI);
+    expect(iniciados[0]!.comando).toBe(ejecutables.get('ngrok'));
   });
 
   it('sin ngrok instalado, sin token o sin cifrado: error con código y no se lanza nada', async () => {

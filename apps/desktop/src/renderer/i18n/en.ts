@@ -228,6 +228,8 @@ export const en: Textos = {
       'tuneles.sin_cifrado': 'System encryption is not available: credentials cannot be saved.',
       'tuneles.token_invalido':
         'The token is not valid: only letters, numbers and _ . - (8 to 200 characters). Save it again in the tunnel options.',
+      'tuneles.binario_alterado':
+        'The installed {nombre} file is no longer the one verified at installation, so it will not be used. Reinstall it from Services.',
       'tuneles.ngrok_no_instalado':
         'ngrok is not installed on this computer. Install it from ngrok.com and try again.',
       'tuneles.ngrok_sin_token': 'The ngrok token is missing: save it in the tunnel options.',

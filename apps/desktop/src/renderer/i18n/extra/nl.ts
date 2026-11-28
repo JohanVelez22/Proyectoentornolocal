@@ -50,6 +50,8 @@ export const nlExtra: TextosParciales = {
         'De schijf {modelo} verkeert in een kritieke staat: maak zo snel mogelijk een back-up.',
       'servicios.no_encendio':
         '{nombre} kon niet worden gestart. Controleer Diensten en de bijbehorende logboeken.',
+      'tuneles.binario_alterado':
+        'Het geïnstalleerde bestand van {nombre} is niet meer het bestand dat bij de installatie is gecontroleerd en wordt daarom niet gebruikt. Installeer het opnieuw via Diensten.',
       'tuneles.sitio_no_confiable':
         '{dominio} wordt nog niet vertrouwd: vink in het project "Ik vertrouw deze repository" aan voordat u het publiceert.',
       'clientehttp.peticion_invalida': 'Ongeldige gegevens in het verzoek: {campo}.',

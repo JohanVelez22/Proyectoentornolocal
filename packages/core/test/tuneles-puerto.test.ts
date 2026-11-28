@@ -19,6 +19,7 @@ let detenidos: string[];
 let salidas: Array<(id: string, c: number | null) => void>;
 let escribir: boolean;
 let instalados: string[];
+let integridad: 'ok' | 'alterado' | 'ausente';
 let emitidos: unknown[];
 
 const crear = (): Tuneles =>
@@ -42,7 +43,10 @@ const crear = (): Tuneles =>
     } as never,
     sitios: { listar: async () => [] },
     almacen: { leer: async () => ({ servicios: { nginx: { puerto: 8080 } } }) } as never,
-    instalador: { instalados: async () => instalados } as never,
+    instalador: {
+      instalados: async () => instalados,
+      integridadEjecutable: async () => integridad,
+    } as never,
     rutas,
     urlBase: {} as never,
     eventos,
@@ -60,6 +64,7 @@ beforeEach(() => {
   salidas = [];
   escribir = true;
   instalados = ['2026.3.0'];
+  integridad = 'ok';
 });
 afterEach(() => rmSync(base, { recursive: true, force: true }));
 
@@ -124,6 +129,22 @@ describe('Tuneles.abrirPuerto', () => {
 
   it('sin cloudflared instalado, el error de siempre y no lanza nada', async () => {
     instalados = [];
+    await expect(
+      crear().abrirPuerto(1111, 'cloudflare-rapido', () => undefined),
+    ).rejects.toMatchObject({ codigo: 'tuneles.cloudflared_no_instalado' });
+    expect(iniciados).toEqual([]);
+  });
+
+  it('con el cloudflared alterado tras instalarlo no se lanza y se avisa; sin su .exe es «no instalado»', async () => {
+    integridad = 'alterado';
+    await expect(
+      crear().abrirPuerto(1111, 'cloudflare-rapido', () => undefined),
+    ).rejects.toMatchObject({
+      codigo: 'tuneles.binario_alterado',
+      datos: { nombre: 'cloudflared' },
+    });
+    expect(iniciados).toEqual([]);
+    integridad = 'ausente';
     await expect(
       crear().abrirPuerto(1111, 'cloudflare-rapido', () => undefined),
     ).rejects.toMatchObject({ codigo: 'tuneles.cloudflared_no_instalado' });

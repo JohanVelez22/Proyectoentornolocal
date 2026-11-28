@@ -61,17 +61,30 @@ export class Ngrok implements ProveedorTunel {
     return path.join(this.d.rutas.ngrokRun(), `${sitioId}.politica.yml`);
   }
 
-  /** El instalado desde Versiones y, si no hay, el del PATH. */
+  /**
+   * El instalado desde Versiones y, si no hay (o falta su .exe), el del PATH. Si el instalado ya no
+   * es el que se verificó al instalarlo, NO se usa ni se cae al del PATH: se avisa (`ErrorWolf`).
+   */
   private async ejecutable(): Promise<string | null> {
-    return (
-      (await this.d.instalado?.().catch(() => null)) ??
-      (await this.d.plataforma.buscarEjecutable('ngrok'))
-    );
+    try {
+      const instalado = await this.d.instalado?.();
+      if (instalado) return instalado;
+    } catch (e) {
+      if (e instanceof ErrorWolf && e.codigo === 'tuneles.binario_alterado') throw e;
+    }
+    return this.d.plataforma.buscarEjecutable('ngrok');
   }
 
   async disponible(): Promise<ResultadoDisponible> {
-    if (!(await this.ejecutable())) {
-      return { ok: false, codigo: 'tuneles.ngrok_no_instalado' };
+    try {
+      if (!(await this.ejecutable())) {
+        return { ok: false, codigo: 'tuneles.ngrok_no_instalado' };
+      }
+    } catch (e) {
+      if (e instanceof ErrorWolf) {
+        return { ok: false, codigo: e.codigo, datos: { nombre: 'ngrok' } };
+      }
+      throw e;
     }
     const s = this.d.secretos();
     if (!s || !s.disponible()) return { ok: false, codigo: 'tuneles.sin_cifrado' };

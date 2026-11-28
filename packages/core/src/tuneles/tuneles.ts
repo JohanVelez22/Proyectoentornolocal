@@ -3,6 +3,7 @@ import { ErrorWolf } from '../errores';
 import path from 'node:path';
 import type { Almacen } from '../almacen';
 import type { Instalador } from '../catalogo/instalador';
+import { compararVersiones } from '../servicios/nginx';
 import type { Eventos, EventosNucleo } from '../eventos';
 import { ErrorDetenidoAlIniciar, type Supervisor } from '../procesos/supervisor';
 import type { Rutas } from '../rutas';
@@ -33,7 +34,7 @@ export interface DepsTuneles {
   supervisor: Pick<Supervisor, 'iniciar' | 'detener' | 'estado' | 'pid' | 'alSalir' | 'ids'>;
   sitios: Pick<GestorSitios, 'listar'>;
   almacen: Pick<Almacen, 'leer'>;
-  instalador: Pick<Instalador, 'instalados'>;
+  instalador: Pick<Instalador, 'instalados'> & Partial<Pick<Instalador, 'integridadEjecutable'>>;
   rutas: Rutas;
   urlBase: Pick<UrlBase, 'aplicar' | 'restaurar' | 'restaurarPorId'>;
   eventos: Eventos<EventosNucleo>;
@@ -812,36 +813,58 @@ export class Tuneles {
     this.quitarRegistro(sitioId);
   }
 
+  /** La versión predeterminada o, sin ella (o con una configuración parcial), la más nueva instalada. */
+  private async versionDeTunel(servicio: 'cloudflared' | 'ngrok'): Promise<string | null> {
+    const versiones = await this.d.instalador.instalados(servicio);
+    const cfg: Partial<Config> = await this.d.almacen.leer();
+    const elegida = cfg.catalogo?.predeterminadas?.[servicio];
+    if (elegida && versiones.includes(elegida)) return elegida;
+    return [...versiones].sort(compararVersiones).at(-1) ?? null;
+  }
+
+  /** Carpetas `bin/<servicio>` ya restringidas al usuario en esta sesión. */
+  private readonly restringidas = new Set<string>();
+
+  /**
+   * Ruta del ejecutable instalado listo para lanzar, o null si no hay (o falta su .exe). Lo deja
+   * accesible solo al usuario (`bin/<servicio>`) y comprueba que sigue siendo el que se verificó
+   * al instalarlo: si no, no se usa y se avisa (`tuneles.binario_alterado`; se reinstala desde Servicios).
+   */
+  private async ejecutableDeTunel(servicio: 'cloudflared' | 'ngrok'): Promise<string | null> {
+    const version = await this.versionDeTunel(servicio);
+    if (!version) return null;
+    const integridad = (await this.d.instalador.integridadEjecutable?.(servicio, version)) ?? 'ok';
+    if (integridad === 'ausente') return null;
+    if (integridad === 'alterado') {
+      throw new ErrorWolf(
+        'tuneles.binario_alterado',
+        `El ${servicio} instalado no coincide con el que se verificó al instalarlo y no se usará: vuelva a instalarlo desde Servicios.`,
+        { nombre: servicio },
+      );
+    }
+    const carpeta = path.dirname(this.d.rutas.bin(servicio, '_'));
+    if (!this.restringidas.has(carpeta)) {
+      this.restringidas.add(carpeta);
+      await this.d.plataforma?.restringirAlUsuario(carpeta, { carpeta: true }).catch(() => false);
+    }
+    return path.join(this.d.rutas.bin(servicio, version), nombreEjecutable(servicio));
+  }
+
   /** Ruta de cloudflared: la versión predeterminada o, sin ella, la más nueva instalada. */
   private async rutaCloudflared(): Promise<string> {
-    const versiones = await this.d.instalador.instalados('cloudflared');
-    // Configuración de una versión anterior (o parcial): sin predeterminada, la más nueva.
-    const cfg: Partial<Config> = await this.d.almacen.leer();
-    const elegida = cfg.catalogo?.predeterminadas?.cloudflared;
-    const version =
-      elegida && versiones.includes(elegida)
-        ? elegida
-        : [...versiones].sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))[0];
-    if (!version)
+    const ruta = await this.ejecutableDeTunel('cloudflared');
+    if (!ruta) {
       throw new ErrorWolf(
         'tuneles.cloudflared_no_instalado',
         'cloudflared no está instalado. Instálelo desde Servicios.',
       );
-    return path.join(this.d.rutas.bin('cloudflared', version), nombreEjecutable('cloudflared'));
+    }
+    return ruta;
   }
 
   /** ngrok instalado desde Versiones (predeterminado o el más nuevo), o null: entonces se usa el del PATH. */
-  private async rutaNgrokInstalado(): Promise<string | null> {
-    const versiones = await this.d.instalador.instalados('ngrok');
-    const cfg: Partial<Config> = await this.d.almacen.leer();
-    const elegida = cfg.catalogo?.predeterminadas?.ngrok;
-    const version =
-      elegida && versiones.includes(elegida)
-        ? elegida
-        : [...versiones].sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))[0];
-    return version
-      ? path.join(this.d.rutas.bin('ngrok', version), nombreEjecutable('ngrok'))
-      : null;
+  private rutaNgrokInstalado(): Promise<string | null> {
+    return this.ejecutableDeTunel('ngrok');
   }
 
   /** Borra lo temporal de todos los proveedores (credenciales) y tapa los secretos de los logs. */

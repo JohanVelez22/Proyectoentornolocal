@@ -42,6 +42,8 @@ export const trExtra: TextosParciales = {
       'doctor.disco_critico': '{modelo} diski kritik durumda: lütfen en kısa sürede yedek alın.',
       'servicios.no_encendio':
         '{nombre} başlatılamadı. Hizmetler bölümünü ve günlüklerini kontrol edin.',
+      'tuneles.binario_alterado':
+        'Yüklü {nombre} dosyası, kurulum sırasında doğrulanan dosyayla aynı olmadığından kullanılmayacak. Hizmetler bölümünden yeniden yükleyin.',
       'tuneles.sitio_no_confiable':
         '{dominio} henüz güvenilir değil: yayınlamadan önce projede «Bu depoya güveniyorum» seçeneğini işaretleyin.',
       'clientehttp.peticion_invalida': 'İstekte geçersiz veri: {campo}.',
