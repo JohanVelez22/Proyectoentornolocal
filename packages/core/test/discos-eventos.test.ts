@@ -118,9 +118,7 @@ describe('evento real de un Windows en español', () => {
           f: '2026-11-15T00:50:21.4723204Z',
           id: 55,
           p: 'Ntfs',
-          m: 'Se detectó un daño en la estructura del sistema de archivos del volumen D:.
-
-A file on the volume is no longer reachable from its parent directory.  The parent file reference number is 0x50000000000',
+          m: 'Se detectó un daño en la estructura del sistema de archivos del volumen D:.\r\n\r\nA file on the volume is no longer reachable from its parent directory.  The parent file reference number is 0x50000000000',
         },
       ]),
     );
@@ -129,8 +127,7 @@ A file on the volume is no longer reachable from its parent directory.  The pare
       gravedad: 'critico',
       disco: { tipo: 'unidad', valor: 'D:' },
     });
-    expect(r[0]?.detalle).not.toMatch(/[
-]/);
+    expect(r[0]?.detalle).not.toMatch(/[\r\n]/);
   });
 });
 
