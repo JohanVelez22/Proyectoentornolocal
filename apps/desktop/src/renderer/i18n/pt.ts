@@ -5287,24 +5287,36 @@ export const pt: Textos = {
   asistentes: {
     pestana: 'Conectar assistentes',
     explicacion:
-      'Conectar um assistente permite que o seu assistente de IA (Claude, Codex…) consulte e gerencie os seus serviços do WolfCore Dev: ver o estado, ligá-los e ler registros. O que é delicado sempre pede a sua confirmação.',
+      'Conectar permite que o seu assistente de IA (Claude, Codex…) veja e gerencie os seus serviços do WolfCore Dev; o que é delicado sempre pede a sua confirmação.',
     alcance:
       'O WolfCore Dev só adiciona ou remove a própria entrada «wolfcore» na configuração de cada programa, salva antes uma cópia com data e nunca grava o seu token nesses arquivos.',
     notaVariable:
-      'Os assistentes leem o token da variável de ambiente WOLFCORE_MCP_TOKEN, que o WolfCore Dev só define ao abri-los em IA › Agentes › «Abrir em um projeto». O Cursor deve ser iniciado com essa variável definida.',
+      'Para que funcione, abra o assistente a partir do WolfCore Dev (IA › Agentes › «Abrir em um projeto»).',
     recargar: 'Detectar de novo',
-    conectado: 'Conectado',
+    conectado: 'Conectado: abra-o a partir do WolfCore Dev (IA › Agentes)',
+    conectadoAppGrafica:
+      'Abra-o a partir do WolfCore Dev (IA › Agentes) para que ele possa se conectar',
+    noSePudoLeer: 'Não foi possível ler',
     instalado: 'Instalado, sem conectar',
     noInstalado: 'Não instalado',
     noCompatible: 'Ainda não compatível',
-    motivoLocales:
-      'Este programa só aceita servidores locais no seu arquivo e o WolfCore Dev nunca grava o token em texto simples, então ainda não pode ser conectado.',
+    motivoLocales: 'Obrigaria a gravar o token em texto simples; virá com uma ponte segura.',
+    motivoAppGrafica:
+      'É um aplicativo gráfico e IA › Agentes ainda não sabe abri-lo com o token: «Conectar» fica desativado até que possa.',
+    motivoIlegible: {
+      invalido:
+        'A configuração não é válida; o WolfCore Dev não mexe nela. Corrija-a ou restaure-a a partir de uma cópia.',
+      demasiado_grande:
+        'O arquivo tem mais de 5 MB e não parece uma configuração; o WolfCore Dev não mexe nele.',
+      sin_acceso: 'Não foi possível abrir o arquivo (permissões, ou não é um arquivo comum).',
+    },
     conectar: 'Conectar',
     quitar: 'Remover',
     copiar: 'Copiar configuração',
     carpeta: 'Abrir pasta de configuração',
     archivo: 'Arquivo de configuração',
     cambios: 'Isto é o que vai mudar no arquivo:',
+    omitidas: (n: number) => `… ${n} linhas sem alterações …`,
     titulo: (n: string) => `Conectar ${n}`,
     tituloQuitar: (n: string) => `Remover a conexão de ${n}`,
     aceptarConectar: 'Conectar',
@@ -5316,12 +5328,16 @@ export const pt: Textos = {
       'Antes de gravar, uma cópia com data é salva ao lado do arquivo (as últimas 5 são mantidas).',
     comentarios:
       'Atenção: os comentários dentro da entrada «wolfcore» serão perdidos. O resto do arquivo não muda.',
+    finalesMezclados:
+      'Atenção: o arquivo mistura finais de linha (CRLF e LF) e, ao ser reescrito por inteiro, ficarão unificados.',
     hConectado: (n: string) => `${n} conectado.`,
     hQuitado: (n: string) => `Conexão removida de ${n}.`,
     hSinCambios: 'Nada mudou.',
     hCopia: (n: string) => `Cópia salva: ${n}`,
     hTokenEscrito:
       'O arquivo tinha o token escrito em texto simples: a cópia o oculta e o arquivo já não o tem.',
+    hTokenSigue: (donde: string) =>
+      `O token continua gravado em texto simples em outra parte do arquivo («${donde}») e não foi alterado: apague-o manualmente. A cópia anterior o guarda mascarado (***).`,
     hCopiada: 'Configuração copiada (sem o token).',
   },
   agentes: {
@@ -5344,8 +5360,6 @@ export const pt: Textos = {
     },
     mcpRegistrado: 'MCP registrado',
     mcpSinRegistrar: 'MCP não registrado',
-    tokenEscrito:
-      'O arquivo do agente trazia o token do MCP gravado: ele já não o tem e a cópia prévia o guarda mascarado (***). Considere gerar um novo token do servidor MCP.',
     mcpNoSoportado:
       'A documentação dele não permite pegar o token de uma variável de ambiente: o WolfCore Dev não registra o MCP nele (o token nunca é gravado em arquivos).',
     instalar: 'Instalar',
@@ -5353,9 +5367,8 @@ export const pt: Textos = {
     guia: 'Guia de instalação',
     soloGuia:
       'O WolfCore Dev não o instala (o instalador dele não tem checksum fixo): siga o guia oficial.',
-    registrar: 'Registrar MCP',
-    quitar: 'Remover MCP',
     abrir: 'Abrir em um projeto',
+    conectarEn: 'Conectar em «Conectar assistentes»',
     confirmarInstalar: {
       titulo: (nombre: string) => `Instalar ${nombre}?`,
       texto: (paquete: string) =>
@@ -5365,22 +5378,6 @@ export const pt: Textos = {
       aceptar: 'Instalar',
       hecho: (nombre: string) => `${nombre} foi instalado.`,
     },
-    confirmarRegistrar: {
-      titulo: (nombre: string) => `Registrar o MCP em ${nombre}?`,
-      texto:
-        'Somente a entrada «wolfcore» deste arquivo é adicionada (ou atualizada); o resto fica igual:',
-      aceptar: 'Registrar',
-      hecho: (nombre: string) => `MCP registrado em ${nombre}.`,
-    },
-    confirmarQuitar: {
-      titulo: (nombre: string) => `Remover o MCP de ${nombre}?`,
-      texto: 'Somente a entrada «wolfcore» deste arquivo é removida; o resto fica igual:',
-      aceptar: 'Remover',
-      hecho: (nombre: string) => `MCP removido de ${nombre}.`,
-    },
-    copiaPrevia:
-      'Antes de tocá-lo, é guardada uma cópia com data ao lado do arquivo (<arquivo>.wolfcore-AAAAMMDD-HHmmss.bak); as 5 mais novas são mantidas. Se o agente estiver aberto, feche-o antes.',
-    copiaHecha: (ruta: string) => `Cópia prévia: ${ruta}`,
     dialogoAbrir: {
       titulo: (nombre: string) => `Abrir ${nombre}`,
       proyecto: 'Projeto',

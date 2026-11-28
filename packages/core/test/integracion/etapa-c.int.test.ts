@@ -713,9 +713,11 @@ describe.skipIf(!esWindows)('Etapa C: integración real en Windows', () => {
         '',
       ].join('\n');
       writeFileSync(archivo, original);
-      const r = await x.agentes.registrarMcp('codex', true);
-      log('registrarMcp codex →', JSON.stringify(r));
-      expect(r.metodo).toBe('archivo');
+      // Un solo camino de escritura: vista previa y aplicar con su huella (Conectar asistentes).
+      const v = await x.asistentes.vistaPrevia('codex', 'conectar');
+      const r = await x.asistentes.aplicar('codex', 'conectar', v.huella, true);
+      log('aplicar codex →', JSON.stringify(r));
+      expect(r.cambiado).toBe(true);
       expect(r.respaldo).not.toBeNull();
       expect(readFileSync(r.respaldo!, 'utf8')).toBe(original);
       const nuevo = readFileSync(archivo, 'utf8');

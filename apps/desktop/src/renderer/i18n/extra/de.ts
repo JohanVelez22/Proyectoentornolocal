@@ -2197,24 +2197,38 @@ export const deExtra: TextosParciales = {
   asistentes: {
     pestana: 'Assistenten verbinden',
     explicacion:
-      'Wenn Sie einen Assistenten verbinden, kann Ihr KI-Assistent (Claude, Codex …) Ihre WolfCore-Dev-Dienste einsehen und steuern: Status ansehen, Dienste starten und Protokolle lesen. Bei allem Heiklen wird immer Ihre Bestätigung verlangt.',
+      'Durch das Verbinden kann Ihr KI-Assistent (Claude, Codex …) Ihre WolfCore-Dev-Dienste einsehen und steuern; bei allem Heiklen wird immer Ihre Bestätigung verlangt.',
     alcance:
       'WolfCore Dev fügt in der Konfiguration jedes Programms nur seinen eigenen Eintrag „wolfcore“ hinzu oder entfernt ihn, speichert vorher eine Kopie mit Datum und schreibt Ihr Token nie in diese Dateien.',
     notaVariable:
-      'Die Assistenten lesen das Token aus der Umgebungsvariable WOLFCORE_MCP_TOKEN, die WolfCore Dev nur setzt, wenn Sie sie über KI › Agenten › „In einem Projekt öffnen“ starten. Cursor muss mit dieser definierten Variable gestartet werden.',
+      'Damit es funktioniert, öffnen Sie den Assistenten über WolfCore Dev (KI › Agenten › „In einem Projekt öffnen“).',
     recargar: 'Erneut erkennen',
-    conectado: 'Verbunden',
+    conectado: 'Verbunden: Öffnen Sie ihn über WolfCore Dev (KI › Agenten)',
+    conectadoAppGrafica:
+      'Öffnen Sie ihn über WolfCore Dev (KI › Agenten), damit er sich verbinden kann',
+    noSePudoLeer: 'Nicht lesbar',
     instalado: 'Installiert, nicht verbunden',
     noInstalado: 'Nicht installiert',
     noCompatible: 'Noch nicht unterstützt',
     motivoLocales:
-      'Dieses Programm akzeptiert in seiner Datei nur lokale Server, und WolfCore Dev schreibt das Token nie im Klartext. Es kann daher noch nicht verbunden werden.',
+      'Dafür müsste das Token im Klartext gespeichert werden; es kommt mit einer sicheren Brücke.',
+    motivoAppGrafica:
+      'Es ist eine grafische Anwendung, und KI › Agenten kann sie noch nicht mit dem Token öffnen: „Verbinden“ bleibt deaktiviert, bis das möglich ist.',
+    motivoIlegible: {
+      invalido:
+        'Die Konfiguration ist ungültig; WolfCore Dev rührt sie nicht an. Korrigieren Sie sie oder stellen Sie sie aus einer Kopie wieder her.',
+      demasiado_grande:
+        'Die Datei ist größer als 5 MB und sieht nicht nach einer Konfiguration aus; WolfCore Dev rührt sie nicht an.',
+      sin_acceso:
+        'Die Datei konnte nicht geöffnet werden (Berechtigungen, oder es ist keine normale Datei).',
+    },
     conectar: 'Verbinden',
     quitar: 'Entfernen',
     copiar: 'Konfiguration kopieren',
     carpeta: 'Konfigurationsordner öffnen',
     archivo: 'Konfigurationsdatei',
     cambios: 'Das ändert sich in der Datei:',
+    omitidas: (n: number) => `… ${n} unveränderte Zeilen …`,
     titulo: (n: string) => `${n} verbinden`,
     tituloQuitar: (n: string) => `Verbindung von ${n} entfernen`,
     aceptarConectar: 'Verbinden',
@@ -2226,12 +2240,16 @@ export const deExtra: TextosParciales = {
       'Vor dem Schreiben wird neben der Datei eine Kopie mit Datum gespeichert (die letzten 5 bleiben erhalten).',
     comentarios:
       'Achtung: Kommentare innerhalb des Eintrags „wolfcore“ gehen verloren. Der Rest der Datei bleibt unverändert.',
+    finalesMezclados:
+      'Achtung: Die Datei mischt Zeilenenden (CRLF und LF); da sie komplett neu geschrieben wird, werden sie vereinheitlicht.',
     hConectado: (n: string) => `${n} verbunden.`,
     hQuitado: (n: string) => `Verbindung von ${n} entfernt.`,
     hSinCambios: 'Es hat sich nichts geändert.',
     hCopia: (n: string) => `Kopie gespeichert: ${n}`,
     hTokenEscrito:
       'Die Datei enthielt das Token im Klartext: Die Kopie blendet es aus und die Datei enthält es nicht mehr.',
+    hTokenSigue: (donde: string) =>
+      `Das Token steht an anderer Stelle der Datei („${donde}“) weiterhin im Klartext und wurde nicht angetastet: Bitte löschen Sie es von Hand. Die vorherige Kopie speichert es maskiert (***).`,
     hCopiada: 'Konfiguration kopiert (ohne das Token).',
   },
 };

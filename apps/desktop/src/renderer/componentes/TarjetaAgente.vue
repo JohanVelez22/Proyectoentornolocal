@@ -1,12 +1,5 @@
 <script setup lang="ts">
-import {
-  CloudDownloadOutline,
-  LinkOutline,
-  OpenOutline,
-  Play,
-  RemoveCircleOutline,
-  Terminal,
-} from '@vicons/ionicons5';
+import { CloudDownloadOutline, LinkOutline, OpenOutline, Play, Terminal } from '@vicons/ionicons5';
 import { NButton, NIcon, NTag, NTooltip } from 'naive-ui';
 import { computed } from 'vue';
 import type { EstadoAgente } from '../../shared/api';
@@ -26,8 +19,7 @@ const emit = defineEmits<{
   instalar: [];
   guia: [];
   version: [];
-  registrar: [];
-  quitar: [];
+  conectar: [];
   abrir: [];
 }>();
 
@@ -128,24 +120,12 @@ const versionDesconocida = computed(() => a.value.instalado && a.value.version =
         {{ t.guia }}
       </NButton>
       <span class="separador" />
-      <!-- Registrar con la entrada ya puesta la actualiza (p. ej. si cambió el puerto del MCP). -->
-      <NButton v-if="a.mcpSoportado" size="small" quaternary @click="emit('registrar')">
+      <!-- Un solo camino de escritura: «Conectar asistentes» (vista previa y confirmación). -->
+      <NButton v-if="a.mcpSoportado" size="small" quaternary @click="emit('conectar')">
         <template #icon
           ><NIcon><LinkOutline /></NIcon
         ></template>
-        {{ t.registrar }}
-      </NButton>
-      <NButton
-        v-if="a.mcpSoportado && a.mcpRegistrado"
-        size="small"
-        quaternary
-        type="error"
-        @click="emit('quitar')"
-      >
-        <template #icon
-          ><NIcon><RemoveCircleOutline /></NIcon
-        ></template>
-        {{ t.quitar }}
+        {{ t.conectarEn }}
       </NButton>
     </footer>
   </article>

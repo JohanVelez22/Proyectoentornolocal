@@ -21,11 +21,10 @@ import { GEMINI_CLI } from './geminiCli';
 import { OPENCODE } from './opencode';
 import { QWEN_CODE } from './qwenCode';
 import {
-  editarConfigAgente,
   entradaMcp,
   interpretarConfig,
   leerConfigAgente,
-  respaldarConfigAgente,
+  seccionEfectiva,
   VARIABLE_TOKEN_MCP,
   type FormatoConfig,
   type ValorEntradaMcp,
@@ -77,6 +76,11 @@ export interface DefAgente {
   formato: FormatoConfig;
   /** Sección de servidores MCP en su archivo. */
   seccion: string;
+  /**
+   * Sección de una versión nueva de su archivo (`mcp.servers` en la V2 de opencode): si esa tabla
+   * existe, la entrada va ahí; si no, en `seccion`.
+   */
+  seccionAlterna?: string;
   archivoConfig(inicio: string): string;
   /** Otros archivos donde el agente puede tener el registro (solo se leen para detectarlo). */
   archivosConfigExtra?(inicio: string): string[];
@@ -84,9 +88,6 @@ export interface DefAgente {
   carpetasConocidas(inicio: string): string[];
   /** Entrada `wolfcore` (con el token por variable, nunca escrito). */
   entradaMcp(url: string): ValorEntradaMcp;
-  /** Argumentos de su CLI para registrar el MCP (si la tiene). */
-  argsRegistrar?(url: string): string[];
-  argsQuitar?(): string[];
   /** Variables con la clave del proveedor para ese agente; null si no lo admite. */
   variablesClave(p: ConfigProveedorIa, clave: string): Record<string, string> | null;
 }
@@ -140,17 +141,6 @@ interface Lanzable {
   origen: OrigenAgente;
 }
 
-export interface ResultadoRegistroMcp {
-  /** Copia previa del archivo del agente (null si no existía). */
-  respaldo: string | null;
-  metodo: 'cli' | 'archivo';
-  /**
-   * El archivo traía el token del MCP escrito: la copia lo lleva enmascarado (`***`) y el archivo
-   * ya no lo tiene. Es un aviso; el token nunca se devuelve.
-   */
-  tokenEscrito?: boolean;
-}
-
 export interface DepsAgentes {
   plataforma: Pick<
     PlataformaCompleta,
@@ -177,7 +167,6 @@ export interface DepsAgentes {
 
 /** Plazo de `npm install -g` (los agentes traen binarios grandes). */
 export const PLAZO_INSTALAR_MS = 15 * 60_000;
-const PLAZO_CLI_MS = 60_000;
 const PLAZO_VERSION_MS = 10_000;
 /** Tope de la respuesta del mensaje de commit. */
 export const MAX_TOKENS_COMMIT = 300;
@@ -203,16 +192,6 @@ export function defAgente(id: string): DefAgente {
     throw new ErrorWolf('agentes.no_existe', 'Agente no soportado.');
   }
   return AGENTES[id as IdAgente];
-}
-
-/** Registrar o quitar el MCP solo existe en los agentes que admiten el token por variable. */
-function exigirMcp(def: DefAgente): void {
-  if (def.soportaMcp) return;
-  throw new ErrorWolf(
-    'agentes.mcp_no_soportado',
-    `${def.nombre} no admite el token del MCP por variable de entorno: no se registra.`,
-    { agente: def.nombre },
-  );
 }
 
 async function existeArchivo(ruta: string): Promise<boolean> {
@@ -386,7 +365,8 @@ export class Agentes {
     for (const ruta of rutas) {
       try {
         const obj = interpretarConfig(def.formato, await leerConfigAgente(ruta), ruta);
-        if (entradaMcp(obj, def.seccion) !== undefined) return true;
+        const seccion = seccionEfectiva(obj, def.seccion, def.seccionAlterna, 'quitar');
+        if (entradaMcp(obj, seccion) !== undefined) return true;
       } catch {
         // un archivo que no se entiende no cuenta como registro
       }
@@ -476,132 +456,6 @@ export class Agentes {
         ),
       });
     }
-  }
-
-  private archivo(def: DefAgente): string {
-    return def.archivoConfig(this.inicio());
-  }
-
-  /** El archivo del agente se entiende (si no, ni su CLI ni WolfCore Dev lo tocan). */
-  private async comprobarArchivo(def: DefAgente): Promise<void> {
-    const ruta = this.archivo(def);
-    interpretarConfig(def.formato, await leerConfigAgente(ruta), ruta);
-  }
-
-  private async entradaActual(def: DefAgente): Promise<unknown> {
-    const ruta = this.archivo(def);
-    try {
-      return entradaMcp(
-        interpretarConfig(def.formato, await leerConfigAgente(ruta), ruta),
-        def.seccion,
-      );
-    } catch {
-      return undefined;
-    }
-  }
-
-  /**
-   * El token del MCP si el archivo del agente lo trae escrito (se compara en memoria; nunca se
-   * imprime ni se guarda): la copia previa lo enmascara. Los tokens muy cortos no se buscan.
-   */
-  private async tokenEscrito(def: DefAgente): Promise<string | undefined> {
-    const token = await this.d.mcp.token();
-    if (token.length < 8) return undefined;
-    const ruta = this.archivo(def);
-    const texto = await leerConfigAgente(ruta).catch(() => null);
-    return texto !== null && texto.includes(token) ? token : undefined;
-  }
-
-  private async cli(l: Lanzable, args: string[]): Promise<boolean> {
-    try {
-      const r = await this.d.exec(l.cmd, [...l.previos, ...args], {
-        timeoutMs: PLAZO_CLI_MS,
-        cwd: this.inicio(),
-      });
-      return r.codigo === 0;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Registra el MCP de WolfCore Dev (entrada `wolfcore`). Primero con la CLI del agente; si no
-   * la tiene o falla, editando su archivo (solo esa entrada). Siempre con copia previa con fecha
-   * del archivo. El token va por `WOLFCORE_MCP_TOKEN`: no se escribe ni pasa por argumentos.
-   */
-  async registrarMcp(id: IdAgente, confirmado: true): Promise<ResultadoRegistroMcp> {
-    const def = defAgente(id);
-    confirmar(confirmado, `Confirme el registro del MCP en ${def.nombre}.`);
-    exigirMcp(def);
-    await this.comprobarArchivo(def);
-    const url = await this.d.mcp.url();
-    const ahora = this.d.ahora?.() ?? new Date();
-    const secreto = await this.tokenEscrito(def);
-    const aviso = secreto === undefined ? {} : { tokenEscrito: true };
-    const l = def.argsRegistrar ? await this.lanzable(def) : null;
-    if (l && def.argsRegistrar) {
-      const respaldo = await respaldarConfigAgente(this.archivo(def), ahora, secreto);
-      if (def.argsQuitar && (await this.entradaActual(def)) !== undefined) {
-        await this.cli(l, def.argsQuitar());
-      }
-      if (await this.cli(l, def.argsRegistrar(url))) {
-        const e = await this.entradaActual(def);
-        if (e && typeof e === 'object' && (e as Record<string, unknown>)['url'] === url) {
-          return { respaldo, metodo: 'cli', ...aviso };
-        }
-      }
-      // La CLI no está o falló: se edita el archivo (la copia ya está hecha).
-      const r = await editarConfigAgente(
-        this.archivo(def),
-        def.formato,
-        def.seccion,
-        def.entradaMcp(url),
-        ahora,
-        {},
-        secreto,
-      );
-      return { respaldo: respaldo ?? r.respaldo, metodo: 'archivo', ...aviso };
-    }
-    const r = await editarConfigAgente(
-      this.archivo(def),
-      def.formato,
-      def.seccion,
-      def.entradaMcp(url),
-      ahora,
-      {},
-      secreto,
-    );
-    return { respaldo: r.respaldo, metodo: 'archivo', ...aviso };
-  }
-
-  /** Quita solo la entrada `wolfcore` (CLI o archivo), con copia previa del archivo. */
-  async quitarMcp(id: IdAgente, confirmado: true): Promise<ResultadoRegistroMcp> {
-    const def = defAgente(id);
-    confirmar(confirmado, `Confirme que quiere quitar el MCP de ${def.nombre}.`);
-    exigirMcp(def);
-    await this.comprobarArchivo(def);
-    const ahora = this.d.ahora?.() ?? new Date();
-    if ((await this.entradaActual(def)) === undefined) return { respaldo: null, metodo: 'archivo' };
-    const l = def.argsQuitar ? await this.lanzable(def) : null;
-    const secreto = await this.tokenEscrito(def);
-    const aviso = secreto === undefined ? {} : { tokenEscrito: true };
-    let respaldo: string | null = null;
-    if (l && def.argsQuitar) {
-      respaldo = await respaldarConfigAgente(this.archivo(def), ahora, secreto);
-      if ((await this.cli(l, def.argsQuitar())) && (await this.entradaActual(def)) === undefined) {
-        return { respaldo, metodo: 'cli', ...aviso };
-      }
-    }
-    const r = await editarConfigAgente(
-      this.archivo(def),
-      def.formato,
-      def.seccion,
-      undefined,
-      ahora,
-      {},
-      secreto,
-    );
-    return { respaldo: respaldo ?? r.respaldo, metodo: 'archivo', ...aviso };
   }
 
   /**

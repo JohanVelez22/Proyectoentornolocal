@@ -3973,8 +3973,6 @@ export const ko: TextosParciales = {
     },
     mcpRegistrado: 'MCP 등록됨',
     mcpSinRegistrar: 'MCP 미등록',
-    tokenEscrito:
-      '에이전트 설정 파일에 MCP 토큰이 기록되어 있었습니다. 현재는 제거되었으며 이전 백업에는 마스킹(***) 처리되어 저장되었습니다. 보안을 위해 MCP 서버 토큰을 재생성하는 것을 권장합니다.',
     mcpNoSoportado:
       '공식 문서상 환경 변수에서 토큰을 읽는 기능을 지원하지 않으므로 WolfCore Dev가 MCP를 등록하지 않습니다(토큰은 파일에 절대 기록하지 않습니다).',
     instalar: '설치',
@@ -3982,9 +3980,8 @@ export const ko: TextosParciales = {
     guia: '설치 가이드',
     soloGuia:
       'WolfCore Dev에서는 직접 설치하지 않습니다(설치 프로그램에 고정 해시가 없음). 공식 가이드를 따라 설치해 주세요.',
-    registrar: 'MCP 등록',
-    quitar: 'MCP 제거',
     abrir: '프로젝트에서 열기',
+    conectarEn: '"어시스턴트 연결"에서 연결',
     confirmarInstalar: {
       titulo: (nombre: string) => `${nombre}을(를) 설치하시겠습니까?`,
       texto: (paquete: string) =>
@@ -3994,21 +3991,6 @@ export const ko: TextosParciales = {
       aceptar: '설치',
       hecho: (nombre: string) => `${nombre} 설치가 완료되었습니다.`,
     },
-    confirmarRegistrar: {
-      titulo: (nombre: string) => `${nombre}에 MCP를 등록하시겠습니까?`,
-      texto: '이 파일에서 «wolfcore» 항목만 추가(또는 업데이트)되며 나머지는 그대로 유지됩니다:',
-      aceptar: '등록',
-      hecho: (nombre: string) => `${nombre}에 MCP가 등록되었습니다.`,
-    },
-    confirmarQuitar: {
-      titulo: (nombre: string) => `${nombre}에서 MCP를 제거하시겠습니까?`,
-      texto: '이 파일에서 «wolfcore» 항목만 제거되며 나머지는 그대로 유지됩니다:',
-      aceptar: '제거',
-      hecho: (nombre: string) => `${nombre}에서 MCP가 제거되었습니다.`,
-    },
-    copiaPrevia:
-      '수정하기 전에 파일 옆에 날짜가 포함된 백업(<파일명>.wolfcore-YYYYMMDD-HHmmss.bak)을 저장하며 최신 5개가 보관됩니다. 에이전트가 열려 있다면 먼저 닫아 주세요.',
-    copiaHecha: (ruta: string) => `이전 백업: ${ruta}`,
     dialogoAbrir: {
       titulo: (nombre: string) => `${nombre} 열기`,
       proyecto: '프로젝트',

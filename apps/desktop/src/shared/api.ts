@@ -162,7 +162,6 @@ import type {
   EstadoAgente,
   IdAgente,
   OrigenAgente,
-  ResultadoRegistroMcp,
   AccionAsistente,
   EstadoAsistente,
   IdAsistente,
@@ -302,7 +301,6 @@ export type {
   EstadoAgente,
   IdAgente,
   OrigenAgente,
-  ResultadoRegistroMcp,
   AccionAsistente,
   EstadoAsistente,
   IdAsistente,
@@ -1413,9 +1411,6 @@ export interface ApiEntorno {
     version(id: IdAgente): Promise<string | null>;
     /** Última versión del paquete oficial con el Node propio; `confirmado` sale del diálogo. */
     instalar(id: IdAgente, confirmado: true): Promise<void>;
-    /** Entrada `wolfcore` en su configuración, con copia previa del archivo. */
-    registrarMcp(id: IdAgente, confirmado: true): Promise<ResultadoRegistroMcp>;
-    quitarMcp(id: IdAgente, confirmado: true): Promise<ResultadoRegistroMcp>;
     /**
      * Terminal visible en la carpeta del proyecto con el agente. Con `proveedorId`, el proceso
      * principal pone la clave en el entorno de esa terminal (nunca pasa por aquí).
@@ -2161,8 +2156,6 @@ export const RUTAS_IPC = [
   'agentes.estado',
   'agentes.version',
   'agentes.instalar',
-  'agentes.registrarMcp',
-  'agentes.quitarMcp',
   'agentes.abrir',
   'asistentes.estado',
   'asistentes.vistaPrevia',

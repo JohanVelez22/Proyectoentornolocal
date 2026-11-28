@@ -4039,8 +4039,6 @@ export const it: TextosParciales = {
     },
     mcpRegistrado: 'MCP registrato',
     mcpSinRegistrar: 'MCP non registrato',
-    tokenEscrito:
-      'Il file dell’agente conteneva il token MCP scritto in chiaro: ora è stato rimosso e il backup precedente lo maschera (***). Valuti di rigenerare il token del server MCP.',
     mcpNoSoportado:
       'La sua documentazione non consente di leggere il token da una variabile d’ambiente: WolfCore Dev non registra l’MCP (il token non viene mai scritto su file).',
     instalar: 'Installa',
@@ -4048,9 +4046,8 @@ export const it: TextosParciales = {
     guia: 'Guida di installazione',
     soloGuia:
       'WolfCore Dev non lo installa (il suo installer non ha un’impronta fissa): segua la guida ufficiale.',
-    registrar: 'Registra MCP',
-    quitar: 'Rimuovi MCP',
     abrir: 'Apri in un progetto',
+    conectarEn: 'Collega in «Collega assistenti»',
     confirmarInstalar: {
       titulo: (nombre: string) => `Installare ${nombre}?`,
       texto: (paquete: string) =>
@@ -4060,22 +4057,6 @@ export const it: TextosParciales = {
       aceptar: 'Installa',
       hecho: (nombre: string) => `${nombre} installato.`,
     },
-    confirmarRegistrar: {
-      titulo: (nombre: string) => `Registrare MCP in ${nombre}?`,
-      texto:
-        'Aggiunge (o aggiorna) solo la voce «wolfcore» in questo file; il resto rimane invariato:',
-      aceptar: 'Registra',
-      hecho: (nombre: string) => `MCP registrato in ${nombre}.`,
-    },
-    confirmarQuitar: {
-      titulo: (nombre: string) => `Rimuovere MCP da ${nombre}?`,
-      texto: 'Rimuove solo la voce «wolfcore» da questo file; il resto rimane invariato:',
-      aceptar: 'Rimuovi',
-      hecho: (nombre: string) => `MCP rimosso da ${nombre}.`,
-    },
-    copiaPrevia:
-      'Prima della modifica viene salvata una copia datata accanto al file (<archivo>.wolfcore-AAAAMMDD-HHmmss.bak); vengono conservate le 5 più recenti. Se l’agente è aperto, lo chiuda prima.',
-    copiaHecha: (ruta: string) => `Copia precedente: ${ruta}`,
     dialogoAbrir: {
       titulo: (nombre: string) => `Apri ${nombre}`,
       proyecto: 'Progetto',

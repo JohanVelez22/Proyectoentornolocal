@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import type { EstadoAgente, IdAgente, ResultadoRegistroMcp } from '../../shared/api';
+import type { EstadoAgente, IdAgente } from '../../shared/api';
 import { api } from '../api';
 
 /**
@@ -55,22 +55,6 @@ export const useAgentes = defineStore('agentes', () => {
     return p;
   }
 
-  async function registrarMcp(id: IdAgente, confirmado: true): Promise<ResultadoRegistroMcp> {
-    try {
-      return await api().agentes.registrarMcp(id, confirmado);
-    } finally {
-      await cargar().catch(() => undefined);
-    }
-  }
-
-  async function quitarMcp(id: IdAgente, confirmado: true): Promise<ResultadoRegistroMcp> {
-    try {
-      return await api().agentes.quitarMcp(id, confirmado);
-    } finally {
-      await cargar().catch(() => undefined);
-    }
-  }
-
   /** Abre el agente en el proyecto (la clave, si hay proveedor, la pone el proceso principal). */
   function abrir(id: IdAgente, sitioId: string, proveedorId?: string): Promise<void> {
     return api().agentes.abrir(id, sitioId, proveedorId);
@@ -85,8 +69,6 @@ export const useAgentes = defineStore('agentes', () => {
     preguntarVersion,
     instalando,
     instalar,
-    registrarMcp,
-    quitarMcp,
     abrir,
   };
 });

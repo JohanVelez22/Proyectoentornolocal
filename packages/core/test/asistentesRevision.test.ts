@@ -1,5 +1,14 @@
-import { chmodSync, mkdirSync, readFileSync, renameSync, statSync, symlinkSync } from 'node:fs';
+import {
+  chmodSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  statSync,
+  symlinkSync,
+} from 'node:fs';
 import path from 'node:path';
+import { parse as parseJsonc } from 'jsonc-parser';
 import { describe, expect, it } from 'vitest';
 import { editarConfigAgente } from '../src/agentes/configArchivo';
 import { aplicar, copias, escribir, leer, montar, TOKEN, URL_MCP } from './asistentesAyuda';
@@ -444,4 +453,88 @@ describe('Permisos de lo que se escribe (no en Windows)', () => {
       expect(statSync(m.ruta('gemini-cli')).mode & 0o777).toBe(0o600);
     },
   );
+});
+
+// Lo que antes cubría el registro antiguo de Agentes, ahora por el único camino de escritura.
+describe.each([
+  ['opencode', 'opencode.json', 'mcp'],
+  ['gemini-cli', 'gemini-settings.json', 'mcpServers'],
+  ['qwen-code', 'qwen-settings.json', 'mcpServers'],
+  ['copilot-cli', 'copilot-mcp-config.json', 'mcpServers'],
+] as const)('Conectar con fixtures reales: %s', (id, fixture, seccion) => {
+  const FIXTURES = path.join(__dirname, 'fixtures', 'agentes');
+
+  it('conserva entradas ajenas, deja copia y nunca escribe el token', async () => {
+    const m = await montar();
+    m.instalados.add(id);
+    const antes = readFileSync(path.join(FIXTURES, fixture), 'utf8');
+    escribir(m.ruta(id), antes);
+    const r = await aplicar(m, id);
+    expect(r.cambiado).toBe(true);
+    expect(leer(r.respaldo!)).toBe(antes);
+    const obj = parseJsonc(leer(m.ruta(id))) as Record<string, Record<string, unknown>>;
+    const original = parseJsonc(antes) as Record<string, Record<string, unknown>>;
+    expect(obj[seccion]!['otro']).toBeDefined();
+    expect(obj[seccion]!['wolfcore']).toBeDefined();
+    for (const k of Object.keys(original)) {
+      if (k !== seccion) expect(obj[k]).toEqual(original[k]);
+    }
+    for (const f of readdirSync(path.dirname(m.ruta(id)))) {
+      expect(readFileSync(path.join(path.dirname(m.ruta(id)), f), 'utf8')).not.toContain(TOKEN);
+    }
+    expect(leer(m.ruta(id))).toContain('WOLFCORE_MCP_TOKEN');
+    await aplicar(m, id, 'quitar');
+    const sin = parseJsonc(leer(m.ruta(id))) as Record<string, Record<string, unknown>>;
+    expect(sin[seccion]!['wolfcore']).toBeUndefined();
+    expect(sin[seccion]!['otro']).toBeDefined();
+  });
+
+  it('sin archivo previo lo crea con solo la entrada wolfcore y sin copia', async () => {
+    const m = await montar();
+    m.instalados.add(id);
+    const r = await aplicar(m, id);
+    expect(r.respaldo).toBeNull();
+    const obj = parseJsonc(leer(m.ruta(id))) as Record<string, Record<string, unknown>>;
+    expect(Object.keys(obj[seccion]!)).toEqual(['wolfcore']);
+  });
+
+  it('un archivo ilegible o de más de 5 MB no se toca', async () => {
+    const m = await montar();
+    m.instalados.add(id);
+    for (const t of [
+      '{ "theme": "dark", ',
+      JSON.stringify({ relleno: 'x'.repeat(5 * 1024 * 1024 + 10) }),
+    ]) {
+      escribir(m.ruta(id), t);
+      await expect(m.as.vistaPrevia(id, 'conectar')).rejects.toMatchObject({
+        codigo: 'agentes.config_ilegible',
+      });
+      expect(leer(m.ruta(id))).toBe(t);
+      expect(readdirSync(path.dirname(m.ruta(id)))).toEqual([path.basename(m.ruta(id))]);
+    }
+  });
+});
+
+describe('Un solo camino de escritura de configuraciones ajenas', () => {
+  const src = path.join(__dirname, '..', 'src');
+  const fuentes = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory()
+        ? fuentes(path.join(dir, e.name))
+        : e.name.endsWith('.ts')
+          ? [path.join(dir, e.name)]
+          : [],
+    );
+
+  it('solo asistentes.ts llama a editarConfigAgente; Agentes ya no registra ni quita el MCP', () => {
+    const llaman = fuentes(src)
+      .filter((f) => /\beditarConfigAgente\(/.test(readFileSync(f, 'utf8')))
+      .map((f) => path.relative(src, f).split(path.sep).join('/'))
+      .sort();
+    // La definición vive en configArchivo.ts; la única llamada es la de «Conectar asistentes».
+    expect(llaman).toEqual(['agentes/configArchivo.ts', 'asistentes/asistentes.ts']);
+    for (const f of fuentes(src)) {
+      expect(readFileSync(f, 'utf8'), f).not.toMatch(/registrarMcp|quitarMcp/);
+    }
+  });
 });

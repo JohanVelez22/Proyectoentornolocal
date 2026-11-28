@@ -1,18 +1,9 @@
 <script setup lang="ts">
 import { InformationCircleOutline, Refresh } from '@vicons/ionicons5';
-import {
-  NAlert,
-  NButton,
-  NFormItem,
-  NIcon,
-  NModal,
-  NSkeleton,
-  useMessage,
-  type SelectOption,
-} from 'naive-ui';
+import { NAlert, NButton, NFormItem, NIcon, NModal, NSkeleton, type SelectOption } from 'naive-ui';
 import Desplegable from '../componentes/Desplegable.vue';
 import { computed, onMounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import type { EstadoAgente, IdAgente } from '../../shared/api';
 import { api } from '../api';
 import TarjetaAgente from '../componentes/TarjetaAgente.vue';
@@ -34,7 +25,7 @@ const ia = useIa();
 const sitios = useSitios();
 const preferencias = usePreferencias();
 const route = useRoute();
-const message = useMessage();
+const router = useRouter();
 const { ejecutar, ocupado } = useAccion();
 
 /** Proyecto que pidió "Abrir agente" desde su tarjeta (`?sitio=<id>`). */
@@ -48,48 +39,28 @@ onMounted(() => {
   void ia.cargarProveedores();
 });
 
-/* ───────────── Confirmaciones (instalar, registrar, quitar) ───────────── */
+/* ───────────── Confirmación de instalar ───────────── */
 
-type Pedido = { tipo: 'instalar' | 'registrar' | 'quitar'; agente: EstadoAgente };
+type Pedido = { tipo: 'instalar'; agente: EstadoAgente };
 const pedido = ref<Pedido | null>(null);
 
-const tituloPedido = computed(() => {
-  const p = pedido.value;
-  if (!p) return '';
-  if (p.tipo === 'instalar') return t.confirmarInstalar.titulo(p.agente.nombre);
-  if (p.tipo === 'registrar') return t.confirmarRegistrar.titulo(p.agente.nombre);
-  return t.confirmarQuitar.titulo(p.agente.nombre);
-});
-const aceptarPedido = computed(() => {
-  const p = pedido.value;
-  if (p?.tipo === 'instalar') return t.confirmarInstalar.aceptar;
-  if (p?.tipo === 'registrar') return t.confirmarRegistrar.aceptar;
-  return t.confirmarQuitar.aceptar;
-});
-
-/** Única vía a instalar, registrar o quitar: el botón del diálogo, con `true` explícito. */
+/** Única vía a instalar: el botón del diálogo, con `true` explícito. */
 function confirmarPedido(): void {
   const p = pedido.value;
   if (!p) return;
   pedido.value = null;
   const { id, nombre } = p.agente;
-  if (p.tipo === 'instalar') {
-    void ejecutar(`instalar:${id}`, () => agentes.instalar(id, true), {
-      exito: t.confirmarInstalar.hecho(nombre),
-    });
-    return;
-  }
-  void ejecutar(`mcp:${id}`, async () => {
-    const r =
-      p.tipo === 'registrar'
-        ? await agentes.registrarMcp(id, true)
-        : await agentes.quitarMcp(id, true);
-    message.success(
-      p.tipo === 'registrar' ? t.confirmarRegistrar.hecho(nombre) : t.confirmarQuitar.hecho(nombre),
-    );
-    if (r.respaldo) message.info(t.copiaHecha(r.respaldo), { duration: 8000 });
-    if (r.tokenEscrito) message.warning(t.tokenEscrito, { duration: 10000 });
+  void ejecutar(`instalar:${id}`, () => agentes.instalar(id, true), {
+    exito: t.confirmarInstalar.hecho(nombre),
   });
+}
+
+/**
+ * Registrar el MCP ya no se hace aquí: hay un solo camino de escritura, el de «Conectar
+ * asistentes» (con vista previa y confirmación), que se abre con ese cliente enfocado.
+ */
+function irAConectar(a: EstadoAgente): void {
+  void router.push({ name: 'ia', params: { pestana: 'conectar' }, query: { cliente: a.id } });
 }
 
 function abrirGuia(a: EstadoAgente): void {
@@ -193,36 +164,27 @@ function abrir(): void {
         @instalar="pedido = { tipo: 'instalar', agente: a }"
         @guia="abrirGuia(a)"
         @version="ejecutar(`version:${a.id}`, () => agentes.preguntarVersion(a.id))"
-        @registrar="pedido = { tipo: 'registrar', agente: a }"
-        @quitar="pedido = { tipo: 'quitar', agente: a }"
+        @conectar="irAConectar(a)"
         @abrir="pedirAbrir(a)"
       />
     </div>
 
-    <!-- Instalar / registrar / quitar: qué se hace, qué archivo y su copia previa. -->
+    <!-- Instalar: qué se instala y de dónde. -->
     <NModal
       :show="pedido !== null"
       preset="dialog"
-      :title="tituloPedido"
-      :positive-text="aceptarPedido"
+      :title="pedido ? t.confirmarInstalar.titulo(pedido.agente.nombre) : ''"
+      :positive-text="t.confirmarInstalar.aceptar"
       :negative-text="textos.acciones.cancelar"
-      :positive-button-props="{ type: pedido?.tipo === 'quitar' ? 'error' : 'primary' }"
+      :positive-button-props="{ type: 'primary' }"
       :auto-focus="false"
       @positive-click="confirmarPedido"
       @negative-click="pedido = null"
       @update:show="(v: boolean) => !v && (pedido = null)"
     >
-      <template v-if="pedido?.tipo === 'instalar'">
+      <template v-if="pedido">
         <p>{{ t.confirmarInstalar.texto(pedido.agente.paquete ?? '') }}</p>
         <p class="tenue">{{ t.confirmarInstalar.aislado }}</p>
-      </template>
-      <template v-else-if="pedido">
-        <p>
-          {{ pedido.tipo === 'registrar' ? t.confirmarRegistrar.texto : t.confirmarQuitar.texto }}
-        </p>
-        <code class="archivo">{{ pedido.agente.archivoConfig }}</code>
-        <p class="tenue">{{ t.copiaPrevia }}</p>
-        <p class="tenue">{{ t.notaMcp }}</p>
       </template>
     </NModal>
 

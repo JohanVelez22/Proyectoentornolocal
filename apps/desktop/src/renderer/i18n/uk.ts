@@ -4013,8 +4013,6 @@ export const uk: TextosParciales = {
     },
     mcpRegistrado: 'MCP зареєстровано',
     mcpSinRegistrar: 'MCP не зареєстровано',
-    tokenEscrito:
-      'У файлі агента було записано токен MCP: тепер його там немає, а в попередній копії він замаскований (***). Рекомендуємо перегенерувати токен сервера MCP.',
     mcpNoSoportado:
       'Його документація не дозволяє отримувати токен зі змінної середовища: WolfCore Dev не реєструє для нього MCP (токен ніколи не записується у файли).',
     instalar: 'Встановити',
@@ -4022,9 +4020,8 @@ export const uk: TextosParciales = {
     guia: 'Посібник зі встановлення',
     soloGuia:
       'WolfCore Dev не встановлює його (у його інсталятора немає фіксованого хешу): дотримуйтесь офіційного посібника.',
-    registrar: 'Зареєструвати MCP',
-    quitar: 'Видалити MCP',
     abrir: 'Відкрити у проєкті',
+    conectarEn: 'Підключити в «Підключення асистентів»',
     confirmarInstalar: {
       titulo: (nombre: string) => `Встановити ${nombre}?`,
       texto: (paquete: string) =>
@@ -4034,22 +4031,6 @@ export const uk: TextosParciales = {
       aceptar: 'Встановити',
       hecho: (nombre: string) => `${nombre} встановлено.`,
     },
-    confirmarRegistrar: {
-      titulo: (nombre: string) => `Зареєструвати MCP у ${nombre}?`,
-      texto:
-        'Додається (або оновлюється) лише запис «wolfcore» у цьому файлі; решта залишається без змін:',
-      aceptar: 'Зареєструвати',
-      hecho: (nombre: string) => `MCP зареєстровано в ${nombre}.`,
-    },
-    confirmarQuitar: {
-      titulo: (nombre: string) => `Видалити MCP із ${nombre}?`,
-      texto: 'Видаляється лише запис «wolfcore» із цього файлу; решта залишається без змін:',
-      aceptar: 'Видалити',
-      hecho: (nombre: string) => `MCP видалено з ${nombre}.`,
-    },
-    copiaPrevia:
-      'Перед внесенням змін поруч із файлом зберігається копія з датою (<файл>.wolfcore-YYYYMMDD-HHmmss.bak); зберігаються 5 найновіших. Якщо агент відкритий, закрийте його перед цим.',
-    copiaHecha: (ruta: string) => `Попередня копія: ${ruta}`,
     dialogoAbrir: {
       titulo: (nombre: string) => `Відкрити ${nombre}`,
       proyecto: 'Проєкт',

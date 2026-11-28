@@ -4022,8 +4022,6 @@ export const ru: TextosParciales = {
     },
     mcpRegistrado: 'MCP зарегистрирован',
     mcpSinRegistrar: 'MCP не зарегистрирован',
-    tokenEscrito:
-      'В файле агента был записан токен MCP: он уже удалён, а в резервной копии он замаскирован (***). Рекомендуется пересоздать токен сервера MCP.',
     mcpNoSoportado:
       'Документация агента не позволяет брать токен из переменной окружения: WolfCore Dev не регистрирует для него MCP (токен никогда не записывается в файлы).',
     instalar: 'Установить',
@@ -4031,9 +4029,8 @@ export const ru: TextosParciales = {
     guia: 'Руководство по установке',
     soloGuia:
       'WolfCore Dev не устанавливает его (у установщика нет фиксированной контрольной суммы): следуйте официальному руководству.',
-    registrar: 'Зарегистрировать MCP',
-    quitar: 'Удалить MCP',
     abrir: 'Открыть в проекте',
+    conectarEn: 'Подключить в «Подключение ассистентов»',
     confirmarInstalar: {
       titulo: (nombre: string) => `Установить ${nombre}?`,
       texto: (paquete: string) =>
@@ -4043,23 +4040,6 @@ export const ru: TextosParciales = {
       aceptar: 'Установить',
       hecho: (nombre: string) => `${nombre} установлен.`,
     },
-    confirmarRegistrar: {
-      titulo: (nombre: string) => `Зарегистрировать MCP в ${nombre}?`,
-      texto:
-        'В этот файл добавляется (или обновляется) только запись «wolfcore»; всё остальное остаётся без изменений:',
-      aceptar: 'Зарегистрировать',
-      hecho: (nombre: string) => `MCP зарегистрирован в ${nombre}.`,
-    },
-    confirmarQuitar: {
-      titulo: (nombre: string) => `Удалить MCP из ${nombre}?`,
-      texto:
-        'Из этого файла удаляется только запись «wolfcore»; всё остальное остаётся без изменений:',
-      aceptar: 'Удалить',
-      hecho: (nombre: string) => `MCP удалён из ${nombre}.`,
-    },
-    copiaPrevia:
-      'Перед изменением рядом с файлом сохраняется резервная копия с датой (<файл>.wolfcore-YYYYMMDD-HHmmss.bak); хранятся 5 последних копий. Если агент открыт, закройте его заранее.',
-    copiaHecha: (ruta: string) => `Предыдущая резервная копия: ${ruta}`,
     dialogoAbrir: {
       titulo: (nombre: string) => `Открыть ${nombre}`,
       proyecto: 'Проект',

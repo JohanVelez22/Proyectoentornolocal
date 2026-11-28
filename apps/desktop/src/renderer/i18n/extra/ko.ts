@@ -2005,24 +2005,36 @@ export const koExtra: TextosParciales = {
   asistentes: {
     pestana: '어시스턴트 연결',
     explicacion:
-      '어시스턴트를 연결하면 고객님의 AI 어시스턴트(Claude, Codex 등)가 WolfCore Dev 서비스를 확인하고 관리할 수 있습니다. 상태 확인, 시작, 로그 읽기가 가능합니다. 중요한 작업은 항상 고객님의 확인을 요청합니다.',
+      '연결하면 고객님의 AI 어시스턴트(Claude, Codex 등)가 WolfCore Dev 서비스를 확인하고 관리할 수 있습니다. 중요한 작업은 항상 고객님의 확인을 요청합니다.',
     alcance:
       'WolfCore Dev는 각 프로그램의 설정에 자체 항목인 "wolfcore"만 추가하거나 제거하며, 먼저 날짜가 표시된 사본을 저장하고 토큰을 해당 파일에 절대 기록하지 않습니다.',
     notaVariable:
-      '어시스턴트는 환경 변수 WOLFCORE_MCP_TOKEN에서 토큰을 읽습니다. 이 변수는 AI › 에이전트 › "프로젝트에서 열기"로 실행할 때만 WolfCore Dev가 설정합니다. Cursor는 이 변수가 정의된 상태로 시작해야 합니다.',
+      '작동하려면 WolfCore Dev에서 어시스턴트를 실행해 주십시오(AI › 에이전트 › "프로젝트에서 열기").',
     recargar: '다시 감지',
-    conectado: '연결됨',
+    conectado: '연결됨: WolfCore Dev(AI › 에이전트)에서 실행해 주십시오',
+    conectadoAppGrafica: '연결될 수 있도록 WolfCore Dev(AI › 에이전트)에서 실행해 주십시오',
+    noSePudoLeer: '읽을 수 없음',
     instalado: '설치됨, 연결되지 않음',
     noInstalado: '설치되지 않음',
     noCompatible: '아직 지원되지 않음',
     motivoLocales:
-      '이 프로그램은 파일에서 로컬 서버만 허용하며 WolfCore Dev는 토큰을 평문으로 기록하지 않으므로 아직 연결할 수 없습니다.',
+      '토큰을 평문으로 저장해야 하므로 지원하지 않습니다. 안전한 연결 방식이 준비되면 지원할 예정입니다.',
+    motivoAppGrafica:
+      '그래픽 애플리케이션이며 AI › 에이전트에서 아직 토큰과 함께 실행할 수 없습니다. 가능해질 때까지 "연결"은 비활성화됩니다.',
+    motivoIlegible: {
+      invalido:
+        '설정이 올바르지 않아 WolfCore Dev는 건드리지 않습니다. 수정하거나 복사본에서 복원해 주십시오.',
+      demasiado_grande:
+        '파일이 5 MB를 넘고 설정 파일로 보이지 않아 WolfCore Dev는 건드리지 않습니다.',
+      sin_acceso: '파일을 열 수 없습니다(권한이 없거나 일반 파일이 아닙니다).',
+    },
     conectar: '연결',
     quitar: '제거',
     copiar: '설정 복사',
     carpeta: '설정 폴더 열기',
     archivo: '설정 파일',
     cambios: '파일에서 다음 내용이 바뀝니다.',
+    omitidas: (n: number) => `… 변경 없는 ${n}줄 …`,
     titulo: (n: string) => `${n} 연결`,
     tituloQuitar: (n: string) => `${n} 연결 제거`,
     aceptarConectar: '연결',
@@ -2033,12 +2045,16 @@ export const koExtra: TextosParciales = {
     copiaPrevia: '기록하기 전에 날짜가 표시된 사본을 파일 옆에 저장합니다(최근 5개를 보관합니다).',
     comentarios:
       '주의: "wolfcore" 항목 안의 주석이 사라집니다. 파일의 나머지 부분은 바뀌지 않습니다.',
+    finalesMezclados:
+      '주의: 파일에 줄 바꿈 형식(CRLF와 LF)이 섞여 있으며, 파일 전체를 다시 쓰면 하나로 통일됩니다.',
     hConectado: (n: string) => `${n}을(를) 연결했습니다.`,
     hQuitado: (n: string) => `${n}의 연결을 제거했습니다.`,
     hSinCambios: '바뀐 내용이 없습니다.',
     hCopia: (n: string) => `사본을 저장했습니다: ${n}`,
     hTokenEscrito:
       '파일에 토큰이 평문으로 기록되어 있었습니다. 사본에서는 가려지고 파일에서는 삭제되었습니다.',
+    hTokenSigue: (donde: string) =>
+      `토큰이 파일의 다른 위치("${donde}")에 평문으로 남아 있으며 건드리지 않았습니다. 직접 삭제해 주십시오. 이전 복사본에는 가려진 상태(***)로 저장됩니다.`,
     hCopiada: '설정을 복사했습니다(토큰 제외).',
   },
 };

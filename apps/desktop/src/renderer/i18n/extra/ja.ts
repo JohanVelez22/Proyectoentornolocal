@@ -2066,24 +2066,37 @@ export const jaExtra: TextosParciales = {
   asistentes: {
     pestana: 'アシスタントを接続',
     explicacion:
-      'アシスタントを接続すると、お使いの AI アシスタント（Claude、Codex など）が WolfCore Dev のサービスを確認して操作できるようになります。状態の確認、起動、ログの読み取りができます。重要な操作では、必ずお客様の確認をお尋ねします。',
+      '接続すると、お使いの AI アシスタント（Claude、Codex など）が WolfCore Dev のサービスを確認して操作できるようになります。重要な操作では、必ずお客様の確認をお尋ねします。',
     alcance:
       'WolfCore Dev は各プログラムの設定に、自身の「wolfcore」エントリだけを追加または削除します。書き込む前に日付付きのコピーを保存し、トークンをこれらのファイルに書き込むことはありません。',
     notaVariable:
-      'アシスタントは環境変数 WOLFCORE_MCP_TOKEN からトークンを読み取ります。この変数は、AI › エージェント › 「プロジェクトで開く」から起動したときにのみ WolfCore Dev が設定します。Cursor は、この変数を定義した状態で起動する必要があります。',
+      '動作させるには、WolfCore Dev からアシスタントを起動してください（AI › エージェント › 「プロジェクトで開く」）。',
     recargar: '再検出',
-    conectado: '接続済み',
+    conectado: '接続済み：WolfCore Dev（AI › エージェント）から起動してください',
+    conectadoAppGrafica: '接続できるよう、WolfCore Dev（AI › エージェント）から起動してください',
+    noSePudoLeer: '読み取れません',
     instalado: 'インストール済み（未接続）',
     noInstalado: '未インストール',
     noCompatible: 'まだ対応していません',
     motivoLocales:
-      'このプログラムはファイル内でローカルサーバーのみ受け付けます。また WolfCore Dev はトークンを平文で書き込まないため、まだ接続できません。',
+      'トークンを平文で保存する必要が生じるため、安全な中継の仕組みが整うまで対応しません。',
+    motivoAppGrafica:
+      'グラフィカルなアプリで、AI › エージェントからはまだトークン付きで起動できません。起動できるようになるまで「接続」は無効です。',
+    motivoIlegible: {
+      invalido:
+        '設定が正しくないため、WolfCore Dev は変更しません。修正するか、コピーから復元してください。',
+      demasiado_grande:
+        'ファイルが 5 MB を超えており、設定ファイルとは思われないため、WolfCore Dev は変更しません。',
+      sin_acceso:
+        'ファイルを開けませんでした（アクセス権がないか、通常のファイルではありません）。',
+    },
     conectar: '接続',
     quitar: '削除',
     copiar: '設定をコピー',
     carpeta: '設定フォルダーを開く',
     archivo: '設定ファイル',
     cambios: 'ファイルでは次の内容が変わります。',
+    omitidas: (n: number) => `… 変更のない ${n} 行 …`,
     titulo: (n: string) => `${n} を接続`,
     tituloQuitar: (n: string) => `${n} の接続を削除`,
     aceptarConectar: '接続',
@@ -2095,12 +2108,16 @@ export const jaExtra: TextosParciales = {
       '書き込む前に、日付付きのコピーをファイルの横に保存します（最新の 5 件を保持します）。',
     comentarios:
       '注意：「wolfcore」エントリ内のコメントは失われます。ファイルのそれ以外の部分は変わりません。',
+    finalesMezclados:
+      '注意：このファイルには異なる改行コード（CRLF と LF）が混在しており、全体を書き直す際に統一されます。',
     hConectado: (n: string) => `${n} を接続しました。`,
     hQuitado: (n: string) => `${n} の接続を削除しました。`,
     hSinCambios: '変更はありませんでした。',
     hCopia: (n: string) => `コピーを保存しました：${n}`,
     hTokenEscrito:
       'ファイルにトークンが平文で書かれていました。コピーでは伏せ字になり、ファイルからは削除されました。',
+    hTokenSigue: (donde: string) =>
+      `トークンはファイルの別の場所（「${donde}」）に平文のまま残っており、変更していません。お手数ですが手動で削除してください。直前のコピーでは伏せ字（***）になっています。`,
     hCopiada: '設定をコピーしました（トークンは含みません）。',
   },
 };

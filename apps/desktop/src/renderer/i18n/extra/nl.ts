@@ -2176,24 +2176,36 @@ export const nlExtra: TextosParciales = {
   asistentes: {
     pestana: 'Assistenten koppelen',
     explicacion:
-      'Als u een assistent koppelt, kan uw AI-assistent (Claude, Codex…) uw WolfCore Dev-services bekijken en beheren: de status zien, ze starten en logboeken lezen. Voor gevoelige acties wordt altijd om uw bevestiging gevraagd.',
+      'Door te koppelen kan uw AI-assistent (Claude, Codex…) uw WolfCore Dev-services bekijken en beheren; voor gevoelige acties wordt altijd om uw bevestiging gevraagd.',
     alcance:
       'WolfCore Dev voegt alleen zijn eigen item ‘wolfcore’ toe aan of verwijdert het uit de configuratie van elk programma, bewaart eerst een kopie met datum en schrijft uw token nooit in die bestanden.',
     notaVariable:
-      'De assistenten lezen het token uit de omgevingsvariabele WOLFCORE_MCP_TOKEN, die WolfCore Dev alleen instelt als u ze opent via AI › Agents › ‘Openen in een project’. Cursor moet worden gestart met die variabele ingesteld.',
+      'Om het te laten werken opent u de assistent vanuit WolfCore Dev (AI › Agents › ‘Openen in een project’).',
     recargar: 'Opnieuw detecteren',
-    conectado: 'Gekoppeld',
+    conectado: 'Gekoppeld: open hem vanuit WolfCore Dev (AI › Agents)',
+    conectadoAppGrafica: 'Open hem vanuit WolfCore Dev (AI › Agents) zodat hij kan koppelen',
+    noSePudoLeer: 'Kon niet worden gelezen',
     instalado: 'Geïnstalleerd, niet gekoppeld',
     noInstalado: 'Niet geïnstalleerd',
     noCompatible: 'Nog niet ondersteund',
     motivoLocales:
-      'Dit programma accepteert in zijn bestand alleen lokale servers en WolfCore Dev schrijft het token nooit als platte tekst, dus het kan nog niet worden gekoppeld.',
+      'Dit zou vereisen dat het token als platte tekst wordt opgeslagen; het komt er met een veilige brug.',
+    motivoAppGrafica:
+      'Het is een grafische toepassing en AI › Agents kan haar nog niet met het token openen: ‘Koppelen’ blijft uitgeschakeld tot dat kan.',
+    motivoIlegible: {
+      invalido:
+        'De configuratie is ongeldig; WolfCore Dev laat haar ongemoeid. Herstel haar of zet haar terug vanuit een kopie.',
+      demasiado_grande:
+        'Het bestand is groter dan 5 MB en lijkt geen configuratie; WolfCore Dev laat het ongemoeid.',
+      sin_acceso: 'Het bestand kon niet worden geopend (rechten, of het is geen gewoon bestand).',
+    },
     conectar: 'Koppelen',
     quitar: 'Verwijderen',
     copiar: 'Configuratie kopiëren',
     carpeta: 'Configuratiemap openen',
     archivo: 'Configuratiebestand',
     cambios: 'Dit verandert er in het bestand:',
+    omitidas: (n: number) => `… ${n} ongewijzigde regels …`,
     titulo: (n: string) => `${n} koppelen`,
     tituloQuitar: (n: string) => `Koppeling van ${n} verwijderen`,
     aceptarConectar: 'Koppelen',
@@ -2205,12 +2217,16 @@ export const nlExtra: TextosParciales = {
       'Vóór het schrijven wordt naast het bestand een kopie met datum bewaard (de laatste 5 blijven bestaan).',
     comentarios:
       'Let op: opmerkingen binnen het item ‘wolfcore’ gaan verloren. De rest van het bestand verandert niet.',
+    finalesMezclados:
+      'Let op: het bestand mengt regeleinden (CRLF en LF) en omdat het volledig opnieuw wordt geschreven, worden ze gelijkgetrokken.',
     hConectado: (n: string) => `${n} gekoppeld.`,
     hQuitado: (n: string) => `Koppeling van ${n} verwijderd.`,
     hSinCambios: 'Er is niets veranderd.',
     hCopia: (n: string) => `Kopie opgeslagen: ${n}`,
     hTokenEscrito:
       'Het bestand bevatte het token als platte tekst: de kopie verbergt het en het bestand bevat het niet meer.',
+    hTokenSigue: (donde: string) =>
+      `Het token staat nog als platte tekst elders in het bestand (‘${donde}’) en is niet aangeraakt: verwijder het handmatig. De vorige kopie bewaart het gemaskeerd (***).`,
     hCopiada: 'Configuratie gekopieerd (zonder het token).',
   },
 };

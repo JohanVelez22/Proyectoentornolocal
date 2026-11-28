@@ -161,13 +161,14 @@ function deAgente(
   carpeta: (inicio: string) => string,
 ): Pick<
   DefAsistente,
-  'agente' | 'formato' | 'seccion' | 'archivo' | 'extras' | 'entrada' | 'carpeta'
+  'agente' | 'formato' | 'seccion' | 'seccionAlterna' | 'archivo' | 'extras' | 'entrada' | 'carpeta'
 > {
   const def = AGENTES[id];
   return {
     agente: id,
     formato: def.formato,
     seccion: def.seccion,
+    ...(def.seccionAlterna ? { seccionAlterna: def.seccionAlterna } : {}),
     archivo: (p) => def.archivoConfig(p.carpetaInicio()),
     ...(def.archivosConfigExtra
       ? { extras: (p: DepsAsistentes['plataforma']) => def.archivosConfigExtra!(p.carpetaInicio()) }
@@ -197,8 +198,7 @@ const DEFS: Record<IdAsistente, DefAsistente> = {
     nombre: 'opencode',
     ...deAgente('opencode', (i) => path.join(i, '.config', 'opencode')),
     // V2: si el archivo trae `mcp.servers`, la entrada va en `mcp.servers.wolfcore`; si no, en
-    // `mcp.wolfcore` (V1, la del paquete `opencode-ai` actual).
-    seccionAlterna: 'mcp.servers',
+    // `mcp.wolfcore` (V1, la del paquete `opencode-ai` actual). Ver `OPENCODE.seccionAlterna`.
   },
   'copilot-cli': {
     id: 'copilot-cli',

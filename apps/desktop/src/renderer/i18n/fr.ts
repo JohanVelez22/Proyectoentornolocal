@@ -5408,24 +5408,38 @@ export const fr: Textos = {
   asistentes: {
     pestana: 'Connecter des assistants',
     explicacion:
-      'Connecter un assistant permet à votre assistant IA (Claude, Codex…) de consulter et de gérer vos services WolfCore Dev : voir leur état, les démarrer et lire les journaux. Tout ce qui est sensible demande toujours votre confirmation.',
+      'Connecter permet à votre assistant IA (Claude, Codex…) de voir et de gérer vos services WolfCore Dev ; tout ce qui est sensible demande toujours votre confirmation.',
     alcance:
       'WolfCore Dev ajoute ou retire uniquement sa propre entrée « wolfcore » dans la configuration de chaque programme, enregistre d’abord une copie datée et n’écrit jamais votre jeton dans ces fichiers.',
     notaVariable:
-      'Les assistants lisent le jeton dans la variable d’environnement WOLFCORE_MCP_TOKEN, que WolfCore Dev ne définit que lorsque vous les ouvrez depuis IA › Agents › « Ouvrir dans un projet ». Cursor doit être lancé avec cette variable définie.',
+      'Pour que cela fonctionne, ouvrez l’assistant depuis WolfCore Dev (IA › Agents › « Ouvrir dans un projet »).',
     recargar: 'Détecter à nouveau',
-    conectado: 'Connecté',
+    conectado: 'Connecté : ouvrez-le depuis WolfCore Dev (IA › Agents)',
+    conectadoAppGrafica:
+      'Ouvrez-le depuis WolfCore Dev (IA › Agents) pour qu’il puisse se connecter',
+    noSePudoLeer: 'Lecture impossible',
     instalado: 'Installé, non connecté',
     noInstalado: 'Non installé',
     noCompatible: 'Pas encore compatible',
     motivoLocales:
-      'Ce programme n’accepte que des serveurs locaux dans son fichier et WolfCore Dev n’écrit jamais le jeton en clair : il ne peut donc pas encore être connecté.',
+      'Cela obligerait à enregistrer le jeton en clair ; cela viendra avec un pont sécurisé.',
+    motivoAppGrafica:
+      'C’est une application graphique et IA › Agents ne sait pas encore l’ouvrir avec le jeton : « Connecter » reste désactivé tant que ce n’est pas possible.',
+    motivoIlegible: {
+      invalido:
+        'Sa configuration n’est pas valide ; WolfCore Dev n’y touche pas. Corrigez-la ou restaurez-la depuis une copie.',
+      demasiado_grande:
+        'Le fichier dépasse 5 Mo et ne ressemble pas à une configuration ; WolfCore Dev n’y touche pas.',
+      sin_acceso:
+        'Le fichier n’a pas pu être ouvert (autorisations, ou ce n’est pas un fichier ordinaire).',
+    },
     conectar: 'Connecter',
     quitar: 'Retirer',
     copiar: 'Copier la configuration',
     carpeta: 'Ouvrir le dossier de configuration',
     archivo: 'Fichier de configuration',
     cambios: 'Voici ce qui va changer dans le fichier :',
+    omitidas: (n: number) => `… ${n} lignes inchangées …`,
     titulo: (n: string) => `Connecter ${n}`,
     tituloQuitar: (n: string) => `Retirer la connexion de ${n}`,
     aceptarConectar: 'Connecter',
@@ -5437,12 +5451,16 @@ export const fr: Textos = {
       'Avant l’écriture, une copie datée est enregistrée à côté du fichier (les 5 dernières sont conservées).',
     comentarios:
       'Attention : les commentaires de l’entrée « wolfcore » seront perdus. Le reste du fichier ne change pas.',
+    finalesMezclados:
+      'Attention : le fichier mélange plusieurs fins de ligne (CRLF et LF) et, étant réécrit en entier, elles seront uniformisées.',
     hConectado: (n: string) => `${n} connecté.`,
     hQuitado: (n: string) => `Connexion retirée de ${n}.`,
     hSinCambios: 'Rien n’a changé.',
     hCopia: (n: string) => `Copie enregistrée : ${n}`,
     hTokenEscrito:
       'Le fichier contenait le jeton en clair : la copie le masque et le fichier ne le contient plus.',
+    hTokenSigue: (donde: string) =>
+      `Le jeton reste écrit en clair ailleurs dans le fichier (« ${donde} ») et n’a pas été modifié : supprimez-le à la main. La copie précédente le conserve masqué (***).`,
     hCopiada: 'Configuration copiée (sans le jeton).',
   },
   agentes: {
@@ -5466,8 +5484,6 @@ export const fr: Textos = {
     },
     mcpRegistrado: 'MCP enregistré',
     mcpSinRegistrar: 'MCP non enregistré',
-    tokenEscrito:
-      'Le fichier de l’agent contenait le jeton du MCP en clair : il ne l’a plus et la copie préalable le conserve masqué (***). Pensez à régénérer le jeton du serveur MCP.',
     mcpNoSoportado:
       'Sa documentation ne permet pas de lire le jeton depuis une variable d’environnement : WolfCore Dev n’y enregistre pas le MCP (le jeton n’est jamais écrit dans des fichiers).',
     instalar: 'Installer',
@@ -5475,9 +5491,8 @@ export const fr: Textos = {
     guia: 'Guide d’installation',
     soloGuia:
       'WolfCore Dev ne l’installe pas (son installateur n’a pas d’empreinte fixe) : suivez le guide officiel.',
-    registrar: 'Enregistrer le MCP',
-    quitar: 'Retirer le MCP',
     abrir: 'Ouvrir dans un projet',
+    conectarEn: 'Connecter dans « Connecter des assistants »',
     confirmarInstalar: {
       titulo: (nombre: string) => `Installer ${nombre} ?`,
       texto: (paquete: string) =>
@@ -5487,22 +5502,6 @@ export const fr: Textos = {
       aceptar: 'Installer',
       hecho: (nombre: string) => `${nombre} a été installé.`,
     },
-    confirmarRegistrar: {
-      titulo: (nombre: string) => `Enregistrer le MCP dans ${nombre} ?`,
-      texto:
-        'Seule l’entrée « wolfcore » de ce fichier est ajoutée (ou mise à jour) ; le reste est inchangé :',
-      aceptar: 'Enregistrer',
-      hecho: (nombre: string) => `MCP enregistré dans ${nombre}.`,
-    },
-    confirmarQuitar: {
-      titulo: (nombre: string) => `Retirer le MCP de ${nombre} ?`,
-      texto: 'Seule l’entrée « wolfcore » de ce fichier est retirée ; le reste est inchangé :',
-      aceptar: 'Retirer',
-      hecho: (nombre: string) => `MCP retiré de ${nombre}.`,
-    },
-    copiaPrevia:
-      'Avant d’y toucher, une copie datée est conservée à côté du fichier (<fichier>.wolfcore-AAAAMMJJ-HHmmss.bak) ; les 5 plus récentes sont gardées. Si l’agent est ouvert, fermez-le d’abord.',
-    copiaHecha: (ruta: string) => `Copie préalable : ${ruta}`,
     dialogoAbrir: {
       titulo: (nombre: string) => `Ouvrir ${nombre}`,
       proyecto: 'Projet',

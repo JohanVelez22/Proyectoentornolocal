@@ -100,8 +100,6 @@ const RUTAS = [
   'agentes.estado',
   'agentes.version',
   'agentes.instalar',
-  'agentes.registrarMcp',
-  'agentes.quitarMcp',
   'agentes.abrir',
   'git.sugerirCommit',
   'git.commitPreparado',
@@ -125,9 +123,6 @@ describe('IPC de agentes y del commit sugerido', () => {
       ['agentes.instalar', ['codex'], 'agentes.sin_confirmar'],
       ['agentes.instalar', ['codex', 'true'], 'agentes.sin_confirmar'],
       ['agentes.instalar', ['codex', 1], 'agentes.sin_confirmar'],
-      ['agentes.registrarMcp', ['codex', false], 'agentes.sin_confirmar'],
-      ['agentes.registrarMcp', ['../codex', true], 'agentes.no_existe'],
-      ['agentes.quitarMcp', ['codex', {}], 'agentes.sin_confirmar'],
       ['agentes.abrir', ['otro', 'tienda'], 'agentes.no_existe'],
       ['agentes.abrir', ['codex', '../tienda'], 'agentes.argumento_invalido'],
       ['agentes.abrir', ['codex', 'C:\\Proyectos\\tienda'], 'agentes.argumento_invalido'],
@@ -160,14 +155,6 @@ describe('IPC de agentes y del commit sugerido', () => {
     expect(agentes.version).toHaveBeenCalledWith('hermes');
     expect((await llamar('agentes.instalar', 'codex', true)).ok).toBe(true);
     expect(agentes.instalar).toHaveBeenCalledWith('codex', true);
-    const reg = await llamar('agentes.registrarMcp', 'claude-code', true);
-    expect(reg).toEqual({
-      ok: true,
-      valor: { respaldo: '/casa/.claude.json.wolfcore-x.bak', metodo: 'cli' },
-    });
-    expect(agentes.registrarMcp).toHaveBeenCalledWith('claude-code', true);
-    expect((await llamar('agentes.quitarMcp', 'hermes', true)).ok).toBe(true);
-    expect(agentes.quitarMcp).toHaveBeenCalledWith('hermes', true);
     expect((await llamar('git.commitPreparado', 'tienda', 'feat: x\n\nCuerpo.')).ok).toBe(true);
     expect(agentes.commitPreparado).toHaveBeenCalledWith('tienda', 'feat: x\n\nCuerpo.');
   });
@@ -259,8 +246,6 @@ function apiFalsa() {
     estado: vi.fn(async () => structuredClone(estados)),
     version: vi.fn(async () => '0.9.1'),
     instalar: vi.fn(async () => undefined),
-    registrarMcp: vi.fn(async () => ({ respaldo: null, metodo: 'archivo' as const })),
-    quitarMcp: vi.fn(async () => ({ respaldo: '/casa/x.bak', metodo: 'archivo' as const })),
     abrir: vi.fn(async () => undefined),
   };
   const api = { agentes } as unknown as ApiEntorno;
@@ -291,21 +276,12 @@ describe('store de agentes', () => {
     expect(s.porId['hermes']?.version).toBe('0.9.1');
   });
 
-  it('instalar, registrar y quitar pasan `true` y vuelven a cargar el estado', async () => {
+  it('instalar pasa `true` y vuelve a cargar el estado', async () => {
     const api = apiFalsa();
     const s = useAgentes();
     await s.instalar('codex', true);
     expect(api.instalar).toHaveBeenCalledWith('codex', true);
-    expect(await s.registrarMcp('claude-code', true)).toEqual({
-      respaldo: null,
-      metodo: 'archivo',
-    });
-    expect(api.registrarMcp).toHaveBeenCalledWith('claude-code', true);
-    expect(await s.quitarMcp('hermes', true)).toEqual({
-      respaldo: '/casa/x.bak',
-      metodo: 'archivo',
-    });
-    expect(api.estado).toHaveBeenCalledTimes(3);
+    expect(api.estado).toHaveBeenCalledTimes(1);
   });
 
   it('una instalación en curso no se pide dos veces', async () => {
@@ -361,21 +337,24 @@ describe('agentes D3: Opencode, Gemini CLI, Qwen Code, Copilot CLI y Antigravity
     for (const id of NUEVOS) expect(pantalla).not.toContain(`'${id}'`);
   });
 
-  it('un agente sin registro de MCP (Antigravity) no ofrece registrar ni quitar', () => {
+  it('un agente sin registro de MCP (Antigravity) no ofrece conectar; los demás llevan a «Conectar asistentes»', () => {
     const tarjeta = readFileSync(
       path.join(__dirname, '..', 'src', 'renderer', 'componentes', 'TarjetaAgente.vue'),
       'utf8',
     );
     expect(tarjeta).toContain('mcpSoportado');
-    // Quitar solo se ofrece donde el registro es posible.
-    expect(tarjeta).toMatch(/v-if="a\.mcpSoportado && a\.mcpRegistrado"/);
+    // El botón antiguo «Registrar MCP» / «Quitar MCP» ya no existe: solo el enlace a la otra pestaña.
+    expect(tarjeta).toMatch(
+      /v-if="a\.mcpSoportado" size="small" quaternary @click="emit\('conectar'\)"/,
+    );
+    expect(tarjeta).not.toMatch(/emit\('(registrar|quitar)'\)/);
   });
 
   it('es y en traen el texto del agente sin registro y el error nuevo', () => {
     expect(es.agentes.mcpNoSoportado).toBeTruthy();
     expect(en.agentes.mcpNoSoportado).toBeTruthy();
-    expect(es.agentes.tokenEscrito).toBeTruthy();
-    expect(en.agentes.tokenEscrito).toBeTruthy();
+    expect(es.agentes.conectarEn).toBeTruthy();
+    expect(en.agentes.conectarEn).toBeTruthy();
     // La descripción no promete el MCP para todos.
     expect(es.agentes.descripcion).toContain('Los que lo permiten');
     expect(en.agentes.descripcion).toContain('Those that allow it');

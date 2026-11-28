@@ -1867,24 +1867,32 @@ export const zhExtra: TextosParciales = {
   asistentes: {
     pestana: '连接助手',
     explicacion:
-      '连接助手后，您的 AI 助手（Claude、Codex 等）就可以查看并管理您的 WolfCore Dev 服务：查看状态、启动服务、读取日志。涉及敏感操作时，始终会请您确认。',
+      '连接后，您的 AI 助手（Claude、Codex 等）就可以查看并管理您的 WolfCore Dev 服务；涉及敏感操作时，始终会请您确认。',
     alcance:
       'WolfCore Dev 只会在各程序的配置中添加或删除自己的“wolfcore”条目，写入前先保存一份带日期的副本，并且绝不会把您的令牌写入这些文件。',
-    notaVariable:
-      '助手从环境变量 WOLFCORE_MCP_TOKEN 中读取令牌，只有当您通过 AI › 代理 ›“在项目中打开”启动它们时，WolfCore Dev 才会设置该变量。启动 Cursor 时必须已定义该变量。',
+    notaVariable: '要使其正常工作，请从 WolfCore Dev 打开该助手（AI › 代理 ›“在项目中打开”）。',
     recargar: '重新检测',
-    conectado: '已连接',
+    conectado: '已连接：请从 WolfCore Dev（AI › 代理）打开它',
+    conectadoAppGrafica: '请从 WolfCore Dev（AI › 代理）打开它，以便它能够连接',
+    noSePudoLeer: '无法读取',
     instalado: '已安装，未连接',
     noInstalado: '未安装',
     noCompatible: '暂不支持',
-    motivoLocales:
-      '该程序的配置文件只接受本地服务器，而 WolfCore Dev 绝不会以明文写入令牌，因此暂时无法连接。',
+    motivoLocales: '这样做需要以明文保存令牌；待提供安全的桥接方式后再支持。',
+    motivoAppGrafica:
+      '这是一个图形界面应用，AI › 代理目前还无法携带令牌打开它：在可以之前，“连接”保持禁用。',
+    motivoIlegible: {
+      invalido: '其配置无效，WolfCore Dev 不会改动它。请您修正，或从副本中恢复。',
+      demasiado_grande: '该文件超过 5 MB，看起来不像配置文件，WolfCore Dev 不会改动它。',
+      sin_acceso: '无法打开该文件（权限不足，或它不是普通文件）。',
+    },
     conectar: '连接',
     quitar: '移除',
     copiar: '复制配置',
     carpeta: '打开配置文件夹',
     archivo: '配置文件',
     cambios: '文件中将发生以下变化：',
+    omitidas: (n: number) => `… ${n} 行未更改 …`,
     titulo: (n: string) => `连接${n}`,
     tituloQuitar: (n: string) => `移除${n}的连接`,
     aceptarConectar: '连接',
@@ -1894,11 +1902,14 @@ export const zhExtra: TextosParciales = {
     sinCambios: '无需更改：已经是这样了。',
     copiaPrevia: '写入前会在文件旁保存一份带日期的副本（保留最近 5 份）。',
     comentarios: '注意：“wolfcore”条目内的注释将会丢失，文件的其余部分不会改变。',
+    finalesMezclados: '注意：该文件混用了换行符（CRLF 和 LF），整体重写时将统一为同一种。',
     hConectado: (n: string) => `已连接${n}。`,
     hQuitado: (n: string) => `已移除${n}的连接。`,
     hSinCambios: '没有任何更改。',
     hCopia: (n: string) => `已保存副本：${n}`,
     hTokenEscrito: '文件中原本以明文写有令牌：副本已将其隐藏，文件中也已不再包含。',
+    hTokenSigue: (donde: string) =>
+      `令牌仍以明文保存在文件的其他位置（“${donde}”），未作改动：请您手动删除。上一份副本中已将其遮盖（***）。`,
     hCopiada: '已复制配置（不含令牌）。',
   },
 };

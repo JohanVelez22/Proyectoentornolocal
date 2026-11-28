@@ -3997,8 +3997,6 @@ export const ja: TextosParciales = {
     },
     mcpRegistrado: 'MCP 登録済み',
     mcpSinRegistrar: 'MCP 未登録',
-    tokenEscrito:
-      'エージェントの設定ファイルに MCP トークンが平文で含まれていたため削除し、直前のバックアップではマスク (***) しました。MCP サーバーのトークン再生成をおすすめします。',
     mcpNoSoportado:
       '環境変数からトークンを読み取る方法が公式ドキュメントにないため MCP を登録しません（トークンをファイルに書き込むことはありません）。',
     instalar: 'インストール',
@@ -4006,9 +4004,8 @@ export const ja: TextosParciales = {
     guia: 'インストールガイド',
     soloGuia:
       'インストーラーに固定チェックサムがないため WolfCore Dev からはインストールしません。公式ガイドを参照してください。',
-    registrar: 'MCP を登録',
-    quitar: 'MCP を削除',
     abrir: 'プロジェクトで開く',
+    conectarEn: '「アシスタントを接続」で接続',
     confirmarInstalar: {
       titulo: (nombre: string) => `${nombre} をインストールしますか？`,
       texto: (paquete: string) =>
@@ -4017,21 +4014,6 @@ export const ja: TextosParciales = {
       aceptar: 'インストール',
       hecho: (nombre: string) => `${nombre} をインストールしました。`,
     },
-    confirmarRegistrar: {
-      titulo: (nombre: string) => `${nombre} に MCP を登録しますか？`,
-      texto: 'このファイルの「wolfcore」項目のみ追加または更新します（その他は変更しません）:',
-      aceptar: '登録する',
-      hecho: (nombre: string) => `${nombre} に MCP を登録しました。`,
-    },
-    confirmarQuitar: {
-      titulo: (nombre: string) => `${nombre} から MCP を削除しますか？`,
-      texto: 'このファイルの「wolfcore」項目のみ削除します（その他は変更しません）:',
-      aceptar: '削除する',
-      hecho: (nombre: string) => `${nombre} から MCP を削除しました。`,
-    },
-    copiaPrevia:
-      '変更前に同じ場所へ日付付きバックアップ (<archivo>.wolfcore-AAAAMMDD-HHmmss.bak) を最大5件保存します。エージェントが起動中なら先に閉じてください。',
-    copiaHecha: (ruta: string) => `事前バックアップ: ${ruta}`,
     dialogoAbrir: {
       titulo: (nombre: string) => `${nombre} を開く`,
       proyecto: 'プロジェクト',

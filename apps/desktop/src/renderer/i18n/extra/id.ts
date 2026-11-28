@@ -2052,24 +2052,35 @@ export const idExtra: TextosParciales = {
   asistentes: {
     pestana: 'Hubungkan asisten',
     explicacion:
-      'Menghubungkan asisten memungkinkan asisten AI Anda (Claude, Codex…) melihat dan mengelola layanan WolfCore Dev Anda: melihat status, menyalakan, dan membaca log. Hal yang sensitif selalu meminta konfirmasi Anda.',
+      'Dengan menghubungkan, asisten AI Anda (Claude, Codex…) dapat melihat dan mengelola layanan WolfCore Dev Anda; hal yang sensitif selalu meminta konfirmasi Anda.',
     alcance:
       'WolfCore Dev hanya menambahkan atau menghapus entri “wolfcore” miliknya sendiri di konfigurasi setiap program, menyimpan salinan bertanggal terlebih dahulu, dan tidak pernah menulis token Anda di berkas tersebut.',
-    notaVariable:
-      'Asisten membaca token dari variabel lingkungan WOLFCORE_MCP_TOKEN, yang hanya ditetapkan WolfCore Dev saat Anda membukanya dari AI › Agen › “Buka di proyek”. Cursor harus dijalankan dengan variabel tersebut sudah ditetapkan.',
+    notaVariable: 'Agar berfungsi, buka asisten dari WolfCore Dev (AI › Agen › “Buka di proyek”).',
     recargar: 'Deteksi ulang',
-    conectado: 'Terhubung',
+    conectado: 'Terhubung: buka dari WolfCore Dev (AI › Agen)',
+    conectadoAppGrafica: 'Buka dari WolfCore Dev (AI › Agen) agar dapat terhubung',
+    noSePudoLeer: 'Tidak dapat dibaca',
     instalado: 'Terpasang, belum terhubung',
     noInstalado: 'Belum terpasang',
     noCompatible: 'Belum didukung',
     motivoLocales:
-      'Program ini hanya menerima server lokal di berkasnya dan WolfCore Dev tidak pernah menulis token sebagai teks biasa, sehingga belum dapat dihubungkan.',
+      'Ini mengharuskan token disimpan sebagai teks biasa; akan tersedia dengan jembatan yang aman.',
+    motivoAppGrafica:
+      'Ini adalah aplikasi grafis dan AI › Agen belum dapat membukanya dengan token: “Hubungkan” tetap dinonaktifkan sampai hal itu memungkinkan.',
+    motivoIlegible: {
+      invalido:
+        'Konfigurasinya tidak valid; WolfCore Dev tidak menyentuhnya. Silakan perbaiki atau pulihkan dari salinan.',
+      demasiado_grande:
+        'Ukuran berkas melebihi 5 MB dan tidak tampak seperti konfigurasi; WolfCore Dev tidak menyentuhnya.',
+      sin_acceso: 'Berkas tidak dapat dibuka (izin akses, atau bukan berkas biasa).',
+    },
     conectar: 'Hubungkan',
     quitar: 'Hapus',
     copiar: 'Salin konfigurasi',
     carpeta: 'Buka folder konfigurasi',
     archivo: 'Berkas konfigurasi',
     cambios: 'Inilah yang akan berubah di berkas:',
+    omitidas: (n: number) => `… ${n} baris tidak berubah …`,
     titulo: (n: string) => `Hubungkan ${n}`,
     tituloQuitar: (n: string) => `Hapus koneksi ${n}`,
     aceptarConectar: 'Hubungkan',
@@ -2081,12 +2092,16 @@ export const idExtra: TextosParciales = {
       'Sebelum menulis, salinan bertanggal disimpan di samping berkas (5 salinan terakhir dipertahankan).',
     comentarios:
       'Perhatian: komentar di dalam entri “wolfcore” akan hilang. Bagian berkas lainnya tidak berubah.',
+    finalesMezclados:
+      'Perhatian: berkas ini mencampur akhiran baris (CRLF dan LF) dan karena ditulis ulang seluruhnya, akhiran tersebut akan diseragamkan.',
     hConectado: (n: string) => `${n} terhubung.`,
     hQuitado: (n: string) => `Koneksi ${n} dihapus.`,
     hSinCambios: 'Tidak ada yang berubah.',
     hCopia: (n: string) => `Salinan disimpan: ${n}`,
     hTokenEscrito:
       'Berkas berisi token sebagai teks biasa: salinan menyembunyikannya dan berkas tidak lagi memilikinya.',
+    hTokenSigue: (donde: string) =>
+      `Token masih tertulis sebagai teks biasa di bagian lain berkas (“${donde}”) dan tidak disentuh: silakan hapus secara manual. Salinan sebelumnya menyimpannya dalam keadaan tersamarkan (***).`,
     hCopiada: 'Konfigurasi disalin (tanpa token).',
   },
 };

@@ -6,7 +6,8 @@ import {
   Refresh,
 } from '@vicons/ionicons5';
 import { NAlert, NButton, NIcon, NModal, NSkeleton, NSpin, NTag, useMessage } from 'naive-ui';
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
+import { useRoute } from 'vue-router';
 import type { EstadoAsistente, VistaPreviaAsistente } from '../../shared/api';
 import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
@@ -19,9 +20,23 @@ import { useAsistentes } from '../stores/asistentes';
 const t = textos.asistentes;
 const asistentes = useAsistentes();
 const message = useMessage();
+const route = useRoute();
 const { ejecutar, ocupado } = useAccion();
 
-onMounted(() => void ejecutar('cargar', () => asistentes.cargar()));
+/** Cliente pedido desde IA › Agentes (`?cliente=<id>`): su fila se muestra y recibe el foco. */
+const enfocado = ref<string | null>(null);
+
+onMounted(() => {
+  void ejecutar('cargar', () => asistentes.cargar()).then(async () => {
+    const id = route.query['cliente'];
+    if (typeof id !== 'string' || !asistentes.estados.some((a) => a.id === id)) return;
+    enfocado.value = id;
+    await nextTick();
+    const fila = document.getElementById(`asistente-${id}`);
+    fila?.scrollIntoView({ block: 'center' });
+    fila?.focus({ preventScroll: true });
+  });
+});
 
 interface Pedido {
   asistente: EstadoAsistente;
@@ -58,7 +73,8 @@ function confirmar(): void {
     if (!r.cambiado) message.info(t.hSinCambios);
     else message.success(p.accion === 'conectar' ? t.hConectado(nombre) : t.hQuitado(nombre));
     if (r.respaldo) message.info(t.hCopia(r.respaldo), { duration: 8000 });
-    if (r.tokenEscrito) message.warning(t.hTokenEscrito, { duration: 10000 });
+    if (r.tokenSigueEn) message.warning(t.hTokenSigue(r.tokenSigueEn), { duration: 12000 });
+    else if (r.tokenEscrito) message.warning(t.hTokenEscrito, { duration: 10000 });
   });
 }
 
@@ -69,16 +85,40 @@ function copiar(a: EstadoAsistente): void {
   });
 }
 
-const tipoEstado = (a: EstadoAsistente): 'success' | 'warning' | 'default' =>
-  a.estado === 'conectado' ? 'success' : a.estado === 'instalado' ? 'warning' : 'default';
+/** «Conectado» solo dice que la entrada está escrita: no es «funciona» (ver `t.conectado`). */
+const tipoEstado = (a: EstadoAsistente): 'info' | 'warning' | 'error' | 'default' =>
+  a.estado === 'conectado'
+    ? 'info'
+    : a.estado === 'instalado'
+      ? 'warning'
+      : a.estado === 'ilegible'
+        ? 'error'
+        : 'default';
 const textoEstado = (a: EstadoAsistente): string =>
-  a.estado === 'conectado' ? t.conectado : a.estado === 'instalado' ? t.instalado : t.noInstalado;
+  a.estado === 'conectado'
+    ? a.motivo === 'app_grafica'
+      ? t.conectadoAppGrafica
+      : t.conectado
+    : a.estado === 'instalado'
+      ? t.instalado
+      : a.estado === 'ilegible'
+        ? t.noSePudoLeer
+        : t.noInstalado;
+/** La frase bajo el nombre: por qué no se puede conectar o por qué no se pudo leer. */
+const notaFila = (a: EstadoAsistente): string | null => {
+  if (a.estado === 'ilegible' && a.motivoIlegible) return t.motivoIlegible[a.motivoIlegible];
+  if (a.motivo === 'solo_servidores_locales') return t.motivoLocales;
+  if (a.motivo === 'app_grafica') return t.motivoAppGrafica;
+  return null;
+};
+const puedeConectar = (a: EstadoAsistente): boolean =>
+  a.conectable && (a.estado === 'instalado' || a.estado === 'conectado');
 
 const sinCambios = computed(() => pedido.value?.vista?.sinCambios === true);
-const marca = (tipo: 'igual' | 'mas' | 'menos'): string =>
+const marca = (tipo: 'igual' | 'mas' | 'menos' | 'omitido'): string =>
   tipo === 'mas' ? '+' : tipo === 'menos' ? '−' : ' ';
-const claseLinea = (tipo: 'igual' | 'mas' | 'menos'): string =>
-  tipo === 'mas' ? 'mas' : tipo === 'menos' ? 'menos' : 'igual';
+const claseLinea = (tipo: 'igual' | 'mas' | 'menos' | 'omitido'): string =>
+  tipo === 'mas' ? 'mas' : tipo === 'menos' ? 'menos' : tipo === 'omitido' ? 'omitido' : 'igual';
 </script>
 
 <template>
@@ -111,11 +151,18 @@ const claseLinea = (tipo: 'igual' | 'mas' | 'menos'): string =>
       <NSkeleton v-for="i in 6" :key="i" height="72px" :sharp="false" />
     </div>
     <ul v-else class="lista" :aria-label="t.pestana">
-      <li v-for="a in asistentes.estados" :key="a.id" class="fila" :data-estado="a.estado">
+      <li
+        v-for="a in asistentes.estados"
+        :id="`asistente-${a.id}`"
+        :key="a.id"
+        :class="['fila', { enfocada: enfocado === a.id }]"
+        :data-estado="a.estado"
+        tabindex="-1"
+      >
         <div class="nombre">
           <strong>{{ a.nombre }}</strong>
           <span class="tenue mono" :title="t.archivo">{{ a.archivoConfig }}</span>
-          <span v-if="!a.compatible" class="tenue">{{ t.motivoLocales }}</span>
+          <span v-if="notaFila(a)" class="tenue">{{ notaFila(a) }}</span>
         </div>
         <div class="estado">
           <NTag size="small" :bordered="false" :type="tipoEstado(a)">{{ textoEstado(a) }}</NTag>
@@ -126,7 +173,7 @@ const claseLinea = (tipo: 'igual' | 'mas' | 'menos'): string =>
             v-if="a.estado !== 'conectado'"
             type="primary"
             size="small"
-            :disabled="a.estado === 'no-instalado' || !a.compatible"
+            :disabled="a.estado === 'no-instalado' || !puedeConectar(a)"
             :loading="ocupado(`aplicar:${a.id}`)"
             @click="pedir(a, 'conectar')"
           >
@@ -142,7 +189,12 @@ const claseLinea = (tipo: 'igual' | 'mas' | 'menos'): string =>
           >
             {{ t.quitar }}
           </NButton>
-          <NButton size="small" quaternary :disabled="!a.compatible" @click="copiar(a)">
+          <NButton
+            size="small"
+            quaternary
+            :disabled="!a.compatible || a.estado === 'no-instalado'"
+            @click="copiar(a)"
+          >
             <template #icon
               ><NIcon><CopyOutline /></NIcon
             ></template>
@@ -196,7 +248,9 @@ const claseLinea = (tipo: 'igual' | 'mas' | 'menos'): string =>
               :key="i"
               :class="['linea', claseLinea(l.tipo)]"
             >
-              <span class="marca" aria-hidden="true">{{ marca(l.tipo) }}</span>{{ l.texto }}
+              <span class="marca" aria-hidden="true">{{ marca(l.tipo) }}</span>{{
+                l.tipo === 'omitido' ? t.omitidas(l.omitidas ?? 0) : l.texto
+              }}
             </div>
           </div>
         </template>
@@ -206,6 +260,13 @@ const claseLinea = (tipo: 'igual' | 'mas' | 'menos'): string =>
           :show-icon="false"
         >
           {{ t.comentarios }}
+        </NAlert>
+        <NAlert
+          v-if="pedido.vista.avisos.includes('finales_mezclados')"
+          type="warning"
+          :show-icon="false"
+        >
+          {{ t.finalesMezclados }}
         </NAlert>
         <p class="tenue">{{ t.copiaPrevia }}</p>
         <p v-if="pedido.accion === 'conectar'" class="tenue">{{ t.notaVariable }}</p>
@@ -308,6 +369,15 @@ const claseLinea = (tipo: 'igual' | 'mas' | 'menos'): string =>
   display: inline-block;
   width: 1.4em;
   font-weight: 700;
+}
+.enfocada {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+.omitido {
+  opacity: 0.7;
+  font-style: italic;
+  text-align: center;
 }
 .mas {
   background: rgba(24, 160, 88, 0.18);

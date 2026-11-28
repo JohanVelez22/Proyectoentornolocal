@@ -1367,10 +1367,6 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'agentes.version': (n, _s, id) => n.agentes.version(idAgente(id)),
   'agentes.instalar': (n, _s, id, confirmado) =>
     n.agentes.instalar(idAgente(id), confirmadoAgente(confirmado)),
-  'agentes.registrarMcp': (n, _s, id, confirmado) =>
-    n.agentes.registrarMcp(idAgente(id), confirmadoAgente(confirmado)),
-  'agentes.quitarMcp': (n, _s, id, confirmado) =>
-    n.agentes.quitarMcp(idAgente(id), confirmadoAgente(confirmado)),
   // La clave del proveedor la pone este proceso: viaja solo al entorno de la terminal.
   'agentes.abrir': (n, s, id, sitioId, proveedorId) => {
     const a = idAgente(id);

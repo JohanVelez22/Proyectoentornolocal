@@ -3957,8 +3957,6 @@ export const tr: TextosParciales = {
     },
     mcpRegistrado: 'MCP kayıtlı',
     mcpSinRegistrar: 'MCP kayıtlı değil',
-    tokenEscrito:
-      'Aracı dosyasında yazılı bir MCP belirteci vardı: artık kaldırıldı ve önceki yedek belirteci maskelenmiş (***) olarak saklıyor. MCP sunucu belirtecini yeniden oluşturmayı düşünün.',
     mcpNoSoportado:
       'Belgeleri belirtecin ortam değişkeninden alınmasına izin vermiyor: WolfCore Dev bunun için MCP kaydetmez (belirteç asla dosyalara yazılmaz).',
     instalar: 'Yükle',
@@ -3966,9 +3964,8 @@ export const tr: TextosParciales = {
     guia: 'Kurulum kılavuzu',
     soloGuia:
       'WolfCore Dev bunu yüklemez (yükleyicisinin sabit bir özeti yoktur): resmi kılavuzu izleyin.',
-    registrar: 'MCP kaydet',
-    quitar: 'MCP kaldır',
     abrir: 'Bir projede aç',
+    conectarEn: '“Asistanları bağla” içinde bağla',
     confirmarInstalar: {
       titulo: (nombre: string) => `${nombre} yüklensin mi?`,
       texto: (paquete: string) =>
@@ -3978,22 +3975,6 @@ export const tr: TextosParciales = {
       aceptar: 'Yükle',
       hecho: (nombre: string) => `${nombre} yüklendi.`,
     },
-    confirmarRegistrar: {
-      titulo: (nombre: string) => `${nombre} için MCP kaydedilsin mi?`,
-      texto:
-        'Bu dosyada yalnızca «wolfcore» girdisi eklenir (veya güncellenir); geri kalan her şey aynı kalır:',
-      aceptar: 'Kaydet',
-      hecho: (nombre: string) => `${nombre} için MCP kaydedildi.`,
-    },
-    confirmarQuitar: {
-      titulo: (nombre: string) => `${nombre} içinden MCP kaldırılsın mi?`,
-      texto: 'Bu dosyadan yalnızca «wolfcore» girdisi kaldırılır; geri kalan her şey aynı kalır:',
-      aceptar: 'Kaldır',
-      hecho: (nombre: string) => `${nombre} içinden MCP kaldırıldı.`,
-    },
-    copiaPrevia:
-      'Değişiklik yapılmadan önce dosyanın yanına tarihli bir yedek kaydedilir (<dosya>.wolfcore-YYYYAAGG-SSddsn.bak); en yeni 5 yedek saklanır. Aracı açıksa önce kapatın.',
-    copiaHecha: (ruta: string) => `Önceki yedek: ${ruta}`,
     dialogoAbrir: {
       titulo: (nombre: string) => `${nombre} aç`,
       proyecto: 'Proje',

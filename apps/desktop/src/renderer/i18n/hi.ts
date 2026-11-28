@@ -3900,8 +3900,6 @@ export const hi: TextosParciales = {
     },
     mcpRegistrado: 'MCP पंजीकृत',
     mcpSinRegistrar: 'MCP अपंजीकृत',
-    tokenEscrito:
-      'एजेंट की फ़ाइल में MCP टोकन लिखा हुआ था: अब वह वहाँ नहीं है और पिछली कॉपी में उसे छिपाकर (***) सहेजा गया है। MCP सर्वर का टोकन पुनः जनरेट करने पर विचार करें।',
     mcpNoSoportado:
       'इसके दस्तावेज़ पर्यावरण वेरिएबल से टोकन लेने की अनुमति नहीं देते: WolfCore Dev इसके लिए MCP पंजीकृत नहीं करता (टोकन कभी फ़ाइलों में नहीं लिखा जाता)।',
     instalar: 'स्थापित करें',
@@ -3909,9 +3907,8 @@ export const hi: TextosParciales = {
     guia: 'स्थापना मार्गदर्शिका',
     soloGuia:
       'WolfCore Dev इसे स्थापित नहीं करता (इसके इंस्टॉलर का फ़िंगरप्रिंट निश्चित नहीं है): आधिकारिक मार्गदर्शिका का पालन करें।',
-    registrar: 'MCP पंजीकृत करें',
-    quitar: 'MCP हटाएँ',
     abrir: 'प्रोजेक्ट में खोलें',
+    conectarEn: '“असिस्टेंट कनेक्ट करें” में कनेक्ट करें',
     confirmarInstalar: {
       titulo: (nombre: string) => `क्या ${nombre} स्थापित करें?`,
       texto: (paquete: string) =>
@@ -3921,21 +3918,6 @@ export const hi: TextosParciales = {
       aceptar: 'स्थापित करें',
       hecho: (nombre: string) => `${nombre} स्थापित हो गया।`,
     },
-    confirmarRegistrar: {
-      titulo: (nombre: string) => `क्या ${nombre} में MCP पंजीकृत करें?`,
-      texto: 'इस फ़ाइल में केवल “wolfcore” प्रविष्टि जोड़ी (या अपडेट की) जाएगी; बाकी सब वैसा ही रहेगा:',
-      aceptar: 'पंजीकृत करें',
-      hecho: (nombre: string) => `${nombre} में MCP पंजीकृत किया गया।`,
-    },
-    confirmarQuitar: {
-      titulo: (nombre: string) => `क्या ${nombre} से MCP हटाएँ?`,
-      texto: 'इस फ़ाइल से केवल “wolfcore” प्रविष्टि हटाई जाएगी; बाकी सब वैसा ही रहेगा:',
-      aceptar: 'हटाएँ',
-      hecho: (nombre: string) => `${nombre} से MCP हटा दिया गया।`,
-    },
-    copiaPrevia:
-      'फ़ाइल में बदलाव करने से पहले उसी के पास दिनांक सहित एक बैकअप कॉपी (<फ़ाइल>.wolfcore-YYYYMMDD-HHmmss.bak) सहेजी जाती है; नवीनतम 5 कॉपियाँ रखी जाती हैं। यदि एजेंट खुला है, तो कृपया पहले उसे बंद करें।',
-    copiaHecha: (ruta: string) => `पिछली कॉपी: ${ruta}`,
     dialogoAbrir: {
       titulo: (nombre: string) => `${nombre} खोलें`,
       proyecto: 'प्रोजेक्ट',

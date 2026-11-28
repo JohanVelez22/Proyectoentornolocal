@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { urlBaseDe } from '../ia/proveedores';
 import type { DefAgente } from './agentes';
-import { NOMBRE_ENTRADA_MCP, VARIABLE_TOKEN_MCP } from './configArchivo';
+import { VARIABLE_TOKEN_MCP } from './configArchivo';
 
 /**
  * Codex CLI (`@openai/codex`). Configuración en `~/.codex/config.toml` (`[mcp_servers.<id>]`
@@ -21,16 +21,6 @@ export const CODEX: DefAgente = {
   archivoConfig: (inicio) => path.join(inicio, '.codex', 'config.toml'),
   carpetasConocidas: () => [],
   entradaMcp: (url) => ({ url, bearer_token_env_var: VARIABLE_TOKEN_MCP }),
-  argsRegistrar: (url) => [
-    'mcp',
-    'add',
-    NOMBRE_ENTRADA_MCP,
-    '--url',
-    url,
-    '--bearer-token-env-var',
-    VARIABLE_TOKEN_MCP,
-  ],
-  argsQuitar: () => ['mcp', 'remove', NOMBRE_ENTRADA_MCP],
   variablesClave: (p, clave) => {
     // El proveedor por defecto de Codex es el de OpenAI; los compatibles, por su URL base.
     if (p.tipo === 'openai') {

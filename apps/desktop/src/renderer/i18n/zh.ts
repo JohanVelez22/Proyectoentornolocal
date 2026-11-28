@@ -3675,17 +3675,14 @@ export const zh: TextosParciales = {
     },
     mcpRegistrado: '已注册 MCP',
     mcpSinRegistrar: '未注册 MCP',
-    tokenEscrito:
-      '该智能体配置文件中曾包含明文 MCP 令牌：现已清除，且先前备份已脱敏（***）。建议重新生成 MCP 服务器令牌。',
     mcpNoSoportado:
       '其文档不支持从环境变量读取令牌：WolfCore Dev 不会为其注册 MCP（令牌绝不写入文件）。',
     instalar: '安装',
     instalando: '正在安装…',
     guia: '安装指南',
     soloGuia: 'WolfCore Dev 不负责安装（其安装程序无固定校验和）：请参考官方指南。',
-    registrar: '注册 MCP',
-    quitar: '移除 MCP',
     abrir: '在项目中打开',
+    conectarEn: '在“连接助手”中连接',
     confirmarInstalar: {
       titulo: (nombre: string) => `安装 ${nombre}？`,
       texto: (paquete: string) =>
@@ -3694,21 +3691,6 @@ export const zh: TextosParciales = {
       aceptar: '安装',
       hecho: (nombre: string) => `${nombre} 已安装。`,
     },
-    confirmarRegistrar: {
-      titulo: (nombre: string) => `在 ${nombre} 中注册 MCP？`,
-      texto: '仅在此文件中添加（或更新）“wolfcore”条目；其余内容保持不变：',
-      aceptar: '注册',
-      hecho: (nombre: string) => `已在 ${nombre} 中注册 MCP。`,
-    },
-    confirmarQuitar: {
-      titulo: (nombre: string) => `从 ${nombre} 移除 MCP？`,
-      texto: '仅从此文件中移除“wolfcore”条目；其余内容保持不变：',
-      aceptar: '移除',
-      hecho: (nombre: string) => `已从 ${nombre} 移除 MCP。`,
-    },
-    copiaPrevia:
-      '修改前会在文件旁保存带日期的备份（<archivo>.wolfcore-AAAAMMDD-HHmmss.bak），最多保留最近 5 份。若智能体正在运行，请先关闭。',
-    copiaHecha: (ruta: string) => `先前备份：${ruta}`,
     dialogoAbrir: {
       titulo: (nombre: string) => `打开 ${nombre}`,
       proyecto: '项目',

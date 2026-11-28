@@ -23,6 +23,7 @@ export const OPENCODE: DefAgente = {
   guia: 'https://opencode.ai/docs/',
   formato: 'json',
   seccion: 'mcp',
+  seccionAlterna: 'mcp.servers',
   soportaMcp: true,
   archivoConfig: (inicio) => path.join(inicio, '.config', 'opencode', 'opencode.json'),
   archivosConfigExtra: (inicio) => [path.join(inicio, '.config', 'opencode', 'opencode.jsonc')],

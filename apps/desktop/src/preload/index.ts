@@ -425,8 +425,6 @@ const api: ApiEntorno = {
     estado: () => invocar('agentes.estado'),
     version: (id) => invocar('agentes.version', id),
     instalar: (id, confirmado) => invocar('agentes.instalar', id, confirmado),
-    registrarMcp: (id, confirmado) => invocar('agentes.registrarMcp', id, confirmado),
-    quitarMcp: (id, confirmado) => invocar('agentes.quitarMcp', id, confirmado),
     abrir: (id, sitioId, proveedorId) => invocar('agentes.abrir', id, sitioId, proveedorId),
   },
   asistentes: {

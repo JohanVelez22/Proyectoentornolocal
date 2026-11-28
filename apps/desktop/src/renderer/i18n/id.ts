@@ -4009,8 +4009,6 @@ export const id: TextosParciales = {
     },
     mcpRegistrado: 'MCP terdaftar',
     mcpSinRegistrar: 'MCP belum terdaftar',
-    tokenEscrito:
-      'File agen sebelumnya berisi token MCP yang tertulis: kini sudah dihapus dan salinan cadangannya menyembunyikannya (***). Pertimbangkan membuat ulang token server MCP.',
     mcpNoSoportado:
       'Dokumentasinya tidak mendukung pengambilan token dari variabel lingkungan: WolfCore Dev tidak mendaftarkan MCP untuknya (token tidak pernah ditulis ke file).',
     instalar: 'Pasang',
@@ -4018,9 +4016,8 @@ export const id: TextosParciales = {
     guia: 'Panduan pemasangan',
     soloGuia:
       'WolfCore Dev tidak memasangnya (pemasangnya tidak memiliki hash tetap): ikuti panduan resmi.',
-    registrar: 'Daftarkan MCP',
-    quitar: 'Hapus MCP',
     abrir: 'Buka di proyek',
+    conectarEn: 'Hubungkan di “Hubungkan asisten”',
     confirmarInstalar: {
       titulo: (nombre: string) => `Pasang ${nombre}?`,
       texto: (paquete: string) =>
@@ -4030,22 +4027,6 @@ export const id: TextosParciales = {
       aceptar: 'Pasang',
       hecho: (nombre: string) => `${nombre} berhasil dipasang.`,
     },
-    confirmarRegistrar: {
-      titulo: (nombre: string) => `Daftarkan MCP di ${nombre}?`,
-      texto:
-        'Hanya entri «wolfcore» yang ditambahkan (atau diperbarui) pada file ini; sisanya tetap sama:',
-      aceptar: 'Daftarkan',
-      hecho: (nombre: string) => `MCP terdaftar di ${nombre}.`,
-    },
-    confirmarQuitar: {
-      titulo: (nombre: string) => `Hapus MCP dari ${nombre}?`,
-      texto: 'Hanya entri «wolfcore» yang dihapus dari file ini; sisanya tetap sama:',
-      aceptar: 'Hapus',
-      hecho: (nombre: string) => `MCP dihapus dari ${nombre}.`,
-    },
-    copiaPrevia:
-      'Sebelum diubah, salinan bertanggal disimpan di samping file (<file>.wolfcore-TTTTBBHH-JJmmd.bak); 5 salinan terbaru disimpan. Jika agen sedang terbuka, tutup terlebih dahulu.',
-    copiaHecha: (ruta: string) => `Salinan sebelumnya: ${ruta}`,
     dialogoAbrir: {
       titulo: (nombre: string) => `Buka ${nombre}`,
       proyecto: 'Proyek',

@@ -4082,8 +4082,6 @@ export const nl: TextosParciales = {
     },
     mcpRegistrado: 'MCP geregistreerd',
     mcpSinRegistrar: 'MCP niet geregistreerd',
-    tokenEscrito:
-      'Het bestand van de agent bevatte het MCP-token in platte tekst: dit is verwijderd en de voorafgaande kopie bewaart het gemaskeerd (***). Overweeg het token van de MCP-server opnieuw te genereren.',
     mcpNoSoportado:
       'De documentatie staat niet toe om het token uit een omgevingsvariabele te lezen: WolfCore Dev registreert de MCP niet (het token wordt nooit naar bestanden geschreven).',
     instalar: 'Installeren',
@@ -4091,9 +4089,8 @@ export const nl: TextosParciales = {
     guia: 'Installatiehandleiding',
     soloGuia:
       'WolfCore Dev installeert deze niet (het installatieprogramma heeft geen vaste hash): volg de officiële handleiding.',
-    registrar: 'MCP registreren',
-    quitar: 'MCP verwijderen',
     abrir: 'Openen in een project',
+    conectarEn: 'Koppelen in ‘Assistenten koppelen’',
     confirmarInstalar: {
       titulo: (nombre: string) => `${nombre} installeren?`,
       texto: (paquete: string) =>
@@ -4103,23 +4100,6 @@ export const nl: TextosParciales = {
       aceptar: 'Installeren',
       hecho: (nombre: string) => `${nombre} is geïnstalleerd.`,
     },
-    confirmarRegistrar: {
-      titulo: (nombre: string) => `MCP registreren in ${nombre}?`,
-      texto:
-        'Alleen de vermelding "wolfcore" in dit bestand wordt toegevoegd (of bijgewerkt); de rest blijft ongewijzigd:',
-      aceptar: 'Registreren',
-      hecho: (nombre: string) => `MCP geregistreerd in ${nombre}.`,
-    },
-    confirmarQuitar: {
-      titulo: (nombre: string) => `MCP verwijderen uit ${nombre}?`,
-      texto:
-        'Alleen de vermelding "wolfcore" wordt uit dit bestand verwijderd; de rest blijft ongewijzigd:',
-      aceptar: 'Verwijderen',
-      hecho: (nombre: string) => `MCP verwijderd uit ${nombre}.`,
-    },
-    copiaPrevia:
-      'Vóór enige wijziging wordt een gedateerde kopie naast het bestand opgeslagen (<bestand>.wolfcore-JJJJMMDD-HHmmss.bak); de 5 nieuwste worden bewaard. Als de agent geopend is, sluit deze dan eerst.',
-    copiaHecha: (ruta: string) => `Vorige kopie: ${ruta}`,
     dialogoAbrir: {
       titulo: (nombre: string) => `${nombre} openen`,
       proyecto: 'Project',

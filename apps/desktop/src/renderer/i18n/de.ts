@@ -4107,8 +4107,6 @@ export const de: TextosParciales = {
     },
     mcpRegistrado: 'MCP registriert',
     mcpSinRegistrar: 'MCP nicht registriert',
-    tokenEscrito:
-      'Die Datei des Agenten enthielt das MCP-Token im Klartext: Es wurde entfernt und in der vorherigen Sicherung maskiert (***) gespeichert. Erwägen Sie, das Token des MCP-Servers neu zu generieren.',
     mcpNoSoportado:
       'Seine Dokumentation unterstützt das Auslesen des Tokens aus einer Umgebungsvariable nicht: WolfCore Dev registriert den MCP dafür nicht (das Token wird niemals in Dateien geschrieben).',
     instalar: 'Installieren',
@@ -4116,9 +4114,8 @@ export const de: TextosParciales = {
     guia: 'Installationsanleitung',
     soloGuia:
       'WolfCore Dev installiert diesen Agenten nicht (sein Installer hat keinen festen Hash): Folgen Sie der offiziellen Anleitung.',
-    registrar: 'MCP registrieren',
-    quitar: 'MCP entfernen',
     abrir: 'In einem Projekt öffnen',
+    conectarEn: 'In „Assistenten verbinden“ verbinden',
     confirmarInstalar: {
       titulo: (nombre: string) => `${nombre} installieren?`,
       texto: (paquete: string) =>
@@ -4128,23 +4125,6 @@ export const de: TextosParciales = {
       aceptar: 'Installieren',
       hecho: (nombre: string) => `${nombre} wurde installiert.`,
     },
-    confirmarRegistrar: {
-      titulo: (nombre: string) => `MCP in ${nombre} registrieren?`,
-      texto:
-        'Es wird nur der Eintrag „wolfcore“ in dieser Datei hinzugefügt (oder aktualisiert); alles andere bleibt unverändert:',
-      aceptar: 'Registrieren',
-      hecho: (nombre: string) => `MCP in ${nombre} registriert.`,
-    },
-    confirmarQuitar: {
-      titulo: (nombre: string) => `MCP aus ${nombre} entfernen?`,
-      texto:
-        'Es wird nur der Eintrag „wolfcore“ aus dieser Datei entfernt; alles andere bleibt unverändert:',
-      aceptar: 'Entfernen',
-      hecho: (nombre: string) => `MCP aus ${nombre} entfernt.`,
-    },
-    copiaPrevia:
-      'Vor der Änderung wird eine datierte Sicherung neben der Datei gespeichert (<Datei>.wolfcore-JJJJMMTT-HHmmss.bak); die 5 neuesten bleiben erhalten. Falls der Agent geöffnet ist, schließen Sie ihn vorher.',
-    copiaHecha: (ruta: string) => `Vorherige Sicherung: ${ruta}`,
     dialogoAbrir: {
       titulo: (nombre: string) => `${nombre} öffnen`,
       proyecto: 'Projekt',

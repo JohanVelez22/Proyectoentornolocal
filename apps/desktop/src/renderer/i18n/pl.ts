@@ -4096,8 +4096,6 @@ export const pl: TextosParciales = {
     },
     mcpRegistrado: 'MCP zarejestrowany',
     mcpSinRegistrar: 'MCP niezarejestrowany',
-    tokenEscrito:
-      'Plik agenta zawierał zapisany token MCP: został już usunięty, a w poprzedniej kopii zapasowej jest zamaskowany (***). Warto rozważyć ponowne wygenerowanie tokenu serwera MCP.',
     mcpNoSoportado:
       'Dokumentacja tego narzędzia nie pozwala pobierać tokenu ze zmiennej środowiskowej: WolfCore Dev nie rejestruje dla niego MCP (token nigdy nie jest zapisywany w plikach).',
     instalar: 'Zainstaluj',
@@ -4105,9 +4103,8 @@ export const pl: TextosParciales = {
     guia: 'Instrukcja instalacji',
     soloGuia:
       'WolfCore Dev nie instaluje tego narzędzia (jego instalator nie ma stałej sumy kontrolnej): należy postępować zgodnie z oficjalną instrukcją.',
-    registrar: 'Zarejestruj MCP',
-    quitar: 'Usuń MCP',
     abrir: 'Otwórz w projekcie',
+    conectarEn: 'Połącz w „Połącz asystentów”',
     confirmarInstalar: {
       titulo: (nombre: string) => `Zainstalować ${nombre}?`,
       texto: (paquete: string) =>
@@ -4117,23 +4114,6 @@ export const pl: TextosParciales = {
       aceptar: 'Zainstaluj',
       hecho: (nombre: string) => `${nombre} został zainstalowany.`,
     },
-    confirmarRegistrar: {
-      titulo: (nombre: string) => `Zarejestrować MCP w ${nombre}?`,
-      texto:
-        'Dodany (lub zaktualizowany) zostanie wyłącznie wpis „wolfcore” w tym pliku; reszta pozostaje bez zmian:',
-      aceptar: 'Zarejestruj',
-      hecho: (nombre: string) => `Zarejestrowano MCP w ${nombre}.`,
-    },
-    confirmarQuitar: {
-      titulo: (nombre: string) => `Usunąć MCP z ${nombre}?`,
-      texto:
-        'Usunięty zostanie wyłącznie wpis „wolfcore” z tego pliku; reszta pozostaje bez zmian:',
-      aceptar: 'Usuń',
-      hecho: (nombre: string) => `Usunięto MCP z ${nombre}.`,
-    },
-    copiaPrevia:
-      'Przed modyfikacją zapisywana jest kopia zapasowa z datą obok pliku (<plik>.wolfcore-RRRRMMDD-HHmmss.bak); zachowywanych jest 5 najnowszych kopii. Jeśli agent jest otwarty, należy go wcześniej zamknąć.',
-    copiaHecha: (ruta: string) => `Poprzednia kopia zapasowa: ${ruta}`,
     dialogoAbrir: {
       titulo: (nombre: string) => `Otwórz ${nombre}`,
       proyecto: 'Projekt',

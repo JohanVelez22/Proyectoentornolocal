@@ -5240,24 +5240,36 @@ export const en: Textos = {
   asistentes: {
     pestana: 'Connect assistants',
     explicacion:
-      'Connecting an assistant lets your AI assistant (Claude, Codex…) look at and manage your WolfCore Dev services: see their status, start them and read logs. Anything sensitive always asks for your confirmation.',
+      'Connecting lets your AI assistant (Claude, Codex…) see and manage your WolfCore Dev services; anything sensitive always asks for your confirmation.',
     alcance:
       'WolfCore Dev only adds or removes its own “wolfcore” entry in each program’s settings, saves a dated copy first and never writes your token in those files.',
     notaVariable:
-      'Assistants read the token from the WOLFCORE_MCP_TOKEN environment variable, which WolfCore Dev only sets when you open them from AI › Agents › “Open in a project”. Cursor must be started with that variable defined.',
+      'For it to work, open the assistant from WolfCore Dev (AI › Agents › “Open in a project”).',
     recargar: 'Detect again',
-    conectado: 'Connected',
+    conectado: 'Connected: open it from WolfCore Dev (AI › Agents)',
+    conectadoAppGrafica: 'Open it from WolfCore Dev (AI › Agents) so it can connect',
+    noSePudoLeer: 'Could not be read',
     instalado: 'Installed, not connected',
     noInstalado: 'Not installed',
     noCompatible: 'Not supported yet',
     motivoLocales:
-      'This program only accepts local servers in its settings file and WolfCore Dev never writes the token in plain text, so it cannot be connected yet.',
+      'It would require saving the token in plain text; it will arrive with a secure bridge.',
+    motivoAppGrafica:
+      'It is a graphical app and AI › Agents cannot yet open it with the token: “Connect” stays disabled until it can.',
+    motivoIlegible: {
+      invalido:
+        'Its configuration is not valid; WolfCore Dev will not touch it. Fix it or restore it from a copy.',
+      demasiado_grande:
+        'The file is over 5 MB and does not look like a configuration; WolfCore Dev will not touch it.',
+      sin_acceso: 'The file could not be opened (permissions, or it is not a regular file).',
+    },
     conectar: 'Connect',
     quitar: 'Remove',
     copiar: 'Copy configuration',
     carpeta: 'Open settings folder',
     archivo: 'Settings file',
     cambios: 'This is what will change in the file:',
+    omitidas: (n: number) => `… ${n} unchanged lines …`,
     titulo: (n: string) => `Connect ${n}`,
     tituloQuitar: (n: string) => `Remove the connection from ${n}`,
     aceptarConectar: 'Connect',
@@ -5268,12 +5280,16 @@ export const en: Textos = {
     copiaPrevia: 'Before writing, a dated copy is saved next to the file (the latest 5 are kept).',
     comentarios:
       'Careful: comments inside the “wolfcore” entry will be lost. The rest of the file does not change.',
+    finalesMezclados:
+      'Note: the file mixes line endings (CRLF and LF) and, since it is rewritten as a whole, they will be unified.',
     hConectado: (n: string) => `${n} connected.`,
     hQuitado: (n: string) => `Connection removed from ${n}.`,
     hSinCambios: 'Nothing changed.',
     hCopia: (n: string) => `Copy saved: ${n}`,
     hTokenEscrito:
       'The file had the token written in plain text: the copy hides it and the file no longer has it.',
+    hTokenSigue: (donde: string) =>
+      `The token is still written in plain text elsewhere in the file (“${donde}”) and was not touched: please delete it by hand. The previous copy stores it masked (***).`,
     hCopiada: 'Configuration copied (without the token).',
   },
   agentes: {
@@ -5296,8 +5312,6 @@ export const en: Textos = {
     },
     mcpRegistrado: 'MCP registered',
     mcpSinRegistrar: 'MCP not registered',
-    tokenEscrito:
-      'The agent file had the MCP token written in it: it no longer does, and the earlier copy keeps it masked (***). Consider regenerating the token of the MCP server.',
     mcpNoSoportado:
       'Its documentation does not allow reading the token from an environment variable: WolfCore Dev does not register the MCP in it (the token is never written to files).',
     instalar: 'Install',
@@ -5305,9 +5319,8 @@ export const en: Textos = {
     guia: 'Installation guide',
     soloGuia:
       'WolfCore Dev does not install it (its installer has no pinned hash): follow the official guide.',
-    registrar: 'Register MCP',
-    quitar: 'Remove MCP',
     abrir: 'Open in a project',
+    conectarEn: 'Connect in “Connect assistants”',
     confirmarInstalar: {
       titulo: (nombre: string) => `Install ${nombre}?`,
       texto: (paquete: string) =>
@@ -5317,22 +5330,6 @@ export const en: Textos = {
       aceptar: 'Install',
       hecho: (nombre: string) => `${nombre} is installed.`,
     },
-    confirmarRegistrar: {
-      titulo: (nombre: string) => `Register the MCP in ${nombre}?`,
-      texto:
-        'Only the «wolfcore» entry of this file is added (or updated); everything else stays the same:',
-      aceptar: 'Register',
-      hecho: (nombre: string) => `MCP registered in ${nombre}.`,
-    },
-    confirmarQuitar: {
-      titulo: (nombre: string) => `Remove the MCP from ${nombre}?`,
-      texto: 'Only the «wolfcore» entry of this file is removed; everything else stays the same:',
-      aceptar: 'Remove',
-      hecho: (nombre: string) => `MCP removed from ${nombre}.`,
-    },
-    copiaPrevia:
-      'Before touching it, a dated copy is saved next to the file (<file>.wolfcore-YYYYMMDD-HHmmss.bak); the 5 newest are kept. If the agent is open, close it first.',
-    copiaHecha: (ruta: string) => `Previous copy: ${ruta}`,
     dialogoAbrir: {
       titulo: (nombre: string) => `Open ${nombre}`,
       proyecto: 'Project',

@@ -1088,8 +1088,6 @@ describe('registrarIpc', () => {
         'agentes.estado',
         'agentes.version',
         'agentes.instalar',
-        'agentes.registrarMcp',
-        'agentes.quitarMcp',
         'agentes.abrir',
         'git.sugerirCommit',
         'git.commitPreparado',

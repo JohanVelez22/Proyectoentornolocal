@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -110,6 +110,35 @@ describe('IPC de «Conectar asistentes»', () => {
     expect(sistema.abrirCarpeta).toHaveBeenCalledTimes(1);
     expect(path.resolve(sistema.abrirCarpeta.mock.calls[0]![0] as string)).toBe(
       path.resolve(carpeta),
+    );
+  });
+});
+
+describe('Un solo camino de escritura de configuraciones ajenas (IPC)', () => {
+  it('no hay canales para registrar o quitar el MCP salvo asistentes.aplicar', () => {
+    expect(RUTAS_IPC.filter((r) => /(registrar|quitar)Mcp|escribirConfig/i.test(r))).toEqual([]);
+    expect(RUTAS_IPC.filter((r) => r.startsWith('asistentes.')).sort()).toEqual([
+      'asistentes.abrirCarpeta',
+      'asistentes.aplicar',
+      'asistentes.copiarConfiguracion',
+      'asistentes.estado',
+      'asistentes.vistaPrevia',
+    ]);
+  });
+
+  it('el proceso principal, el preload y la API compartida no llaman al registro antiguo', () => {
+    for (const f of ['main/ipc.ts', 'preload/index.ts', 'shared/api.ts']) {
+      const t = readFileSync(path.join(__dirname, '..', 'src', f), 'utf8');
+      expect(t, f).not.toMatch(/registrarMcp|quitarMcp/);
+    }
+  });
+
+  it('el único canal que escribe configuraciones llama a aplicar con huella y confirmación', async () => {
+    const t = readFileSync(path.join(__dirname, '..', 'src', 'main', 'ipc.ts'), 'utf8');
+    const llamadas = t.match(/n\.asistentes\.\w+\(/g) ?? [];
+    expect(llamadas.filter((l) => l.includes('aplicar'))).toHaveLength(1);
+    expect(t).toMatch(
+      /'asistentes\.aplicar':[\s\S]{0,200}huellaAsistente\(huella\)[\s\S]{0,80}confirmadoAgente/,
     );
   });
 });

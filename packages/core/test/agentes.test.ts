@@ -1,15 +1,8 @@
 import { spawnSync } from 'node:child_process';
-import {
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { parse } from 'jsonc-parser';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   AGENTES,
   Agentes,
@@ -21,11 +14,7 @@ import {
   limpiarMensajeCommit,
   type DepsAgentes,
 } from '../src/agentes/agentes';
-import {
-  editarConfigAgente,
-  editarEntradaMcp,
-  VARIABLE_TOKEN_MCP,
-} from '../src/agentes/configArchivo';
+import { editarConfigAgente, editarEntradaMcp } from '../src/agentes/configArchivo';
 import { REGISTRO_NPM_AGENTES, urlOficial } from '../src/catalogo/catalogo';
 import { archivoSensible, Git } from '../src/git/git';
 import type { ClienteIa, ConfigProveedorIa } from '../src/ia/proveedores';
@@ -35,7 +24,6 @@ import { ejecutorPorDefecto } from '../src/plataforma/win';
 import { carpetaTemporal } from './temporales';
 
 // Valores claramente falsos: nunca deben aparecer en argumentos ni en archivos de los agentes.
-const FIXTURES = path.join(__dirname, 'fixtures', 'agentes');
 const TOKEN_MCP = 'token-mcp-FALSO-agentes-0000000000000000000000';
 const CLAVE = 'sk-ant-falsa-CENTINELA-agentes-000000000000wxyz';
 const URL_MCP = 'http://127.0.0.1:47123/mcp';
@@ -332,182 +320,7 @@ describe('Agentes: instalación', () => {
   });
 });
 
-describe('Agentes: registro del MCP', () => {
-  let m: Montaje;
-  beforeEach(async () => {
-    m = await montar();
-  });
-
-  it('Claude Code por su CLI: argumentos exactos, copia del archivo y sin el token', async () => {
-    const archivo = path.join(m.inicio, '.claude.json');
-    writeFileSync(archivo, '{"theme":"dark"}');
-    const cli = paquete(m.prefijo, '@anthropic-ai/claude-code', 'claude', '2.1.0');
-    m.exec.mockImplementation(async (cmd: string, args: string[]) => {
-      m.llamadas.push({ cmd, args });
-      if (args[1] === 'mcp' && args[2] === 'add') {
-        // La CLI real escribe la entrada (con la variable sin expandir).
-        const j = JSON.parse(readFileSync(archivo, 'utf8'));
-        j.mcpServers = { wolfcore: { type: 'http', url: args[8], headers: {} } };
-        writeFileSync(archivo, JSON.stringify(j));
-      }
-      return { codigo: 0, stdout: '', stderr: '' };
-    });
-    const r = await m.agentes.registrarMcp('claude-code', true);
-    expect(r.metodo).toBe('cli');
-    const add = m.llamadas.find((l) => l.args.includes('add'))!;
-    expect(add.args).toEqual([
-      cli,
-      'mcp',
-      'add',
-      '--transport',
-      'http',
-      '--scope',
-      'user',
-      'wolfcore',
-      URL_MCP,
-      '--header',
-      `Authorization: Bearer \${${VARIABLE_TOKEN_MCP}}`,
-    ]);
-    expect(JSON.stringify(m.llamadas)).not.toContain(TOKEN_MCP);
-    expect(r.respaldo).toBe(`${archivo}.wolfcore-20261119-103000.bak`);
-    expect(readFileSync(r.respaldo!, 'utf8')).toBe('{"theme":"dark"}');
-  });
-
-  it('Codex por su CLI con --bearer-token-env-var', async () => {
-    paquete(m.prefijo, '@openai/codex', 'codex', '0.50.0');
-    m.exec.mockImplementation(async (cmd: string, args: string[]) => {
-      m.llamadas.push({ cmd, args });
-      if (args.includes('add')) {
-        mkdirSync(path.join(m.inicio, '.codex'), { recursive: true });
-        writeFileSync(
-          path.join(m.inicio, '.codex', 'config.toml'),
-          `[mcp_servers.wolfcore]\nurl = "${URL_MCP}"\nbearer_token_env_var = "WOLFCORE_MCP_TOKEN"\n`,
-        );
-      }
-      return { codigo: 0, stdout: '', stderr: '' };
-    });
-    expect(await m.agentes.registrarMcp('codex', true)).toEqual({ respaldo: null, metodo: 'cli' });
-    expect(m.llamadas.find((l) => l.args.includes('add'))!.args.slice(1)).toEqual([
-      'mcp',
-      'add',
-      'wolfcore',
-      '--url',
-      URL_MCP,
-      '--bearer-token-env-var',
-      'WOLFCORE_MCP_TOKEN',
-    ]);
-  });
-
-  it('sin CLI, edita ~/.claude.json conservando comentarios y entradas ajenas, con copia', async () => {
-    const archivo = path.join(m.inicio, '.claude.json');
-    const original =
-      '{\n  // preferencias del usuario\n  "theme": "dark",\n  "mcpServers": {\n    "otro": { "command": "npx", "args": ["x"] },\n  },\n}\n';
-    writeFileSync(archivo, original);
-    const r = await m.agentes.registrarMcp('claude-code', true);
-    expect(r.metodo).toBe('archivo');
-    const nuevo = readFileSync(archivo, 'utf8');
-    expect(nuevo).toContain('// preferencias del usuario');
-    // jsonc-parser reformatea el objeto donde inserta; los datos ajenos quedan iguales.
-    expect(parse(nuevo).mcpServers.otro).toEqual({ command: 'npx', args: ['x'] });
-    expect(nuevo).toContain('"theme": "dark"');
-    expect(nuevo).toContain(`"Authorization": "Bearer \${WOLFCORE_MCP_TOKEN}"`);
-    expect(nuevo).toContain(URL_MCP);
-    expect(nuevo).not.toContain(TOKEN_MCP);
-    expect(readFileSync(r.respaldo!, 'utf8')).toBe(original);
-    expect(copias(m.inicio, '.claude.json')).toHaveLength(1);
-    expect(await m.agentes.estado().then((e) => e[0]!.mcpRegistrado)).toBe(true);
-  });
-
-  it('si la CLI falla, edita el archivo igual (sin perder la copia)', async () => {
-    paquete(m.prefijo, '@anthropic-ai/claude-code', 'claude', '2.1.0');
-    m.exec.mockResolvedValue({ codigo: 1, stdout: '', stderr: 'error' });
-    writeFileSync(path.join(m.inicio, '.claude.json'), '{"a":1}');
-    const r = await m.agentes.registrarMcp('claude-code', true);
-    expect(r.metodo).toBe('archivo');
-    expect(r.respaldo).not.toBeNull();
-    expect(JSON.parse(readFileSync(path.join(m.inicio, '.claude.json'), 'utf8'))).toMatchObject({
-      a: 1,
-      mcpServers: { wolfcore: { type: 'http', url: URL_MCP } },
-    });
-  });
-
-  it('TOML de Codex: reemplaza solo [mcp_servers.wolfcore] y conserva tablas ajenas y comentarios', async () => {
-    const dir = path.join(m.inicio, '.codex');
-    mkdirSync(dir);
-    const archivo = path.join(dir, 'config.toml');
-    writeFileSync(
-      archivo,
-      [
-        '# configuración del usuario',
-        'model = "o3"',
-        '',
-        '[mcp_servers.otro]',
-        'command = "npx"',
-        'args = ["-y", "otro"]',
-        '',
-        '[mcp_servers.wolfcore]',
-        'url = "http://127.0.0.1:1/viejo"',
-        '',
-        '[mcp_servers.wolfcore.env]',
-        'X = "1"',
-        '',
-        '[profiles.rapido]',
-        'model = "o4-mini" # comentario',
-        '',
-      ].join('\n'),
-    );
-    const r = await m.agentes.registrarMcp('codex', true);
-    expect(r.metodo).toBe('archivo');
-    const t = readFileSync(archivo, 'utf8');
-    expect(t).toContain('# configuración del usuario');
-    expect(t).toContain('[mcp_servers.otro]\ncommand = "npx"\nargs = ["-y", "otro"]');
-    expect(t).toContain('[profiles.rapido]\nmodel = "o4-mini" # comentario');
-    expect(t).not.toContain('viejo');
-    expect(t).not.toContain('[mcp_servers.wolfcore.env]');
-    expect(t).toContain(
-      `[mcp_servers.wolfcore]\nurl = "${URL_MCP}"\nbearer_token_env_var = "WOLFCORE_MCP_TOKEN"`,
-    );
-    expect(t).not.toContain(TOKEN_MCP);
-    expect(copias(dir, 'config.toml')).toHaveLength(1);
-  });
-
-  it('YAML de Hermes: agrega la entrada y conserva comentarios y servidores ajenos', async () => {
-    const dir = path.join(m.inicio, '.hermes');
-    mkdirSync(dir);
-    const archivo = path.join(dir, 'config.yaml');
-    writeFileSync(archivo, '# mío\nmodel: nous\nmcp_servers:\n  otro:\n    command: npx # sí\n');
-    const r = await m.agentes.registrarMcp('hermes', true);
-    expect(r.metodo).toBe('archivo');
-    const t = readFileSync(archivo, 'utf8');
-    expect(t).toContain('# mío');
-    expect(t).toContain('command: npx # sí');
-    expect(t).toContain('wolfcore:');
-    expect(t).toContain('Bearer ${WOLFCORE_MCP_TOKEN}');
-    expect(t).not.toContain(TOKEN_MCP);
-    expect(m.exec).not.toHaveBeenCalled();
-  });
-
-  it('un archivo que no se puede interpretar queda igual, sin copia y sin llamar a la CLI', async () => {
-    paquete(m.prefijo, '@anthropic-ai/claude-code', 'claude', '2.1.0');
-    const roto = '{ "theme": "dark", ';
-    writeFileSync(path.join(m.inicio, '.claude.json'), roto);
-    await expect(m.agentes.registrarMcp('claude-code', true)).rejects.toMatchObject({
-      codigo: 'agentes.config_ilegible',
-      datos: { archivo: '.claude.json' },
-    });
-    expect(readFileSync(path.join(m.inicio, '.claude.json'), 'utf8')).toBe(roto);
-    expect(copias(m.inicio, '.claude.json')).toEqual([]);
-    expect(m.exec).not.toHaveBeenCalled();
-    mkdirSync(path.join(m.inicio, '.codex'));
-    writeFileSync(path.join(m.inicio, '.codex', 'config.toml'), '[mcp_servers\nurl=');
-    await expect(m.agentes.registrarMcp('codex', true)).rejects.toMatchObject({
-      codigo: 'agentes.config_ilegible',
-    });
-    expect(readFileSync(path.join(m.inicio, '.codex', 'config.toml'), 'utf8')).toBe(
-      '[mcp_servers\nurl=',
-    );
-  });
-
+describe('Edición de configuraciones de agentes: casos que se rechazan', () => {
   it('una sección mcp_servers que no es tabla, o una edición que cambiaría otras cosas, se rechaza', () => {
     expect(() =>
       editarEntradaMcp('json', '{"mcpServers": 3}', 'mcpServers', { url: 'u' }, 'x.json'),
@@ -522,27 +335,6 @@ describe('Agentes: registro del MCP', () => {
         'c.toml',
       ),
     ).toThrow(expect.objectContaining({ codigo: 'asistentes.entrada_no_editable' }));
-  });
-
-  it('sin confirmación no toca nada', async () => {
-    writeFileSync(path.join(m.inicio, '.claude.json'), '{}');
-    await expect(m.agentes.registrarMcp('claude-code', 'si' as never)).rejects.toMatchObject({
-      codigo: 'agentes.sin_confirmar',
-    });
-    expect(readFileSync(path.join(m.inicio, '.claude.json'), 'utf8')).toBe('{}');
-  });
-
-  it('quitarMcp quita solo la entrada wolfcore, con copia', async () => {
-    const archivo = path.join(m.inicio, '.claude.json');
-    writeFileSync(
-      archivo,
-      JSON.stringify({ mcpServers: { otro: { command: 'x' }, wolfcore: { url: URL_MCP } } }),
-    );
-    const r = await m.agentes.quitarMcp('claude-code', true);
-    expect(JSON.parse(readFileSync(archivo, 'utf8'))).toEqual({
-      mcpServers: { otro: { command: 'x' } },
-    });
-    expect(r.respaldo).not.toBeNull();
   });
 });
 
@@ -943,83 +735,6 @@ describe('Agentes D3: la lista sale de IDS_AGENTE', () => {
 });
 
 describe.each(NUEVOS)('Agentes D3: $id', (n) => {
-  const rutaConfig = (inicio: string): string => path.join(inicio, ...n.archivo);
-  const poner = (inicio: string): string => {
-    const r = rutaConfig(inicio);
-    mkdirSync(path.dirname(r), { recursive: true });
-    copyFileSync(path.join(FIXTURES, n.fixture), r);
-    return r;
-  };
-
-  it('registrar conserva entradas ajenas y deja copia', async () => {
-    const m = await montar();
-    const r = poner(m.inicio);
-    const antes = readFileSync(r, 'utf8');
-    const res = await m.agentes.registrarMcp(n.id, true);
-    expect(res.metodo).toBe('archivo');
-    expect(res.respaldo).toMatch(/\.wolfcore-20261119-103000\.bak$/);
-    expect(readFileSync(res.respaldo!, 'utf8')).toBe(antes);
-    const obj = parse(readFileSync(r, 'utf8')) as Record<string, Record<string, unknown>>;
-    expect(obj[n.seccion]!['otro']).toBeDefined();
-    expect(obj[n.seccion]!['wolfcore']).toEqual(n.entrada);
-    const original = parse(antes) as Record<string, unknown>;
-    for (const k of Object.keys(original)) {
-      if (k !== n.seccion) expect(obj[k]).toEqual(original[k]);
-    }
-    // El estado lo ve como registrado, y quitar deja solo lo ajeno.
-    expect((await m.agentes.estado()).find((x) => x.id === n.id)!.mcpRegistrado).toBe(true);
-    await m.agentes.quitarMcp(n.id, true);
-    const sin = parse(readFileSync(r, 'utf8')) as Record<string, Record<string, unknown>>;
-    expect(sin[n.seccion]!['wolfcore']).toBeUndefined();
-    expect(sin[n.seccion]!['otro']).toBeDefined();
-  });
-
-  it('el token nunca queda escrito: ni en el archivo, ni en la copia, ni en la línea de órdenes', async () => {
-    const m = await montar();
-    const r = poner(m.inicio);
-    await m.agentes.registrarMcp(n.id, true);
-    for (const f of readdirSync(path.dirname(r))) {
-      expect(readFileSync(path.join(path.dirname(r), f), 'utf8')).not.toContain(TOKEN_MCP);
-    }
-    expect(readFileSync(r, 'utf8')).toContain('WOLFCORE_MCP_TOKEN');
-    expect(JSON.stringify(m.llamadas)).not.toContain(TOKEN_MCP);
-  });
-
-  it('sin archivo previo lo crea con solo la entrada wolfcore', async () => {
-    const m = await montar();
-    const res = await m.agentes.registrarMcp(n.id, true);
-    expect(res.respaldo).toBeNull();
-    const obj = parse(readFileSync(rutaConfig(m.inicio), 'utf8')) as Record<
-      string,
-      Record<string, unknown>
-    >;
-    expect(Object.keys(obj[n.seccion]!)).toEqual(['wolfcore']);
-  });
-
-  it('archivo ilegible no se toca', async () => {
-    const m = await montar();
-    const r = rutaConfig(m.inicio);
-    mkdirSync(path.dirname(r), { recursive: true });
-    const roto = '{ "theme": "dark", ';
-    writeFileSync(r, roto);
-    await expect(m.agentes.registrarMcp(n.id, true)).rejects.toMatchObject({
-      codigo: 'agentes.config_ilegible',
-    });
-    expect(readFileSync(r, 'utf8')).toBe(roto);
-    expect(readdirSync(path.dirname(r))).toEqual([path.basename(r)]);
-    expect(m.exec).not.toHaveBeenCalled();
-  });
-
-  it('sin confirmación no toca nada', async () => {
-    const m = await montar();
-    const r = poner(m.inicio);
-    const antes = readFileSync(r, 'utf8');
-    await expect(m.agentes.registrarMcp(n.id, false as never)).rejects.toMatchObject({
-      codigo: 'agentes.sin_confirmar',
-    });
-    expect(readFileSync(r, 'utf8')).toBe(antes);
-  });
-
   it('instalar usa el paquete oficial con el Node propio', async () => {
     const m = await montar();
     await m.agentes.instalar(n.id, true);
@@ -1089,22 +804,6 @@ describe('Agentes D3: Antigravity solo con detección y guía', () => {
     expect(m.exec).not.toHaveBeenCalled();
   });
 
-  it('registrar y quitar fallan con agentes.mcp_no_soportado y no tocan el archivo', async () => {
-    const m = await montar();
-    const r = path.join(m.inicio, '.gemini', 'config', 'mcp_config.json');
-    mkdirSync(path.dirname(r), { recursive: true });
-    copyFileSync(path.join(FIXTURES, 'antigravity-mcp_config.json'), r);
-    const antes = readFileSync(r, 'utf8');
-    await expect(m.agentes.registrarMcp('antigravity', true)).rejects.toMatchObject({
-      codigo: 'agentes.mcp_no_soportado',
-    });
-    await expect(m.agentes.quitarMcp('antigravity', true)).rejects.toMatchObject({
-      codigo: 'agentes.mcp_no_soportado',
-    });
-    expect(readFileSync(r, 'utf8')).toBe(antes);
-    expect(readdirSync(path.dirname(r))).toEqual(['mcp_config.json']);
-  });
-
   it('se detecta el ejecutable agy y se abre con solo el token', async () => {
     const m = await montar();
     const exe = path.join(m.inicio, 'AppData', 'Local', 'agy', 'bin', 'agy');
@@ -1131,47 +830,6 @@ describe('Agentes D3: revisión', () => {
       codigo: 'agentes.mcp_no_soportado',
       datos: { agente: 'Antigravity CLI' },
     });
-  });
-
-  it('un token literal en el archivo se enmascara en la copia, se avisa y no se imprime', async () => {
-    const m = await montar();
-    const r = path.join(m.inicio, '.gemini', 'settings.json');
-    mkdirSync(path.dirname(r), { recursive: true });
-    writeFileSync(
-      r,
-      JSON.stringify({
-        theme: 'Default',
-        mcpServers: {
-          wolfcore: { httpUrl: URL_MCP, headers: { Authorization: `Bearer ${TOKEN_MCP}` } },
-        },
-      }),
-    );
-    const res = await m.agentes.registrarMcp('gemini-cli', true);
-    expect(res.tokenEscrito).toBe(true);
-    const copia = readFileSync(res.respaldo!, 'utf8');
-    expect(copia).not.toContain(TOKEN_MCP);
-    expect(copia).toContain('Bearer ***');
-    // El archivo vivo ya no lo tiene y el resultado no lo imprime.
-    expect(readFileSync(r, 'utf8')).not.toContain(TOKEN_MCP);
-    expect(JSON.stringify(res)).not.toContain(TOKEN_MCP);
-    expect(copias(path.dirname(r), 'settings.json').length).toBe(1);
-    // Sin token literal no hay aviso.
-    const m2 = await montar();
-    const r2 = await m2.agentes.registrarMcp('gemini-cli', true);
-    expect(r2.tokenEscrito).toBeFalsy();
-  });
-
-  it('un archivo de más de 5 MB se trata como ilegible y no se toca', async () => {
-    const m = await montar();
-    const r = path.join(m.inicio, '.qwen', 'settings.json');
-    mkdirSync(path.dirname(r), { recursive: true });
-    const grande = JSON.stringify({ relleno: 'x'.repeat(5 * 1024 * 1024 + 10) });
-    writeFileSync(r, grande);
-    await expect(m.agentes.registrarMcp('qwen-code', true)).rejects.toMatchObject({
-      codigo: 'agentes.config_ilegible',
-    });
-    expect(readFileSync(r, 'utf8')).toBe(grande);
-    expect(readdirSync(path.dirname(r))).toEqual(['settings.json']);
   });
 
   it('el registro de Opencode también se detecta en opencode.jsonc', async () => {
