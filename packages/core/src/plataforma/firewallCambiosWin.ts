@@ -79,6 +79,10 @@ export const SALIDA_FIREWALL = {
   vencido: 11,
   sinTemporal: 12,
   temporalAlterado: 13,
+  /** El cuerpo es un enlace (ReparsePoint): no se lee ni se ejecuta. */
+  temporalEnlace: 14,
+  /** El cuerpo pesa más que `TOPE_CUERPO_ELEVADO`: no se lee. */
+  temporalGrande: 15,
   /** La carpeta protegida no es de fiar (permisos, dueño o enlace): no se tocó nada. */
   almacenInseguro: 21,
   /** Alguna regla se saltó o no se pudo cambiar (no es un fallo total). */
@@ -430,10 +434,14 @@ const PLAZO_POR_REGLA = (limiteUnixMs: number | null): string[] =>
         `  if ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() -gt ${Math.floor(limiteUnixMs)}) { $vencido = $true; break }`,
       ];
 
+/** Tamaño máximo (bytes) de un cuerpo elevado: los reales pesan unos pocos KB. */
+export const TOPE_CUERPO_ELEVADO = 1_048_576;
+
 /**
  * Comando elevado (corto y de tamaño fijo): lee el cuerpo del script del archivo temporal,
  * comprueba su SHA-256 (incrustado aquí, que no se puede cambiar) y lo ejecuta. Un archivo
- * alterado o que ya no está sale sin ejecutar nada.
+ * alterado, que ya no está, que es un enlace (ReparsePoint) o que pesa más del tope sale sin leer ni
+ * ejecutar nada.
  */
 export function scriptCargador(archivo: string, sha256: string): string {
   return [
@@ -441,6 +449,9 @@ export function scriptCargador(archivo: string, sha256: string): string {
     FUNCION_HUELLA,
     `$t = ${lit(archivo)}`,
     `if (-not [IO.File]::Exists($t)) { exit ${SALIDA_FIREWALL.sinTemporal} }`,
+    // Antes de leerlo: ni un enlace (apuntaría a otro archivo) ni uno desmesurado.
+    `if (([IO.File]::GetAttributes($t) -band [IO.FileAttributes]::ReparsePoint) -ne 0) { exit ${SALIDA_FIREWALL.temporalEnlace} }`,
+    `if (([IO.FileInfo]::new($t)).Length -gt ${TOPE_CUERPO_ELEVADO}) { exit ${SALIDA_FIREWALL.temporalGrande} }`,
     '$b = [IO.File]::ReadAllBytes($t)',
     `if ((Get-HuellaWolf $b) -ne ${lit(sha256.toLowerCase())}) { exit ${SALIDA_FIREWALL.temporalAlterado} }`,
     '& ([scriptblock]::Create([Text.UTF8Encoding]::new($false).GetString($b)))',
