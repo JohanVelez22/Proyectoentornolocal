@@ -158,7 +158,6 @@ import type {
   EstadoAntivirus,
   EstadoCaptura,
   ConexionActiva,
-  EstadoCierre,
   IdentidadUsuario,
   EstadoPantalla,
   MemoriaSistema,
@@ -1043,11 +1042,6 @@ export class PlataformaWindows implements PlataformaCompleta {
   /** Procesos del usuario y la sesión actuales (solo lee; sin servicios de Windows). */
   procesosDelUsuario(): Promise<ProcesoUsuario[]> {
     return this.procesosUsuario().listar();
-  }
-
-  /** Cierre amable (CloseMainWindow) por PID: nunca termina el proceso. */
-  cerrarVentanaPrincipal(pid: number, inicio: string, ruta: string): Promise<EstadoCierre> {
-    return this.procesosUsuario().cerrarVentana(pid, inicio, ruta);
   }
 
   /** Hora de inicio de un PID (consulta puntual) o null si no existe. */

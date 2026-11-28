@@ -280,30 +280,6 @@ export class ServicioPhp {
     }
   }
 
-  /** Trabajadores de la rama que están encendidos (índices), solo los propios de WolfCore Dev. */
-  trabajadoresEncendidos(version: string): number[] {
-    const res: number[] = [];
-    for (let i = 0; i < MAX_TRABAJADORES; i++) {
-      if (this.supervisor.estado(this.idTrabajador(version, i)) === 'encendido') res.push(i);
-    }
-    return res;
-  }
-
-  /**
-   * Deja encendido solo el primer trabajador que esté encendido de la rama (D36; no necesariamente
-   * el 0: si los encendidos son [1, 2], se queda el 1): detiene con normalidad los demás por su id
-   * del supervisor. Volver al tamaño normal es reiniciar la rama (`iniciar`). Devuelve cuántos
-   * detuvo.
-   */
-  async reducirAUno(version: string): Promise<number> {
-    let n = 0;
-    for (const i of this.trabajadoresEncendidos(version).slice(1)) {
-      await this.supervisor.detener(this.idTrabajador(version, i));
-      n++;
-    }
-    return n;
-  }
-
   async detener(version: string): Promise<void> {
     const cfg = await this.leerConfig();
     const n = Math.max(cfg.servicios.php.trabajadores, MAX_TRABAJADORES);

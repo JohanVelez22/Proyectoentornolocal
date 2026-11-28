@@ -6,19 +6,17 @@ import { rutaPowerShell, rutaSistema32 } from './procesosWin';
 import type {
   ConexionActiva,
   Ejecutor,
-  EstadoCierre,
   IdentidadUsuario,
   ProcesoUsuario,
 } from './tipos';
 
 /**
- * Procesos del usuario actual para el optimizador de RAM (D36).
+ * Procesos del usuario actual para liberar memoria (D54b).
  *
  * - `listar` y `identidad` SOLO LEEN (`Get-CimInstance Win32_Process` filtrado por la sesión y el
  *   SID del usuario actual, sin servicios de Windows).
- * - `cerrarVentana` solo pide un cierre amable (`CloseMainWindow`, como la X) POR PID. Aquí no hay
- *   ni habrá `taskkill`, `Stop-Process`, `TerminateProcess` ni `Process.Kill`: lo guarda una
- *   prueba que lee este archivo.
+ * - Aquí no hay ni habrá `taskkill`, `Stop-Process`, `TerminateProcess`, `Process.Kill` ni cierre de
+ *   ventanas: lo guarda una prueba que lee este archivo.
  *
  * PowerShell va por ruta absoluta de System32 (nunca del PATH ni de la carpeta actual).
  */
@@ -75,52 +73,6 @@ export const SCRIPT_IDENTIDAD = [
   '$ses = [System.Diagnostics.Process]::GetCurrentProcess().SessionId',
   `[Console]::Out.WriteLine("$yo${SEP}$ses")`,
 ].join('\n');
-
-/** Lo que el script de cierre dice por la salida estándar. */
-const SALIDAS_CIERRE: Readonly<Record<string, EstadoCierre>> = {
-  CERRADO: 'cerrado-pedido',
-  CAMBIO: 'cambio',
-  SIN_VENTANA: 'sin-ventana',
-  NO_SE_PUDO: 'no-se-pudo',
-};
-
-/**
- * Cierre amable de la ventana principal del proceso `pid` (entero ya validado). Todo se comprueba
- * DENTRO del mismo script y justo antes de `CloseMainWindow`, sin que nada vuelva a Node entre una
- * cosa y otra: la sesión y el dueño, la hora de creación (`inicio`, entero de `ToFileTimeUtc`), la
- * ruta del ejecutable (`ruta`, en base64), que no sea un servicio y, con el propio objeto
- * `Process` que va a recibir el cierre, la hora de inicio otra vez. Salida: CERRADO (se pidió),
- * CAMBIO (no es el mismo proceso), SIN_VENTANA o NO_SE_PUDO (no se pudo abrir o pedir: elevado).
- */
-export function scriptCerrarVentana(pid: number, inicio: string, ruta: string): string {
-  if (!Number.isInteger(pid) || pid <= 0) throw new Error(`PID no válido: ${pid}`);
-  if (!/^[1-9]\d{0,18}$/.test(inicio) || BigInt(inicio) > 9223372036854775807n) {
-    throw new Error('Hora de inicio no válida.');
-  }
-  if (ruta === '' || ruta.includes('\0')) throw new Error('Ruta no válida.');
-  const rutaB64 = Buffer.from(ruta, 'utf8').toString('base64');
-  const salida = (clave: string): string => `[Console]::Out.Write('${clave}'); exit 0`;
-  return [
-    "$ErrorActionPreference = 'Stop'",
-    '$yo = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value',
-    '$ses = [System.Diagnostics.Process]::GetCurrentProcess().SessionId',
-    `$w = Get-CimInstance Win32_Process -Filter 'ProcessId=${pid}'`,
-    `if (-not $w -or $w.SessionId -ne $ses) { ${salida('CAMBIO')} }`,
-    '$o = Invoke-CimMethod -InputObject $w -MethodName GetOwnerSid -ErrorAction SilentlyContinue',
-    `if (-not $o -or $o.Sid -ne $yo) { ${salida('CAMBIO')} }`,
-    '$c = 0; if ($w.CreationDate) { $c = $w.CreationDate.ToFileTimeUtc() }',
-    `if ($c -ne [int64]${inicio}) { ${salida('CAMBIO')} }`,
-    `$ruta = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${rutaB64}'))`,
-    `if (-not $w.ExecutablePath -or $w.ExecutablePath -ine $ruta) { ${salida('CAMBIO')} }`,
-    `if (Get-CimInstance Win32_Service -Filter 'ProcessId=${pid}') { ${salida('CAMBIO')} }`,
-    `$p = Get-Process -Id ${pid} -ErrorAction SilentlyContinue`,
-    `if (-not $p -or $p.MainWindowHandle -eq 0) { ${salida('SIN_VENTANA')} }`,
-    `try { $null = $p.Handle } catch { ${salida('NO_SE_PUDO')} }`,
-    `try { $t = $p.StartTime.ToFileTimeUtc() } catch { ${salida('NO_SE_PUDO')} }`,
-    `if ([math]::Abs($t - [int64]${inicio}) -gt 100000) { ${salida('CAMBIO')} }`,
-    `if ($p.CloseMainWindow()) { ${salida('CERRADO')} } else { ${salida('NO_SE_PUDO')} }`,
-  ].join('\n');
-}
 
 const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;
 
@@ -210,28 +162,6 @@ export class ProcesosUsuarioWindows {
     } catch (e) {
       if (e instanceof ErrorWolf) throw e;
       throw new ErrorWolf('memoria.no_disponible', 'No se pudieron leer los procesos del usuario.');
-    }
-  }
-
-  /**
-   * Cierre amable por PID, comprobando dentro del mismo script el mismo proceso (hora de inicio y
-   * ruta). Nunca termina el proceso. Ante cualquier fallo: `no-se-pudo`.
-   */
-  async cerrarVentana(pid: number, inicio: string, ruta: string): Promise<EstadoCierre> {
-    let script: string;
-    try {
-      script = scriptCerrarVentana(pid, inicio, ruta);
-    } catch {
-      return 'no-se-pudo';
-    }
-    try {
-      const r = await this.ejecutar(rutaPowerShell(this.env), codificarPowerShell(script), {
-        timeoutMs: 20_000,
-      });
-      if (r.codigo !== 0) return 'no-se-pudo';
-      return SALIDAS_CIERRE[r.stdout.trim()] ?? 'no-se-pudo';
-    } catch {
-      return 'no-se-pudo';
     }
   }
 

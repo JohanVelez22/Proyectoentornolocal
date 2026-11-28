@@ -320,18 +320,10 @@ export interface CapacidadesPlataforma {
   capturaDisponible(): Promise<EstadoCaptura>;
   /**
    * Procesos del usuario y la sesión actuales (nunca los del sistema, de servicios ni de otros
-   * usuarios si la plataforma puede distinguirlos). Solo LEE: es el insumo del optimizador de RAM
-   * (D36), que además vuelve a filtrar y a comprobar cada proceso antes de tocarlo.
+   * usuarios si la plataforma puede distinguirlos). Solo LEE: es el insumo de liberar memoria
+   * (D54b), que además vuelve a filtrar y a comprobar cada proceso antes de tocarlo.
    */
   procesosDelUsuario(): Promise<ProcesoUsuario[]>;
-  /**
-   * Pide al proceso `pid` que cierre su ventana principal, como al pulsar la X (cierre amable: el
-   * programa puede preguntar si guarda). Nunca termina ni mata el proceso ni actúa por nombre.
-   * `inicio` (hora de creación) y `ruta` (ejecutable) son lo que el optimizador vio al listarlo:
-   * se comprueban dentro de la misma operación, justo antes de pedir el cierre, para no cerrar
-   * otro programa que heredó el PID.
-   */
-  cerrarVentanaPrincipal(pid: number, inicio: string, ruta: string): Promise<EstadoCierre>;
   /**
    * Consulta puntual de un PID: su hora de inicio (la misma forma que `ProcesoUsuario.inicio`) o
    * `null` si no existe. Falla si no se puede consultar: quien llama no afirma nada.
@@ -518,7 +510,7 @@ export interface ProcesoUsuario {
   sesion: number;
   /** Identificador del dueño (el SID en Windows). */
   usuario: string;
-  /** true si es un servicio del sistema (la plataforma lo sabe; el optimizador lo protege). */
+  /** true si es un servicio del sistema (la plataforma lo sabe; liberar memoria lo protege). */
   servicio?: boolean;
   /**
    * true si la plataforma no pudo abrir el proceso (típico de uno elevado, de mayor integridad):
@@ -571,9 +563,6 @@ export interface ResultadoVaciadoProceso {
   antes: number;
   despues: number;
 }
-
-/** Resultado de `cerrarVentanaPrincipal`. */
-export type EstadoCierre = 'cerrado-pedido' | 'cambio' | 'sin-ventana' | 'no-se-pudo';
 
 /** Una conexión TCP establecida (`netstat -ano`): puertos de cada extremo y PID que la tiene. */
 export interface ConexionActiva {

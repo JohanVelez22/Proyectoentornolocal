@@ -39,7 +39,6 @@ import type {
   ObjetivoVaciado,
   ResultadoPurga,
   ResultadoVaciadoProceso,
-  EstadoCierre,
   IdentidadUsuario,
   ProcesoUsuario,
   NavegadorLimpieza,
@@ -217,7 +216,7 @@ export class PlataformaFalsa implements PlataformaCompleta {
     return this.procesos.has(pid) ? (this.rutasProceso.get(pid) ?? null) : null;
   }
 
-  /** Si es true, `matarArbol` falla la prueba: el optimizador de RAM nunca debe matar. */
+  /** Si es true, `matarArbol` falla la prueba: liberar memoria nunca debe matar. */
   prohibirMatar = false;
 
   async matarArbol(pid: number): Promise<void> {
@@ -442,13 +441,6 @@ export class PlataformaFalsa implements PlataformaCompleta {
     String.raw`C:\Windows`,
     String.raw`C:\Program Files\Windows Defender`,
   ];
-  /** PIDs a los que se pidió cerrar la ventana (nunca se mata nada). */
-  readonly cierresPedidos: number[] = [];
-
-  /** Qué contesta `cerrarVentanaPrincipal` cuando el proceso es el esperado (para simular UIPI). */
-  resultadoCierre: EstadoCierre = 'cerrado-pedido';
-  /** Los PIDs que, tras pedirles el cierre, desaparecen (el usuario no cancela). */
-  cierranAlPedir = new Set<number>();
   /** Si es true, `procesosDelUsuario` falla (listado fallido). */
   fallaListado = false;
   /** Veces que se leyó la lista de procesos. */
@@ -456,38 +448,10 @@ export class PlataformaFalsa implements PlataformaCompleta {
   /** Conexiones TCP en curso que ve `conexionesActivas`; `fallaConexiones` simula no poder leerlas. */
   conexiones: ConexionActiva[] = [];
   fallaConexiones = false;
-  /** Veces que se pidió cerrar (con lo que se comprobó), aunque se saltara. */
-  readonly cierresIntentados: { pid: number; inicio: string; ruta: string }[] = [];
-
   async procesosDelUsuario(): Promise<ProcesoUsuario[]> {
     this.listados++;
     if (this.fallaListado) throw new ErrorWolf('memoria.no_disponible', 'listado fallido');
     return this.procesosUsuario.map((p) => ({ ...p }));
-  }
-
-  /** Imita al script real: comprueba pid, dueño, sesión, inicio, ruta y servicio antes de cerrar. */
-  async cerrarVentanaPrincipal(pid: number, inicio: string, ruta: string): Promise<EstadoCierre> {
-    this.cierresIntentados.push({ pid, inicio, ruta });
-    const p = this.procesosUsuario.find((x) => x.pid === pid);
-    if (
-      !p ||
-      p.usuario !== this.identidad.usuario ||
-      p.sesion !== this.identidad.sesion ||
-      p.servicio === true ||
-      p.inicio !== inicio ||
-      (p.ruta ?? '').toLowerCase() !== ruta.toLowerCase()
-    ) {
-      return 'cambio';
-    }
-    if (!p.ventana) return 'sin-ventana';
-    if (p.elevado === true) return 'no-se-pudo';
-    if (this.resultadoCierre === 'cerrado-pedido') {
-      this.cierresPedidos.push(pid);
-      if (this.cierranAlPedir.has(pid)) {
-        this.procesosUsuario = this.procesosUsuario.filter((x) => x.pid !== pid);
-      }
-    }
-    return this.resultadoCierre;
   }
 
   /** Consultas puntuales por PID (M2); `fallaConsultaPid` simula no poder consultar. */

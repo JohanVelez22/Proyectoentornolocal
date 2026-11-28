@@ -1,6 +1,5 @@
 import { spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -16,6 +15,7 @@ import { FIRMAS, lineasPInvoke } from '../src/plataforma/pinvokeWin';
 import { scriptQuitarCarpeta } from '../src/plataforma/redWin';
 import { cuerpoSaludDiscosAdmin } from '../src/plataforma/saludDiscosWin';
 import { PlataformaWindows } from '../src/plataforma/win';
+import { carpetaTemporal } from './temporales';
 import { analizarPowerShell, hayPowerShell } from './soporte/parserPowerShell';
 
 const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src');
@@ -143,16 +143,16 @@ const sinComentarios = (codigo: string): string =>
 describe.skipIf(process.platform !== 'win32' || !hayPowerShell())(
   'con PowerShell real, sin elevar: el tipo se crea en memoria',
   () => {
-    const ps = (script: string) =>
+    const ps = (script: string, env: NodeJS.ProcessEnv = process.env) =>
       spawnSync(
         'powershell',
         ['-NoProfile', '-NonInteractive', '-EncodedCommand', codificarComando(script)],
-        { encoding: 'utf8', windowsHide: true, timeout: 120_000 },
+        { encoding: 'utf8', windowsHide: true, timeout: 120_000, env },
       );
-    const temporales = (): Set<string> => new Set(readdirSync(tmpdir()));
 
-    it('las firmas declaradas son las del tipo creado y no se escribe nada en %TEMP%', () => {
-      const antes = temporales();
+    it('las firmas declaradas son las del tipo creado y no se escribe nada en %TEMP%', async () => {
+      // Un %TEMP% propio de esta prueba: otras pruebas en paralelo compilan con csc en el de todos.
+      const temporal = await carpetaTemporal('pel-pinvoke-');
       const lineas = [
         "$ErrorActionPreference = 'Stop'",
         ...lineasPInvoke('Pur', 'WolfPur', FIRMAS.purga),
@@ -161,7 +161,7 @@ describe.skipIf(process.platform !== 'win32' || !hayPowerShell())(
         ...lineasPInvoke('No', 'WolfNo', FIRMAS.notificacion),
         'foreach ($t in @($Pur, $Ws, $Ru, $No)) { foreach ($m in $t.GetMethods([Reflection.BindingFlags]"Public,Static,DeclaredOnly")) { [Console]::Out.WriteLine($m.Name + ":" + $m.ReturnType.Name + ":" + (($m.GetParameters() | ForEach-Object { $_.ParameterType.Name }) -join ",")) } }',
       ].join('\n');
-      const r = ps(lineas);
+      const r = ps(lineas, { ...process.env, TEMP: temporal, TMP: temporal });
       expect(r.status).toBe(0);
       const salida = r.stdout.trim().split(/\r?\n/).sort();
       const esperado = [
@@ -178,8 +178,8 @@ describe.skipIf(process.platform !== 'win32' || !hayPowerShell())(
         'SHQueryUserNotificationState:Int32:Int32&',
       ].sort();
       expect(salida).toEqual(esperado);
-      const nuevos = [...temporales()].filter(
-        (f) => !antes.has(f) && /\.(cs|cmdline|dll|out|err|pdb)$/i.test(f),
+      const nuevos = readdirSync(temporal).filter((f) =>
+        /\.(cs|cmdline|dll|out|err|pdb)$/i.test(f),
       );
       expect(nuevos).toEqual([]);
     });

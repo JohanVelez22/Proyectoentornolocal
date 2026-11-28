@@ -3,17 +3,16 @@ import { ErrorWolf } from '../errores';
 import type { CapacidadesPlataforma } from './tipos';
 
 /**
- * Respaldo neutro de las capacidades del optimizador de RAM (D36) para sistemas que aún no las
- * tienen (todo lo que no sea Windows): no hay procesos que listar, no se cierra nada y la
+ * Respaldo neutro de las capacidades de liberar memoria (D54b) para sistemas que aún no las
+ * tienen (todo lo que no sea Windows): no hay procesos que listar, no se vacía nada y la
  * identidad no se puede dar, con un error del catálogo (nunca un `Error` crudo).
  */
 const noDisponible = (): ErrorWolf =>
-  new ErrorWolf('memoria.no_disponible', 'El optimizador de memoria no está disponible aquí.');
+  new ErrorWolf('memoria.no_disponible', 'Liberar memoria no está disponible aquí.');
 
 export const RESPALDO_MEMORIA_NEUTRO: Pick<
   CapacidadesPlataforma,
   | 'procesosDelUsuario'
-  | 'cerrarVentanaPrincipal'
   | 'inicioDeProceso'
   | 'inicioAnteriorA'
   | 'identidadActual'
@@ -41,7 +40,6 @@ export const RESPALDO_MEMORIA_NEUTRO: Pick<
   | 'recursosDeEquipo'
 > = {
   procesosDelUsuario: async () => [],
-  cerrarVentanaPrincipal: async () => 'no-se-pudo',
   inicioDeProceso: async () => {
     throw noDisponible();
   },

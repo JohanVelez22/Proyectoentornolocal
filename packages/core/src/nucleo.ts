@@ -848,7 +848,7 @@ export class Nucleo {
    * guarda, la registra ni la emite.
    */
   private proveedorClaveBd: (sitioId: string) => Promise<string | null> = async () => null;
-  /** Cachés propias que el optimizador de RAM sabe vaciar (las que registra la app). */
+  /** Liberar memoria en tres niveles (D54b): solo vacía conjuntos de trabajo, nada se cierra. */
   private readonly liberadorMemoria: LiberadorMemoria;
   private readonly limpiezaDisco: LimpiezaDisco;
   private readonly editorCodigo: EditorCodigo;

@@ -202,8 +202,8 @@ describe('liberar memoria: qué procesos entran en cada nivel', () => {
     const falsa = escenario();
     await liberador(falsa).liberar('profundo', true);
     expect(falsa.matados).toEqual([]);
-    expect(falsa.cierresIntentados).toEqual([]);
-    expect(falsa.cierresPedidos).toEqual([]);
+    // Ni siquiera existe la capacidad de pedir el cierre de una ventana.
+    expect('cerrarVentanaPrincipal' in falsa).toBe(false);
   });
 
   it('si un proceso cambió entre elegirlo y actuar (otra hora de inicio), la plataforma lo salta', async () => {

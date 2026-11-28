@@ -6,11 +6,9 @@ import { interpretarNetstatEstablecidas } from '../src/plataforma/netstat';
 import {
   interpretarProcesosUsuario,
   ProcesosUsuarioWindows,
-  scriptCerrarVentana,
   scriptProcesosUsuario,
 } from '../src/plataforma/procesosUsuarioWin';
 import type { Ejecutor } from '../src/plataforma/tipos';
-import { ServicioPhp } from '../src/servicios/php';
 
 describe('Metricas: inactividad observada', () => {
   it('cuenta desde que se observa y un hueco largo entre muestras la borra', async () => {
@@ -53,46 +51,7 @@ describe('Metricas: inactividad observada', () => {
   });
 });
 
-describe('ServicioPhp.reducirAUno', () => {
-  function php(encendidos: string[]) {
-    const estados = new Map<string, string>(encendidos.map((id) => [id, 'encendido']));
-    const detenidos: string[] = [];
-    const sup = {
-      estado: (id: string) => estados.get(id) ?? 'apagado',
-      detener: async (id: string) => {
-        detenidos.push(id);
-        estados.set(id, 'apagado');
-      },
-    };
-    const servicio = new ServicioPhp(
-      {} as never,
-      {} as never,
-      sup as never,
-      {} as never,
-      (async () => ({})) as never,
-    );
-    return { servicio, detenidos };
-  }
-
-  it('deja encendido el primer trabajador encendido y detiene los demás por su id', async () => {
-    const { servicio, detenidos } = php(['php-8.4-0', 'php-8.4-1', 'php-8.4-2', 'php-8.3-0']);
-    expect(servicio.trabajadoresEncendidos('8.4')).toEqual([0, 1, 2]);
-    expect(await servicio.reducirAUno('8.4')).toBe(2);
-    expect(detenidos).toEqual(['php-8.4-1', 'php-8.4-2']);
-    expect(await servicio.reducirAUno('8.4')).toBe(0);
-    expect(servicio.trabajadoresEncendidos('8.3')).toEqual([0]);
-  });
-
-  it('si los encendidos son [1, 2] conserva el 1 (no el índice 0, que está apagado)', async () => {
-    const { servicio, detenidos } = php(['php-8.4-1', 'php-8.4-2']);
-    expect(servicio.trabajadoresEncendidos('8.4')).toEqual([1, 2]);
-    expect(await servicio.reducirAUno('8.4')).toBe(1);
-    expect(detenidos).toEqual(['php-8.4-2']);
-    expect(servicio.trabajadoresEncendidos('8.4')).toEqual([1]);
-  });
-});
-
-describe('implementación de Windows: solo lee y cierra con amabilidad', () => {
+describe('implementación de Windows: solo lee', () => {
   const b64 = (t: string): string => Buffer.from(t, 'utf8').toString('base64');
   const decodificar = (args: string[]): string =>
     Buffer.from(args[args.indexOf('-EncodedCommand') + 1] ?? '', 'base64').toString('utf16le');
@@ -176,75 +135,7 @@ describe('implementación de Windows: solo lee y cierra con amabilidad', () => {
       throw new Error('sin powershell');
     }, {});
     await expect(w2.listar()).rejects.toMatchObject({ codigo: 'memoria.no_disponible' });
-    expect(await w2.cerrarVentana(5, '133000000000000000', 'C:\\a.exe')).toBe('no-se-pudo');
     await expect(w2.conexiones()).rejects.toMatchObject({ codigo: 'memoria.no_disponible' });
-  });
-
-  it('el script de cierre comprueba pid, hora de inicio y ruta antes de CloseMainWindow, en el mismo script', () => {
-    const inicio = '133700000000000000';
-    const ruta = 'C:\\Users\\yo\\Prográma ñ\\a.exe';
-    const s = scriptCerrarVentana(4321, inicio, ruta);
-    expect(s).toContain('-Id 4321');
-    expect(s).toContain(`[int64]${inicio}`);
-    expect(s).toContain(Buffer.from(ruta, 'utf8').toString('base64'));
-    // Nada de la ruta va en claro dentro del script.
-    expect(s).not.toContain('Prográma');
-    const iClose = s.indexOf('CloseMainWindow()');
-    expect(iClose).toBeGreaterThan(s.indexOf('CreationDate'));
-    expect(iClose).toBeGreaterThan(s.indexOf('ExecutablePath'));
-    expect(iClose).toBeGreaterThan(s.indexOf('StartTime'));
-    for (const estado of ['CERRADO', 'CAMBIO', 'SIN_VENTANA', 'NO_SE_PUDO']) {
-      expect(s).toContain(`'${estado}'`);
-    }
-    expect(s).not.toMatch(/-Name|Stop-Process|taskkill|Kill|Terminate/i);
-    // Entradas que no son lo que dicen no llegan a formar un script.
-    for (const [pid, i, r] of [
-      [0, inicio, ruta],
-      [-1, inicio, ruta],
-      [1.5, inicio, ruta],
-      [Number.NaN, inicio, ruta],
-      [10, '', ruta],
-      [10, '12abc', ruta],
-      [10, '1; Stop-Process', ruta],
-      [10, '0', ruta],
-      [10, '99999999999999999999', ruta],
-      [10, '9223372036854775808', ruta],
-      [10, inicio, ''],
-    ] as [number, string, string][]) {
-      expect(() => scriptCerrarVentana(pid, i, r), `${pid} ${i} ${r}`).toThrow();
-    }
-  });
-
-  it('cerrarVentana distingue cerrado-pedido, cambio, sin-ventana y no-se-pudo', async () => {
-    const scripts: string[] = [];
-    let salida = 'CERRADO';
-    let codigo = 0;
-    const w = new ProcesosUsuarioWindows(async (_c, args) => {
-      scripts.push(decodificar(args));
-      return { codigo, stdout: salida, stderr: '' };
-    }, {});
-    const llamar = () => w.cerrarVentana(4321, '133700000000000000', 'C:\\a.exe');
-    expect(await llamar()).toBe('cerrado-pedido');
-    salida = 'CAMBIO';
-    expect(await llamar()).toBe('cambio');
-    salida = 'SIN_VENTANA';
-    expect(await llamar()).toBe('sin-ventana');
-    salida = 'NO_SE_PUDO';
-    expect(await llamar()).toBe('no-se-pudo');
-    // Una salida rara o un código de error nunca se toman por un cierre.
-    salida = 'SI';
-    expect(await llamar()).toBe('no-se-pudo');
-    salida = 'CERRADO';
-    codigo = 1;
-    expect(await llamar()).toBe('no-se-pudo');
-    expect(scripts[0]).toContain('CloseMainWindow()');
-    // Con datos que no valen, ni siquiera se ejecuta nada.
-    const antes = scripts.length;
-    for (const malo of [0, -1, 1.5, Number.NaN]) {
-      expect(await w.cerrarVentana(malo, '133700000000000000', 'C:\\a.exe')).toBe('no-se-pudo');
-    }
-    expect(await w.cerrarVentana(5, 'no-es-numero', 'C:\\a.exe')).toBe('no-se-pudo');
-    expect(scripts).toHaveLength(antes);
   });
 
   it('las conexiones se leen con NETSTAT de System32 y se ignoran las que se están cerrando', async () => {
@@ -333,17 +224,6 @@ describe('implementación de Windows: solo lee y cierra con amabilidad', () => {
     expect(await soloEscucha.conexiones()).toEqual([]);
   });
 
-  it('"elevado" se detecta con Process.Handle (StartTime no falla con permisos limitados) en el listado y en el cierre (I2)', async () => {
-    const listado = scriptProcesosUsuario(1);
-    expect(listado).toContain('.Handle');
-    expect(listado).not.toContain('.StartTime');
-    const cierre = scriptCerrarVentana(4321, '133700000000000000', 'C:\\a.exe');
-    const iHandle = cierre.indexOf('$p.Handle');
-    expect(iHandle).toBeGreaterThan(-1);
-    expect(iHandle).toBeLessThan(cierre.indexOf('CloseMainWindow()'));
-    expect(cierre.slice(iHandle, iHandle + 80)).toContain("'NO_SE_PUDO'");
-  });
-
   it('inicioDe devuelve la hora de inicio, null si no existe y falla si no se puede consultar', async () => {
     let salida = '133700000000000000';
     let codigo = 0;
@@ -367,5 +247,15 @@ describe('implementación de Windows: solo lee y cierra con amabilidad', () => {
     const r = w.rutasProtegidas();
     expect(r).toContain('D:\\Win');
     expect(r).toContain('D:\\PF\\Windows Defender');
+  });
+});
+
+describe('liberar memoria no cierra ventanas ni reduce el pool de PHP (D54b)', () => {
+  it('ya no existen scriptCerrarVentana, cerrarVentana ni ServicioPhp.reducirAUno', async () => {
+    const procesos = await import('../src/plataforma/procesosUsuarioWin');
+    expect('scriptCerrarVentana' in procesos).toBe(false);
+    expect('cerrarVentana' in procesos.ProcesosUsuarioWindows.prototype).toBe(false);
+    const php = await import('../src/servicios/php');
+    expect('reducirAUno' in php.ServicioPhp.prototype).toBe(false);
   });
 });

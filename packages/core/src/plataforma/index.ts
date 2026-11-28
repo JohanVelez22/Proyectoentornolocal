@@ -17,7 +17,6 @@ export type {
   CategoriaLimpieza,
   NavegadorLimpieza,
   RutasCategoriaLimpieza,
-  EstadoCierre,
   ConexionActiva,
   MemoriaSistema,
   EstadoPantalla,
@@ -129,7 +128,6 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'libreOffice',
   'capturaDisponible',
   'procesosDelUsuario',
-  'cerrarVentanaPrincipal',
   'inicioDeProceso',
   'inicioAnteriorA',
   'identidadActual',
@@ -173,7 +171,7 @@ export function completarPlataforma(
   if (faltan.length === 0) return p as PlataformaCompleta;
   const res = Object.create(p) as Record<string, unknown>;
   for (const k of faltan) {
-    // Fuera de Windows, las del optimizador de RAM no se piden a PowerShell: respaldo neutro.
+    // Fuera de Windows, las de liberar memoria no se piden a PowerShell: respaldo neutro.
     const neutro = sistema !== 'win32' && k in RESPALDO_MEMORIA_NEUTRO;
     const origen = (neutro ? RESPALDO_MEMORIA_NEUTRO : respaldo) as unknown as Record<
       string,

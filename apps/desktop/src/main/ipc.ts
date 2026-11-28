@@ -2002,7 +2002,7 @@ const TABLA: Record<RutaIpc, Manejador> = {
       unoDe(a, FORMATOS_CONVERSOR, 'formato'),
       s.elegidas.exigir(destino, 'archivo', 'guardar'),
     ),
-  // ---- Optimizador de RAM (D36): la lista siempre se ve antes y se aplica solo con confirmación ----
+  // ---- Liberar memoria (D54b): la estimación solo lee; Profundo exige la confirmación `true` ----
   // ---- Cliente HTTP (D48): pide a cualquier host (también 127.0.0.1 y la LAN), solo a pedido del
   // usuario desde la ventana. Los datos se validan en el núcleo; los secretos solo pasan por main. ----
   'clienteHttp.estado': (_n, s) => s.clienteHttp().estado(),
