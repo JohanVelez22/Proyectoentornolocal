@@ -52,7 +52,9 @@ La auditoría `docs/superpowers/auditorias/2026-11-27-diseno-ui.md` y CONTINUAR 
 | 13  | Puente `wolf mcp` por stdio       | Subcomando de la CLI `wolf` que habla MCP por stdio y reenvía al servidor local, para que Claude Desktop y Cursor funcionen aunque se abran por fuera de WolfCore Dev. D58 dejó «No compatible todavía» en la fila de Claude Desktop.                          | 5     | `packages/core/src/mcp/servidor.ts` (HTTP en 127.0.0.1 con `Authorization: Bearer`, rechaza Host ajenos), `cli/servidor.ts` (servidor de órdenes de `wolf`), `agentes/configArchivo.ts`. Sustituye al botón «Registrar MCP». | **Alto.** Un proceso externo obtiene el token. Cumple R2, R3 y R4: el token se lee del almacén en cada arranque y no se escribe en el `claude_desktop_config.json`, y la edición del config usa vista previa, respaldo y atómica. Revisión opus. Sin red hacia fuera; sin administrador. | Imprescindible |
 | 14  | Instalador de reglas de IA        | Escribe o actualiza `AGENTS.md` o `CLAUDE.md` en un proyecto con las reglas de WolfCore Dev, con vista previa y respaldo.                                                                                                                                    | 3     | `packages/core/src/agentes/configArchivo.ts` (mismo flujo de R4), `ia/envIa.ts`, proyectos.                                                                                         | Medio. Escribe en carpetas del usuario. Sin red ni administrador. Nunca incluye claves.                                                                              | Muy útil      |
 | 15  | Combos de IA                      | Un «combo» agrupa proveedor, modelo y agente para un proyecto, y se aplica de una vez.                                                                                                                                                                       | 4     | `ia/gestorIa.ts`, `ia/proveedores.ts`, `agentes/`, `bloque de IA por proyecto` (`ia/envIa.ts`).                                                                                     | Medio. Mueve claves hacia `.env` (hoy solo con confirmación). Sin red nueva.                                                                                          | Muy útil      |
-| 16  | Imágenes con IA                   | Generar imágenes con el proveedor que el usuario ya configuró (OpenAI o Gemini) y guardarlas en el proyecto o pasarlas al conversor de imágenes.                                                                                                              | 6     | `ia/clienteOpenAi.ts`, `ia/clienteGemini.ts`, almacén de secretos, conversor de imágenes de D (`packages/core/src/conversor/`).                                                    | **Alto.** Red hacia terceros con clave del usuario; cada imagen se paga. Aviso de coste y nada automático. Revisión opus. Sin administrador.                          | Puede esperar |
+| 16 | Mejora de imágenes con IA ×2/×4 | Amplía la herramienta Imágenes (`packages/core/src/herramientas/imagenes.ts`) con Real-ESRGAN ncnn-vulkan. Descarga opcional verificada por SHA-256. Se adapta al hardware: GPU Vulkan por bloques según la VRAM; en CPU, un modelo liviano o mejora clásica. Modos Foto, Dibujo y Rostros, vista de antes y después y un aviso honesto de lo que puede y no puede hacer. | 6-9 (≈7,5) | `herramientas/imagenes.ts`, `conversor/`, catálogo de descargas con huella, detección de RAM y VRAM de D55 (`ia/ollama.ts`). | **Medio.** Binario de terceros: la descarga y su huella llevan revisión opus. Pide red solo para descargar. Se ejecuta local, nada sale del equipo. Sin administrador. | Muy útil |
+| 31 | Redimensionar imágenes | Cambiar el tamaño por píxeles, porcentaje o DPI con Lanczos, también por lotes. Amplía la herramienta Imágenes. | 3-4 (≈3,5) | `herramientas/imagenes.ts`, `conversor/operaciones.ts`. | Bajo. Local y sin red. No sobrescribe el original (copia con sufijo). | Muy útil |
+| 32 | Vectorizar a SVG | Convierte una imagen de mapa de bits a SVG desde la herramienta Imágenes. | 4-6 (≈5) | `herramientas/imagenes.ts`; librería de licencia permisiva (por elegir). | Bajo. Local y sin red. El SVG de salida se limpia de scripts. | Puede esperar |
 
 ### Grupo D. Datos y respaldos
 
@@ -65,10 +67,10 @@ La auditoría `docs/superpowers/auditorias/2026-11-27-diseno-ui.md` y CONTINUAR 
 
 | #   | Idea                | Qué es                                                                                                                                                                                                                        | Horas | Dependencias                                                                                                                                                | Seguridad y permisos                                                                                                                                                                                                                                                       | Prioridad     |
 | --- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| 19  | Actualizador de la app | Comprueba si hay una versión nueva, la descarga con huella verificada y la instala con confirmación.                                                                                                                        | 8     | `apps/desktop/electron-builder.yml`. No hay `electron-updater` en el proyecto (comprobado), así que hay que elegir cómo se publica. La firma de código está fuera por coste (plan de etapas, §3). | **Alto.** Descarga y ejecuta un instalador. Sin certificado, Windows muestra SmartScreen y la integridad depende solo de la huella. Pide red. No pide administrador si es instalación por usuario (verificar). Revisión opus.                                                | Muy útil      |
+| 19 | Actualizador de la app | Al abrir, una ventana con «Actualizar ahora», «Más tarde» y «Omitir esta versión», más Ajustes › Actualizaciones. Usa GitHub Releases, con descarga verificada y respaldo antes de instalar. | 6-8 (≈7) | `apps/desktop/electron-builder.yml`. No hay `electron-updater` en el proyecto (comprobado). Ajustes (idea 3), respaldo de perfiles (`perfiles/exportar.ts`). | **Alto.** Actualización sin firma de código: SmartScreen y solo la huella como garantía de integridad. Descarga y ejecuta un instalador. Pide red. Sin administrador si es instalación por usuario (verificar). Revisión opus. | Imprescindible |
 | 20  | Telegram            | Un bot de Telegram para **avisos** (un servicio cayó, un respaldo terminó, un proceso de proyecto falló) y, solo si el usuario lo decide, **control remoto mínimo** (ver estado e iniciar o detener servicios). Descripción sacada de la idea del usuario; en `progress.md` no hay más detalle. | 8     | `apps/desktop/src/main/notificaciones.ts`, `packages/core/src/avisos/`, `cli/servidor.ts` (órdenes), secretos.                                              | **Alto.** Saca información a un servicio externo y, con control remoto, acepta órdenes desde fuera. Cumple R3: el token del bot va al almacén de secretos, nunca en config, URL ni registros (la API de Telegram lleva el token en la URL, así que se registra solo el método). Lista de chats permitidos obligatoria. Sin administrador. Revisión opus. Recomendado empezar solo con avisos. | Puede esperar |
-| 21  | Simular región      | **Por definir con el usuario.** La lectura más probable es poder probar un sitio como si estuviera en otra región (zona horaria, idioma y moneda del navegador y de las pruebas), sin VPN. No hay descripción en las fuentes.         | 5     | Cliente HTTP (`clientehttp/`), CLI `wolf`, túneles (solo si se piensa en geolocalización real).                                                             | Medio. Si es solo cabeceras y zona horaria, no sale nada del equipo. Si se piensa en IP real o VPN, sube a alto y pide red. No pide administrador ni crea reglas de cortafuegos (R5).                                                                                      | Puede esperar |
-| 22  | «Lobo»              | **Por definir con el usuario.** En `progress.md` no aparece como idea, y en el código solo está el lobo de la marca (logotipo, animación de inicio en `AnimacionInicio.vue`, tema). Puede ser una mascota o un asistente con nombre. | 0     | Sin determinar.                                                                                                                                             | Sin determinar.                                                                                                                                                                                                                                                            | Puede esperar |
+| 21 | Simular región | Abre Chrome o Edge en un perfil temporal con otro idioma, otra zona horaria y otra geolocalización (flags o CDP; nunca el perfil real del usuario), y se borra al cerrar. Añade encabezados Accept-Language por país en el Cliente HTTP. Incluye una guía corta de Proton VPN gratis o Tor, sin integrarlos. | 4-6 (≈5) | `clientehttp/`, detección de navegadores, carpeta temporal de la app. | Bajo. El perfil es temporal y se borra al cerrar. El puerto de CDP, si se usa, escucha solo en 127.0.0.1 (R2). Sin red propia ni administrador; sin cortafuegos (R5). | Puede esperar |
+| 22 | «Lobo», asistente flotante | Asistente con forma de lobo-bot que se arrastra por toda la interfaz. Responde solo sobre WolfCore Dev, con el manual y el estado de la app en solo lectura. Funciona con Ollama local o con el proveedor de la nube configurado. Rechaza lo que no tenga que ver con la app y nunca envía secretos ni datos reales a la nube. Más adelante podría usar el MCP de la app. | 10-14 (≈12) | `ia/gestorIa.ts`, `ia/ollama.ts`, `ia/proveedores.ts`, `docs/manual/`, `patronesSecretos.ts` (filtro de secretos), `AnimacionInicio.vue` y la marca del lobo; luego `mcp/servidor.ts` (idea 13). | **Medio.** Riesgo de fuga de datos a la nube (R3) y de prompt injection desde el manual o el estado; solo lectura y sin herramientas que escriban. Pide red solo si se usa la nube. Sin administrador. Revisión opus. | Muy útil |
 
 ### Grupo F. Entorno de desarrollo
 
@@ -90,54 +92,60 @@ La auditoría `docs/superpowers/auditorias/2026-11-27-diseno-ui.md` y CONTINUAR 
 
 ## 3. Resumen
 
-- **30 ideas** (la 22, «Lobo», está por definir y no suma horas).
-- **Horas totales: 140,5 h.**
+- **32 ideas.** Las 3 de imágenes (16, 31 y 32) sustituyen a «imágenes con IA».
+- **Horas totales: 161,5 h** (con el punto medio de cada rango).
 - Por prioridad:
-  - Imprescindible: 1, 2, 3, 8, 9 y 13 (20,5 h).
-  - Muy útil: 4, 5, 10, 11, 14, 15, 17, 18, 19, 23 y 28 (60 h).
-  - Puede esperar: 6, 7, 12, 16, 20, 21, 22, 24, 25, 26, 27, 29 y 30 (60 h).
+  - Imprescindible: 1, 2, 3, 8, 9, 13 y 19 (27,5 h).
+  - Muy útil: 4, 5, 10, 11, 14, 15, 16, 17, 18, 22, 23, 28 y 31 (75 h).
+  - Puede esperar: 6, 7, 12, 20, 21, 24, 25, 26, 27, 29, 30 y 32 (59 h).
+
+Nota: las sumas por prioridad son orientativas. La suma exacta de las tandas de abajo es la que vale (161,5 h).
 
 ## 4. Tandas
 
-Un día son unas 10 h de agentes. Cada tanda se puede partir si el usuario lo prefiere. Primero van lo imprescindible y lo de bajo riesgo; lo de seguridad y red va más tarde, con revisión opus.
+Un día son unas 10 h de agentes. Cada tanda se puede partir. Primero van lo imprescindible y lo de bajo riesgo; el actualizador va pronto, con revisión opus; lo de seguridad y red va después.
 
-| Tanda  | Duración  | Contenido (ideas)                                                  | Horas | Riesgo   |
-| ------ | --------- | ------------------------------------------------------------------ | ----- | -------- |
-| F1     | 1 día     | 8, 9, 10, 2, 3                                                     | 11,5  | Bajo     |
-| F2     | 1-2 días  | 1, 4, 7                                                            | 14    | Bajo     |
-| F3     | 1 día     | 13, 14, 15                                                         | 12    | Medio y alto (opus en 13) |
-| F4     | 1 día     | 17, 28                                                             | 12    | Bajo     |
-| F5     | 1-2 días  | 29, 27, 12, 30                                                     | 14    | Bajo y medio |
-| F6     | 1 día     | 5, 6                                                               | 11    | Bajo     |
-| F7     | 2 días    | 23, 24, 11                                                         | 16    | Medio    |
-| F8     | 2 días    | 19, 18                                                             | 18    | Alto (opus) |
-| F9     | 2 días    | 16, 20, 21                                                         | 19    | Alto (opus) |
-| F10    | 1-2 días  | 25, 26                                                             | 13    | Medio (opus en 26) |
-| **Total** |        | 29 ideas con horas, sin la 22                                      | **140,5** |       |
+| Tanda     | Duración | Contenido (ideas)                    | Horas     | Riesgo                |
+| --------- | -------- | ------------------------------------ | --------- | --------------------- |
+| F1        | 1 día    | 8, 9, 10, 2, 3                       | 11,5      | Bajo                  |
+| F2        | 1-2 días | 1, 4, 7                              | 14        | Bajo                  |
+| F3        | 1 día    | 19 (actualizador), 13 (`wolf mcp`)   | 12        | Alto (opus)           |
+| F4        | 1 día    | 14, 15, 31                           | 10,5      | Medio                 |
+| F5        | 1 día    | 17, 28                               | 12        | Bajo                  |
+| F6        | 1-2 días | 29, 27, 12, 30                       | 14        | Bajo y medio          |
+| F7        | 1 día    | 5, 6                                 | 11        | Bajo                  |
+| F8        | 2 días   | 23, 24, 11                           | 16        | Medio                 |
+| F9        | 2 días   | 18 (nube), 16 (mejora IA)            | 17,5      | Alto (opus)           |
+| F10       | 2 días   | 22 (Lobo), 32 (vectorizar)           | 17        | Medio (opus en Lobo)  |
+| F11       | 1-2 días | 20 (Telegram), 21 (región)           | 13        | Alto (opus en Telegram) |
+| F12       | 1-2 días | 25, 26                               | 13        | Medio (opus en 26)    |
+| **Total** |          | 32 ideas                             | **161,5** |                       |
 
 ### Qué tendría que probar el usuario a mano en cada tanda
 
 - **F1.** Que Inicio y «Iniciar todo» muestren los avisos y el contador esperados con procesos de proyecto; que Ajustes tenga el índice fijo a 1024, 1280 y 1600 px; que «ram-justo» muestre el motivo de CPU; que el botón de PHP 8.3 actualice y deje una copia de `php.ini`.
 - **F2.** Recorrer cada pantalla en claro y oscuro y comprobar que los tamaños no han cambiado a peor; Tab en cada pantalla para ver el foco; que los botones sigan la guía en Versiones, Agentes y Correo.
-- **F3.** Abrir Claude Desktop y Cursor **por fuera** de la app y confirmar que ven las herramientas de WolfCore Dev; comprobar que el `claude_desktop_config.json` no contiene el token y que hay respaldo; escribir reglas en un proyecto de prueba; aplicar un combo y revisar el `.env`.
-- **F4.** Abrir el diagrama de una base de varias tablas con claves foráneas (MySQL y PostgreSQL) y comprobar que se lee bien y que una base grande no cuelga la app; probar una receta de Go y de otro lenguaje con `127.0.0.1`.
-- **F5.** Cambiar a cada idioma nuevo y ver si falta algún texto; instalar Oh My Posh con la vista previa; reproducir un vídeo de la guía sin conexión.
-- **F6.** Proyectos plegado y desplegado con varios proyectos; Cliente HTTP con una respuesta larga, Intro para enviar y el historial.
-- **F7.** Abrir, redimensionar y cerrar varias pestañas de la terminal; ejecutar un comando largo y cerrar la app; grabar y reproducir una sesión; abrir un túnel y comprobar que cloudflared termina al cerrar WolfCore Dev.
-- **F8.** Con una instalación de prueba, actualizar a una versión nueva y ver el aviso de SmartScreen; hacer un respaldo a la nube, comprobar que lo subido está cifrado y restaurarlo. El primer envío real, con el usuario presente.
-- **F9.** Generar una imagen con un proveedor propio y comprobar el aviso de coste; crear un bot de Telegram de prueba, recibir un aviso y, si se activa, mandar una orden desde un chat no permitido (debe rechazarla); comprobar la simulación de región según lo que se defina.
-- **F10.** WSL: listar distribuciones y abrir una terminal; Sandbox: solo si el equipo no es Home, y con el usuario por la activación de la función (administrador).
+- **F3.** Actualizador: con una versión de prueba en GitHub Releases, ver la ventana al abrir, probar «Más tarde» y «Omitir esta versión» (no debe volver a avisar de esa), confirmar el respaldo previo y el aviso de SmartScreen. `wolf mcp`: abrir Claude Desktop y Cursor por fuera de la app y comprobar que ven las herramientas; verificar que el `claude_desktop_config.json` no contiene el token y que hay respaldo.
+- **F4.** Escribir reglas de IA en un proyecto de prueba con vista previa; aplicar un combo y revisar el `.env`; redimensionar una imagen por píxeles, porcentaje y DPI, y un lote de varias, comprobando que el original no se toca.
+- **F5.** Abrir el diagrama de una base con varias tablas y claves foráneas (MySQL y PostgreSQL) y ver que una base grande no cuelga la app; probar una receta de Go y de otro lenguaje con `127.0.0.1`.
+- **F6.** Cambiar a cada idioma nuevo y ver si falta algún texto; instalar Oh My Posh con la vista previa; reproducir un vídeo de la guía sin conexión.
+- **F7.** Proyectos plegado y desplegado con varios proyectos; Cliente HTTP con una respuesta larga, Intro para enviar y el historial.
+- **F8.** Abrir, redimensionar y cerrar varias pestañas de la terminal; ejecutar un comando largo y cerrar la app; grabar y reproducir una sesión; abrir un túnel y comprobar que cloudflared termina al cerrar WolfCore Dev.
+- **F9.** Hacer un respaldo a la nube, comprobar que lo subido está cifrado y restaurarlo (el primer envío real, con el usuario). Descargar Real-ESRGAN, ver la huella verificada y mejorar una foto, un dibujo y un rostro en ×2 y ×4 con la vista de antes y después; probarlo también sin GPU Vulkan.
+- **F10.** Lobo: arrastrarlo por varias pantallas; preguntarle por la app y por algo ajeno (debe rechazarlo); con Ollama local y con un proveedor de la nube; intentar que revele una clave o siga una instrucción escondida en el manual (no debe). Vectorizar un logo y un dibujo a SVG.
+- **F11.** Crear un bot de Telegram de prueba, recibir un aviso y, si se activa el control, mandar una orden desde un chat no permitido (debe rechazarla). Simular región: abrir Chrome o Edge con otro idioma, zona horaria y geolocalización, ver que usa un perfil temporal que se borra al cerrar y que el perfil real no se toca; probar Accept-Language por país en el Cliente HTTP.
+- **F12.** WSL: listar distribuciones y abrir una terminal. Sandbox: solo si el equipo no es Home, y con el usuario por la activación de la función (administrador).
 
 ## 5. Decisiones que debe tomar el usuario
 
-1. **Qué tandas entran.** Solo F1 a F4 (lo imprescindible y de bajo riesgo), o también las de seguridad y red (F8 y F9).
-2. **«Lobo» y «Simular región».** Qué son exactamente. Mientras no se definan, no se estiman ni se programan.
-3. **Telegram.** Solo avisos, o también control remoto. Recomendación: avisos primero.
-4. **Actualizador de la app.** Si se hace sin firma de código (con SmartScreen y huella) o si se espera a comprar un certificado.
-5. **Respaldos en la nube.** Qué destino (carpeta sincronizada, S3, WebDAV).
-6. **Terminal integrada.** Aceptar una dependencia nativa nueva (`node-pty`), que complica la compilación y el CI en los 3 sistemas.
-7. **WSL y Sandbox.** Si se mantienen, sabiendo que Sandbox no existe en Windows 11 Home y que activarlo pide administrador.
-8. **Optimizador.** Revisar si D54b ya lo cubrió y quitarlo.
-9. **Qué queda para después de F.** Lo que el plan de etapas dejó en F y no está en este borrador (DNS propio y comodín, Apache/Caddy, FrankenPHP/Octane, contenedores, Meilisearch/RabbitMQ/Reverb, inspectores, perfilado, rama como subdominio, WordPress completo, pruebas por sitio, arranque perezoso, modo portable, sincronizar entre equipos, RAG con pgvector, restos de la CA, FTP y restauración, y las pruebas pendientes de pgvector multibase y la revisión nativa de los 14 idiomas no base): si entran en este orden o van a una Etapa F2.
+1. **Qué tandas entran.** Solo F1 a F5 (lo imprescindible y de bajo riesgo), o también las de seguridad y red (F9 y F11).
+2. **Telegram.** Solo avisos, o también control remoto. Recomendación: avisos primero.
+3. **Respaldos en la nube.** Qué destino (carpeta sincronizada, S3, WebDAV).
+4. **Terminal integrada.** Aceptar una dependencia nativa nueva (`node-pty`), que complica la compilación y el CI en los 3 sistemas.
+5. **WSL y Sandbox.** Si se mantienen, sabiendo que Sandbox no existe en Windows 11 Home y que activarlo pide administrador.
+6. **Optimizador.** Revisar si D54b ya lo cubrió y quitarlo.
+7. **Qué queda para después de F.** Lo que el plan de etapas dejó en F y no está en este borrador (DNS propio y comodín, Apache/Caddy, FrankenPHP/Octane, contenedores, Meilisearch/RabbitMQ/Reverb, inspectores, perfilado, rama como subdominio, WordPress completo, pruebas por sitio, arranque perezoso, modo portable, sincronizar entre equipos, RAG con pgvector, restos de la CA, FTP y restauración, y las pruebas pendientes de pgvector multibase y la revisión nativa de los 14 idiomas no base): si entran en este orden o van a una Etapa F2.
+
+Ya resueltas por el usuario: qué es «Lobo», qué es «Simular región», el actualizador (GitHub Releases, sin firma, Imprescindible) y el reparto de las imágenes en tres.
 
 **Nada de la Etapa F se implementa sin la aprobación del usuario.** Este borrador solo sirve para elegir. Cada tanda elegida pasa por un plan detallado antes de tocar código, y lo que toque seguridad, red o administrador lleva revisión opus.
