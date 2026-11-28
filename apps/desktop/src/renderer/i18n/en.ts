@@ -90,6 +90,14 @@ export const en: Textos = {
       'sintaxis.falta_llave': 'missing “}”',
     },
     codigos: {
+      'asistentes.no_existe': 'That assistant is not supported.',
+      'asistentes.no_instalado': '{asistente} is not installed.',
+      'asistentes.no_compatible': '{asistente} cannot be connected yet.',
+      'asistentes.enlace_rechazado':
+        '{archivo} is a link (symbolic link or junction): it was not modified.',
+      'asistentes.vista_desfasada':
+        'The file changed after the preview. Please review the preview again.',
+      'asistentes.sin_carpeta': 'The settings folder of {asistente} does not exist.',
       'git.cambios_locales':
         'There are unsaved changes in the folder: commit or discard them before pulling. Nothing was touched.',
       'git.divergencia':
@@ -5226,6 +5234,45 @@ export const en: Textos = {
       buscar: 'Search extension',
       vacio: 'No extensions match.',
     },
+  },
+  asistentes: {
+    pestana: 'Connect assistants',
+    explicacion:
+      'Connecting an assistant lets your AI assistant (Claude, Codex…) look at and manage your WolfCore Dev services: see their status, start them and read logs. Anything sensitive always asks for your confirmation.',
+    alcance:
+      'WolfCore Dev only adds or removes its own “wolfcore” entry in each program’s settings, saves a dated copy first and never writes your token in those files.',
+    notaVariable:
+      'Assistants read the token from the WOLFCORE_MCP_TOKEN environment variable, which WolfCore Dev only sets when you open them from AI › Agents › “Open in a project”. Cursor must be started with that variable defined.',
+    recargar: 'Detect again',
+    conectado: 'Connected',
+    instalado: 'Installed, not connected',
+    noInstalado: 'Not installed',
+    noCompatible: 'Not supported yet',
+    motivoLocales:
+      'This program only accepts local servers in its settings file and WolfCore Dev never writes the token in plain text, so it cannot be connected yet.',
+    conectar: 'Connect',
+    quitar: 'Remove',
+    copiar: 'Copy configuration',
+    carpeta: 'Open settings folder',
+    archivo: 'Settings file',
+    cambios: 'This is what will change in the file:',
+    titulo: (n: string) => `Connect ${n}`,
+    tituloQuitar: (n: string) => `Remove the connection from ${n}`,
+    aceptarConectar: 'Connect',
+    aceptarQuitar: 'Remove connection',
+    preparando: 'Preparing the preview…',
+    archivoNuevo: 'The file does not exist yet: it will be created.',
+    sinCambios: 'Nothing to change: it is already like this.',
+    copiaPrevia: 'Before writing, a dated copy is saved next to the file (the latest 5 are kept).',
+    comentarios:
+      'Careful: comments inside the “wolfcore” entry will be lost. The rest of the file does not change.',
+    hConectado: (n: string) => `${n} connected.`,
+    hQuitado: (n: string) => `Connection removed from ${n}.`,
+    hSinCambios: 'Nothing changed.',
+    hCopia: (n: string) => `Copy saved: ${n}`,
+    hTokenEscrito:
+      'The file had the token written in plain text: the copy hides it and the file no longer has it.',
+    hCopiada: 'Configuration copied (without the token).',
   },
   agentes: {
     descripcion:

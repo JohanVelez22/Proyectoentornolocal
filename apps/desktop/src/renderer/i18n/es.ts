@@ -89,6 +89,13 @@ export const es = {
       'sintaxis.falta_llave': 'falta una «}»',
     },
     codigos: {
+      'asistentes.no_existe': 'Ese asistente no está soportado.',
+      'asistentes.no_instalado': '{asistente} no está instalado.',
+      'asistentes.no_compatible': '{asistente} todavía no se puede conectar.',
+      'asistentes.enlace_rechazado': '{archivo} es un enlace (simbólico o unión): no se modificó.',
+      'asistentes.vista_desfasada':
+        'El archivo cambió después de la vista previa. Revísela de nuevo.',
+      'asistentes.sin_carpeta': 'La carpeta de configuración de {asistente} no existe.',
       'git.cambios_locales':
         'Hay cambios sin guardar en la carpeta: guárdelos (commit) o descártelos antes de traer cambios. No se tocó nada.',
       'git.divergencia':
@@ -5257,6 +5264,46 @@ export const es = {
       buscar: 'Buscar extensión',
       vacio: 'No hay extensiones que coincidan.',
     },
+  },
+  asistentes: {
+    pestana: 'Conectar asistentes',
+    explicacion:
+      'Conectar un asistente permite que su asistente de IA (Claude, Codex…) consulte y maneje sus servicios de WolfCore Dev: ver su estado, encenderlos y leer registros. Lo delicado siempre pide su confirmación.',
+    alcance:
+      'WolfCore Dev solo añade o quita su propia entrada «wolfcore» en la configuración de cada programa, guarda antes una copia con fecha y nunca escribe su token en esos archivos.',
+    notaVariable:
+      'Los asistentes leen el token de la variable de entorno WOLFCORE_MCP_TOKEN, que WolfCore Dev solo define al abrirlos desde IA › Agentes › «Abrir en un proyecto». Cursor debe iniciarse con esa variable definida.',
+    recargar: 'Volver a detectar',
+    conectado: 'Conectado',
+    instalado: 'Instalado, sin conectar',
+    noInstalado: 'No instalado',
+    noCompatible: 'No compatible todavía',
+    motivoLocales:
+      'Este programa solo admite servidores locales en su archivo y WolfCore Dev nunca escribe el token en claro, así que todavía no se puede conectar.',
+    conectar: 'Conectar',
+    quitar: 'Quitar',
+    copiar: 'Copiar configuración',
+    carpeta: 'Abrir carpeta de configuración',
+    archivo: 'Archivo de configuración',
+    cambios: 'Esto es lo que cambiará en el archivo:',
+    titulo: (n: string) => `Conectar ${n}`,
+    tituloQuitar: (n: string) => `Quitar la conexión de ${n}`,
+    aceptarConectar: 'Conectar',
+    aceptarQuitar: 'Quitar conexión',
+    preparando: 'Preparando la vista previa…',
+    archivoNuevo: 'El archivo todavía no existe: se creará.',
+    sinCambios: 'No hay nada que cambiar: ya está así.',
+    copiaPrevia:
+      'Antes de escribir se guarda una copia con fecha junto al archivo (se conservan las últimas 5).',
+    comentarios:
+      'Atención: se perderán los comentarios que haya dentro de la entrada «wolfcore». El resto del archivo no cambia.',
+    hConectado: (n: string) => `${n} conectado.`,
+    hQuitado: (n: string) => `Conexión quitada de ${n}.`,
+    hSinCambios: 'No cambió nada.',
+    hCopia: (n: string) => `Copia guardada: ${n}`,
+    hTokenEscrito:
+      'El archivo tenía el token escrito en claro: la copia lo oculta y el archivo ya no lo tiene.',
+    hCopiada: 'Configuración copiada (sin el token).',
   },
   agentes: {
     descripcion:

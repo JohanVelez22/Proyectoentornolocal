@@ -25,6 +25,14 @@ export const deExtra: TextosParciales = {
   },
   errores: {
     codigos: {
+      'asistentes.no_existe': 'Dieser Assistent wird nicht unterstützt.',
+      'asistentes.no_instalado': '{asistente} ist nicht installiert.',
+      'asistentes.no_compatible': '{asistente} kann noch nicht verbunden werden.',
+      'asistentes.enlace_rechazado':
+        '{archivo} ist ein Link (symbolisch oder Junction): Es wurde nicht geändert.',
+      'asistentes.vista_desfasada':
+        'Die Datei hat sich nach der Vorschau geändert. Bitte prüfen Sie die Vorschau erneut.',
+      'asistentes.sin_carpeta': 'Der Konfigurationsordner von {asistente} existiert nicht.',
       'discos.sin_lectura':
         'Der Zustand der Laufwerke konnte nicht gelesen werden. Bitte versuchen Sie es erneut.',
       'discos.sin_eventos': 'Die Laufwerkereignisse konnten nicht gelesen werden.',
@@ -2183,5 +2191,45 @@ export const deExtra: TextosParciales = {
     vacioTitulo: 'Diese Datenbank hat keine Tabellen',
     vacioTexto:
       'Wenn Sie Tabellen erstellen (zum Beispiel mit den Migrationen Ihres Projekts), erscheinen sie hier.',
+  },
+  asistentes: {
+    pestana: 'Assistenten verbinden',
+    explicacion:
+      'Wenn Sie einen Assistenten verbinden, kann Ihr KI-Assistent (Claude, Codex …) Ihre WolfCore-Dev-Dienste einsehen und steuern: Status ansehen, Dienste starten und Protokolle lesen. Bei allem Heiklen wird immer Ihre Bestätigung verlangt.',
+    alcance:
+      'WolfCore Dev fügt in der Konfiguration jedes Programms nur seinen eigenen Eintrag „wolfcore“ hinzu oder entfernt ihn, speichert vorher eine Kopie mit Datum und schreibt Ihr Token nie in diese Dateien.',
+    notaVariable:
+      'Die Assistenten lesen das Token aus der Umgebungsvariable WOLFCORE_MCP_TOKEN, die WolfCore Dev nur setzt, wenn Sie sie über KI › Agenten › „In einem Projekt öffnen“ starten. Cursor muss mit dieser definierten Variable gestartet werden.',
+    recargar: 'Erneut erkennen',
+    conectado: 'Verbunden',
+    instalado: 'Installiert, nicht verbunden',
+    noInstalado: 'Nicht installiert',
+    noCompatible: 'Noch nicht unterstützt',
+    motivoLocales:
+      'Dieses Programm akzeptiert in seiner Datei nur lokale Server, und WolfCore Dev schreibt das Token nie im Klartext. Es kann daher noch nicht verbunden werden.',
+    conectar: 'Verbinden',
+    quitar: 'Entfernen',
+    copiar: 'Konfiguration kopieren',
+    carpeta: 'Konfigurationsordner öffnen',
+    archivo: 'Konfigurationsdatei',
+    cambios: 'Das ändert sich in der Datei:',
+    titulo: (n: string) => `${n} verbinden`,
+    tituloQuitar: (n: string) => `Verbindung von ${n} entfernen`,
+    aceptarConectar: 'Verbinden',
+    aceptarQuitar: 'Verbindung entfernen',
+    preparando: 'Vorschau wird vorbereitet…',
+    archivoNuevo: 'Die Datei existiert noch nicht: Sie wird erstellt.',
+    sinCambios: 'Es gibt nichts zu ändern: Es ist bereits so.',
+    copiaPrevia:
+      'Vor dem Schreiben wird neben der Datei eine Kopie mit Datum gespeichert (die letzten 5 bleiben erhalten).',
+    comentarios:
+      'Achtung: Kommentare innerhalb des Eintrags „wolfcore“ gehen verloren. Der Rest der Datei bleibt unverändert.',
+    hConectado: (n: string) => `${n} verbunden.`,
+    hQuitado: (n: string) => `Verbindung von ${n} entfernt.`,
+    hSinCambios: 'Es hat sich nichts geändert.',
+    hCopia: (n: string) => `Kopie gespeichert: ${n}`,
+    hTokenEscrito:
+      'Die Datei enthielt das Token im Klartext: Die Kopie blendet es aus und die Datei enthält es nicht mehr.',
+    hCopiada: 'Konfiguration kopiert (ohne das Token).',
   },
 };

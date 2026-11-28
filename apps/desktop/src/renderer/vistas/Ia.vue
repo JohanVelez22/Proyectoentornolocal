@@ -41,6 +41,7 @@ import type {
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import Agentes from './Agentes.vue';
+import ConectarAsistentes from './ConectarAsistentes.vue';
 import DialogoEnvIa from '../componentes/DialogoEnvIa.vue';
 import DialogoProveedorIa from '../componentes/DialogoProveedorIa.vue';
 import IlustracionVacia from '../componentes/IlustracionVacia.vue';
@@ -427,10 +428,13 @@ const filasConexion = computed(() => [
       :aria-label="tn.pestanas.etiqueta"
       @update:value="cambiarPestana"
     >
-      <NTab v-for="p in PESTANAS_IA" :key="p" :name="p">{{ tn.pestanas[p] }}</NTab>
+      <NTab v-for="p in PESTANAS_IA" :key="p" :name="p">{{
+        p === 'conectar' ? textos.asistentes.pestana : tn.pestanas[p]
+      }}</NTab>
     </NTabs>
 
     <Agentes v-if="pestana === 'agentes'" />
+    <ConectarAsistentes v-else-if="pestana === 'conectar'" />
 
     <!-- IA en la nube -->
     <template v-else-if="pestana === 'nube'">

@@ -24,6 +24,14 @@ export const itExtra: TextosParciales = {
   },
   errores: {
     codigos: {
+      'asistentes.no_existe': 'Questo assistente non è supportato.',
+      'asistentes.no_instalado': '{asistente} non è installato.',
+      'asistentes.no_compatible': '{asistente} non può ancora essere collegato.',
+      'asistentes.enlace_rechazado':
+        '{archivo} è un collegamento (simbolico o giunzione): non è stato modificato.',
+      'asistentes.vista_desfasada':
+        'Il file è cambiato dopo l’anteprima. Riveda di nuovo l’anteprima.',
+      'asistentes.sin_carpeta': 'La cartella di configurazione di {asistente} non esiste.',
       'discos.sin_lectura': 'Non è stato possibile leggere lo stato di salute dei dischi. Riprovi.',
       'discos.sin_eventos': 'Non è stato possibile leggere gli eventi del disco.',
       'discos.admin_cancelado':
@@ -2147,5 +2155,45 @@ export const itExtra: TextosParciales = {
     vacioTitulo: 'Questo database non ha tabelle',
     vacioTexto:
       'Quando creerà delle tabelle (ad esempio con le migrazioni del suo progetto) compariranno qui.',
+  },
+  asistentes: {
+    pestana: 'Collega assistenti',
+    explicacion:
+      'Collegare un assistente permette al Suo assistente IA (Claude, Codex…) di consultare e gestire i Suoi servizi di WolfCore Dev: vederne lo stato, avviarli e leggere i log. Ciò che è delicato richiede sempre la Sua conferma.',
+    alcance:
+      'WolfCore Dev aggiunge o rimuove solo la propria voce «wolfcore» nella configurazione di ogni programma, salva prima una copia con data e non scrive mai il Suo token in quei file.',
+    notaVariable:
+      'Gli assistenti leggono il token dalla variabile d’ambiente WOLFCORE_MCP_TOKEN, che WolfCore Dev imposta solo quando li apre da IA › Agenti › «Apri in un progetto». Cursor deve essere avviato con quella variabile definita.',
+    recargar: 'Rileva di nuovo',
+    conectado: 'Collegato',
+    instalado: 'Installato, non collegato',
+    noInstalado: 'Non installato',
+    noCompatible: 'Non ancora compatibile',
+    motivoLocales:
+      'Questo programma accetta solo server locali nel suo file e WolfCore Dev non scrive mai il token in chiaro, quindi non può ancora essere collegato.',
+    conectar: 'Collega',
+    quitar: 'Rimuovi',
+    copiar: 'Copia configurazione',
+    carpeta: 'Apri cartella di configurazione',
+    archivo: 'File di configurazione',
+    cambios: 'Ecco cosa cambierà nel file:',
+    titulo: (n: string) => `Collega ${n}`,
+    tituloQuitar: (n: string) => `Rimuovi il collegamento di ${n}`,
+    aceptarConectar: 'Collega',
+    aceptarQuitar: 'Rimuovi collegamento',
+    preparando: 'Preparazione dell’anteprima…',
+    archivoNuevo: 'Il file non esiste ancora: verrà creato.',
+    sinCambios: 'Non c’è nulla da cambiare: è già così.',
+    copiaPrevia:
+      'Prima di scrivere, accanto al file viene salvata una copia con data (si conservano le ultime 5).',
+    comentarios:
+      'Attenzione: i commenti all’interno della voce «wolfcore» andranno persi. Il resto del file non cambia.',
+    hConectado: (n: string) => `${n} collegato.`,
+    hQuitado: (n: string) => `Collegamento rimosso da ${n}.`,
+    hSinCambios: 'Non è cambiato nulla.',
+    hCopia: (n: string) => `Copia salvata: ${n}`,
+    hTokenEscrito:
+      'Il file conteneva il token in chiaro: la copia lo nasconde e il file non lo contiene più.',
+    hCopiada: 'Configurazione copiata (senza il token).',
   },
 };

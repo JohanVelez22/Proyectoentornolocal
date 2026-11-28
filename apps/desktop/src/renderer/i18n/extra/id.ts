@@ -20,6 +20,14 @@ export const idExtra: TextosParciales = {
   acciones: { copiarCompleto: 'Salin seluruh teks' },
   errores: {
     codigos: {
+      'asistentes.no_existe': 'Asisten itu tidak didukung.',
+      'asistentes.no_instalado': '{asistente} belum terpasang.',
+      'asistentes.no_compatible': '{asistente} belum dapat dihubungkan.',
+      'asistentes.enlace_rechazado':
+        '{archivo} adalah tautan (simbolis atau junction): tidak diubah.',
+      'asistentes.vista_desfasada':
+        'Berkas berubah setelah pratinjau. Mohon tinjau pratinjau sekali lagi.',
+      'asistentes.sin_carpeta': 'Folder konfigurasi {asistente} tidak ada.',
       'discos.sin_lectura': 'Kesehatan disk tidak dapat dibaca. Silakan coba lagi.',
       'discos.sin_eventos': 'Peristiwa disk tidak dapat dibaca.',
       'discos.admin_cancelado': 'Izin administrator dibatalkan: tidak ada yang dibaca.',
@@ -2038,5 +2046,45 @@ export const idExtra: TextosParciales = {
     vacioTitulo: 'Basis data ini tidak memiliki tabel',
     vacioTexto:
       'Saat Anda membuat tabel (misalnya, dengan migrasi proyek Anda), tabel itu akan muncul di sini.',
+  },
+  asistentes: {
+    pestana: 'Hubungkan asisten',
+    explicacion:
+      'Menghubungkan asisten memungkinkan asisten AI Anda (Claude, Codex…) melihat dan mengelola layanan WolfCore Dev Anda: melihat status, menyalakan, dan membaca log. Hal yang sensitif selalu meminta konfirmasi Anda.',
+    alcance:
+      'WolfCore Dev hanya menambahkan atau menghapus entri “wolfcore” miliknya sendiri di konfigurasi setiap program, menyimpan salinan bertanggal terlebih dahulu, dan tidak pernah menulis token Anda di berkas tersebut.',
+    notaVariable:
+      'Asisten membaca token dari variabel lingkungan WOLFCORE_MCP_TOKEN, yang hanya ditetapkan WolfCore Dev saat Anda membukanya dari AI › Agen › “Buka di proyek”. Cursor harus dijalankan dengan variabel tersebut sudah ditetapkan.',
+    recargar: 'Deteksi ulang',
+    conectado: 'Terhubung',
+    instalado: 'Terpasang, belum terhubung',
+    noInstalado: 'Belum terpasang',
+    noCompatible: 'Belum didukung',
+    motivoLocales:
+      'Program ini hanya menerima server lokal di berkasnya dan WolfCore Dev tidak pernah menulis token sebagai teks biasa, sehingga belum dapat dihubungkan.',
+    conectar: 'Hubungkan',
+    quitar: 'Hapus',
+    copiar: 'Salin konfigurasi',
+    carpeta: 'Buka folder konfigurasi',
+    archivo: 'Berkas konfigurasi',
+    cambios: 'Inilah yang akan berubah di berkas:',
+    titulo: (n: string) => `Hubungkan ${n}`,
+    tituloQuitar: (n: string) => `Hapus koneksi ${n}`,
+    aceptarConectar: 'Hubungkan',
+    aceptarQuitar: 'Hapus koneksi',
+    preparando: 'Menyiapkan pratinjau…',
+    archivoNuevo: 'Berkas belum ada: akan dibuat.',
+    sinCambios: 'Tidak ada yang perlu diubah: sudah seperti ini.',
+    copiaPrevia:
+      'Sebelum menulis, salinan bertanggal disimpan di samping berkas (5 salinan terakhir dipertahankan).',
+    comentarios:
+      'Perhatian: komentar di dalam entri “wolfcore” akan hilang. Bagian berkas lainnya tidak berubah.',
+    hConectado: (n: string) => `${n} terhubung.`,
+    hQuitado: (n: string) => `Koneksi ${n} dihapus.`,
+    hSinCambios: 'Tidak ada yang berubah.',
+    hCopia: (n: string) => `Salinan disimpan: ${n}`,
+    hTokenEscrito:
+      'Berkas berisi token sebagai teks biasa: salinan menyembunyikannya dan berkas tidak lagi memilikinya.',
+    hCopiada: 'Konfigurasi disalin (tanpa token).',
   },
 };

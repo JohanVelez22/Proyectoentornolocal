@@ -21,6 +21,14 @@ export const trExtra: TextosParciales = {
   acciones: { copiarCompleto: 'Metnin tamamını kopyala' },
   errores: {
     codigos: {
+      'asistentes.no_existe': 'Bu asistan desteklenmiyor.',
+      'asistentes.no_instalado': '{asistente} yüklü değil.',
+      'asistentes.no_compatible': '{asistente} henüz bağlanamıyor.',
+      'asistentes.enlace_rechazado':
+        '{archivo} bir bağlantı (sembolik veya birleşim noktası): değiştirilmedi.',
+      'asistentes.vista_desfasada':
+        'Dosya önizlemeden sonra değişti. Lütfen önizlemeyi yeniden inceleyin.',
+      'asistentes.sin_carpeta': '{asistente} yapılandırma klasörü yok.',
       'discos.sin_lectura': 'Disk sağlığı okunamadı. Lütfen yeniden deneyin.',
       'discos.sin_eventos': 'Disk olayları okunamadı.',
       'discos.admin_cancelado': 'Yönetici izni iptal edildi: hiçbir şey okunmadı.',
@@ -2036,5 +2044,45 @@ export const trExtra: TextosParciales = {
     unico: 'benzersiz',
     vacioTitulo: 'Bu veritabanında tablo yok',
     vacioTexto: 'Tablolar oluşturduğunuzda (örneğin proje geçişlerinizle) burada görünecek.',
+  },
+  asistentes: {
+    pestana: 'Asistanları bağla',
+    explicacion:
+      'Bir asistanı bağlamak, yapay zekâ asistanınızın (Claude, Codex…) WolfCore Dev hizmetlerinize bakmasını ve onları yönetmesini sağlar: durumlarını görmek, başlatmak ve günlükleri okumak. Hassas olan her şey için her zaman onayınız istenir.',
+    alcance:
+      'WolfCore Dev, her programın yapılandırmasına yalnızca kendi “wolfcore” girdisini ekler veya kaldırır, öncesinde tarihli bir kopya kaydeder ve belirtecinizi bu dosyalara asla yazmaz.',
+    notaVariable:
+      'Asistanlar belirteci WOLFCORE_MCP_TOKEN ortam değişkeninden okur; WolfCore Dev bu değişkeni yalnızca onları Yapay Zekâ › Ajanlar › “Bir projede aç” üzerinden açtığınızda tanımlar. Cursor, bu değişken tanımlı olarak başlatılmalıdır.',
+    recargar: 'Yeniden algıla',
+    conectado: 'Bağlı',
+    instalado: 'Yüklü, bağlı değil',
+    noInstalado: 'Yüklü değil',
+    noCompatible: 'Henüz desteklenmiyor',
+    motivoLocales:
+      'Bu program dosyasında yalnızca yerel sunucuları kabul eder ve WolfCore Dev belirteci asla düz metin olarak yazmaz; bu yüzden henüz bağlanamaz.',
+    conectar: 'Bağla',
+    quitar: 'Kaldır',
+    copiar: 'Yapılandırmayı kopyala',
+    carpeta: 'Yapılandırma klasörünü aç',
+    archivo: 'Yapılandırma dosyası',
+    cambios: 'Dosyada şunlar değişecek:',
+    titulo: (n: string) => `${n} bağla`,
+    tituloQuitar: (n: string) => `${n} bağlantısını kaldır`,
+    aceptarConectar: 'Bağla',
+    aceptarQuitar: 'Bağlantıyı kaldır',
+    preparando: 'Önizleme hazırlanıyor…',
+    archivoNuevo: 'Dosya henüz yok: oluşturulacak.',
+    sinCambios: 'Değiştirilecek bir şey yok: zaten böyle.',
+    copiaPrevia:
+      'Yazmadan önce dosyanın yanına tarihli bir kopya kaydedilir (son 5 kopya saklanır).',
+    comentarios:
+      'Dikkat: “wolfcore” girdisinin içindeki yorumlar kaybolacak. Dosyanın geri kalanı değişmez.',
+    hConectado: (n: string) => `${n} bağlandı.`,
+    hQuitado: (n: string) => `${n} bağlantısı kaldırıldı.`,
+    hSinCambios: 'Hiçbir şey değişmedi.',
+    hCopia: (n: string) => `Kopya kaydedildi: ${n}`,
+    hTokenEscrito:
+      'Dosyada belirteç düz metin olarak yazılıydı: kopya onu gizler ve dosyada artık yoktur.',
+    hCopiada: 'Yapılandırma kopyalandı (belirteç olmadan).',
   },
 };

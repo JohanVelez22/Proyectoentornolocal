@@ -25,6 +25,14 @@ export const nlExtra: TextosParciales = {
   },
   errores: {
     codigos: {
+      'asistentes.no_existe': 'Die assistent wordt niet ondersteund.',
+      'asistentes.no_instalado': '{asistente} is niet geïnstalleerd.',
+      'asistentes.no_compatible': '{asistente} kan nog niet worden gekoppeld.',
+      'asistentes.enlace_rechazado':
+        '{archivo} is een koppeling (symbolisch of junction): het is niet gewijzigd.',
+      'asistentes.vista_desfasada':
+        'Het bestand is gewijzigd na het voorbeeld. Bekijk het voorbeeld opnieuw.',
+      'asistentes.sin_carpeta': 'De configuratiemap van {asistente} bestaat niet.',
       'discos.sin_lectura':
         'De gezondheid van de schijven kon niet worden gelezen. Probeer het opnieuw.',
       'discos.sin_eventos': 'De schijfgebeurtenissen konden niet worden gelezen.',
@@ -2162,5 +2170,45 @@ export const nlExtra: TextosParciales = {
     vacioTitulo: 'Deze database heeft geen tabellen',
     vacioTexto:
       'Wanneer u tabellen aanmaakt (bijvoorbeeld met de migraties van uw project), verschijnen ze hier.',
+  },
+  asistentes: {
+    pestana: 'Assistenten koppelen',
+    explicacion:
+      'Als u een assistent koppelt, kan uw AI-assistent (Claude, Codex…) uw WolfCore Dev-services bekijken en beheren: de status zien, ze starten en logboeken lezen. Voor gevoelige acties wordt altijd om uw bevestiging gevraagd.',
+    alcance:
+      'WolfCore Dev voegt alleen zijn eigen item ‘wolfcore’ toe aan of verwijdert het uit de configuratie van elk programma, bewaart eerst een kopie met datum en schrijft uw token nooit in die bestanden.',
+    notaVariable:
+      'De assistenten lezen het token uit de omgevingsvariabele WOLFCORE_MCP_TOKEN, die WolfCore Dev alleen instelt als u ze opent via AI › Agents › ‘Openen in een project’. Cursor moet worden gestart met die variabele ingesteld.',
+    recargar: 'Opnieuw detecteren',
+    conectado: 'Gekoppeld',
+    instalado: 'Geïnstalleerd, niet gekoppeld',
+    noInstalado: 'Niet geïnstalleerd',
+    noCompatible: 'Nog niet ondersteund',
+    motivoLocales:
+      'Dit programma accepteert in zijn bestand alleen lokale servers en WolfCore Dev schrijft het token nooit als platte tekst, dus het kan nog niet worden gekoppeld.',
+    conectar: 'Koppelen',
+    quitar: 'Verwijderen',
+    copiar: 'Configuratie kopiëren',
+    carpeta: 'Configuratiemap openen',
+    archivo: 'Configuratiebestand',
+    cambios: 'Dit verandert er in het bestand:',
+    titulo: (n: string) => `${n} koppelen`,
+    tituloQuitar: (n: string) => `Koppeling van ${n} verwijderen`,
+    aceptarConectar: 'Koppelen',
+    aceptarQuitar: 'Koppeling verwijderen',
+    preparando: 'Voorbeeld voorbereiden…',
+    archivoNuevo: 'Het bestand bestaat nog niet: het wordt aangemaakt.',
+    sinCambios: 'Er is niets te wijzigen: het is al zo.',
+    copiaPrevia:
+      'Vóór het schrijven wordt naast het bestand een kopie met datum bewaard (de laatste 5 blijven bestaan).',
+    comentarios:
+      'Let op: opmerkingen binnen het item ‘wolfcore’ gaan verloren. De rest van het bestand verandert niet.',
+    hConectado: (n: string) => `${n} gekoppeld.`,
+    hQuitado: (n: string) => `Koppeling van ${n} verwijderd.`,
+    hSinCambios: 'Er is niets veranderd.',
+    hCopia: (n: string) => `Kopie opgeslagen: ${n}`,
+    hTokenEscrito:
+      'Het bestand bevatte het token als platte tekst: de kopie verbergt het en het bestand bevat het niet meer.',
+    hCopiada: 'Configuratie gekopieerd (zonder het token).',
   },
 };

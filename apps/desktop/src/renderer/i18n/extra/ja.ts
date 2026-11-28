@@ -18,6 +18,14 @@ export const jaExtra: TextosParciales = {
   acciones: { copiarCompleto: '全文をコピー' },
   errores: {
     codigos: {
+      'asistentes.no_existe': 'このアシスタントには対応していません。',
+      'asistentes.no_instalado': '{asistente} はインストールされていません。',
+      'asistentes.no_compatible': '{asistente} はまだ接続できません。',
+      'asistentes.enlace_rechazado':
+        '{archivo} はリンク（シンボリックリンクまたはジャンクション）のため、変更しませんでした。',
+      'asistentes.vista_desfasada':
+        'プレビューの後にファイルが変更されました。プレビューをもう一度ご確認ください。',
+      'asistentes.sin_carpeta': '{asistente} の設定フォルダーがありません。',
       'discos.sin_lectura': 'ディスクの健全性を読み取れませんでした。もう一度お試しください。',
       'discos.sin_eventos': 'ディスクのイベントを読み取れませんでした。',
       'discos.admin_cancelado': '管理者の許可が取り消されました。何も読み取っていません。',
@@ -2052,5 +2060,45 @@ export const jaExtra: TextosParciales = {
     vacioTitulo: 'このデータベースにはテーブルがありません',
     vacioTexto:
       'テーブルを作成すると（たとえばプロジェクトのマイグレーションで）、ここに表示されます。',
+  },
+  asistentes: {
+    pestana: 'アシスタントを接続',
+    explicacion:
+      'アシスタントを接続すると、お使いの AI アシスタント（Claude、Codex など）が WolfCore Dev のサービスを確認して操作できるようになります。状態の確認、起動、ログの読み取りができます。重要な操作では、必ずお客様の確認をお尋ねします。',
+    alcance:
+      'WolfCore Dev は各プログラムの設定に、自身の「wolfcore」エントリだけを追加または削除します。書き込む前に日付付きのコピーを保存し、トークンをこれらのファイルに書き込むことはありません。',
+    notaVariable:
+      'アシスタントは環境変数 WOLFCORE_MCP_TOKEN からトークンを読み取ります。この変数は、AI › エージェント › 「プロジェクトで開く」から起動したときにのみ WolfCore Dev が設定します。Cursor は、この変数を定義した状態で起動する必要があります。',
+    recargar: '再検出',
+    conectado: '接続済み',
+    instalado: 'インストール済み（未接続）',
+    noInstalado: '未インストール',
+    noCompatible: 'まだ対応していません',
+    motivoLocales:
+      'このプログラムはファイル内でローカルサーバーのみ受け付けます。また WolfCore Dev はトークンを平文で書き込まないため、まだ接続できません。',
+    conectar: '接続',
+    quitar: '削除',
+    copiar: '設定をコピー',
+    carpeta: '設定フォルダーを開く',
+    archivo: '設定ファイル',
+    cambios: 'ファイルでは次の内容が変わります。',
+    titulo: (n: string) => `${n} を接続`,
+    tituloQuitar: (n: string) => `${n} の接続を削除`,
+    aceptarConectar: '接続',
+    aceptarQuitar: '接続を削除',
+    preparando: 'プレビューを準備しています…',
+    archivoNuevo: 'ファイルはまだありません。新しく作成されます。',
+    sinCambios: '変更するものはありません。すでにこの状態です。',
+    copiaPrevia:
+      '書き込む前に、日付付きのコピーをファイルの横に保存します（最新の 5 件を保持します）。',
+    comentarios:
+      '注意：「wolfcore」エントリ内のコメントは失われます。ファイルのそれ以外の部分は変わりません。',
+    hConectado: (n: string) => `${n} を接続しました。`,
+    hQuitado: (n: string) => `${n} の接続を削除しました。`,
+    hSinCambios: '変更はありませんでした。',
+    hCopia: (n: string) => `コピーを保存しました：${n}`,
+    hTokenEscrito:
+      'ファイルにトークンが平文で書かれていました。コピーでは伏せ字になり、ファイルからは削除されました。',
+    hCopiada: '設定をコピーしました（トークンは含みません）。',
   },
 };

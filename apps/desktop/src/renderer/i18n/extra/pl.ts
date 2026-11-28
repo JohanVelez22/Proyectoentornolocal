@@ -29,6 +29,14 @@ export const plExtra: TextosParciales = {
   },
   errores: {
     codigos: {
+      'asistentes.no_existe': 'Ten asystent nie jest obsługiwany.',
+      'asistentes.no_instalado': '{asistente} nie jest zainstalowany.',
+      'asistentes.no_compatible': '{asistente} nie może jeszcze zostać połączony.',
+      'asistentes.enlace_rechazado':
+        '{archivo} jest dowiązaniem (symbolicznym lub złączem): nie został zmieniony.',
+      'asistentes.vista_desfasada':
+        'Plik zmienił się po podglądzie. Proszę sprawdzić podgląd ponownie.',
+      'asistentes.sin_carpeta': 'Folder konfiguracji programu {asistente} nie istnieje.',
       'discos.sin_lectura': 'Nie udało się odczytać kondycji dysków. Proszę spróbować ponownie.',
       'discos.sin_eventos': 'Nie udało się odczytać zdarzeń dysku.',
       'discos.admin_cancelado': 'Anulowano zgodę administratora: nic nie odczytano.',
@@ -2159,5 +2167,45 @@ export const plExtra: TextosParciales = {
       springboot: 'Spring Boot',
       aspnet: 'ASP.NET',
     },
+  },
+  asistentes: {
+    pestana: 'Połącz asystentów',
+    explicacion:
+      'Połączenie asystenta pozwala asystentowi AI (Claude, Codex…) przeglądać usługi WolfCore Dev i nimi zarządzać: sprawdzać ich stan, uruchamiać je i czytać dzienniki. Każda wrażliwa operacja zawsze wymaga potwierdzenia.',
+    alcance:
+      'WolfCore Dev dodaje lub usuwa tylko własny wpis „wolfcore” w konfiguracji każdego programu, wcześniej zapisuje kopię z datą i nigdy nie zapisuje tokenu w tych plikach.',
+    notaVariable:
+      'Asystenci odczytują token ze zmiennej środowiskowej WOLFCORE_MCP_TOKEN, którą WolfCore Dev ustawia tylko po otwarciu ich z AI › Agenci › „Otwórz w projekcie”. Cursor trzeba uruchomić z tą zmienną.',
+    recargar: 'Wykryj ponownie',
+    conectado: 'Połączony',
+    instalado: 'Zainstalowany, niepołączony',
+    noInstalado: 'Niezainstalowany',
+    noCompatible: 'Jeszcze nieobsługiwany',
+    motivoLocales:
+      'Ten program przyjmuje w swoim pliku tylko serwery lokalne, a WolfCore Dev nigdy nie zapisuje tokenu jawnym tekstem, więc nie można go jeszcze połączyć.',
+    conectar: 'Połącz',
+    quitar: 'Usuń',
+    copiar: 'Kopiuj konfigurację',
+    carpeta: 'Otwórz folder konfiguracji',
+    archivo: 'Plik konfiguracji',
+    cambios: 'To zmieni się w pliku:',
+    titulo: (n: string) => `Połącz ${n}`,
+    tituloQuitar: (n: string) => `Usuń połączenie z ${n}`,
+    aceptarConectar: 'Połącz',
+    aceptarQuitar: 'Usuń połączenie',
+    preparando: 'Przygotowywanie podglądu…',
+    archivoNuevo: 'Plik jeszcze nie istnieje: zostanie utworzony.',
+    sinCambios: 'Nie ma nic do zmiany: już tak jest.',
+    copiaPrevia:
+      'Przed zapisem obok pliku zapisywana jest kopia z datą (zachowywanych jest ostatnich 5).',
+    comentarios:
+      'Uwaga: komentarze wewnątrz wpisu „wolfcore” zostaną utracone. Reszta pliku się nie zmienia.',
+    hConectado: (n: string) => `${n} połączony.`,
+    hQuitado: (n: string) => `Usunięto połączenie z ${n}.`,
+    hSinCambios: 'Nic się nie zmieniło.',
+    hCopia: (n: string) => `Zapisano kopię: ${n}`,
+    hTokenEscrito:
+      'Plik zawierał token jawnym tekstem: kopia go ukrywa, a plik już go nie zawiera.',
+    hCopiada: 'Skopiowano konfigurację (bez tokenu).',
   },
 };

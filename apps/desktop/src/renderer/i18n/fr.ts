@@ -95,6 +95,13 @@ export const fr: Textos = {
       'sintaxis.falta_llave': 'il manque une « } »',
     },
     codigos: {
+      'asistentes.no_existe': 'Cet assistant n’est pas pris en charge.',
+      'asistentes.no_instalado': '{asistente} n’est pas installé.',
+      'asistentes.no_compatible': '{asistente} ne peut pas encore être connecté.',
+      'asistentes.enlace_rechazado':
+        '{archivo} est un lien (symbolique ou jonction) : il n’a pas été modifié.',
+      'asistentes.vista_desfasada': 'Le fichier a changé après l’aperçu. Veuillez revoir l’aperçu.',
+      'asistentes.sin_carpeta': 'Le dossier de configuration de {asistente} n’existe pas.',
       'git.cambios_locales':
         'Le dossier contient des modifications non enregistrées : enregistrez-les (commit) ou abandonnez-les avant de récupérer des changements. Rien n’a été modifié.',
       'git.divergencia':
@@ -5395,6 +5402,46 @@ export const fr: Textos = {
       buscar: 'Rechercher une extension',
       vacio: 'Aucune extension ne correspond.',
     },
+  },
+  asistentes: {
+    pestana: 'Connecter des assistants',
+    explicacion:
+      'Connecter un assistant permet à votre assistant IA (Claude, Codex…) de consulter et de gérer vos services WolfCore Dev : voir leur état, les démarrer et lire les journaux. Tout ce qui est sensible demande toujours votre confirmation.',
+    alcance:
+      'WolfCore Dev ajoute ou retire uniquement sa propre entrée « wolfcore » dans la configuration de chaque programme, enregistre d’abord une copie datée et n’écrit jamais votre jeton dans ces fichiers.',
+    notaVariable:
+      'Les assistants lisent le jeton dans la variable d’environnement WOLFCORE_MCP_TOKEN, que WolfCore Dev ne définit que lorsque vous les ouvrez depuis IA › Agents › « Ouvrir dans un projet ». Cursor doit être lancé avec cette variable définie.',
+    recargar: 'Détecter à nouveau',
+    conectado: 'Connecté',
+    instalado: 'Installé, non connecté',
+    noInstalado: 'Non installé',
+    noCompatible: 'Pas encore compatible',
+    motivoLocales:
+      'Ce programme n’accepte que des serveurs locaux dans son fichier et WolfCore Dev n’écrit jamais le jeton en clair : il ne peut donc pas encore être connecté.',
+    conectar: 'Connecter',
+    quitar: 'Retirer',
+    copiar: 'Copier la configuration',
+    carpeta: 'Ouvrir le dossier de configuration',
+    archivo: 'Fichier de configuration',
+    cambios: 'Voici ce qui va changer dans le fichier :',
+    titulo: (n: string) => `Connecter ${n}`,
+    tituloQuitar: (n: string) => `Retirer la connexion de ${n}`,
+    aceptarConectar: 'Connecter',
+    aceptarQuitar: 'Retirer la connexion',
+    preparando: 'Préparation de l’aperçu…',
+    archivoNuevo: 'Le fichier n’existe pas encore : il sera créé.',
+    sinCambios: 'Rien à modifier : c’est déjà ainsi.',
+    copiaPrevia:
+      'Avant l’écriture, une copie datée est enregistrée à côté du fichier (les 5 dernières sont conservées).',
+    comentarios:
+      'Attention : les commentaires de l’entrée « wolfcore » seront perdus. Le reste du fichier ne change pas.',
+    hConectado: (n: string) => `${n} connecté.`,
+    hQuitado: (n: string) => `Connexion retirée de ${n}.`,
+    hSinCambios: 'Rien n’a changé.',
+    hCopia: (n: string) => `Copie enregistrée : ${n}`,
+    hTokenEscrito:
+      'Le fichier contenait le jeton en clair : la copie le masque et le fichier ne le contient plus.',
+    hCopiada: 'Configuration copiée (sans le jeton).',
   },
   agentes: {
     descripcion:

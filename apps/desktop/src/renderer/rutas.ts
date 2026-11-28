@@ -5,7 +5,7 @@ import type { Textos } from './i18n';
 export type SeccionNav = Exclude<keyof Textos['nav'], 'contraer' | 'expandir'>;
 
 /** Pestañas de la pantalla IA (la ruta `/ia/:pestana?`). */
-export const PESTANAS_IA = ['agentes', 'nube', 'local'] as const;
+export const PESTANAS_IA = ['agentes', 'conectar', 'nube', 'local'] as const;
 export type PestanaIa = (typeof PESTANAS_IA)[number];
 
 export interface PantallaRuta {
@@ -28,7 +28,7 @@ export const PANTALLAS: readonly PantallaRuta[] = [
   { path: '/servicios/php', name: 'servicios.php', seccion: 'servicios' },
   { path: '/bases-de-datos', name: 'basesDeDatos', seccion: 'basesDeDatos' },
   { path: '/correo', name: 'correo', seccion: 'correo' },
-  // IA con tres pestañas: Agentes, Nube y Modelos locales (sin pestaña, la primera).
+  // IA con cuatro pestañas: Agentes, Conectar asistentes, Nube y Modelos locales (sin pestaña, la primera).
   { path: `/ia/:pestana(${PESTANAS_IA.join('|')})?`, name: 'ia', seccion: 'ia' },
   { path: '/tuneles', name: 'tuneles', seccion: 'tuneles' },
   // Oculta en la barra lateral salvo con «Mostrar secciones avanzadas»; la ruta y la paleta siguen.
